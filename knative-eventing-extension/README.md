@@ -7,4 +7,4 @@ In addition to Tekton/Knative Eventing glue, it includes an extension to the Tek
 
 ## Want to get involved
 
-Visit the [Tekton Community](https://github.com/tektoncd/community) project for an overview of our processes
+Visit the [Tekton Community](https://github.com/tektoncd/community) project for an overview of our processes.
