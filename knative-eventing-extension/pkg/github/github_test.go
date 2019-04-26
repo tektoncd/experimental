@@ -25,7 +25,7 @@ func TestNewTriggerService(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewTriggerService(tt.args.ghClient, tt.args.tektonClient); !reflect.DeepEqual(got, tt.want) {
+			if got := NewTrigger(tt.args.ghClient, tt.args.tektonClient); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewTriggerService() = %v, want %v", got, tt.want)
 			}
 		})
@@ -51,11 +51,11 @@ func TestTrigger_Handler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t := &Trigger{
+			tr := &Trigger{
 				ghClient:     tt.fields.ghClient,
 				tektonClient: tt.fields.tektonClient,
 			}
-			if err := t.Handler(tt.args.ctx, tt.args.event); (err != nil) != tt.wantErr {
+			if err := tr.Handler(tt.args.ctx, tt.args.event); (err != nil) != tt.wantErr {
 				t.Errorf("Trigger.Handler() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -82,11 +82,11 @@ func TestTrigger_getPipeline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t := &Trigger{
+			tr := &Trigger{
 				ghClient:     tt.fields.ghClient,
 				tektonClient: tt.fields.tektonClient,
 			}
-			got, err := t.getPipeline(tt.args.ctx, tt.args.repo)
+			got, err := tr.getPipeline(tt.args.ctx, tt.args.repo)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Trigger.getPipeline() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -118,11 +118,11 @@ func TestTrigger_getPipelineRun(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t := &Trigger{
+			tr := &Trigger{
 				ghClient:     tt.fields.ghClient,
 				tektonClient: tt.fields.tektonClient,
 			}
-			got, err := t.getPipelineRun(tt.args.ctx, tt.args.repo)
+			got, err := tr.getPipelineRun(tt.args.ctx, tt.args.repo)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Trigger.getPipelineRun() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -155,11 +155,11 @@ func TestTrigger_getGHFileContent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t := &Trigger{
+			tr := &Trigger{
 				ghClient:     tt.fields.ghClient,
 				tektonClient: tt.fields.tektonClient,
 			}
-			got, err := t.getGHFileContent(tt.args.ctx, tt.args.repo, tt.args.path)
+			got, err := tr.getGHFileContent(tt.args.ctx, tt.args.repo, tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Trigger.getGHFileContent() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -191,11 +191,11 @@ func TestTrigger_createPipelineRun(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t := &Trigger{
+			tr := &Trigger{
 				ghClient:     tt.fields.ghClient,
 				tektonClient: tt.fields.tektonClient,
 			}
-			if err := t.createPipelineRun(tt.args.pipeline, tt.args.pipelinerun, tt.args.pe); (err != nil) != tt.wantErr {
+			if err := tr.createPipelineRun(tt.args.pipeline, tt.args.pipelinerun, tt.args.pe); (err != nil) != tt.wantErr {
 				t.Errorf("Trigger.createPipelineRun() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

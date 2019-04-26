@@ -30,7 +30,7 @@ func main() {
 		log.Fatalf("failed to create client, %v", err)
 	}
 
-	cfgEnv := os.Getenv("CONFIG")
+	cfgEnv := os.Getenv("KUBECONFIG")
 	if len(cfgEnv) == 0 {
 		log.Fatalf("CONFIG env not set properly")
 	}
@@ -45,8 +45,9 @@ func main() {
 		log.Fatalf("Error creating tekton client: %v", err)
 	}
 
-	trigger := github.NewTriggerService(ghClient, tektonClient)
+	trigger := github.NewTrigger(ghClient, tektonClient)
 
+	log.Printf("starting trigger service")
 	err = c.StartReceiver(ctx, trigger.Handler)
 	if err != nil {
 		log.Fatalf("failed to start receiver: %s", err)
