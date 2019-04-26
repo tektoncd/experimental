@@ -7,7 +7,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	gh "github.com/google/go-github/github"
-	"github.com/tektoncd/experimental/knative-eventing-extension/pkg/github"
+	"github.com/tektoncd/experimental/webhooks-extension/pkg/github"
 	tknClient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 
 	"golang.org/x/oauth2"
