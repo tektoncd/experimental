@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhooks-extension
+  labels:
+    app: webhooks-extension
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhooks-extension
+  template:
+    metadata:
+      labels:
+        app: webhooks-extension
+    spec:
+      containers:
+        - name: webhooks-extension
+          image: "DOCKER_REPO/extension:latest"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8080
+          env:
+          - name: PORT
+            value: "8080"
+          - name: INSTALLED_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
