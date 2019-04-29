@@ -11,6 +11,7 @@ import (
 	tknClient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1alpha1"
 
 	"golang.org/x/oauth2"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -30,14 +31,19 @@ func main() {
 		log.Fatalf("failed to create client, %v", err)
 	}
 
+	var cfg *rest.Config
+
 	cfgEnv := os.Getenv("KUBECONFIG")
 	if len(cfgEnv) == 0 {
-		log.Fatalf("CONFIG env not set properly")
-	}
-
-	cfg, err := clientcmd.BuildConfigFromFlags("", cfgEnv)
-	if err != nil {
-		log.Fatalf("Error building config from %v: %v\n", cfgEnv, err)
+		cfg, err = rest.InClusterConfig()
+		if err != nil {
+			log.Fatalf("Error building config from %v:\n", err)
+		}
+	} else {
+		cfg, err = clientcmd.BuildConfigFromFlags("", cfgEnv)
+		if err != nil {
+			log.Fatalf("Error building config from %v: %v\n", cfgEnv, err)
+		}
 	}
 
 	tektonClient, err := tknClient.NewForConfig(cfg)
