@@ -42,6 +42,12 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
+
+	dockerRegDefault := os.Getenv("DOCKER_REGISTRY_LOCATION")
+	if webhook.DockerRegistry == "" && dockerRegDefault != "" {
+		webhook.DockerRegistry = dockerRegDefault
+	}
+
 	namespace := webhook.Namespace
 	if namespace == "" {
 		err := errors.New("namespace is required, but none was given")

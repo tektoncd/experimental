@@ -129,7 +129,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 		log.Printf("Error getting github webhook: %s.", err.Error())
 		return
 	}
-	registrySecret := webhook.RegistrySecret
+	dockerRegistry := webhook.DockerRegistry
 	helmSecret := webhook.HelmSecret
 	pipelineTemplateName := webhook.Pipeline
 	pipelineNs := webhook.Namespace
@@ -157,8 +157,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 
 	log.Print("Creating PipelineResources.")
 
-	registryURL := os.Getenv("DOCKER_REGISTRY_LOCATION")
-	urlToUse := fmt.Sprintf("%s/%s:%s", registryURL, strings.ToLower(buildInformation.REPONAME), buildInformation.SHORTID)
+	urlToUse := fmt.Sprintf("%s/%s:%s", dockerRegistry, strings.ToLower(buildInformation.REPONAME), buildInformation.SHORTID)
 	log.Printf("Image URL is: %s.", urlToUse)
 
 	paramsForImageResource := []v1alpha1.Param{{Name: "url", Value: urlToUse}}
@@ -186,7 +185,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	resources := []v1alpha1.PipelineResourceBinding{{Name: "docker-image", ResourceRef: imageResourceRef}, {Name: "git-source", ResourceRef: gitResourceRef}}
 
 	imageTag := buildInformation.SHORTID
-	imageName := fmt.Sprintf("%s/%s", registryURL, strings.ToLower(buildInformation.REPONAME))
+	imageName := fmt.Sprintf("%s/%s", dockerRegistry, strings.ToLower(buildInformation.REPONAME))
 	releaseName := fmt.Sprintf("%s-%s", strings.ToLower(buildInformation.REPONAME), buildInformation.SHORTID)
 	repositoryName := strings.ToLower(buildInformation.REPONAME)
 	params := []v1alpha1.Param{{Name: "image-tag", Value: imageTag},
@@ -195,8 +194,8 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 		{Name: "repository-name", Value: repositoryName},
 		{Name: "target-namespace", Value: pipelineNs}}
 
-	if registrySecret != "" {
-		params = append(params, v1alpha1.Param{Name: "registry-secret", Value: registrySecret})
+	if dockerRegistry != "" {
+		params = append(params, v1alpha1.Param{Name: "docker-registry", Value: dockerRegistry})
 	}
 	if helmSecret != "" {
 		params = append(params, v1alpha1.Param{Name: "helm-secret", Value: helmSecret})
