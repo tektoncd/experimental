@@ -17,10 +17,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const default_registry = "default.docker.reg:8500/foo"
 
 // Test createGitHubSource
 func TestGitHubSource(t *testing.T) {
@@ -35,7 +38,7 @@ func TestGitHubSource(t *testing.T) {
 			GitRepositoryURL:     "https://github.com/owner/repo.git",
 			AccessTokenRef:       "token1",
 			Pipeline:             "pipeline1",
-			RegistrySecret:       "registrysecret1",
+			DockerRegistry:       "registry1",
 			HelmSecret:           "helmsecret1",
 			RepositorySecretName: "secretName1",
 		},
@@ -45,10 +48,27 @@ func TestGitHubSource(t *testing.T) {
 			GitRepositoryURL:     "https://github.company.com/owner2/repo2",
 			AccessTokenRef:       "token2",
 			Pipeline:             "pipeline2",
-			RegistrySecret:       "registrysecret2",
+			DockerRegistry:       "registry2",
 			HelmSecret:           "helmsecret2",
 			RepositorySecretName: "secretName2",
 		},
+		{
+			Name:                 "name3",
+			Namespace:            runNs,
+			GitRepositoryURL:     "https://github.company.com/owner3/repo3",
+			AccessTokenRef:       "token3",
+			Pipeline:             "pipeline3",
+			DockerRegistry:       "",
+			HelmSecret:           "helmsecret3",
+			RepositorySecretName: "secretName3",
+		},
+	}
+
+	// Set default docker registry for sources that specify no registry value
+	err := os.Setenv("DOCKER_REGISTRY_LOCATION", default_registry)
+	if err != nil {
+		t.Errorf("Error occured setting the DOCKER_REGISTRY_LOCATION environment variable, error was: %s", err.Error())
+		t.FailNow()
 	}
 
 	// Create the first entry
@@ -66,8 +86,12 @@ func TestGitHubSource(t *testing.T) {
 	// Check the second entry (check with k8s)
 	testGitHubSource(sources[1].Name, "owner2/repo2", "https://github.company.com/api/v3/", installNs, r, t)
 
-	// Check both entries (check with GET all webhooks)
+	// Create the third entry source specifies no docker registry so should use env var
+	createWebhook(sources[2], r)
+
+	// Check all entries (check with GET all webhooks)
 	testGetAllWebhooks(sources, r, t)
+
 }
 
 func createWebhook(webhook webhook, r *Resource) {
@@ -114,6 +138,9 @@ func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
 		return
 	}
 	for i := 0; i < len(expectedWebhooks); i++ {
+		if expectedWebhooks[i].DockerRegistry == "" {
+			expectedWebhooks[i].DockerRegistry = default_registry
+		}
 		if expectedWebhooks[i] != actualWebhooks[i] {
 			t.Errorf("Incorrect webhook %d, expected %+v but was %+v", i, expectedWebhooks[i], actualWebhooks[i])
 		}

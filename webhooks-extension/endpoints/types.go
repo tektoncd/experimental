@@ -75,7 +75,7 @@ type webhook struct {
 	GitRepositoryURL     string `json:"gitrepositoryurl"`
 	AccessTokenRef       string `json:"accesstoken"`
 	Pipeline             string `json:"pipeline"`
-	RegistrySecret       string `json:"registrysecret,omitempty"`
+	DockerRegistry       string `json:"dockerregistry,omitempty"`
 	HelmSecret           string `json:"helmsecret,omitempty"`
 	RepositorySecretName string `json:"repositorysecretname,omitempty"`
 }
