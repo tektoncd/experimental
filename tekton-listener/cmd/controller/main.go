@@ -30,18 +30,17 @@ import (
 
 	sharedclientset "github.com/knative/pkg/client/clientset/versioned"
 	"github.com/knative/pkg/controller"
+	pipelineclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 
 	"github.com/tektoncd/experimental/tekton-listener/pkg/reconciler"
 	"github.com/tektoncd/experimental/tekton-listener/pkg/reconciler/eventbinding"
 	"github.com/tektoncd/experimental/tekton-listener/pkg/reconciler/tektonlistener"
-	"github.com/tektoncd/pipeline/pkg/reconciler/v1alpha1/pipelinerun"
-	"github.com/tektoncd/pipeline/pkg/reconciler/v1alpha1/taskrun"
-	"github.com/tektoncd/pipeline/pkg/system"
 
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/signals"
 	clientset "github.com/tektoncd/experimental/tekton-listener/pkg/client/clientset/versioned"
 	experimentalinformers "github.com/tektoncd/experimental/tekton-listener/pkg/client/informers/externalversions"
+	pipelineinformers "github.com/tektoncd/pipeline/pkg/client/informers/externalversions"
 )
 
 const (
@@ -64,7 +63,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(loggingConfig, logging.ControllerLogKey)
+	logger, _ := logging.NewLoggerFromConfig(loggingConfig, logging.ControllerLogKey)
 	defer logger.Sync()
 
 	logger.Info("Starting the Experimental Controller (gasp)")
@@ -87,33 +86,32 @@ func main() {
 		logger.Fatalf("Error building shared clientset: %v", err)
 	}
 
-	pipelineClient, err := clientset.NewForConfig(cfg)
+	pipelineClient, err := pipelineclientset.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatalf("Error building experimental clientset: %v", err)
 	}
 
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.GetNamespace())
+	experimentClient, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		logger.Fatalf("Error building experimental clientset: %v", err)
+	}
 
 	opt := reconciler.Options{
-		KubeClientSet:     kubeClient,
-		SharedClientSet:   sharedClient,
-		PipelineClientSet: pipelineClient,
-		ConfigMapWatcher:  configMapWatcher,
-		ResyncPeriod:      resyncPeriod,
-		Logger:            logger,
+		KubeClientSet:       kubeClient,
+		SharedClientSet:     sharedClient,
+		ExperimentClientSet: experimentClient,
+		PipelineClientSet:   pipelineClient,
+		ResyncPeriod:        resyncPeriod,
+		Logger:              logger,
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, opt.ResyncPeriod)
+	experimentalInformerFactory := experimentalinformers.NewSharedInformerFactory(experimentClient, opt.ResyncPeriod)
 	pipelineInformerFactory := pipelineinformers.NewSharedInformerFactory(pipelineClient, opt.ResyncPeriod)
 
-	resourceInformer := pipelineInformerFactory.Tekton().V1alpha1().PipelineResources()
-	podInformer := kubeInformerFactory.Core().V1().Pods()
-	tektonListenerInformer := pipelineInformerFactory.Tekton().V1alpha1().TektonListeners()
-	eventbindingInformer := pipelineInformerFactory.Tekton().V1alpha1().EventBindings()
-
+	eventbindingInformer := experimentalInformerFactory.Pipelineexperimental().V1alpha1().EventBindings()
+	tektonListenerInformer := experimentalInformerFactory.Pipelineexperimental().V1alpha1().TektonListeners()
 	pipelineInformer := pipelineInformerFactory.Tekton().V1alpha1().Pipelines()
-	pipelineRunInformer := pipelineInformerFactory.Tekton().V1alpha1().PipelineRuns()
-	timeoutHandler := reconciler.NewTimeoutHandler(kubeClient, pipelineClient, stopCh, logger)
 
 	lrc := tektonlistener.NewController(
 		kubeClient,
@@ -133,18 +131,10 @@ func main() {
 		lrc,
 		ebc,
 	}
-	timeoutHandler.SetTaskRunCallbackFunc(trc.Enqueue)
-	timeoutHandler.SetPipelineRunCallbackFunc(prc.Enqueue)
-	timeoutHandler.CheckTimeouts()
-
-	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher.Watch(logging.ConfigName, logging.UpdateLevelFromConfigMap(logger, atomicLevel, logging.ControllerLogKey))
 
 	kubeInformerFactory.Start(stopCh)
 	pipelineInformerFactory.Start(stopCh)
-	if err := configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("failed to start configuration manager: %v", err)
-	}
+	experimentalInformerFactory.Start(stopCh)
 
 	// Wait for the caches to be synced before starting controllers.
 	logger.Info("Waiting for informer caches to sync")
