@@ -60,6 +60,7 @@ type TektonListener struct {
 type TektonListenerSpecStatus string
 
 // TektonListenerStatus defines the observed state of TektonListenerStatus
+// +k8s:deepcopy-gen=true
 type TektonListenerStatus struct {
 	duckv1alpha1.Status `json:",inline"`
 	// namespace of the listener
@@ -79,6 +80,7 @@ type TektonListenerStatus struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // TektonListenerList contains a list of TektonListeners
+// +k8s:deepcopy-gen=true
 type TektonListenerList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

@@ -70,6 +70,7 @@ type EventBinding struct {
 type EventBindingSpecStatus string
 
 // EventBindingStatus defines the observed state of the EventBinding
+// +k8s:deepcopy-gen=true
 type EventBindingStatus struct {
 	duckv1alpha1.Status `json:",inline"`
 	// namespace of the listener
@@ -84,6 +85,7 @@ type EventBindingStatus struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // EventBindingList contains a list of EventBindings
+// +k8s:deepcopy-gen=true
 type EventBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
