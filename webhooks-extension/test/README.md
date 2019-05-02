@@ -17,6 +17,7 @@ You must install these tools:
 - ko: For development. ko version v0.1 or higher is required for pipeline to work correctly.
 - kubectl: For interacting with your kube cluster
 - helm: Templating is used to install Istio according to [Knative docs](https://knative.dev/docs/install/installing-istio/)
+- npm: For building the user interface
 
 
 ## Dependency Versioning

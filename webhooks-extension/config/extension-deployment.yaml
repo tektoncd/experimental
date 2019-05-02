@@ -37,3 +37,5 @@ spec:
                 fieldPath: metadata.namespace
           - name: DOCKER_REGISTRY_LOCATION
             value: DOCKER_REPO
+          - name: WEB_RESOURCES_DIR
+            value: web
