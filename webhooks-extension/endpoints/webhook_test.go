@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,12 +138,19 @@ func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
 		t.Errorf("Incorrect length of result, expected %d, but was %d", len(expectedWebhooks), len(actualWebhooks))
 		return
 	}
-	for i := 0; i < len(expectedWebhooks); i++ {
+
+	// Now compare the arrays expectedWebhooks and actualWebhooks by turning them into maps
+	expected := map[webhook]bool{}
+	actual := map[webhook]bool{}
+	for i := range expectedWebhooks {
 		if expectedWebhooks[i].DockerRegistry == "" {
 			expectedWebhooks[i].DockerRegistry = default_registry
 		}
-		if expectedWebhooks[i] != actualWebhooks[i] {
-			t.Errorf("Incorrect webhook %d, expected %+v but was %+v", i, expectedWebhooks[i], actualWebhooks[i])
-		}
+		expected[expectedWebhooks[i]] = true
+		actual[actualWebhooks[i]] = true
+	}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Webhook error: expected: \n%v \nbut received \n%v", expected, actual)
 	}
 }
