@@ -16,6 +16,8 @@ package endpoints
 import (
 	"bytes"
 	"encoding/json"
+	restful "github.com/emicklei/go-restful"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
@@ -34,34 +36,34 @@ func TestGitHubSource(t *testing.T) {
 	runNs := "test"
 	sources := []webhook{
 		{
-			Name:                 "name1",
-			Namespace:            runNs,
-			GitRepositoryURL:     "https://github.com/owner/repo.git",
-			AccessTokenRef:       "token1",
-			Pipeline:             "pipeline1",
-			DockerRegistry:       "registry1",
-			HelmSecret:           "helmsecret1",
-			RepositorySecretName: "secretName1",
+			Name:             "name1",
+			Namespace:        runNs,
+			GitRepositoryURL: "https://github.com/owner/repo.git",
+			AccessTokenRef:   "token1",
+			Pipeline:         "pipeline1",
+			DockerRegistry:   "registry1",
+			HelmSecret:       "helmsecret1",
+			ReleaseName:      "releasename1",
 		},
 		{
-			Name:                 "name2",
-			Namespace:            runNs,
-			GitRepositoryURL:     "https://github.company.com/owner2/repo2",
-			AccessTokenRef:       "token2",
-			Pipeline:             "pipeline2",
-			DockerRegistry:       "registry2",
-			HelmSecret:           "helmsecret2",
-			RepositorySecretName: "secretName2",
+			Name:             "name2",
+			Namespace:        runNs,
+			GitRepositoryURL: "https://github.company.com/owner2/repo2",
+			AccessTokenRef:   "token2",
+			Pipeline:         "pipeline2",
+			DockerRegistry:   "registry2",
+			HelmSecret:       "helmsecret2",
+			ReleaseName:      "releasename2",
 		},
 		{
-			Name:                 "name3",
-			Namespace:            runNs,
-			GitRepositoryURL:     "https://github.company.com/owner3/repo3",
-			AccessTokenRef:       "token3",
-			Pipeline:             "pipeline3",
-			DockerRegistry:       "",
-			HelmSecret:           "helmsecret3",
-			RepositorySecretName: "secretName3",
+			Name:             "name3",
+			Namespace:        runNs,
+			GitRepositoryURL: "https://github.company.com/owner3/repo3",
+			AccessTokenRef:   "token3",
+			Pipeline:         "pipeline3",
+			DockerRegistry:   "",
+			HelmSecret:       "helmsecret3",
+			ReleaseName:      "releasename3",
 		},
 	}
 
@@ -95,14 +97,14 @@ func TestGitHubSource(t *testing.T) {
 
 }
 
-func createWebhook(webhook webhook, r *Resource) {
-	// Create the first entry
+func createWebhook(webhook webhook, r *Resource) (response *restful.Response) {
 	b, _ := json.Marshal(webhook)
 	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8080/webhooks-extension/webhook/", bytes.NewBuffer(b))
 	req := dummyRestfulRequest(httpReq, "", "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.createWebhook(req, resp)
+	return resp
 }
 
 // Check a webhook's github source against k8s
@@ -152,5 +154,26 @@ func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
 
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("Webhook error: expected: \n%v \nbut received \n%v", expected, actual)
+	}
+}
+
+func testGithubSourceReleaseNameTooLong(r *Resource, t *testing.T) {
+	runNs := "test"
+
+	data := webhook{
+		Name:             "name1",
+		Namespace:        runNs,
+		GitRepositoryURL: "https://github.com/owner/repo.git",
+		AccessTokenRef:   "token1",
+		Pipeline:         "pipeline1",
+		HelmSecret:       "helmsecret1",
+		ReleaseName:      "1234567891234567891234567891234567891234567891234567891234567890", // 0 brings us to 64 char
+	}
+
+	// Create the first entry
+	resp := createWebhook(data, r)
+
+	if resp.StatusCode() != http.StatusBadRequest {
+		t.Error("Expected a bad request when the release name exceeded 63 chars")
 	}
 }

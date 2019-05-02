@@ -21,6 +21,12 @@ To initiate this installation, run `development_install.sh`.
 
 _Note: Your git provider must be able to reach the address of this extension's sink. The sink is deployed with a Knative service, so you may need to configure Knative serving. We recommend [setting up a custom domain](https://knative.dev/v0.3-docs/serving/using-a-custom-domain/) with the extension `.nip.io`._
 
+## Running tests
+
+```bash
+docker build -f cmd/extension/Dockerfile_test .
+```
+
 ## API Definitions
 
 - [Extension API definitions](cmd/extension/README.md)
@@ -57,7 +63,12 @@ Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/e
 - All knative event sources are created in the namespace into which the dashboard and this extension are installed.
 - Currently the docker registry to which built images are pushed is hard coded from the registry you specified at install time, there is work underway to change this restriction.
 - Only one webhook can be created for each git repository, so each repository will only be able to trigger a PipelineRun from one webhook.
-- Only the [simple-pipeline](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/pipeline.yaml) Pipeline definition is currently supported.
+
+- Three pipeline definitions are currently supported.
+
+  - [simple-pipeline](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/pipeline.yaml)
+  - [simple-helm-pipeline](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/helm-pipeline.yaml) (requires a secret to talk to a secure Tiller)
+  - [simple-helm-pipeline-insecure](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/helm-insecure-pipeline.yaml.yaml)
 
 ## Architecture information
 

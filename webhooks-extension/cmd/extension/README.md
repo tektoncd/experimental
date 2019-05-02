@@ -45,3 +45,9 @@ Example POST
 ```
 
 These endpoints can be accessed through the dashboard.
+
+If using Helm, you can also specify a Helm release name. If no Helm release name is provided, your Helm release name will default to be the repository name.
+
+Specify a Helm release name by providing `releasename` in the POST request.
+
+The release name __must be less than 64 characters in length__: if your repository name does not meet this requirement you must specify a `releasename` that is less than 64 characters.
