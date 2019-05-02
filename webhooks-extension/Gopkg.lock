@@ -209,6 +209,14 @@
   version = "v2.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:d421d847bed133d9f4635bbf19905db4560be4fc54fcb7631e58903ced9a5108"
+  name = "github.com/tektoncd/experimental"
+  packages = ["webhooks-extension/endpoints"]
+  pruneopts = "UT"
+  revision = "5b243ba3980c738ec4fc4fa633d84c485ed3c822"
+
+[[projects]]
   digest = "1:1aec373958064996926528aa0f992914d4e9612c3dc478b60c92dab906a55238"
   name = "github.com/tektoncd/pipeline"
   packages = [
@@ -562,6 +570,7 @@
     "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned/fake",
+    "github.com/tektoncd/experimental/webhooks-extension/endpoints",
     "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake",

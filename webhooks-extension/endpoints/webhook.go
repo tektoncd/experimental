@@ -38,12 +38,23 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 
 	webhook := webhook{}
 	if err := request.ReadEntity(&webhook); err != nil {
-		log.Printf("Error trying to read request entity as webhook: %s.", err)
+		log.Printf("error trying to read request entity as webhook: %s.", err)
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
 
+	if webhook.ReleaseName != "" {
+		if len(webhook.ReleaseName) > 63 {
+			tooLongMessage := fmt.Sprintf("requested release name (%s) must be less than 64 characters", webhook.ReleaseName)
+			err := errors.New(tooLongMessage)
+			log.Printf("error: %s", err.Error())
+			RespondError(response, err, http.StatusBadRequest)
+			return
+		}
+	}
+
 	dockerRegDefault := os.Getenv("DOCKER_REGISTRY_LOCATION")
+
 	if webhook.DockerRegistry == "" && dockerRegDefault != "" {
 		webhook.DockerRegistry = dockerRegDefault
 	}
@@ -51,20 +62,22 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	namespace := webhook.Namespace
 	if namespace == "" {
 		err := errors.New("namespace is required, but none was given")
-		log.Printf("Error: %s.", err.Error())
+		log.Printf("error: %s.", err.Error())
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
 	log.Printf("Creating webhook: %v.", webhook)
 	pieces := strings.Split(webhook.GitRepositoryURL, "/")
 	if len(pieces) < 4 {
-		log.Printf("Error creating webhook: GitRepositoryURL format error (%+v).", webhook.GitRepositoryURL)
+		log.Printf("error creating webhook: GitRepositoryURL format error (%+v).", webhook.GitRepositoryURL)
 		RespondError(response, errors.New("GitRepositoryURL format error"), http.StatusBadRequest)
 		return
 	}
 	apiURL := strings.TrimSuffix(webhook.GitRepositoryURL, pieces[len(pieces)-2]+"/"+pieces[len(pieces)-1]) + "api/v3/"
 	ownerRepo := pieces[len(pieces)-2] + "/" + strings.TrimSuffix(pieces[len(pieces)-1], ".git")
-	log.Printf("Create GitHub source with apiURL: %s and Owner-repo: %s.", apiURL, ownerRepo)
+
+	log.Printf("Creating GitHub source with apiURL: %s and Owner-repo: %s.", apiURL, ownerRepo)
+
 	entry := eventapi.GitHubSource{
 		ObjectMeta: metav1.ObjectMeta{Name: webhook.Name},
 		Spec: eventapi.GitHubSourceSpec{
@@ -109,7 +122,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	}
 	webhooks, err := r.readGitHubWebhooks(installNs)
 	if err != nil {
-		log.Printf("Error getting GitHub webhooks: %s.", err.Error())
+		log.Printf("error getting GitHub webhooks: %s.", err.Error())
 		RespondError(response, err, http.StatusInternalServerError)
 		return
 	}
@@ -128,7 +141,7 @@ func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Res
 	log.Printf("Get all webhooks in namespace: %s.", installNs)
 	sources, err := r.readGitHubWebhooks(installNs)
 	if err != nil {
-		log.Printf("Error trying to get webhooks: %s.", err.Error())
+		log.Printf("error trying to get webhooks: %s.", err.Error())
 		RespondError(response, err, http.StatusInternalServerError)
 		return
 	}
@@ -169,7 +182,7 @@ func (r Resource) readGitHubWebhooks(namespace string) (map[string]webhook, erro
 	if ok {
 		err = json.Unmarshal(raw, &result)
 		if err != nil {
-			log.Printf("Error unmarshalling in readGitHubSource: %s", err.Error())
+			log.Printf("error unmarshalling in readGitHubSource: %s", err.Error())
 			return map[string]webhook{}, err
 		}
 	} else {
@@ -196,20 +209,20 @@ func (r Resource) writeGitHubWebhooks(namespace string, sources map[string]webho
 	}
 	buf, err := json.Marshal(sources)
 	if err != nil {
-		log.Printf("Error marshalling GitHub webhooks: %s.", err.Error())
+		log.Printf("error marshalling GitHub webhooks: %s.", err.Error())
 		return err
 	}
 	configMap.BinaryData["GitHubSource"] = buf
 	if create {
 		_, err = configMapClient.Create(configMap)
 		if err != nil {
-			log.Printf("Error creating configmap for GitHub webhooks: %s.", err.Error())
+			log.Printf("error creating configmap for GitHub webhooks: %s.", err.Error())
 			return err
 		}
 	} else {
 		_, err = configMapClient.Update(configMap)
 		if err != nil {
-			log.Printf("Error updating configmap for GitHub webhooks: %s.", err.Error())
+			log.Printf("error updating configmap for GitHub webhooks: %s.", err.Error())
 		}
 	}
 	return nil

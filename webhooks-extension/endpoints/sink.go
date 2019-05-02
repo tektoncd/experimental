@@ -134,6 +134,8 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	pipelineTemplateName := webhook.Pipeline
 	pipelineNs := webhook.Namespace
 	saName := webhook.ServiceAccount
+	requestedReleaseName := webhook.ReleaseName
+
 	if saName == "" {
 		saName = "default"
 	}
@@ -186,7 +188,17 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 
 	imageTag := buildInformation.SHORTID
 	imageName := fmt.Sprintf("%s/%s", dockerRegistry, strings.ToLower(buildInformation.REPONAME))
-	releaseName := fmt.Sprintf("%s-%s", strings.ToLower(buildInformation.REPONAME), buildInformation.SHORTID)
+
+	releaseName := ""
+
+	if requestedReleaseName != "" {
+		log.Printf("Release name based on input: %s", requestedReleaseName)
+		releaseName = requestedReleaseName
+	} else {
+		releaseName = fmt.Sprintf("%s", strings.ToLower(buildInformation.REPONAME))
+		log.Printf("Release name based on repository name: %s", releaseName)
+	}
+
 	repositoryName := strings.ToLower(buildInformation.REPONAME)
 	params := []v1alpha1.Param{{Name: "image-tag", Value: imageTag},
 		{Name: "image-name", Value: imageName},
@@ -194,9 +206,6 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 		{Name: "repository-name", Value: repositoryName},
 		{Name: "target-namespace", Value: pipelineNs}}
 
-	if dockerRegistry != "" {
-		params = append(params, v1alpha1.Param{Name: "docker-registry", Value: dockerRegistry})
-	}
 	if helmSecret != "" {
 		params = append(params, v1alpha1.Param{Name: "helm-secret", Value: helmSecret})
 	}
