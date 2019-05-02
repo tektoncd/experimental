@@ -11,7 +11,8 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/joeshaw/envdecode"
-	experimentalv1alpha1 "github.com/tektoncd/experimental/tekton-listener/pkg/apis/pipelineexperimental/v1alpha1"
+	//experimentalv1alpha1 "github.com/tektoncd/experimental/tekton-listener/pkg/apis/pipelineexperimental/v1alpha1"
+	//experimentalClient "github.com/tektoncd/experimental/tekton-listener/pkg/client/clientset"
 	experimentalClientset "github.com/tektoncd/experimental/tekton-listener/pkg/client/clientset/versioned"
 
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -43,16 +44,17 @@ type Config struct {
 
 // EventListener starts an event receiver to accept data to trigger pipelineruns.
 type EventListener struct {
-	event          string
-	eventType      string
-	namespace      string
-	runName        string
-	serviceAccount string
-	clientset      clientset.Interface
-	mux            *sync.Mutex
-	runSpec        pipelinev1alpha1.PipelineRunSpec
-	port           int
-	setBuildSha    bool
+	event               string
+	eventType           string
+	namespace           string
+	runName             string
+	serviceAccount      string
+	pipelineClientset   pipelineClientset.Interface
+	experimentClientset experimentalClientset.Interface
+	mux                 *sync.Mutex
+	runSpec             pipelinev1alpha1.PipelineRunSpec
+	port                int
+	setBuildSha         bool
 }
 
 func main() {
@@ -74,27 +76,32 @@ func main() {
 		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
-	pipelineClient, err := pipelinev1alpha1.NewForConfig(clientcfg)
+	pipelineClient, err := pipelineClientset.NewForConfig(clientcfg)
 	if err != nil {
 		logger.Fatalf("Error building pipeline clientset: %v", err)
 	}
+	experimentClient, err := experimentalClientset.NewForConfig(clientcfg)
+	if err != nil {
+		logger.Fatalf("Error building experimental tekton clientset: %v", err)
+	}
 
-	listener, err := pipelineClient.Tekton().TektonListeners(cfg.Namespace).Get(cfg.ListenerResource, metav1.GetOptions{})
+	listener, err := experimentClient.PipelineexperimentalV1alpha1().TektonListeners(cfg.Namespace).Get(cfg.ListenerResource, metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("failed to get pipeline listener spec: %q", err)
 	}
 	listenerName := fmt.Sprintf("%s-%d", listener.Name, cfg.Port)
 	e := &EventListener{
-		event:          cfg.Event,
-		eventType:      cfg.EventType,
-		port:           cfg.Port,
-		namespace:      cfg.Namespace,
-		mux:            &sync.Mutex{},
-		clientset:      pipelineClient,
-		runName:        listenerName,
-		runSpec:        *listener.Spec.PipelineRunSpec,
-		setBuildSha:    cfg.SetBuildSha,
-		serviceAccount: cfg.ServiceAccount,
+		event:               cfg.Event,
+		eventType:           cfg.EventType,
+		port:                cfg.Port,
+		namespace:           cfg.Namespace,
+		mux:                 &sync.Mutex{},
+		pipelineClientset:   pipelineClient,
+		experimentClientset: experimentClient,
+		runName:             listenerName,
+		runSpec:             *listener.Spec.PipelineRunSpec,
+		setBuildSha:         cfg.SetBuildSha,
+		serviceAccount:      cfg.ServiceAccount,
 	}
 
 	switch e.event {
@@ -195,7 +202,7 @@ func (e *EventListener) createPipelineRun(sha string) (*pipelinev1alpha1.Pipelin
 
 	log.Printf("Creating pipelinerun %q sha %q namespace %q", pr.Name, sha, pr.Namespace)
 
-	run, err := e.clientset.Tekton().PipelineRuns(e.namespace).Create(pr)
+	run, err := e.pipelineClientset.Tekton().PipelineRuns(e.namespace).Create(pr)
 	if err != nil {
 		log.Fatalf("failed to get pipeline listener spec: %q", err)
 	}

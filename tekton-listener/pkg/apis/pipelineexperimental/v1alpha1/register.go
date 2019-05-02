@@ -39,7 +39,9 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(
 		SchemeGroupVersion,
 		&EventBinding{},
+		&EventBindingList{},
 		&TektonListener{},
+		&TektonListenerList{},
 	)
 
 	scheme.AddKnownTypes(
