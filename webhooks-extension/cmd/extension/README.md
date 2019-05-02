@@ -22,6 +22,17 @@ Example payload response
 ]
 ```
 
+```
+GET /webhooks/defaults
+Get default values, currently install namespace and docker registry
+Returns HTTP code 200
+
+Example payload response
+{
+ "namespace": "default",
+ "dockerregistry": "mydockerhubregistry"
+}
+```
 
 ### POST endpoints
 

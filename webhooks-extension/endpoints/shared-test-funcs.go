@@ -61,11 +61,30 @@ func dummyRestfulRequest(httpReq *http.Request, namespace string, name string) *
 	return restfulReq
 }
 
+func dummyDefaults() EnvDefaults {
+	initialValues := EnvDefaults{
+		Namespace:      "default",
+		DockerRegistry: "",
+	}
+	return initialValues
+}
+
+func updateResourceDefaults(r *Resource, newDefaults EnvDefaults) *Resource {
+	newResource := Resource{
+		K8sClient:      r.K8sClient,
+		TektonClient:   r.TektonClient,
+		EventSrcClient: r.EventSrcClient,
+		Defaults:       newDefaults,
+	}
+	return &newResource
+}
+
 func dummyResource() *Resource {
 	resource := Resource{
 		K8sClient:      dummyK8sClientset(),
 		TektonClient:   dummyClientset(),
 		EventSrcClient: dummyEventSrcClient(),
+		Defaults:       dummyDefaults(),
 	}
 	return &resource
 }
