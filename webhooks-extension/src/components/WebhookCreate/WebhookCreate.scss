@@ -1,0 +1,184 @@
+.webhook-create {
+  .bx--inline-notification {
+    width: 100%;
+    max-width: 100%;
+    min-width: 100%;
+  }
+}
+
+.create-container {
+  padding-top: 3rem;
+  background-color: white;
+  
+  .title {
+    font-size: 150%;
+    text-align: center;
+    padding-bottom: 3rem;
+  }
+
+  .row {  
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 1% 0% 1% 15%;
+  }
+
+  .item-label {
+    width: 15%;
+    background-color: white;
+    text-align: left;
+  }
+  
+  .help-icon {
+    padding-right: 1%;
+    width: 4%;
+  }
+  
+  .entry-field {
+    background-color: white;
+    width: 60%;
+  }
+  
+  .git-access-drop-down-div {
+    background-color: white;
+    width: 50%;
+  }
+  
+  .secButtonEnabled {
+    cursor: pointer;
+  }
+  
+  .secButtonDisabled {
+    cursor: unset;
+    fill: #dcdcdc;
+    pointer-events: none;
+  }
+  
+  #pipeline, #namespace, #git, #serviceAccounts {
+    margin: 0;
+  }
+
+  %secret-controls-shared {
+    width: 5%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+    
+  .add-sec-btn {
+    @extend %secret-controls-shared;
+    fill: green;
+   }
+
+  .del-sec-btn {
+    @extend %secret-controls-shared;
+    fill: red;
+  }
+  
+  .token {
+    align-items: center;
+    display: flex;
+  }
+  
+  %token-icon-shared {
+    right: 2.25rem;
+    position: fixed;
+    cursor: pointer;
+  }
+
+  .token-visible {
+    @extend %token-icon-shared;
+    visibility: visible;
+  }
+  
+  .token-invisible {
+    @extend %token-icon-shared;
+    visibility: hidden;
+  }
+  
+  %cancel-submit-shared {
+    font-weight: bold;
+    float: left;
+    padding-left: 15%;
+    padding-right: 15%;
+  }
+
+  #cancel {
+    @extend %cancel-submit-shared;
+    background-color: red; 
+  }
+  
+  #submit {
+    @extend %cancel-submit-shared;
+    background-color: green; 
+  }
+  
+  #del #add {
+    padding: 0;
+  }
+  
+  .bx--text-input__field-wrapper {
+    width: 100%;
+  }
+  
+  .bx--modal-content {
+    width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .bx--modal.is-visible {
+    background-color: rgba(255,255,255,0.82);
+  }
+  
+  .bx--modal-container {
+    border: 1px solid black;
+    background-color: white;
+  }
+  
+  %primary-secondary-shared {
+    display: inline;
+    text-align: center;
+    padding: 0px;
+    font-weight: bold;
+  }
+
+  .bx--btn.bx--btn--primary {
+    @extend %primary-secondary-shared;
+    background-color: green;
+  }
+  
+  .bx--btn.bx--btn--secondary {
+    @extend %primary-secondary-shared;
+    background-color: red;
+  }
+
+  .bx--btn.bx--btn--primary.bx--btn--disabled {
+    background-color: lightgrey;
+    font-weight: bold;
+    float: right;
+    padding-left: 15%;
+    padding-right: 15%;
+    color: white;
+  }
+  
+  .modal-row {
+    display: flex;
+    align-items: center;
+    padding: 1%;
+  }
+  
+  .modal-row-help-icon {
+    width: 8%;
+  }
+  
+  .modal-row-item-label {
+    width: 30%;
+  }
+  
+  .modal-row-entry-field {
+    width: 60%;
+  }
+
+}
+

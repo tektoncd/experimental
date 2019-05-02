@@ -1,0 +1,93 @@
+.spinner-div {
+  padding-left: 40%;
+  padding-top: 15%;
+}
+
+.table-container {
+  
+  #toolbar {
+    background: transparent;
+  }
+
+  #create-btn {
+    background-color: green; 
+    font-weight: bold;
+    text-align: center;
+    margin: auto;
+    width: 100%;
+    padding: 0% 10% 0% 10%;
+    height: 100%;
+    display: inline-flex;
+  }
+
+  #delete-btn {
+    padding: 0.875rem 2.5rem 0.875rem 0.5rem;
+  }
+
+  .create-icon {
+    fill: white;
+    padding-top: 5%;
+  }
+
+  .search-bar {
+    width: 100%;
+    display: contents;
+  }
+
+  .btn-div {
+    width: 10%;
+  }
+
+  .bx--btn--ghost {
+    background-color: white; 
+  }
+
+  .bx--batch-actions--active {
+    justify-content: flex-end;
+  }
+
+  .bx--data-table-header {
+    background: #f4f7fb;
+  }
+
+  .bx--table-toolbar {
+    border-left: 2px solid #f4f7fb;
+    border-right: 3px solid #f4f7fb;
+    background: #f4f7fb;
+  }
+
+  .bx--toolbar-search-container-expandable .bx--search {
+    width: 100%;
+  }
+
+  .bx--data-table th {
+    background-color: #7190c1;
+    border: 2px solid white;
+  }
+
+  .bx--table-sort {
+    background-color: #7190c1;
+    padding: 0px;
+  }
+
+  .bx--table-sort:focus {
+    outline: transparent;
+  }
+
+  .bx--btn--primary {
+    color: #ffffff;
+    white-space: nowrap;
+  }
+
+  .bx--data-table--zebra tbody tr:nth-child(odd) td {
+    border: 0, 2px, 2px, 2px solid white;
+  }
+
+  .bx--data-table--zebra tbody tr:nth-child(even) td {
+    border: 2px solid white;
+  }
+
+  .bx--inline-notification {
+    max-width: 100%;
+  }
+}

@@ -82,6 +82,7 @@ func (r Resource) deleteCredential(request *restful.Request, response *restful.R
 		utils.RespondMessageAndLogError(response, err, errorMessage, http.StatusInternalServerError)
 		return
 	}
+	response.WriteHeader(204)
 }
 
 func (r Resource) getAllCredentials(request *restful.Request, response *restful.Response) {

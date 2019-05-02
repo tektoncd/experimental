@@ -18,7 +18,7 @@ import (
 	"os"
 
 	restful "github.com/emicklei/go-restful"
-	"github.com/tektoncd/experimental/webhooks-extension/endpoints"
+	endpoints "github.com/tektoncd/experimental/webhooks-extension/pkg/endpoints"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 )
 
@@ -31,12 +31,15 @@ func main() {
 
 	// Set up routes
 	wsContainer := restful.NewContainer()
-	// Add extension
+	wsContainer.Router(restful.CurlyRouter{})
 
-	r.RegisterEndpoints(wsContainer)
+	// Add web extension
+	r.RegisterWeb(wsContainer)
+	r.RegisterExtensionWebService(wsContainer)
+
 	// Add liveness/readiness
-	wsContainer.Add(endpoints.LivenessWebService())
-	wsContainer.Add(endpoints.ReadinessWebService())
+	r.RegisterLivenessWebService(wsContainer)
+	r.RegisterReadinessWebService(wsContainer)
 
 	// Serve
 	logging.Log.Info("Creating server and entering wait loop.")

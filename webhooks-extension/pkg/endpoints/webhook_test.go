@@ -42,7 +42,7 @@ func setUpServer() *Resource {
 	resource := dummyResource()
 	resource.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: installNs}})
 	server = httptest.NewServer(wsContainer)
-	resource.RegisterEndpoints(wsContainer)
+	resource.RegisterExtensionWebService(wsContainer)
 	return resource
 }
 

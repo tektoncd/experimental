@@ -175,6 +175,9 @@ function install_webhooks_extension() {
   fi 
   namespace=$1
   docker login
+  npm install
+  npm rebuild node-sass
+  npm run build_ko
   dep ensure -v
   timeout 60 "ko apply -f config -n $namespace"
   popd

@@ -214,7 +214,7 @@
   name = "github.com/tektoncd/dashboard"
   packages = ["pkg/logging"]
   pruneopts = "UT"
-  revision = "7e6c0036e6ed0252b33804af8bb5812a92eb2b35"
+  revision = "dbdb5c2805ee17751e30b4888fbd6791770a4b7f"
 
 [[projects]]
   digest = "1:1aec373958064996926528aa0f992914d4e9612c3dc478b60c92dab906a55238"

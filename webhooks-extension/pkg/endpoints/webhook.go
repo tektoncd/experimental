@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,28 +32,6 @@ import (
 )
 
 var modifyingConfigMapLock sync.Mutex
-
-// RegisterEndpoints registers the endpoints for a container
-// Do it this way so we can create our own test server too
-func (r Resource) RegisterEndpoints(container *restful.Container) {
-	ws := new(restful.WebService)
-	ws.
-		Path("/webhooks").
-		Consumes(restful.MIME_JSON, restful.MIME_JSON).
-		Produces(restful.MIME_JSON, restful.MIME_JSON)
-
-	ws.Route(ws.POST("/").To(r.createWebhook))
-	ws.Route(ws.GET("/").To(r.getAllWebhooks))
-	ws.Route(ws.GET("/defaults").To(r.getDefaults))
-
-	ws.Route(ws.DELETE("/{name}").To(r.deleteWebhook))
-
-	ws.Route(ws.POST("/credentials").To(r.createCredential))
-	ws.Route(ws.GET("/credentials").To(r.getAllCredentials))
-	ws.Route(ws.DELETE("/credentials/{name}").To(r.deleteCredential))
-
-	container.Add(ws)
-}
 
 // Creates a webhook for a given repository and populates (creating if doesn't yet exist) a ConfigMap storing this information
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
@@ -490,4 +469,47 @@ func RespondErrorAndMessage(response *restful.Response, err error, message strin
 	logging.Log.Errorf("Message for RespondErrorAndMesage: %s.", message)
 	response.AddHeader("Content-Type", "text/plain")
 	response.WriteErrorString(statusCode, message)
+}
+
+// RegisterExtensionWebService registers the webhook webservice
+func (r Resource) RegisterExtensionWebService(container *restful.Container) {
+	ws := new(restful.WebService)
+	ws.
+		Path("/webhooks").
+		Consumes(restful.MIME_JSON, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_JSON)
+
+	ws.Route(ws.POST("/").To(r.createWebhook))
+	ws.Route(ws.GET("/").To(r.getAllWebhooks))
+	ws.Route(ws.GET("/defaults").To(r.getDefaults))
+	ws.Route(ws.DELETE("/{name}").To(r.deleteWebhook))
+
+	ws.Route(ws.DELETE("/{name}").To(r.deleteWebhook))
+
+	ws.Route(ws.POST("/credentials").To(r.createCredential))
+	ws.Route(ws.GET("/credentials").To(r.getAllCredentials))
+	ws.Route(ws.DELETE("/credentials/{name}").To(r.deleteCredential))
+
+	container.Add(ws)
+}
+
+// RegisterWeb registers extension web bundle on the container
+func (r Resource) RegisterWeb(container *restful.Container) {
+	var handler http.Handler
+	webResourcesDir := os.Getenv("WEB_RESOURCES_DIR")
+	koDataPath := os.Getenv("KO_DATA_PATH")
+	if _, err := os.Stat(webResourcesDir); err != nil {
+		if os.IsNotExist(err) {
+			if koDataPath != "" {
+				logging.Log.Warnf("WEB_RESOURCES_DIR %s not found, serving static content from KO_DATA_PATH instead.", webResourcesDir)
+				handler = http.FileServer(http.Dir(koDataPath))
+			} else {
+				logging.Log.Errorf("WEB_RESOURCES %s not found and KO_DATA_PATH not found, static resource (UI) problems to be expected.")
+			}
+		} else {
+			logging.Log.Infof("Serving static files from WEB_RESOURCES_DIR: %s", webResourcesDir)
+			handler = http.FileServer(http.Dir(webResourcesDir))
+		}
+	}
+	container.Handle("/web/", http.StripPrefix("/web/", handler))
 }

@@ -12,6 +12,8 @@ In addition to Tekton/Knative Eventing glue, it includes an extension to the Tek
 ## Install
 Please see the [development installation guide](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/README.md#scripting)
 
+_Note: The main dashboard user interface (UI) finds registered extension UIs when the main dashboard pod starts.  If you have installed this extension after you installed the dashboard you will need to restart the dashboard pod (`kubectl delete pod -l app=tekton-dashboard`). This only needs doing until https://github.com/tektoncd/dashboard/issues/215 is completed such that the dashboard dynamically finds extensions._
+
 ## Running tests
 
 ```bash
@@ -52,8 +54,7 @@ Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/e
 
 - Only Git Hub webhooks are currently supported.
 - Only `push` and `pull_request` events are supported at the moment. The webhook is currently only created with both `push` and `pull_request` events.
-- All Knative event sources are created in the namespace into which the dashboard and this extension are installed.
-- Currently the Docker registry to which built images are pushed is hard coded from the registry you specified at install time, there is work underway to change this restriction.
+- All knative event sources are created in the namespace into which the dashboard and this extension are installed.
 - Only one webhook can be created for each git repository, so each repository will only be able to trigger a PipelineRun from one webhook.
 
 - Three pipeline definitions are currently supported.

@@ -330,10 +330,10 @@ func getDateTimeAsString() string {
 }
 
 // SinkWebService returns the liveness web service
-func SinkWebService(r Resource) *restful.WebService {
+func (r Resource) SinkWebService(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.Path("/")
 	ws.Route(ws.POST("").To(r.handleWebhook))
 
-	return ws
+	container.Add(ws)
 }

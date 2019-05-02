@@ -20,3 +20,15 @@ vendor/
 
 # install script
 install/
+
+# node_modules
+node_modules/
+
+# dist
+dist/
+
+# Output of test coverage
+coverage/
+
+# Kodata
+cmd/extension/kodata/
