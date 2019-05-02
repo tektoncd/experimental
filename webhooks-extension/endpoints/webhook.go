@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	restful "github.com/emicklei/go-restful"
@@ -31,7 +30,7 @@ import (
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
 	log.Printf("Create webhook with request: %+v.", request)
 	// Install namespace
-	installNs := os.Getenv("INSTALLED_NAMESPACE")
+	installNs := r.Defaults.Namespace
 	if installNs == "" {
 		installNs = "default"
 	}
@@ -53,8 +52,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		}
 	}
 
-	dockerRegDefault := os.Getenv("DOCKER_REGISTRY_LOCATION")
-
+	dockerRegDefault := r.Defaults.DockerRegistry
 	if webhook.DockerRegistry == "" && dockerRegDefault != "" {
 		webhook.DockerRegistry = dockerRegDefault
 	}
@@ -133,7 +131,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 
 func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Response) {
 	// Install namespace
-	installNs := os.Getenv("INSTALLED_NAMESPACE")
+	installNs := r.Defaults.Namespace
 	if installNs == "" {
 		installNs = "default"
 	}
@@ -228,6 +226,11 @@ func (r Resource) writeGitHubWebhooks(namespace string, sources map[string]webho
 	return nil
 }
 
+func (r Resource) getDefaults(request *restful.Request, response *restful.Response) {
+	log.Printf("getDefaults returning: %v", r.Defaults)
+	response.WriteEntity(r.Defaults)
+}
+
 // RespondError ...
 func RespondError(response *restful.Response, err error, statusCode int) {
 	log.Printf("Error for RespondError: %s.", err.Error())
@@ -255,12 +258,13 @@ func RespondErrorAndMessage(response *restful.Response, err error, message strin
 func ExtensionWebService(r Resource) *restful.WebService {
 	ws := new(restful.WebService)
 	ws.
-		Path("/webhooks-extension/webhooks").
+		Path("/webhooks").
 		Consumes(restful.MIME_JSON, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_JSON)
 
 	ws.Route(ws.POST("/").To(r.createWebhook))
 	ws.Route(ws.GET("/").To(r.getAllWebhooks))
+	ws.Route(ws.GET("/defaults").To(r.getDefaults))
 
 	return ws
 }

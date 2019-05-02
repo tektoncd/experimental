@@ -19,7 +19,6 @@ import (
 	restful "github.com/emicklei/go-restful"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"testing"
 
@@ -67,12 +66,16 @@ func TestGitHubSource(t *testing.T) {
 		},
 	}
 
+	testDockerRegUnset(r, t)
+
 	// Set default docker registry for sources that specify no registry value
-	err := os.Setenv("DOCKER_REGISTRY_LOCATION", default_registry)
-	if err != nil {
-		t.Errorf("Error occured setting the DOCKER_REGISTRY_LOCATION environment variable, error was: %s", err.Error())
-		t.FailNow()
+	newDefaults := EnvDefaults{
+		Namespace:      installNs,
+		DockerRegistry: default_registry,
 	}
+	r = updateResourceDefaults(r, newDefaults)
+
+	testDockerRegSet(r, t)
 
 	// Create the first entry
 	createWebhook(sources[0], r)
@@ -97,9 +100,43 @@ func TestGitHubSource(t *testing.T) {
 
 }
 
+func testDockerRegUnset(r *Resource, t *testing.T) {
+	// Get the docker registry using the endpoint, expect ""
+	defaults := getEnvDefaults(r, t)
+	reg := defaults.DockerRegistry
+	if reg != "" {
+		t.Errorf("Incorrect defaultDockerRegistry, expected \"\" but was: %s", reg)
+	}
+}
+
+func testDockerRegSet(r *Resource, t *testing.T) {
+	// Get the docker registry using the endpoint, expect "default.docker.reg:8500/foo"
+	defaults := getEnvDefaults(r, t)
+	reg := defaults.DockerRegistry
+	if reg != "default.docker.reg:8500/foo" {
+		t.Errorf("Incorrect defaultDockerRegistry, expected default.docker.reg:8500/foo, but was: %s", reg)
+	}
+}
+
+func getEnvDefaults(r *Resource, t *testing.T) EnvDefaults {
+	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhook/defaults", nil)
+	req := dummyRestfulRequest(httpReq, "", "")
+	httpWriter := httptest.NewRecorder()
+	resp := dummyRestfulResponse(httpWriter)
+	r.getDefaults(req, resp)
+
+	defaults := EnvDefaults{}
+	err := json.NewDecoder(httpWriter.Body).Decode(&defaults)
+	if err != nil {
+		t.Errorf("Error decoding result into defaults{}: %s", err.Error())
+	}
+	return defaults
+}
+
 func createWebhook(webhook webhook, r *Resource) (response *restful.Response) {
+	// Create the first entry
 	b, _ := json.Marshal(webhook)
-	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8080/webhooks-extension/webhook/", bytes.NewBuffer(b))
+	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8080/webhook/", bytes.NewBuffer(b))
 	req := dummyRestfulRequest(httpReq, "", "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
@@ -125,7 +162,7 @@ func testGitHubSource(expectedName string, expectedOwnerAndRepo string, expected
 
 // Check the webhooks against the GET all webhooks
 func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
-	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhooks-extension/webhook/", nil)
+	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhook/", nil)
 	req := dummyRestfulRequest(httpReq, "", "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)

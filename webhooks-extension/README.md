@@ -43,15 +43,16 @@ data='{
   "namespace": "green",
   "gitrepositoryurl": "https://github.com/ncskier/go-hello-world",
   "accesstoken": "github-secret",
-  "pipeline": "simple-pipeline"
+  "pipeline": "simple-pipeline",
+  "dockerregistry": "mydockerregistry"
 }'
-curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:8080/webhooks-extension/webhooks
+curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:8080/webhooks
 ```
 
 When curling through the dashboard, use the same endpoints; for example, assuming the dashboard is at `localhost:9097`:
 
 ```bash
-curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:9097/webhooks-extension/webhooks
+curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:9097/webhooks
 ```
 
 Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/eventing/samples/github-source/) to properly create the `accesstoken` secret. This is the secret that is used to create GitHub webhooks.

@@ -20,6 +20,7 @@ import (
 	tektoncdclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	k8sclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"os"
 )
 
 // Resource stores all types here that are reused throughout files
@@ -27,6 +28,7 @@ type Resource struct {
 	EventSrcClient eventsrcclientset.Interface
 	TektonClient   tektoncdclientset.Interface
 	K8sClient      k8sclientset.Interface
+	Defaults       EnvDefaults
 }
 
 // NewResource returns a new Resource instantiated with its clientsets
@@ -59,10 +61,16 @@ func NewResource() (Resource, error) {
 		return Resource{}, err
 	}
 
+	defaults := EnvDefaults{
+		Namespace:      os.Getenv("INSTALLED_NAMESPACE"),
+		DockerRegistry: os.Getenv("DOCKER_REGISTRY_LOCATION"),
+	}
+
 	r := Resource{
 		K8sClient:      k8sClient,
 		TektonClient:   tektonClient,
 		EventSrcClient: eventSrcClient,
+		Defaults:       defaults,
 	}
 	return r, nil
 }
@@ -82,3 +90,9 @@ type webhook struct {
 
 // ConfigMapName ... the name of the ConfigMap to create
 const ConfigMapName = "githubwebhook"
+
+//
+type EnvDefaults struct {
+	Namespace      string `json:"namespace"`
+	DockerRegistry string `json:"dockerregistry"`
+}
