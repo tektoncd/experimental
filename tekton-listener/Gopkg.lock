@@ -35,35 +35,7 @@
   revision = "21591786a5e0c21806209b266cc6dfdfa85b3cdb"
 
 [[projects]]
-  digest = "1:904c3688aef33a2bf066cf92b2ba44131fed71c894f79c7076ffe2c6ad1ec4ea"
-  name = "github.com/Azure/azure-sdk-for-go"
-  packages = [
-    "services/containerregistry/mgmt/2017-10-01/containerregistry",
-    "version",
-  ]
-  pruneopts = "NUT"
-  revision = "32916f57ad7b421f5fdaab86b73a795632fff117"
-  version = "v21.4.0"
-
-[[projects]]
-  digest = "1:90df11ad9349a69d46e08211d47eb8db80311bf985a447dd88cb30d5b5f54add"
-  name = "github.com/Azure/go-autorest"
-  packages = [
-    "autorest",
-    "autorest/adal",
-    "autorest/azure",
-    "autorest/date",
-    "autorest/to",
-    "autorest/validation",
-    "logger",
-    "version",
-  ]
-  pruneopts = "NUT"
-  revision = "1ffcc8896ef6dfe022d90a4317d866f925cf0f9e"
-  version = "v11.1.2"
-
-[[projects]]
-  digest = "1:0ba998576c4a15b56824598853086d99543941ca06d9125aad4f7d3d98cd695c"
+  digest = "1:01d8381730ae8de81e1f976cad614cb35a3dc0fbae1a207e28bade75f3f5e630"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -90,13 +62,10 @@
     "internal/sdkuri",
     "internal/shareddefaults",
     "private/protocol",
-    "private/protocol/json/jsonutil",
-    "private/protocol/jsonrpc",
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
     "private/protocol/xml/xmlutil",
-    "service/ecr",
     "service/sts",
   ]
   pruneopts = "NUT"
@@ -150,14 +119,6 @@
   pruneopts = "NUT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
-
-[[projects]]
-  digest = "1:7a6852b35eb5bbc184561443762d225116ae630c26a7c4d90546619f1e7d2ad2"
-  name = "github.com/dgrijalva/jwt-go"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
-  version = "v3.2.0"
 
 [[projects]]
   digest = "1:db115eee0ae265dab922fecbb7966c3fcdc4eae3c2e9caae302fdcba3ba422c7"
@@ -250,24 +211,6 @@
   ]
   pruneopts = "NUT"
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
-
-[[projects]]
-  digest = "1:b70151e9d07b7606ff7f2250e58b6d24e33519e0c27a5aa2d8a912af91021810"
-  name = "github.com/google/go-containerregistry"
-  packages = [
-    "pkg/authn",
-    "pkg/authn/k8schain",
-    "pkg/name",
-    "pkg/v1",
-    "pkg/v1/partial",
-    "pkg/v1/remote",
-    "pkg/v1/remote/transport",
-    "pkg/v1/stream",
-    "pkg/v1/types",
-    "pkg/v1/v1util",
-  ]
-  pruneopts = "NUT"
-  revision = "8d4083db9aa0d2fae6588c1acdbe6a1f5db461e3"
 
 [[projects]]
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
@@ -386,7 +329,7 @@
   revision = "3fc06fd3c9880a9ebb5c401f4b20cf6666cc7bc0"
 
 [[projects]]
-  digest = "1:4214cd3a47ec2f1f54bb59dc392f8236ecaaed7902f59eaf1d971b5108df748d"
+  digest = "1:59e34f778b23d23053868f85ea644d259666f4fe4f99e4b5a6e3b51545418902"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -412,7 +355,6 @@
     "metrics",
     "metrics/metricskey",
     "signals",
-    "tracker",
   ]
   pruneopts = "NUT"
   revision = "28cfa161499b88cc5a71cfb7cf8a59fc34bff3d3"
@@ -541,34 +483,22 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:7a43e0e7dc6280ef7e419570d0fb52be7432b5b5b629baa3ec0bd025fb5294d1"
+  digest = "1:9428b863e2618eca85e66111a009650dad241f6561ef93f4327fb6d673b213ac"
   name = "github.com/tektoncd/pipeline"
   packages = [
     "pkg/apis/pipeline",
     "pkg/apis/pipeline/v1alpha1",
-    "pkg/artifacts",
     "pkg/client/clientset/versioned",
     "pkg/client/clientset/versioned/scheme",
     "pkg/client/clientset/versioned/typed/pipeline/v1alpha1",
+    "pkg/client/informers/externalversions",
     "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/informers/externalversions/pipeline",
     "pkg/client/informers/externalversions/pipeline/v1alpha1",
     "pkg/client/listers/pipeline/v1alpha1",
-    "pkg/credentials",
-    "pkg/credentials/dockercreds",
-    "pkg/credentials/gitcreds",
     "pkg/list",
     "pkg/logging",
-    "pkg/merge",
     "pkg/names",
-    "pkg/reconciler",
-    "pkg/reconciler/v1alpha1/pipeline/dag",
-    "pkg/reconciler/v1alpha1/pipelinerun",
-    "pkg/reconciler/v1alpha1/pipelinerun/config",
-    "pkg/reconciler/v1alpha1/pipelinerun/resources",
-    "pkg/reconciler/v1alpha1/taskrun",
-    "pkg/reconciler/v1alpha1/taskrun/entrypoint",
-    "pkg/reconciler/v1alpha1/taskrun/resources",
-    "pkg/system",
     "pkg/templating",
   ]
   pruneopts = "NUT"
@@ -633,13 +563,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5e4639c1d29ee517777961d74071e3cf3aa7634521b0ceac3d2c8fc0334dbff9"
+  digest = "1:bbe51412d9915d64ffaa96b51d409e070665efc5194fcf145c4a27d4133107a4"
   name = "golang.org/x/crypto"
-  packages = [
-    "pkcs12",
-    "pkcs12/internal/rc2",
-    "ssh/terminal",
-  ]
+  packages = ["ssh/terminal"]
   pruneopts = "NUT"
   revision = "a29dc8fdc73485234dbef99ebedb95d2eced08de"
 
@@ -1173,30 +1099,6 @@
   pruneopts = "NUT"
   revision = "20ad7abe0e6ac00d0cfc72abf9a22990fb0fd8a8"
 
-[[projects]]
-  digest = "1:a1f93e247ebab037d0e87a25d5e517496305486ad6526962b4b5dc602c73e8db"
-  name = "k8s.io/kubernetes"
-  packages = [
-    "pkg/cloudprovider/providers/azure/auth",
-    "pkg/credentialprovider",
-    "pkg/credentialprovider/aws",
-    "pkg/credentialprovider/azure",
-    "pkg/credentialprovider/gcp",
-    "pkg/credentialprovider/secrets",
-    "pkg/version",
-  ]
-  pruneopts = "NUT"
-  revision = "b7394102d6ef778017f2ca4046abbaa23b88c290"
-  version = "v1.14.1"
-
-[[projects]]
-  digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
-  name = "sigs.k8s.io/yaml"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480"
-  version = "v1.1.0"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -1238,10 +1140,10 @@
     "github.com/pkg/errors",
     "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned",
+    "github.com/tektoncd/pipeline/pkg/client/informers/externalversions",
+    "github.com/tektoncd/pipeline/pkg/client/informers/externalversions/pipeline/v1alpha1",
+    "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1alpha1",
     "github.com/tektoncd/pipeline/pkg/logging",
-    "github.com/tektoncd/pipeline/pkg/reconciler/v1alpha1/pipelinerun",
-    "github.com/tektoncd/pipeline/pkg/reconciler/v1alpha1/taskrun",
-    "github.com/tektoncd/pipeline/pkg/system",
     "go.uber.org/zap",
     "golang.org/x/sync/errgroup",
     "google.golang.org/genproto/protobuf/field_mask",
