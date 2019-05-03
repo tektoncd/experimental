@@ -114,21 +114,15 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	pl = pl.DeepCopy()
 	setName := pl.Name + "-statefulset"
 
-	//eventType := base64.StdEncoding.EncodeToString([]byte(pl.Spec.EventType))
-	//event := base64.StdEncoding.EncodeToString([]byte(pl.Spec.Event))
-	//serviceAcccount := base64.StdEncoding.EncodeToString([]byte(pl.Spec.PipelineRunSpec.ServiceAccount))
-	//ns := base64.StdEncoding.EncodeToString([]byte(pl.Spec.Namespace))
-	//listenerName := base64.StdEncoding.EncodeToString([]byte(pl.Name))
-
 	containerEnv := []corev1.EnvVar{
-		//		{
-		//			Name:  "EVENT_TYPE",
-		//			Value: pl.Spec.EventType,
-		//		},
-		//		{
-		//			Name:  "EVENT",
-		//			Value: pl.Spec.Event,
-		//		},
+		{
+			Name:  "EVENT_TYPE",
+			Value: pl.Spec.EventType,
+		},
+		{
+			Name:  "EVENT",
+			Value: pl.Spec.Event,
+		},
 		{
 			Name:  "NAMESPACE",
 			Value: pl.Spec.Namespace,
@@ -141,10 +135,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			Name:  "SERVICEACCOUNT",
 			Value: pl.Spec.PipelineRunSpec.ServiceAccount,
 		},
-		//		{
-		//			Name:  "PORT",
-		//			Value: string(pl.Spec.Port),
-		//		},
 	}
 
 	c.logger.Infof("launching tekton-listener %s with type: %s namespace: %s",
