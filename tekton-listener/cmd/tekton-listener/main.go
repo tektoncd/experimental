@@ -27,7 +27,7 @@ import (
 
 const (
 	listenerPath   = "/events"
-	cloudEventType = "cloud-event"
+	cloudEventType = "cloudevent"
 )
 
 type Config struct {
@@ -38,7 +38,7 @@ type Config struct {
 	Namespace        string `env:"NAMESPACE"`
 	ServiceAccount   string `env:"SERVICEACCOUNT"`
 	ListenerResource string `env:"LISTENER_RESOURCE"`
-	Port             int    `env:"PORT"`
+	Port             int    `env:"PORT,default=8082"`
 	SetBuildSha      bool   `env:"SETBUILDSHA"`
 }
 
@@ -87,7 +87,7 @@ func main() {
 
 	listener, err := experimentClient.PipelineexperimentalV1alpha1().TektonListeners(cfg.Namespace).Get(cfg.ListenerResource, metav1.GetOptions{})
 	if err != nil {
-		log.Fatalf("failed to get pipeline listener spec: %q", err)
+		log.Fatalf("failed to get tekton listener spec: %s in namespace: %s error: %q", cfg.ListenerResource, cfg.Namespace, err)
 	}
 	listenerName := fmt.Sprintf("%s-%d", listener.Name, cfg.Port)
 	e := &EventListener{
@@ -108,7 +108,7 @@ func main() {
 	case cloudEventType:
 		e.startCloudEventListener() // handle cloud events
 	default:
-		log.Fatalf("invalid event type: %q", err)
+		log.Fatalf("invalid event type: %q", e.event)
 	}
 }
 
@@ -147,7 +147,7 @@ func (e *EventListener) HandleRequest(ctx context.Context, event cloudevents.Eve
 
 	}
 
-	log.Printf("Handling event ID: %q Type: %q", event.ID(), event.Type())
+	log.Printf("Handling event Type: %q", event.Type())
 
 	switch event.Type() {
 	case "com.github.checksuite":
@@ -167,7 +167,7 @@ func (r *EventListener) handleCheckSuite(event cloudevents.Event, cs *gh.CheckSu
 	if cs.CheckSuite.Conclusion == "success" {
 		build, err := r.createPipelineRun(cs.CheckSuite.HeadSHA)
 		if err != nil {
-			return errors.Wrapf(err, "Error creating pipeline run for check_suite event ID: %q", event.ID())
+			return errors.Wrapf(err, "Error creating pipeline run for check_suite event: %q", event.Type())
 		}
 
 		log.Printf("Created pipeline run %q!", build.Name)
