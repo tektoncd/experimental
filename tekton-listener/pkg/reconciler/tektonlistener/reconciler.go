@@ -187,8 +187,9 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			Namespace:       pl.Namespace,
 			StatefulSetName: created.Name,
 		}
-
-		return err
+		if err != nil {
+			return err
+		}
 	} else if err != nil {
 		return err
 	}
