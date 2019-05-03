@@ -2,14 +2,12 @@
 
 This experimental directory defines two new CRDs - TektonListeners and EventBindings.
 
-The `TektonListener` is a CRD which provides a listener component, which can listen for a specified CloudEvent and spawn a specific PipelineRuns as a result.
+The `TektonListener` is a CRD which provides a listener component, which can listen for CloudEvents and spawn specific PipelineRuns as a result.
 
 The `EventBinding` CRD exposes a new, high-level concept of "binding" Events with a specified Pipeline. The EventBinding takes care of creating and deleting PipeLineResources and also spawns `TektonListener`s to handle event ingress and processing.
 
 ## TektonListener
-The first new CRD, `TektonListener`, provides support for consuming CloudEvent and producing a predefined PipelineRun. It is intentionally designed to allow for other sources beyond CloudEvents.
-
-The only event-type supported is `com.github.checksuite`.
+The first new CRD, `TektonListener`, provides support for consuming CloudEvent and producing a predefined PipelineRun. Although only CloudEvents are currently supports, the listener is intentionally designed to allow for extension beyond CloudEvents.
 
 An example TektonListener:
 ```
@@ -51,10 +49,10 @@ spec:
         name: skaffold-image-leeroy-app
 ```
 
-Since the Service fullfills the [Addressable](https://github.com/knative/eventing/blob/master/docs/spec/interfaces.md#addressable) contract, the listener service can be used as a sink for [github source](https://knative.dev/docs/reference/eventing/eventing-sources-api/#GitHubSource), for example. So, once you have created the githubsource to have our new Listener as its sink, events can begin flowing and Pipelines begin running.
+Since the Service fullfills the [Addressable](https://github.com/knative/eventing/blob/master/docs/spec/interfaces.md#addressable) contract, the listener service can be used as a sink for [github source](https://knative.dev/docs/reference/eventing/eventing-sources-api/#GitHubSource), for example.
 
 ## EventBinding
-The `EventBinding` CRD allows a new, higher-level method to bind an Event with a specific PipelineRun. Individual EventBindings are scoped to a specific pipeline - and Bindings also create all their own PipelineResources (and clean them up on removal as well).
+The `EventBinding` CRD provides a new high-level means of managing all of the resources needed to all a Pipeline to be bound to a specific Event and produce PipelineRuns as a result of those events. Individual EventBindings are scoped to a specific pipeline - Bindings also create all their own PipelineResources and Listeners (and clean them up on removal as well).
 
 An example EventBinding:
 
