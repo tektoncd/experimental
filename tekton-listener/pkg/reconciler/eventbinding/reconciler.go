@@ -22,7 +22,6 @@ import (
 	"reflect"
 
 	"go.uber.org/zap"
-	//	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -117,9 +116,13 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
-	// get this bindings Pipeline from PipelineRef
+	// Get this bindings Pipeline from PipelineRef
 	c.logger.Info("retrieving associated pipeline")
-	_, err = c.pipelineLister.Pipelines(namespace).Get(binding.Spec.PipelineRef.Name) // todo: namespace???
+
+	// Caveat: The Pipeline must exist within the same namespace the EventBinding was created in.
+	// This seems like a reasonable expectation for now, but someday, someone might ask why and here it is below.
+	// If PipelineRef carried along a namespace as well (it prob should, no?), we could handle this more gracefully.
+	_, err = c.pipelineLister.Pipelines(namespace).Get(binding.Spec.PipelineRef.Name)
 	if errors.IsNotFound(err) {
 		c.logger.Errorf("eventing binding specifies pipeline %q which doesnt exist", binding.Spec.PipelineRef.Name)
 		return err
