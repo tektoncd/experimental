@@ -4,6 +4,7 @@ metadata:
   name: test-event-binding
   namespace: tekton-pipelines
 spec:
+  serviceAccount: tekton-experimental-controller
   selector:
     matchLabels:
       app: test-event-binding
@@ -17,17 +18,18 @@ spec:
     name: demo-source
   resourceTemplates:
    - name: gitTemplate
-     template:
-       metadata:
-       spec:
-         type: git
-         params:
-         - name: revision
-           valueFrom:
-             fieldName: event.repo.revision
-         - name: url
-           valueFrom:
-             fieldName: event.repo.name
+     metadata:
+       name: resource-eb-1
+       namespace: tekton-pipelines
+     spec:
+       type: git
+       params:
+       - name: revision
+         valueFrom:
+           fieldName: event.repo.revision
+       - name: url
+         valueFrom:
+           fieldName: event.repo.name
   resources:
   - templateRef:
     name: gitTemplate

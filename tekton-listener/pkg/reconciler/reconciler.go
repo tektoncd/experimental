@@ -113,13 +113,14 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 	}
 
 	base := &Base{
-		KubeClientSet:     opt.KubeClientSet,
-		SharedClientSet:   opt.SharedClientSet,
-		PipelineClientSet: opt.PipelineClientSet,
-		CachingClientSet:  opt.CachingClientSet,
-		ConfigMapWatcher:  opt.ConfigMapWatcher,
-		Recorder:          recorder,
-		Logger:            logger,
+		KubeClientSet:       opt.KubeClientSet,
+		SharedClientSet:     opt.SharedClientSet,
+		PipelineClientSet:   opt.PipelineClientSet,
+		CachingClientSet:    opt.CachingClientSet,
+		ConfigMapWatcher:    opt.ConfigMapWatcher,
+		ExperimentClientSet: opt.ExperimentClientSet,
+		Recorder:            recorder,
+		Logger:              logger,
 	}
 
 	return base
