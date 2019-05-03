@@ -5,6 +5,10 @@
 *.so
 *.dylib
 
+# dependencies
+node_modules
+vendor
+
 # Test binary, build with `go test -c`
 *.test
 
