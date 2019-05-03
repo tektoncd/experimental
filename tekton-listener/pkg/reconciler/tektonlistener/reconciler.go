@@ -21,7 +21,7 @@ import (
 	"flag"
 	"reflect"
 
-	"encoding/base64"
+	//"encoding/base64"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -114,32 +114,37 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	pl = pl.DeepCopy()
 	setName := pl.Name + "-statefulset"
 
-	eventType := base64.StdEncoding.EncodeToString([]byte(pl.Spec.EventType))
-	event := base64.StdEncoding.EncodeToString([]byte(pl.Spec.Event))
-	ns := base64.StdEncoding.EncodeToString([]byte(pl.Spec.Namespace))
-	listenerName := base64.StdEncoding.EncodeToString([]byte(pl.Name))
+	//eventType := base64.StdEncoding.EncodeToString([]byte(pl.Spec.EventType))
+	//event := base64.StdEncoding.EncodeToString([]byte(pl.Spec.Event))
+	//serviceAcccount := base64.StdEncoding.EncodeToString([]byte(pl.Spec.PipelineRunSpec.ServiceAccount))
+	//ns := base64.StdEncoding.EncodeToString([]byte(pl.Spec.Namespace))
+	//listenerName := base64.StdEncoding.EncodeToString([]byte(pl.Name))
 
 	containerEnv := []corev1.EnvVar{
-		{
-			Name:  "EVENT_TYPE",
-			Value: eventType,
-		},
-		{
-			Name:  "EVENT",
-			Value: event,
-		},
+		//		{
+		//			Name:  "EVENT_TYPE",
+		//			Value: pl.Spec.EventType,
+		//		},
+		//		{
+		//			Name:  "EVENT",
+		//			Value: pl.Spec.Event,
+		//		},
 		{
 			Name:  "NAMESPACE",
-			Value: ns,
+			Value: pl.Spec.Namespace,
 		},
 		{
 			Name:  "LISTENER_RESOURCE",
-			Value: listenerName,
+			Value: pl.Name,
 		},
 		{
-			Name:  "PORT",
-			Value: string(pl.Spec.Port),
+			Name:  "SERVICEACCOUNT",
+			Value: pl.Spec.PipelineRunSpec.ServiceAccount,
 		},
+		//		{
+		//			Name:  "PORT",
+		//			Value: string(pl.Spec.Port),
+		//		},
 	}
 
 	c.logger.Infof("launching tekton-listener %s with type: %s namespace: %s",
