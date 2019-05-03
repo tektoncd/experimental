@@ -30,15 +30,16 @@ docker build -t ${DOCKER_REPO}/extension:latest -f cmd/extension/Dockerfile . ||
 docker push ${DOCKER_REPO}/extension:latest || fail "extension docker push failed"
 
 echo "build cmd/sink ..."
-docker build -t ${DOCKER_REPO}/extension-sink:latest -f cmd/sink/Dockerfile . || fail "sink docker build failed"
-docker push ${DOCKER_REPO}/extension-sink:latest || fail "sink docker push failed"
+docker build -t ${DOCKER_REPO}/sink:latest -f cmd/sink/Dockerfile . || fail "sink docker build failed"
+docker push ${DOCKER_REPO}/sink:latest || fail "sink docker push failed"
 
 
 # Copy and replace the config/ yaml files into install/
 mkdir -p install
 cp -r config/ install/
 for file in install/*.yaml; do
-    sed -i '' 's/DOCKER_REPO/'"$DOCKER_REPO"'/g' "${file}"
+    sed -i '' 's|github.com/tektoncd/experimental/webhooks-extension/cmd/extension|'"$DOCKER_REPO"'/extension:latest|g' "${file}"
+    sed -i '' 's|github.com/tektoncd/experimental/webhooks-extension/cmd/sink|'"$DOCKER_REPO"'/sink:latest|g' "${file}"
 done
 
 

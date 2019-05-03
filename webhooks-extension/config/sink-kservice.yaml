@@ -10,7 +10,7 @@ spec:
       revisionTemplate:
         spec:
           container:
-            image: "DOCKER_REPO/extension-sink:latest"
+            image: "github.com/tektoncd/experimental/webhooks-extension/cmd/sink"
             imagePullPolicy: Always
             ports:
             - containerPort: 8080
