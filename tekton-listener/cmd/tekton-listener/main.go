@@ -11,8 +11,6 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/joeshaw/envdecode"
-	//experimentalv1alpha1 "github.com/tektoncd/experimental/tekton-listener/pkg/apis/pipelineexperimental/v1alpha1"
-	//experimentalClient "github.com/tektoncd/experimental/tekton-listener/pkg/client/clientset"
 	experimentalClientset "github.com/tektoncd/experimental/tekton-listener/pkg/client/clientset/versioned"
 
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"

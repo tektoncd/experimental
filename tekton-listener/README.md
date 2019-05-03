@@ -4,12 +4,10 @@ This experimental directory defines two new CRDs - TektonListeners and EventBind
 
 The `TektonListener` is a CRD which provides a listener component, which can listen for a specified CloudEvent and spawn a specific PipelineRuns as a result.
 
-The `EventBinding` CRD exposes a high-level way to "bind" Events with Pipelines. By specifying the event and resource details in advance, all resources can be automatically created by the binding as needed (and cleaned up) and Listeners are provisioned as needed as well, to accept and handle whatever EventBindings are specified.
+The `EventBinding` CRD exposes a new, high-level concept of "binding" Events with a specified Pipeline. The EventBinding takes care of creating and deleting PipeLineResources and also spawns `TektonListener`s to handle event ingress and processing.
 
 ## TektonListener
-The `TektonListener` is a CRD which provides a listener component, which can listen for a specified CloudEvent and spawn a specific PipelineRuns as a result.
-
-To do this, an optional CRD `TektonListener` is provided. Once defined, the listener provides support for consuming CloudEvent and producing a predefined PipelineRun. It is intentionally designed to allow for other sources beyond CloudEvents.
+The first new CRD, `TektonListener`, provides support for consuming CloudEvent and producing a predefined PipelineRun. It is intentionally designed to allow for other sources beyond CloudEvents.
 
 The only event-type supported is `com.github.checksuite`.
 
@@ -53,8 +51,10 @@ spec:
         name: skaffold-image-leeroy-app
 ```
 
+Since the Service fullfills the [Addressable](https://github.com/knative/eventing/blob/master/docs/spec/interfaces.md#addressable) contract, the listener service can be used as a sink for [github source](https://knative.dev/docs/reference/eventing/eventing-sources-api/#GitHubSource), for example. So, once you have created the githubsource to have our new Listener as its sink, events can begin flowing and Pipelines begin running.
+
 ## EventBinding
-The `EventBinding` allows a new, higher-level method to bind an Event with a specific PipelineRun. Once an EventBinding is created, no other resources are nneeded to accept, process and run Pipeline Resources. For the sake of security and to keep configuration simple, individual EventBindings are scoped to a specific pipeline - and Bindings also create all their own PipelineResources (and clean them up on removal as well).
+The `EventBinding` CRD allows a new, higher-level method to bind an Event with a specific PipelineRun. Individual EventBindings are scoped to a specific pipeline - and Bindings also create all their own PipelineResources (and clean them up on removal as well).
 
 An example EventBinding:
 
@@ -119,6 +119,3 @@ To dev/test locally with minikube:
 * Apply tekton components: `ko apply -L -f config/`
 * Create an EventBinding (such as the example above) and await cloud events.
 * The Listener that the EventBinding creates can be used as an Eventing sink.
-
-
-Since the Service fullfills the [Addressable](https://github.com/knative/eventing/blob/master/docs/spec/interfaces.md#addressable) contract, the listener service can be used as a sink for [github source](https://knative.dev/docs/reference/eventing/eventing-sources-api/#GitHubSource), for example. So, once you have created the githubsource to have our new Listener as its sink, events can begin flowing and Pipelines begin running.
