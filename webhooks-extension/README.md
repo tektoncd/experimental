@@ -15,7 +15,17 @@ Verify that you have installed the [dependencies](#dependencies).
 
 Until such a time an official release is hosted you will need to use the development process to install this extension.
 
-For convenience, a script has been provided. The script will build the image, push to your registry of choice and then kubectl apply the relevant yaml into the specified namespace. Please note this namespace needs to be the namespace into which you have installed the tekton dashboard.
+If you have `ko`:
+
+```
+$ docker login
+$ export KO_DOCKER_REPO=docker.io/<mydockername>
+$ ko apply -f config/
+```
+
+Alternatively, without `ko`, you can use the install script we provided:
+
+The script will build the image, push to your registry of choice and then kubectl apply the relevant yaml into the specified namespace. Please note this namespace needs to be the namespace into which you have installed the tekton dashboard.
 
 To initiate this installation, run `development_install.sh`.
 

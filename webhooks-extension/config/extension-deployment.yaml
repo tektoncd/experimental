@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: webhooks-extension
-          image: "DOCKER_REPO/extension:latest"
+          image: "github.com/tektoncd/experimental/webhooks-extension/cmd/extension"
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
