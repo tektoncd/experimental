@@ -7,7 +7,7 @@ The `TektonListener` is a CRD which provides a listener component, which can lis
 The `EventBinding` CRD exposes a new, high-level concept of "binding" Events with a specified Pipeline. The EventBinding takes care of creating and deleting PipeLineResources and also spawns `TektonListener`s to handle event ingress and processing.
 
 ## TektonListener
-The first new CRD, `TektonListener`, provides support for consuming CloudEvent and producing a predefined PipelineRun. Although only CloudEvents are currently supports, the listener is intentionally designed to allow for extension beyond CloudEvents.
+The first new CRD, `TektonListener`, provides support for consuming CloudEvent and producing a predefined PipelineRun. Although only CloudEvents are currently supported, the listener is intentionally designed to allow for extension beyond CloudEvents.
 
 An example TektonListener:
 ```
@@ -52,7 +52,7 @@ spec:
 Since the Service fullfills the [Addressable](https://github.com/knative/eventing/blob/master/docs/spec/interfaces.md#addressable) contract, the listener service can be used as a sink for [github source](https://knative.dev/docs/reference/eventing/eventing-sources-api/#GitHubSource), for example.
 
 ## EventBinding
-The `EventBinding` CRD provides a new high-level means of managing all of the resources needed to all a Pipeline to be bound to a specific Event and produce PipelineRuns as a result of those events. Individual EventBindings are scoped to a specific pipeline - Bindings also create all their own PipelineResources and Listeners (and clean them up on removal as well).
+The `EventBinding` CRD provides a new high-level means of managing all of the resources needed to allow a Pipeline to be bound to a specific Event and produce PipelineRuns as a result of those events. Individual EventBindings are scoped to a specific pipeline - Bindings also create all their own PipelineResources and Listeners (and clean them up on removal as well). This spec will likely evolve the most as we discover the most effect ways to bind events to action.
 
 An example EventBinding:
 
