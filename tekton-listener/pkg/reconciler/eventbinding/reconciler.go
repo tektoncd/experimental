@@ -184,7 +184,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	c.logger.Info("attempting to retrieve associated tekton-listener")
-
 	found, err := c.tektonListenerLister.TektonListeners(binding.Namespace).Get(tektonListenerName)
 	if err != nil && errors.IsNotFound(err) {
 		c.logger.Info("no listener found - creating new tekton-listener")
