@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script is for use on Docker Desktop on a Mac. It installs Istio, Knative and Tekton. It requires:
+#  - kubectl
+#  
+
 export tekton_repo_dir=$(git rev-parse --show-toplevel)
 export test_dir="${tekton_repo_dir}/webhooks-extension/test"
 
@@ -18,8 +22,3 @@ install_tekton ${TEKTON_VERSION}
 ip=$(ifconfig | grep netmask | sed -n 2p | cut -d ' ' -f2) 
 kubectl patch configmap config-domain --namespace knative-serving --type='json' \
   --patch '[{"op": "add", "path": "/data/'"${ip}.nip.io"'", "value": ""}]'
-
-# Install Dashboard
-
-
-# Install Webhooks extension
