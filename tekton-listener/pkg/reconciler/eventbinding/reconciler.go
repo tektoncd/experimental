@@ -118,7 +118,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Get this bindings Pipeline from PipelineRef
 	c.logger.Info("retrieving associated pipeline")
-
 	// Caveat: The Pipeline must exist within the same namespace the EventBinding was created in.
 	// This seems like a reasonable expectation for now, but someday, someone might ask why and here it is below.
 	// If PipelineRef carried along a namespace as well (it prob should, no?), we could handle this more gracefully.
@@ -137,21 +136,19 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Build the resource dependancies
 	for _, resource := range binding.Spec.ResourceTemplates {
 		// :dog-flying-around-in-space:
-		c.logger.Infof("getting resource templates %s", resource.Name)
-
 		_, err := c.PipelineClientSet.TektonV1alpha1().PipelineResources(resource.Namespace).Get(resource.Name, metav1.GetOptions{})
-		if err != nil && errors.IsNotFound(err) {
-			c.logger.Infof("creating resource templates %s", resource.Name)
-
+		if errors.IsNotFound(err) {
 			_, err := c.PipelineClientSet.TektonV1alpha1().PipelineResources(resource.Namespace).Create(&resource)
 			if err != nil {
 				return err
 			}
 
 			c.logger.Infof("created resource %q for eventbinding %q", resource.Name, binding.Name)
-		} else if err != nil {
+		}
+		if err != nil {
 			return err
 		}
+
 		pipelineResourceBindings = append(pipelineResourceBindings, pipelinev1alpha1.PipelineResourceBinding{
 			Name: resource.Name,
 			ResourceRef: pipelinev1alpha1.PipelineResourceRef{
@@ -188,15 +185,14 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	c.logger.Info("attempting to retrieve associated tekton-listener")
 	found, err := c.tektonListenerLister.TektonListeners(binding.Namespace).Get(tektonListenerName)
-	if err != nil && errors.IsNotFound(err) {
-		c.logger.Info("no listener found - creating new tekton-listener")
+	if errors.IsNotFound(err) {
 		created, err := c.ExperimentClientSet.Pipelineexperimental().TektonListeners(binding.Namespace).Create(newListener)
 		if err != nil {
 			return err
 		}
-
 		c.logger.Infof("created tekton listener %q for eventbinding %q", created.Name, binding.Name)
-	} else if err != nil {
+	}
+	if err != nil {
 		return err
 	}
 
