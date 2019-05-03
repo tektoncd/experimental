@@ -14,19 +14,19 @@ limitations under the License.
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
 	restful "github.com/emicklei/go-restful"
 	"github.com/tektoncd/experimental/webhooks-extension/endpoints"
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 )
 
 func main() {
 	// Create/setup resource
 	r, err := endpoints.NewResource()
 	if err != nil {
-		log.Fatalf("Fatal error creating resource: %s.", err.Error())
+		logging.Log.Fatalf("Fatal error creating resource: %s.", err.Error())
 	}
 
 	// Set up routes
@@ -38,13 +38,13 @@ func main() {
 	wsContainer.Add(endpoints.ReadinessWebService())
 
 	// Serve
-	log.Print("Creating server and entering wait loop.")
+	logging.Log.Info("Creating server and entering wait loop.")
 	port := ":8080"
 	portnum := os.Getenv("PORT")
 	if portnum != "" {
 		port = ":" + portnum
-		log.Printf("Port number from config: %s.", portnum)
+		logging.Log.Infof("Port number from config: %s.", portnum)
 	}
 	server := &http.Server{Addr: port, Handler: wsContainer}
-	log.Fatal(server.ListenAndServe())
+	logging.Log.Fatal(server.ListenAndServe())
 }

@@ -26,8 +26,7 @@ func checkHealth(request *restful.Request, response *restful.Response) {
 // LivenessWebService returns the liveness web service
 func LivenessWebService() *restful.WebService {
 	ws := new(restful.WebService)
-	ws.
-		Path("/liveness")
+	ws.Path("/liveness")
 	ws.Route(ws.GET("").To(checkHealth))
 
 	return ws
@@ -36,8 +35,7 @@ func LivenessWebService() *restful.WebService {
 // ReadinessWebService returns the readiness web service
 func ReadinessWebService() *restful.WebService {
 	ws := new(restful.WebService)
-	ws.
-		Path("/readiness")
+	ws.Path("/readiness")
 	ws.Route(ws.GET("").To(checkHealth))
 
 	return ws
