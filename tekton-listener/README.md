@@ -2,8 +2,12 @@
 
 This experimental directory defines two new CRDs - TektonListeners and EventBindings.
 
+The `TektonListener` is a CRD which provides a listener component, which can listen for a specified CloudEvent and spawn a specific PipelineRuns as a result.
+
+The `EventBinding` CRD exposes a high-level way to "bind" Events with Pipelines. By specifying the event and resource details in advance, all resources can be automatically created by the binding as needed (and cleaned up) and Listeners are provisioned as needed as well, to accept and handle whatever EventBindings are specified.
+
 ## TektonListener
-The `TektonListener` defines a process by which PipelineRuns can be directly triggered by Cloudevents, which it consumes and handles to kickoff the pipeline.
+The `TektonListener` is a CRD which provides a listener component, which can listen for a specified CloudEvent and spawn a specific PipelineRuns as a result.
 
 To do this, an optional CRD `TektonListener` is provided. Once defined, the listener provides support for consuming CloudEvent and producing a predefined PipelineRun. It is intentionally designed to allow for other sources beyond CloudEvents.
 
@@ -50,7 +54,7 @@ spec:
 ```
 
 ## EventBinding
-The `EventBinding` allows a new, higher-level method to bind an Event with a specific PipelineRun. Once an EventBinding is created, no other resources are nneeded to accept, process and run Pipeline Resources. For the sake of security and to keep configuration simple, individual EventBindings are scoped to a specific pipeline - and Bindings also create all their own PipelineResources (and clean them up on removal as well). 
+The `EventBinding` allows a new, higher-level method to bind an Event with a specific PipelineRun. Once an EventBinding is created, no other resources are nneeded to accept, process and run Pipeline Resources. For the sake of security and to keep configuration simple, individual EventBindings are scoped to a specific pipeline - and Bindings also create all their own PipelineResources (and clean them up on removal as well).
 
 An example EventBinding:
 
@@ -94,7 +98,17 @@ spec:
 
 ```
 
-# Minikube instructions
+# Instructions
+
+TODO: icoffey is working on this next :)
+
+## Getting Started
+
+Preqs:
+
+- A Tekton Pipeline must be created prior to creating an EventBinding. This is the Pipeline that will handle requests.
+
+## Minikube instructions
 
 To dev/test locally with minikube:
 
