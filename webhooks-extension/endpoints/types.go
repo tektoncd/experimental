@@ -14,9 +14,8 @@ limitations under the License.
 package endpoints
 
 import (
-	"log"
-
 	eventsrcclientset "github.com/knative/eventing-sources/pkg/client/clientset/versioned"
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	tektoncdclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	k8sclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -36,28 +35,28 @@ func NewResource() (Resource, error) {
 	// Get cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Fatal error getting in cluster config: %s.", err.Error())
+		logging.Log.Errorf("error getting in cluster config: %s.", err.Error())
 		return Resource{}, err
 	}
 
 	// Setup event source client
 	eventSrcClient, err := eventsrcclientset.NewForConfig(config)
 	if err != nil {
-		log.Printf("Error building event source client: %s.", err.Error())
+		logging.Log.Errorf("error building event source client: %s.", err.Error())
 		return Resource{}, err
 	}
 
 	// Setup tektoncd client
 	tektonClient, err := tektoncdclientset.NewForConfig(config)
 	if err != nil {
-		log.Printf("Error building tekton clientset: %s.", err.Error())
+		logging.Log.Errorf("error building tekton clientset: %s.", err.Error())
 		return Resource{}, err
 	}
 
 	// Setup k8s client
 	k8sClient, err := k8sclientset.NewForConfig(config)
 	if err != nil {
-		log.Printf("Error building k8s clientset: %s.", err.Error())
+		logging.Log.Errorf("error building k8s clientset: %s.", err.Error())
 		return Resource{}, err
 	}
 

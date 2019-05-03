@@ -16,17 +16,16 @@ package endpoints
 import (
 	"errors"
 	"fmt"
-	"log"
+	restful "github.com/emicklei/go-restful"
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
+	v1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	gh "gopkg.in/go-playground/webhooks.v3/github"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	restful "github.com/emicklei/go-restful"
-	v1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	gh "gopkg.in/go-playground/webhooks.v3/github"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const gitServerLabel = "gitServer"
@@ -46,31 +45,31 @@ type BuildInformation struct {
 
 // handleWebhook should be called when we hit the / endpoint with webhook data. Todo provide proper responses e.g. 503, server errors, 200 if good
 func (r Resource) handleWebhook(request *restful.Request, response *restful.Response) {
-	log.Print("In HandleWebhook for a GitHub event.")
+	logging.Log.Info("In HandleWebhook for a GitHub event...")
 	buildInformation := BuildInformation{}
-	log.Printf("Github event name to look for is: %s.", githubEventParameter)
+	logging.Log.Infof("Github event name to look for is: %s.", githubEventParameter)
 	gitHubEventType := request.HeaderParameter(githubEventParameter)
 
 	if len(gitHubEventType) < 1 {
-		log.Printf("Error found header (%s) exists but has no value. Request is: %+v.", githubEventParameter, request)
+		logging.Log.Errorf("error found header (%s) exists but has no value. Request is: %+v.", githubEventParameter, request)
 		return
 	}
 
 	gitHubEventTypeString := strings.Replace(gitHubEventType, "\"", "", -1)
 
-	log.Printf("GitHub event type is: %s.", gitHubEventTypeString)
+	logging.Log.Debugf("GitHub event type is: %s.", gitHubEventTypeString)
 
 	timestamp := getDateTimeAsString()
 
 	if gitHubEventTypeString == "ping" {
 		response.WriteHeader(http.StatusNoContent)
 	} else if gitHubEventTypeString == "push" {
-		log.Print("Handling a push event.")
+		logging.Log.Info("Handling a push event.")
 
 		webhookData := gh.PushPayload{}
 
 		if err := request.ReadEntity(&webhookData); err != nil {
-			log.Printf("Error decoding webhook data: %s.", err.Error())
+			logging.Log.Errorf("error decoding webhook data: %s.", err.Error())
 			return
 		}
 
@@ -81,15 +80,15 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.TIMESTAMP = timestamp
 
 		createPipelineRunFromWebhookData(buildInformation, r)
-		log.Printf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
+		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
 
 	} else if gitHubEventTypeString == "pull_request" {
-		log.Print("Handling a pull request event.")
+		logging.Log.Info("Handling a pull request event.")
 
 		webhookData := gh.PullRequestPayload{}
 
 		if err := request.ReadEntity(&webhookData); err != nil {
-			log.Printf("Error decoding webhook data: %s.", err.Error())
+			logging.Log.Errorf("error decoding webhook data: %s.", err.Error())
 			return
 		}
 
@@ -100,16 +99,16 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.TIMESTAMP = timestamp
 
 		createPipelineRunFromWebhookData(buildInformation, r)
-		log.Printf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
+		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
 
 	} else {
-		log.Printf("Error: event wasn't a push, pull, or ping event, no action will be taken. Request is: %+v.", request)
+		logging.Log.Errorf("error: event wasn't a push, pull, or ping event, no action will be taken. Request is: %+v.", request)
 	}
 }
 
 // This is the main flow that handles building and deploying: given everything we need to kick off a build, do so
 func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resource) {
-	log.Printf("In createPipelineRunFromWebhookData, build information: %s.", buildInformation)
+	logging.Log.Debugf("In createPipelineRunFromWebhookData, build information: %s.", buildInformation)
 
 	// TODO: Use the dashboard endpoint to create the PipelineRun
 	// Track PR: https://github.com/tektoncd/dashboard/pull/33
@@ -121,12 +120,12 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 		installNs = "default"
 	}
 
-	log.Printf("Looking for the pipeline configmap in the install namespace %s.", installNs)
+	logging.Log.Debugf("Looking for the pipeline configmap in the install namespace %s.", installNs)
 
 	// get information from related githubsource instance
 	webhook, err := r.getGitHubWebhook(buildInformation.REPOURL, installNs)
 	if err != nil {
-		log.Printf("Error getting github webhook: %s.", err.Error())
+		logging.Log.Errorf("error getting github webhook: %s.", err.Error())
 		return
 	}
 	dockerRegistry := webhook.DockerRegistry
@@ -140,7 +139,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 		saName = "default"
 	}
 
-	log.Printf("Build information: %+v.", buildInformation)
+	logging.Log.Debugf("Build information: %+v.", buildInformation)
 
 	// Assumes you've already applied the yml: so the pipeline definition and its tasks must exist upfront.
 	startTime := getDateTimeAsString()
@@ -152,34 +151,34 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 
 	pipeline, err := r.getPipelineImpl(pipelineTemplateName, pipelineNs)
 	if err != nil {
-		log.Printf("Could not find the pipeline template %s in namespace %s.", pipelineTemplateName, pipelineNs)
+		logging.Log.Errorf("could not find the pipeline template %s in namespace %s.", pipelineTemplateName, pipelineNs)
 		return
 	}
-	log.Printf("Found the pipeline template %s OK.", pipelineTemplateName)
+	logging.Log.Debugf("Found the pipeline template %s OK.", pipelineTemplateName)
 
-	log.Print("Creating PipelineResources.")
+	logging.Log.Debug("Creating PipelineResources.")
 
 	urlToUse := fmt.Sprintf("%s/%s:%s", dockerRegistry, strings.ToLower(buildInformation.REPONAME), buildInformation.SHORTID)
-	log.Printf("Image URL is: %s.", urlToUse)
+	logging.Log.Debugf("Constructed image URL is: %s.", urlToUse)
 
 	paramsForImageResource := []v1alpha1.Param{{Name: "url", Value: urlToUse}}
 	pipelineImageResource := definePipelineResource(imageResourceName, pipelineNs, paramsForImageResource, "image")
 	createdPipelineImageResource, err := r.TektonClient.TektonV1alpha1().PipelineResources(pipelineNs).Create(pipelineImageResource)
 	if err != nil {
-		log.Printf("Error creating pipeline image resource to be used in the pipeline: %s.", err.Error())
+		logging.Log.Errorf("error creating pipeline image resource to be used in the pipeline: %s.", err.Error())
 		return
 	}
-	log.Printf("Created pipeline image resource %s successfully.", createdPipelineImageResource.Name)
+	logging.Log.Infof("Created pipeline image resource %s successfully.", createdPipelineImageResource.Name)
 
 	paramsForGitResource := []v1alpha1.Param{{Name: "revision", Value: buildInformation.COMMITID}, {Name: "url", Value: buildInformation.REPOURL}}
 	pipelineGitResource := definePipelineResource(gitResourceName, pipelineNs, paramsForGitResource, "git")
 	createdPipelineGitResource, err := r.TektonClient.TektonV1alpha1().PipelineResources(pipelineNs).Create(pipelineGitResource)
 
 	if err != nil {
-		log.Printf("Error creating pipeline git resource to be used in the pipeline: %s.", err.Error())
+		logging.Log.Errorf("error creating pipeline git resource to be used in the pipeline: %s.", err.Error())
 		return
 	}
-	log.Printf("Created pipeline git resource %s successfully.", createdPipelineGitResource.Name)
+	logging.Log.Infof("Created pipeline git resource %s successfully.", createdPipelineGitResource.Name)
 
 	gitResourceRef := v1alpha1.PipelineResourceRef{Name: gitResourceName}
 	imageResourceRef := v1alpha1.PipelineResourceRef{Name: imageResourceName}
@@ -192,11 +191,11 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	releaseName := ""
 
 	if requestedReleaseName != "" {
-		log.Printf("Release name based on input: %s", requestedReleaseName)
+		logging.Log.Infof("Release name based on input: %s", requestedReleaseName)
 		releaseName = requestedReleaseName
 	} else {
 		releaseName = fmt.Sprintf("%s", strings.ToLower(buildInformation.REPONAME))
-		log.Printf("Release name based on repository name: %s", releaseName)
+		logging.Log.Infof("Release name based on repository name: %s", releaseName)
 	}
 
 	repositoryName := strings.ToLower(buildInformation.REPONAME)
@@ -206,6 +205,10 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 		{Name: "repository-name", Value: repositoryName},
 		{Name: "target-namespace", Value: pipelineNs}}
 
+	if dockerRegistry != "" {
+		params = append(params, v1alpha1.Param{Name: "docker-registry", Value: dockerRegistry})
+	}
+
 	if helmSecret != "" {
 		params = append(params, v1alpha1.Param{Name: "helm-secret", Value: helmSecret})
 	}
@@ -214,28 +217,28 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	pipelineRunData, err := definePipelineRun(generatedPipelineRunName, pipelineNs, saName, buildInformation.REPOURL,
 		pipeline, v1alpha1.PipelineTriggerTypeManual, resources, params)
 
-	log.Printf("Creating a new PipelineRun named %s in the namespace %s using the service account %s.", generatedPipelineRunName, pipelineNs, saName)
+	logging.Log.Infof("Creating a new PipelineRun named %s in the namespace %s using the service account %s.", generatedPipelineRunName, pipelineNs, saName)
 
 	pipelineRun, err := r.TektonClient.TektonV1alpha1().PipelineRuns(pipelineNs).Create(pipelineRunData)
 	if err != nil {
-		log.Printf("Error creating the PipelineRun: %s", err.Error())
+		logging.Log.Errorf("error creating the PipelineRun: %s", err.Error())
 		return
 	}
-	log.Printf("PipelineRun created: %+v.", pipelineRun)
+	logging.Log.Debugf("PipelineRun created: %+v.", pipelineRun)
 }
 
 /* Get all pipelines in a given namespace: the caller needs to handle any errors,
 an empty v1alpha1.Pipeline{} is returned if no pipeline is found */
 func (r Resource) getPipelineImpl(name, namespace string) (v1alpha1.Pipeline, error) {
-	log.Printf("In getPipelineImpl, name %s, namespace %s.", name, namespace)
+	logging.Log.Infof("In getPipelineImpl, name %s, namespace %s.", name, namespace)
 
 	pipelines := r.TektonClient.TektonV1alpha1().Pipelines(namespace)
 	pipeline, err := pipelines.Get(name, metav1.GetOptions{})
 	if err != nil {
-		log.Printf("Error revreiving the pipeline called %s in namespace %s: %s.", name, namespace, err.Error())
+		logging.Log.Errorf("error receiving the pipeline called %s in namespace %s: %s.", name, namespace, err.Error())
 		return v1alpha1.Pipeline{}, err
 	}
-	log.Print("Found the pipeline definition OK.")
+	logging.Log.Info("Found the pipeline definition OK.")
 	return *pipeline, nil
 }
 
@@ -265,7 +268,7 @@ func definePipelineRun(pipelineRunName, namespace, saName, repoURL string,
 	if repoURL != "" {
 		gitServer, gitOrg, gitRepo, err = getGitValues(repoURL)
 		if err != nil {
-			log.Printf("Error getting the Git values: %s.", err)
+			logging.Log.Errorf("error getting the Git values: %s.", err)
 			return &v1alpha1.PipelineRun{}, err
 		}
 	}
@@ -275,7 +278,7 @@ func definePipelineRun(pipelineRunName, namespace, saName, repoURL string,
 			Name:      pipelineRunName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app":          "devops-knative",
+				"app":          "tekton-webhook-handler",
 				gitServerLabel: gitServer,
 				gitOrgLabel:    gitOrg,
 				gitRepoLabel:   gitRepo,
@@ -311,7 +314,7 @@ func getGitValues(url string) (gitServer, gitOrg, gitRepo string, err error) {
 	// example at this point: github.com/tektoncd/pipeline
 	numSlashes := strings.Count(repoURL, "/")
 	if numSlashes < 2 {
-		return "", "", "", errors.New("Url didn't match the requirements (at least two slashes)")
+		return "", "", "", errors.New("URL didn't match the requirement (at least two slashes)")
 	}
 	repoURL = strings.TrimSuffix(repoURL, "/")
 
@@ -329,8 +332,7 @@ func getDateTimeAsString() string {
 // SinkWebService returns the liveness web service
 func SinkWebService(r Resource) *restful.WebService {
 	ws := new(restful.WebService)
-	ws.
-		Path("/")
+	ws.Path("/")
 	ws.Route(ws.POST("").To(r.handleWebhook))
 
 	return ws

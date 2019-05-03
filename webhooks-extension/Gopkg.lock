@@ -209,14 +209,6 @@
   version = "v2.0.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d421d847bed133d9f4635bbf19905db4560be4fc54fcb7631e58903ced9a5108"
-  name = "github.com/tektoncd/experimental"
-  packages = ["webhooks-extension/endpoints"]
-  pruneopts = "UT"
-  revision = "5b243ba3980c738ec4fc4fa633d84c485ed3c822"
-
-[[projects]]
   digest = "1:1aec373958064996926528aa0f992914d4e9612c3dc478b60c92dab906a55238"
   name = "github.com/tektoncd/pipeline"
   packages = [
@@ -234,6 +226,37 @@
   pruneopts = "UT"
   revision = "7c43fbae2816c7271bed51098d0595cd6174c7a3"
   version = "0.2.0"
+
+[[projects]]
+  digest = "1:a5158647b553c61877aa9ae74f4015000294e47981e6b8b07525edcbb0747c81"
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "df976f2515e274675050de7b3f42545de80594fd"
+  version = "v1.4.0"
+
+[[projects]]
+  digest = "1:60bf2a5e347af463c42ed31a493d817f8a72f102543060ed992754e689805d1a"
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  digest = "1:676160e6a4722b08e0e26b11521d575c2cb2b6f0c679e1ee6178c5d8dee51e5e"
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore",
+  ]
+  pruneopts = "UT"
+  revision = "27376062155ad36be76b0f12cf1572a221d3a48c"
+  version = "v1.10.0"
 
 [[projects]]
   branch = "master"
@@ -570,10 +593,10 @@
     "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned/fake",
-    "github.com/tektoncd/experimental/webhooks-extension/endpoints",
     "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake",
+    "go.uber.org/zap",
     "gopkg.in/go-playground/webhooks.v3/github",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",

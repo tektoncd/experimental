@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	"net/http"
 	"strings"
 
@@ -28,7 +28,7 @@ import (
 )
 
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
-	log.Printf("Create webhook with request: %+v.", request)
+	logging.Log.Infof("Creating webhook with request: %+v.", request)
 	// Install namespace
 	installNs := r.Defaults.Namespace
 	if installNs == "" {
@@ -37,7 +37,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 
 	webhook := webhook{}
 	if err := request.ReadEntity(&webhook); err != nil {
-		log.Printf("error trying to read request entity as webhook: %s.", err)
+		logging.Log.Errorf("error trying to read request entity as webhook: %s.", err)
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
@@ -46,7 +46,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		if len(webhook.ReleaseName) > 63 {
 			tooLongMessage := fmt.Sprintf("requested release name (%s) must be less than 64 characters", webhook.ReleaseName)
 			err := errors.New(tooLongMessage)
-			log.Printf("error: %s", err.Error())
+			logging.Log.Errorf("error: %s", err.Error())
 			RespondError(response, err, http.StatusBadRequest)
 			return
 		}
@@ -56,25 +56,26 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	if webhook.DockerRegistry == "" && dockerRegDefault != "" {
 		webhook.DockerRegistry = dockerRegDefault
 	}
+	logging.Log.Debugf("Docker registry location is: %s", webhook.DockerRegistry)
 
 	namespace := webhook.Namespace
 	if namespace == "" {
 		err := errors.New("namespace is required, but none was given")
-		log.Printf("error: %s.", err.Error())
+		logging.Log.Errorf("error: %s.", err.Error())
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
-	log.Printf("Creating webhook: %v.", webhook)
+	logging.Log.Infof("Creating webhook: %v.", webhook)
 	pieces := strings.Split(webhook.GitRepositoryURL, "/")
 	if len(pieces) < 4 {
-		log.Printf("error creating webhook: GitRepositoryURL format error (%+v).", webhook.GitRepositoryURL)
+		logging.Log.Errorf("error creating webhook: GitRepositoryURL format error (%+v).", webhook.GitRepositoryURL)
 		RespondError(response, errors.New("GitRepositoryURL format error"), http.StatusBadRequest)
 		return
 	}
 	apiURL := strings.TrimSuffix(webhook.GitRepositoryURL, pieces[len(pieces)-2]+"/"+pieces[len(pieces)-1]) + "api/v3/"
 	ownerRepo := pieces[len(pieces)-2] + "/" + strings.TrimSuffix(pieces[len(pieces)-1], ".git")
 
-	log.Printf("Creating GitHub source with apiURL: %s and Owner-repo: %s.", apiURL, ownerRepo)
+	logging.Log.Debugf("Creating GitHub source with apiURL: %s and Owner-repo: %s.", apiURL, ownerRepo)
 
 	entry := eventapi.GitHubSource{
 		ObjectMeta: metav1.ObjectMeta{Name: webhook.Name},
@@ -108,19 +109,19 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		entry.Spec.GitHubAPIURL = apiURL
 	} else if c != 1 {
 		err := fmt.Errorf("parsing git api url '%s'", apiURL)
-		log.Printf("Error %s", err.Error())
+		logging.Log.Errorf("Error %s", err.Error())
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
 	_, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Create(&entry)
 	if err != nil {
-		log.Printf("Error creating GitHub source: %s.", err.Error())
+		logging.Log.Errorf("Error creating GitHub source: %s.", err.Error())
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
 	webhooks, err := r.readGitHubWebhooks(installNs)
 	if err != nil {
-		log.Printf("error getting GitHub webhooks: %s.", err.Error())
+		logging.Log.Errorf("error getting GitHub webhooks: %s.", err.Error())
 		RespondError(response, err, http.StatusInternalServerError)
 		return
 	}
@@ -136,10 +137,10 @@ func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Res
 		installNs = "default"
 	}
 
-	log.Printf("Get all webhooks in namespace: %s.", installNs)
+	logging.Log.Debugf("Get all webhooks in namespace: %s.", installNs)
 	sources, err := r.readGitHubWebhooks(installNs)
 	if err != nil {
-		log.Printf("error trying to get webhooks: %s.", err.Error())
+		logging.Log.Errorf("error trying to get webhooks: %s.", err.Error())
 		RespondError(response, err, http.StatusInternalServerError)
 		return
 	}
@@ -152,7 +153,7 @@ func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Res
 
 // retrieve retistry secret, helm secret and pipeline name for the github url
 func (r Resource) getGitHubWebhook(gitrepourl string, namespace string) (webhook, error) {
-	log.Printf("Get GitHub webhook in namespace %s with repositoryURL %s.", namespace, gitrepourl)
+	logging.Log.Debugf("Get GitHub webhook in namespace %s with repositoryURL %s.", namespace, gitrepourl)
 
 	sources, err := r.readGitHubWebhooks(namespace)
 	if err != nil {
@@ -167,11 +168,11 @@ func (r Resource) getGitHubWebhook(gitrepourl string, namespace string) (webhook
 }
 
 func (r Resource) readGitHubWebhooks(namespace string) (map[string]webhook, error) {
-	log.Printf("Read GitHub webhooks in namespace %s.", namespace)
+	logging.Log.Debugf("Reading GitHub webhooks in namespace %s.", namespace)
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
 	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 	if err != nil {
-		log.Printf("Creating empty configmap because error getting configmap: %s.", err.Error())
+		logging.Log.Debugf("Creating empty configmap because error getting configmap: %s.", err.Error())
 		configMap = &corev1.ConfigMap{}
 		configMap.BinaryData = make(map[string][]byte)
 	}
@@ -180,18 +181,18 @@ func (r Resource) readGitHubWebhooks(namespace string) (map[string]webhook, erro
 	if ok {
 		err = json.Unmarshal(raw, &result)
 		if err != nil {
-			log.Printf("error unmarshalling in readGitHubSource: %s", err.Error())
+			logging.Log.Errorf("error unmarshalling in readGitHubSource: %s", err.Error())
 			return map[string]webhook{}, err
 		}
 	} else {
 		result = make(map[string]webhook)
 	}
-	log.Printf("GitHub sources: %v.", result)
+	logging.Log.Debugf("Found GitHub sources: %v.", result)
 	return result, nil
 }
 
 func (r Resource) writeGitHubWebhooks(namespace string, sources map[string]webhook) error {
-	log.Printf("Write GitHub webhooks in namespace: %s. Webhooks: %+v", namespace, sources)
+	logging.Log.Debugf("In writeGitHubWebhooks, namespace: %s, webhooks found: %+v", namespace, sources)
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
 	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 	var create = false
@@ -207,49 +208,49 @@ func (r Resource) writeGitHubWebhooks(namespace string, sources map[string]webho
 	}
 	buf, err := json.Marshal(sources)
 	if err != nil {
-		log.Printf("error marshalling GitHub webhooks: %s.", err.Error())
+		logging.Log.Errorf("error marshalling GitHub webhooks: %s.", err.Error())
 		return err
 	}
 	configMap.BinaryData["GitHubSource"] = buf
 	if create {
 		_, err = configMapClient.Create(configMap)
 		if err != nil {
-			log.Printf("error creating configmap for GitHub webhooks: %s.", err.Error())
+			logging.Log.Errorf("error creating configmap for GitHub webhooks: %s.", err.Error())
 			return err
 		}
 	} else {
 		_, err = configMapClient.Update(configMap)
 		if err != nil {
-			log.Printf("error updating configmap for GitHub webhooks: %s.", err.Error())
+			logging.Log.Errorf("error updating configmap for GitHub webhooks: %s.", err.Error())
 		}
 	}
 	return nil
 }
 
 func (r Resource) getDefaults(request *restful.Request, response *restful.Response) {
-	log.Printf("getDefaults returning: %v", r.Defaults)
+	logging.Log.Debugf("getDefaults returning: %v", r.Defaults)
 	response.WriteEntity(r.Defaults)
 }
 
 // RespondError ...
 func RespondError(response *restful.Response, err error, statusCode int) {
-	log.Printf("Error for RespondError: %s.", err.Error())
-	log.Printf("Response is %v.", *response)
+	logging.Log.Errorf("Error for RespondError: %s.", err.Error())
+	logging.Log.Errorf("Response is %v.", *response)
 	response.AddHeader("Content-Type", "text/plain")
 	response.WriteError(statusCode, err)
 }
 
 // RespondErrorMessage ...
 func RespondErrorMessage(response *restful.Response, message string, statusCode int) {
-	log.Printf("Message for RespondErrorMessage: %s.", message)
+	logging.Log.Errorf("Message for RespondErrorMessage: %s.", message)
 	response.AddHeader("Content-Type", "text/plain")
 	response.WriteErrorString(statusCode, message)
 }
 
 // RespondErrorAndMessage ...
 func RespondErrorAndMessage(response *restful.Response, err error, message string, statusCode int) {
-	log.Printf("Error for RespondErrorAndMessage: %s.", err.Error())
-	log.Printf("Message for RespondErrorAndMesage: %s.", message)
+	logging.Log.Errorf("Error for RespondErrorAndMessage: %s.", err.Error())
+	logging.Log.Errorf("Message for RespondErrorAndMesage: %s.", message)
 	response.AddHeader("Content-Type", "text/plain")
 	response.WriteErrorString(statusCode, message)
 }
