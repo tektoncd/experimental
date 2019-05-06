@@ -3,6 +3,8 @@ kind: EventBinding
 metadata:
   name: test-event-binding
   namespace: tekton-pipelines
+  labels:
+    app: test-build-tekton-listener
 spec:
   serviceAccount: tekton-experimental-controller
   selector:

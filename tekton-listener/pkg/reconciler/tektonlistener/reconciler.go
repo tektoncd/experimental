@@ -143,21 +143,24 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		pl.Spec.Namespace,
 	)
 
+	c.logger.Infof("\n StatefulSet matchlabels: %q\n", pl.Labels)
+
 	// Create a stateful set for the listener. It mounts a secret containing the build information.
 	// The build spec may contain sensetive data and therefore the whole thing seems safest/easiest as a secret
 	set := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      setName,
 			Namespace: pl.Namespace,
+			Labels:    pl.Labels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"statefulset": pl.Name + "-statefulset"},
+				MatchLabels: pl.Labels,
 			},
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
-					"statefulset": pl.Name + "-statefulset",
-				}},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: pl.Labels, // the pods will inherit labels and passes them down
+				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: pl.Spec.PipelineRunSpec.ServiceAccount,
 					Containers: []corev1.Container{
