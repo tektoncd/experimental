@@ -159,11 +159,13 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	tektonListenerName := fmt.Sprintf("%s-listener", binding.Name)
+
 	// Create a tekton listener!
 	newListener := &v1alpha1.TektonListener{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tektonListenerName,
 			Namespace: binding.Namespace,
+			Labels:    binding.Labels,
 		},
 		Spec: v1alpha1.TektonListenerSpec{
 			PipelineRef: binding.Spec.PipelineRef,

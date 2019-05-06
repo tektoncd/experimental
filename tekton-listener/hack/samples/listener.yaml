@@ -4,17 +4,10 @@ kind: TektonListener
 metadata:
   name: test-build-tekton-listener
   namespace: tekton-pipelines
+  labels:
+    app: test-build-tekton-listener
 spec:
-  selector:
-    matchLabels:
-      app: test-build-tekton-listener
   serviceName: test-build-tekton-listener
-  template:
-    metadata:
-      labels:
-        role: test-build-tekton-listener
-    spec:
-      serviceAccountName: tekton-experimental-controller
   listener-image: github.com/tektoncd/pipeline/cmd/tektonlistener
   event: cloudevent
   event-type: com.github.checksuite
