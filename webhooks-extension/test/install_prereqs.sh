@@ -18,6 +18,8 @@ install_knative_eventing_sources ${KNATIVE_VERSION}
 install_tekton ${TEKTON_VERSION}
 
 # Docker desktop: cluster IP = host IP. Obviously not true for other types of cluster. 
+#   kubectl cluster-info | cut -d'/' -f3 | cut -d':' -f1 | head -n 1
+# returns 'localhost' for Docker Desktop; not tested on other cluster types. 
 # For minikube, ip=$(minikube ip)
 ip=$(ifconfig | grep netmask | sed -n 2p | cut -d ' ' -f2) 
 kubectl patch configmap config-domain --namespace knative-serving --type='json' \
