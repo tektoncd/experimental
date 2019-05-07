@@ -50,7 +50,7 @@ function install_knative_eventing() {
     wait_for_ready_pods knative-eventing 180 20
 }
 
-# Note that eventing-sources.yalm was renamed from release.yaml in the v0.5.0 release, so this won't work for earlier releases as-is. 
+# Note that eventing-sources.yaml was renamed from release.yaml in the v0.5.0 release, so this won't work for earlier releases as-is. 
 function install_knative_eventing_sources() {
     if [ -z "$1" ]; then
         echo "Usage ERROR for function: install_knative_eventing_sources [version]"
@@ -146,45 +146,8 @@ function wait_for_ready_pods() {
         exit 1
     fi
     namespace=$1
-    timeout=$2
-    sleepTime=${3:-"2"}
-
-    # Loop check for ready resources
-    emptyResponse="No resources found."
-    # kubectl command prints to stderr, so redirect it to stdout
-    response=$(kubectl get pods --namespace $namespace --field-selector status.phase!=Running,status.phase!=Succeeded 2>&1)
-    readyResp=$(kubectl get pods --namespace $namespace -o json | jq '.items[]
-        | {phase: .status.phase, conditions: .status.conditions}
-        | select(.phase == "Running")
-        | .conditions[]
-        | select(.type == "Ready")
-        | select(.status != "True")')
-    ctr=0
-    until [ "$response" = "$emptyResponse" ] && [ "$readyResp" = "" ]; do
-        echo "waiting for pods in namespace $namespace:"
-        echo "$response"
-        if [ "$response" = "$emptyResponse" ]; then
-            echo "waiting for ready:"
-            echo "$readyResp" | jq '.'
-        fi
-        if [ "$timeout" -le "$ctr" ]; then
-            echo "ERROR: exceeded timeout (${timeout}s) for namespace '${namespace}'"
-            kubectl get pods --namespace $namespace
-            kubectl describe pods --namespace $namespace
-            return 1
-        fi
-        sleep "$sleepTime"
-        ctr=$((ctr+sleepTime))
-        # kubectl command prints to stderr, so redirect it to stdout
-        response=$(kubectl get pods --namespace $namespace --field-selector status.phase!=Running,status.phase!=Succeeded 2>&1)
-        readyResp=$(kubectl get pods --namespace $namespace -o json | jq '.items[]
-        | {phase: .status.phase, conditions: .status.conditions}
-        | select(.phase == "Running")
-        | .conditions[]
-        | select(.type == "Ready")
-        | select(.status != "True")')
-    done
-    kubectl get pods --namespace $namespace
+    timeout_period=$2
+    timeout ${timeout_period} "kubectl get pods -n ${namespace} && [[ \$(kubectl get pods -n ${namespace} 2>&1 | grep -c -v -E '(Running|Completed|Terminating|STATUS)') -eq 0 ]]"
 }
 
 function check() { 
@@ -212,4 +175,14 @@ function check() {
 function fail() {
     echo "Error: $1."
     exit 1
+}
+
+# Loops until duration (car) is exceeded or command (cdr) returns success
+# Lifted from https://github.com/openshift-cloud-functions/knative-operators/blob/master/etc/scripts/installation-functions.sh
+function timeout() {
+  SECONDS=0; TIMEOUT=$1; shift
+  until eval $*; do
+    sleep 5
+    [[ $SECONDS -gt $TIMEOUT ]] && echo "ERROR: Timed out" && exit 1
+  done
 }
