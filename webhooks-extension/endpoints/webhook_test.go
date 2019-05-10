@@ -16,28 +16,43 @@ package endpoints
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	restful "github.com/emicklei/go-restful"
+	v1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const default_registry = "default.docker.reg:8500/foo"
+var server *httptest.Server
+
+// All event sources will be created in the "default" namespace because the INSTALLED_NAMESPACE env variable is not set
+const installNs = "default"
+const defaultRegistry = "default.docker.reg:8500/foo"
+
+func setUpServer() *Resource {
+	wsContainer := restful.NewContainer()
+	resource := dummyResource()
+	resource.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: installNs}})
+	server = httptest.NewServer(wsContainer)
+	resource.RegisterEndpoints(wsContainer)
+	return resource
+}
 
 // Test createGitHubSource
 func TestGitHubSource(t *testing.T) {
 	r := dummyResource()
-	// All event sources will be created in the "default" namespace because the INSTALLED_NAMESPACE env variable is not set
-	installNs := "default"
-	runNs := "test"
+
 	sources := []webhook{
 		{
 			Name:             "name1",
-			Namespace:        runNs,
-			GitRepositoryURL: "https://github.com/owner/repo.git",
+			Namespace:        installNs,
+			GitRepositoryURL: "https://github.com/owner/repo",
 			AccessTokenRef:   "token1",
 			Pipeline:         "pipeline1",
 			DockerRegistry:   "registry1",
@@ -46,7 +61,7 @@ func TestGitHubSource(t *testing.T) {
 		},
 		{
 			Name:             "name2",
-			Namespace:        runNs,
+			Namespace:        installNs,
 			GitRepositoryURL: "https://github.company.com/owner2/repo2",
 			AccessTokenRef:   "token2",
 			Pipeline:         "pipeline2",
@@ -56,7 +71,7 @@ func TestGitHubSource(t *testing.T) {
 		},
 		{
 			Name:             "name3",
-			Namespace:        runNs,
+			Namespace:        installNs,
 			GitRepositoryURL: "https://github.company.com/owner3/repo3",
 			AccessTokenRef:   "token3",
 			Pipeline:         "pipeline3",
@@ -71,7 +86,7 @@ func TestGitHubSource(t *testing.T) {
 	// Set default docker registry for sources that specify no registry value
 	newDefaults := EnvDefaults{
 		Namespace:      installNs,
-		DockerRegistry: default_registry,
+		DockerRegistry: defaultRegistry,
 	}
 	r = updateResourceDefaults(r, newDefaults)
 
@@ -119,7 +134,7 @@ func testDockerRegSet(r *Resource, t *testing.T) {
 }
 
 func getEnvDefaults(r *Resource, t *testing.T) EnvDefaults {
-	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhook/defaults", nil)
+	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhooks/defaults", nil)
 	req := dummyRestfulRequest(httpReq, "", "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
@@ -136,7 +151,7 @@ func getEnvDefaults(r *Resource, t *testing.T) EnvDefaults {
 func createWebhook(webhook webhook, r *Resource) (response *restful.Response) {
 	// Create the first entry
 	b, _ := json.Marshal(webhook)
-	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8080/webhook/", bytes.NewBuffer(b))
+	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8080/webhooks/", bytes.NewBuffer(b))
 	req := dummyRestfulRequest(httpReq, "", "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
@@ -152,7 +167,7 @@ func testGitHubSource(expectedName string, expectedOwnerAndRepo string, expected
 	}
 	realOwnerAndRepo := ghSrc.Spec.OwnerAndRepository
 	if expectedOwnerAndRepo != realOwnerAndRepo {
-		t.Errorf("Incorrect OwnderAndRepository, expected %s but was: %s", expectedOwnerAndRepo, realOwnerAndRepo)
+		t.Errorf("Incorrect OwnerAndRepository, expected %s but was: %s", expectedOwnerAndRepo, realOwnerAndRepo)
 	}
 	realGitHubAPIURL := ghSrc.Spec.GitHubAPIURL
 	if expectedGitHubAPIURL != realGitHubAPIURL {
@@ -162,7 +177,7 @@ func testGitHubSource(expectedName string, expectedOwnerAndRepo string, expected
 
 // Check the webhooks against the GET all webhooks
 func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
-	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhook/", nil)
+	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhooks/", nil)
 	req := dummyRestfulRequest(httpReq, "", "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
@@ -183,7 +198,7 @@ func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
 	actual := map[webhook]bool{}
 	for i := range expectedWebhooks {
 		if expectedWebhooks[i].DockerRegistry == "" {
-			expectedWebhooks[i].DockerRegistry = default_registry
+			expectedWebhooks[i].DockerRegistry = defaultRegistry
 		}
 		expected[expectedWebhooks[i]] = true
 		actual[actualWebhooks[i]] = true
@@ -194,13 +209,273 @@ func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
 	}
 }
 
+func TestDeleteByNameNoName405(t *testing.T) {
+	setUpServer()
+	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/?namespace=foo", nil)
+	response, _ := http.DefaultClient.Do(httpReq)
+	if response.StatusCode != 405 {
+		t.Errorf("Status code not set to 400 when deleting without a name, it's: %d", response.StatusCode)
+	}
+}
+
+func TestDeleteByNameNoNamespaceBadRequest(t *testing.T) {
+	setUpServer()
+	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/name=foo", nil)
+	response, _ := http.DefaultClient.Do(httpReq)
+	if response.StatusCode != 400 {
+		t.Errorf("Status code not set to 400 when deleting without a namespace, it's: %d", response.StatusCode)
+	}
+}
+
+// Verify it's gone, inc from configmap, and no pipelineruns were deleted for that repo as wasn't specified
+func TestDeleteByNameKeepRuns(t *testing.T) {
+	t.Log("In testDeleteByNameKeepRuns")
+
+	r := setUpServer()
+
+	labels := make(map[string]string)
+	labels["gitServer"] = "github.com"
+	labels["gitOrg"] = "owner"
+	labels["gitRepo"] = "repo"
+
+	// This should get left around
+	pipelineRun := v1alpha1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "imustlinger",
+			Labels: labels,
+		},
+		Spec: v1alpha1.PipelineRunSpec{},
+	}
+
+	_, err := r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Create(&pipelineRun)
+	if err != nil {
+		t.Errorf("Error creating the PipelineRun: %s", err)
+	}
+
+	theWebhook := webhook{
+		Name:             "webhooktodelete",
+		Namespace:        installNs,
+		GitRepositoryURL: "https://github.com/owner/repo",
+		AccessTokenRef:   "token1",
+		Pipeline:         "pipeline1",
+		HelmSecret:       "helmsecret1",
+		ReleaseName:      "foo",
+	}
+
+	configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
+
+	resp := createWebhook(theWebhook, r)
+
+	if resp.StatusCode() != http.StatusCreated {
+		t.Error("Didn't create the webhook ok for the deletion test")
+	} else {
+		_, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was removed from it. Error is: %s", err)
+		}
+	}
+
+	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook.Name+"?namespace="+installNs, nil)
+
+	response, _ := http.DefaultClient.Do(httpReq)
+
+	if response.StatusCode != 201 {
+		t.Errorf("Status code not set to 201 when deleting, it's: %d", response.StatusCode)
+	}
+	_, err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Get(theWebhook.Name, metav1.GetOptions{})
+
+	// We get an error if it can't be found. There's no error here, so it still exists - so fail
+	if err == nil {
+		t.Error("GitHub source should have been deleted, wasn't")
+	}
+
+	// We get an error if it can't be found. There's no error here, so it still exists - so fail
+	_, err = r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Get(pipelineRun.Name, metav1.GetOptions{})
+
+	if err != nil {
+		t.Errorf("PipelineRun %s should not have been deleted, it was", pipelineRun.Name)
+	}
+
+	// Now check it's gone from the ConfigMap
+
+	configMapToCheck, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("Uh oh, we got an error looking up the configmap for webhooks to check if our entry was removed from it. Error is: %s", err)
+		t.Fail()
+	}
+
+	if configMapToCheck == nil {
+		t.Errorf("Uh oh, we didn't find the configmap named %s in namespace %s", ConfigMapName, installNs)
+		t.Fail()
+	}
+
+	contents := string(configMapToCheck.BinaryData["GitHubSource"])
+
+	if contents == "" {
+		t.Errorf("Uh oh, nothing in the configmap for GitHubSource, failing")
+		t.Fail()
+	}
+
+	if strings.Contains(contents, "webhooktodelete") || strings.Contains(contents, "https://github.com/owner/repo") {
+		t.Errorf("Found the webhook name or the repository URL in the configmap data when it should have been removed, data is: %s", contents)
+	}
+}
+
+// Verify it's gone, including from the ConfigMap, and PipelineRuns were deleted for that repository
+func TestDeleteByNameDeleteRuns(t *testing.T) {
+	t.Logf("In testDeleteByNameDeleteRuns")
+
+	r := setUpServer()
+
+	labelsForPipelineRun1 := make(map[string]string)
+	labelsForPipelineRun1["gitServer"] = "github.com"
+	labelsForPipelineRun1["gitOrg"] = "foobar"
+	labelsForPipelineRun1["gitRepo"] = "barfoo"
+
+	pipelineRun1 := v1alpha1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "imustlinger1",
+			Labels: labelsForPipelineRun1,
+		},
+		Spec: v1alpha1.PipelineRunSpec{},
+	}
+
+	_, err := r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Create(&pipelineRun1)
+	if err != nil {
+		t.Errorf("Error creating the first PipelineRun: %s", err)
+	}
+
+	labelsForPipelineRun2 := make(map[string]string)
+	labelsForPipelineRun2["gitServer"] = "funkygithub.com"
+	labelsForPipelineRun2["gitOrg"] = "iamgettingdeleted"
+	labelsForPipelineRun2["gitRepo"] = "barfoobar"
+
+	pipelineRun2 := v1alpha1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "imustgo",
+			Labels: labelsForPipelineRun2,
+		},
+		Spec: v1alpha1.PipelineRunSpec{},
+	}
+
+	_, err = r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Create(&pipelineRun2)
+	if err != nil {
+		t.Errorf("Error creating the second PipelineRun: %s", err)
+	}
+
+	labelsForPipelineRun3 := make(map[string]string)
+	labelsForPipelineRun3["gitServer"] = "funkygithub.com"
+	labelsForPipelineRun3["gitOrg"] = "iamstaying"
+	labelsForPipelineRun3["gitRepo"] = "barfoobar"
+
+	pipelineRun3 := v1alpha1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "imustlinger2",
+			Labels: labelsForPipelineRun3,
+		},
+		Spec: v1alpha1.PipelineRunSpec{},
+	}
+
+	_, err = r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Create(&pipelineRun3)
+	if err != nil {
+		t.Errorf("Error creating the third PipelineRun: %s", err)
+	}
+
+	// Maps to the second PipelineRun which must be deleted
+	theWebhook := webhook{
+		Name:             "DeleteByNameDeleteRunsHook",
+		Namespace:        installNs,
+		GitRepositoryURL: "https://funkygithub.com/iamgettingdeleted/barfoobar", // Same repo URL as pipelineRun2
+		AccessTokenRef:   "token1",
+		Pipeline:         "pipeline1",
+		HelmSecret:       "helmsecret1",
+		ReleaseName:      "foo",
+	}
+
+	resp := createWebhook(theWebhook, r)
+
+	if resp.StatusCode() != http.StatusCreated {
+		t.Error("Didn't create the webhook ok for the deletion test")
+		t.Fail()
+	}
+
+	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook.Name+"?namespace="+installNs+"&deletepipelineruns=true", nil)
+
+	response, _ := http.DefaultClient.Do(httpReq)
+	if response.StatusCode != 201 {
+		t.Error("Status code not set to 201 when deleting")
+	}
+
+	_, err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Get(theWebhook.Name, metav1.GetOptions{})
+
+	if err == nil {
+		t.Errorf("The GitHub source %s should have been deleted, wasn't", theWebhook.Name)
+	}
+
+	// This Get should fail because it's been deleted, so we want an error
+
+	_, err = r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Get(pipelineRun2.Name, metav1.GetOptions{})
+
+	// This Get should not give us an error because PipelineRun2 still exists
+
+	if err == nil {
+		t.Errorf("The second PipelineRun should have been deleted, it wasn't!")
+	}
+
+	// This Get should not give us an error because PipelineRun2 still exists
+
+	_, err = r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Get(pipelineRun1.Name, metav1.GetOptions{})
+
+	if err != nil {
+		theRepoFromLabels := fmt.Sprintf("%s/%s/%s", pipelineRun1.Labels["gitServer"], pipelineRun1.Labels["gitOrg"], pipelineRun1.Labels["gitRepo"])
+		t.Errorf("The first PipelineRun %s for repository %s should not have been deleted", pipelineRun1.Name, theRepoFromLabels)
+	}
+
+	// This Get should not give us an error because PipelineRun3 still exists
+
+	_, err = r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).Get(pipelineRun3.Name, metav1.GetOptions{})
+
+	if err != nil {
+		theRepoFromLabels := fmt.Sprintf("%s/%s/%s", pipelineRun3.Labels["gitServer"], pipelineRun3.Labels["gitOrg"], pipelineRun3.Labels["gitRepo"])
+		t.Errorf("The third PipelineRun %s for repository %s should not have been deleted", pipelineRun3.Name, theRepoFromLabels)
+
+		allPipelineRuns, err := r.TektonClient.TektonV1alpha1().PipelineRuns(installNs).List(metav1.ListOptions{})
+		if err != nil {
+			t.Errorf("Couldn't even get a list of PipelineRuns, error is: %s", err)
+		}
+		t.Logf("Found PipelineRuns: %v", allPipelineRuns.Items)
+	}
+
+	// Now check it's gone from the ConfigMap
+
+	configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
+
+	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		t.Error("Uh oh, we got an error looking up the configmap for webhooks to check if our entry was removed from it")
+	}
+
+	contents := string(configMap.BinaryData["GitHubSource"])
+	if strings.Contains(contents, "DeleteByNameDeleteRunsHook") || strings.Contains(contents, "https://funkygithub.com/iamgettingdeleted/barfoobar") {
+		t.Errorf("Found the webhook name or the repository URL in the configmap data when it should have been removed, data is: %s", contents)
+	}
+}
+
+func TestDeleteByName404NotFound(t *testing.T) {
+	t.Log("In TestDeleteByName404NotFound")
+	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/idonotexist?namespace="+installNs, nil)
+	response, _ := http.DefaultClient.Do(httpReq)
+	if response.StatusCode != 404 {
+		t.Errorf("Status code not set to 404 when deleting a non-existent webhook, it's: %d", response.StatusCode)
+	}
+}
+
 func testGithubSourceReleaseNameTooLong(r *Resource, t *testing.T) {
-	runNs := "test"
 
 	data := webhook{
 		Name:             "name1",
-		Namespace:        runNs,
-		GitRepositoryURL: "https://github.com/owner/repo.git",
+		Namespace:        installNs,
+		GitRepositoryURL: "https://github.com/owner/repo",
 		AccessTokenRef:   "token1",
 		Pipeline:         "pipeline1",
 		HelmSecret:       "helmsecret1",

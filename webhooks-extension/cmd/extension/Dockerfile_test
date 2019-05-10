@@ -1,6 +1,6 @@
-# Start from a Debian image with the latest version of Go installed
-# and a workspace (GOPATH) configured at /go.
-FROM golang
+FROM golang:1.12-alpine
+
+RUN apk add curl git
 
 # Copy the local package files to the container's workspace.
 ADD . /go/src/github.com/tektoncd/experimental/webhooks-extension
@@ -12,4 +12,4 @@ RUN chmod +x /usr/bin/dep
 RUN dep ensure -vendor-only
 
 # Run endpoints go tests
-RUN go test github.com/tektoncd/experimental/webhooks-extension/endpoints -v
+RUN CGO_ENABLED=0 go test github.com/tektoncd/experimental/webhooks-extension/endpoints -v

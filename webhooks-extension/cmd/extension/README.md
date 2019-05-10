@@ -55,6 +55,24 @@ Example POST
 }
 ```
 
+### DELETE endpoint
+
+```
+DELETE /webhooks/<webhookid>?namespace=<my namespace>
+```
+
+You can optionally add &deletepipelineruns=true to remove all PipelineRuns associated with the same repository.
+
+Returns HTTP code 201 if the webhook was deleted successfully
+Returns HTTP code 400 if an error occurred with the request body
+Returns HTTP code 404 if the webhook wasn't found
+Returns HTTP code 405 if a query parameter alone was provided
+Returns HTTP code 500 if any other errors occurred
+
+Deletes the GithubSource (therefore the webhook from the repository) and optionally deletes all PipelineRuns for the configured repository. 
+The ConfigMap used to maintain a list of configured webhooks to Pipelines is also updated.
+
+
 These endpoints can be accessed through the dashboard.
 
 If using Helm, you can also specify a Helm release name. If no Helm release name is provided, your Helm release name will default to be the repository name.
