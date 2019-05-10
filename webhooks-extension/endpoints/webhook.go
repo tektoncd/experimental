@@ -19,6 +19,7 @@ import (
 	"fmt"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	"net/http"
+	"strconv"
 	"strings"
 
 	restful "github.com/emicklei/go-restful"
@@ -27,9 +28,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// RegisterEndpoints registers the endpoints for a container
+// Do it this way so we can create our own test server too
+func (r Resource) RegisterEndpoints(container *restful.Container) {
+	ws := new(restful.WebService)
+	ws.
+		Path("/webhooks").
+		Consumes(restful.MIME_JSON, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_JSON)
+
+	ws.Route(ws.POST("/").To(r.createWebhook))
+	ws.Route(ws.GET("/").To(r.getAllWebhooks))
+	ws.Route(ws.GET("/defaults").To(r.getDefaults))
+
+	ws.Route(ws.DELETE("/{name}").To(r.deleteWebhook))
+
+	container.Add(ws)
+}
+
+// Creates a webhook for a given repository and populates (creating if doesn't yet exist) a ConfigMap storing this information
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
 	logging.Log.Infof("Creating webhook with request: %+v.", request)
-	// Install namespace
 	installNs := r.Defaults.Namespace
 	if installNs == "" {
 		installNs = "default"
@@ -65,6 +84,9 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
+
+	logging.Log.Debugf("Webhook to be created in namespace %s", namespace)
+
 	logging.Log.Infof("Creating webhook: %v.", webhook)
 	pieces := strings.Split(webhook.GitRepositoryURL, "/")
 	if len(pieces) < 4 {
@@ -126,12 +148,142 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		return
 	}
 	webhooks[webhook.Name] = webhook
+	logging.Log.Debugf("Writing the GitHubSource webhook ConfigMap in namespace %s", installNs)
 	r.writeGitHubWebhooks(installNs, webhooks)
 	response.WriteHeader(http.StatusCreated)
 }
 
+// Removes from ConfigMap, removes the actual GitHubSource, removes the webhook
+func (r Resource) deleteWebhook(request *restful.Request, response *restful.Response) {
+	logging.Log.Debug("In deleteWebhook")
+	name := request.PathParameter("name")
+	namespace := request.QueryParameter("namespace")
+	deletePipelineRuns := request.QueryParameter("deletepipelineruns")
+
+	var toDeletePipelineRuns = false
+	var err error
+
+	if deletePipelineRuns != "" {
+		toDeletePipelineRuns, err = strconv.ParseBool(deletePipelineRuns)
+		if err != nil {
+			theError := errors.New("bad request information provided, cannot handle deletepipelineruns query (should be set to true or not provided)")
+			logging.Log.Error(theError)
+			RespondError(response, err, http.StatusInternalServerError)
+		}
+	}
+
+	if namespace == "" {
+		theError := errors.New("no namespace was provided")
+		logging.Log.Error(theError)
+		RespondError(response, theError, http.StatusBadRequest)
+	}
+
+	if name != "" {
+		foundRepoURL := r.findRepoURLFromConfigMap(name, namespace)
+		// This will remove any PipelineRuns too if specified to, hence the need for the repository URL
+		err = r.deleteGitHubWebhookByName(name, namespace, foundRepoURL, toDeletePipelineRuns)
+		if err != nil {
+			if strings.Contains(err.Error(), "could not find webhook with name") {
+				logging.Log.Errorf("webhook (name %s) not found in namespace %s", name, namespace)
+				RespondError(response, err, http.StatusNotFound)
+			} else {
+				logging.Log.Errorf("error deleting the webhook (name %s), error: %s", name, err)
+				RespondError(response, err, http.StatusInternalServerError)
+			}
+		} else {
+			logging.Log.Info("Deleted the webhook OK, deleting from ConfigMap next")
+		}
+
+		err = r.deleteWebhookFromConfigMapByName(name, namespace)
+		if err != nil {
+			logging.Log.Errorf("error deleting the webhook information (name %s) from the ConfigMap, error: %s", name, err)
+			RespondError(response, err, http.StatusInternalServerError)
+		}
+	} else {
+		logging.Log.Error("no name was provided")
+		RespondError(response, err, http.StatusBadRequest)
+	}
+	response.WriteHeader(201)
+}
+
+// Find the repository URL for a webhook. We store webhook in a ConfigMap
+func (r Resource) findRepoURLFromConfigMap(webhookName, namespace string) string {
+	foundURL := ""
+	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
+
+	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		logging.Log.Errorf("couldn't find ConfigMap %s in namespace %s", ConfigMapName, namespace)
+		return ""
+	}
+
+	data := configMap.BinaryData["GitHubSource"]
+
+	itsANestedMap := map[string]map[string]string{}
+	err = json.Unmarshal(data, &itsANestedMap)
+	if err != nil {
+		logging.Log.Errorf("invalid data format in the ConfigMap, can't modify it, error: %s", err.Error())
+	}
+
+	foundURL = itsANestedMap[webhookName]["gitrepositoryurl"]
+	return foundURL
+}
+
+// Delete the webhook information from our ConfigMap
+func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string) error {
+	logging.Log.Debug("Deleting webhook info from ConfigMap")
+
+	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
+
+	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		logging.Log.Errorf("couldn't find the ConfigMap %s in namespace %s", ConfigMapName, namespace)
+		return err
+	} else {
+		logging.Log.Debugf("Found and deleting webhook info %s from %s", webhookName, configMap.Name)
+	}
+
+	/* Contains for example, base64 encoded:
+	{
+		confiMap.BinaryData[GitHubSource]
+		"myhook":
+		{
+			"name":"myhook",
+			"namespace":"default",
+			"gitrepositoryurl":"https://myrepourl",
+		  "accesstoken":"my-secret-for-hooks",
+		  "pipeline":"simple-helm-pipeline-insecure",
+			"dockerregistry":"adamroberts"
+		}
+	}
+	*/
+
+	data := configMap.BinaryData["GitHubSource"]
+
+	itsANestedMap := map[string]map[string]string{}
+	err = json.Unmarshal(data, &itsANestedMap)
+	if err != nil {
+		logging.Log.Errorf("invalid data format in the ConfigMap, can't modify it, error: %s", err.Error())
+	}
+
+	delete(itsANestedMap, webhookName)
+
+	itsANestedMapAsBytes, err := json.Marshal(itsANestedMap)
+	if err != nil {
+		logging.Log.Errorf("Couldn't go back to bytes from the nested map, error is: %s", err.Error())
+	}
+
+	configMap.BinaryData["GitHubSource"] = itsANestedMapAsBytes
+
+	_, err = configMapClient.Update(configMap)
+	if err != nil {
+		logging.Log.Errorf("error updating ConfigMap for GitHub webhooks: %s.", err.Error())
+	}
+
+	return nil
+}
+
 func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Response) {
-	// Install namespace
 	installNs := r.Defaults.Namespace
 	if installNs == "" {
 		installNs = "default"
@@ -151,7 +303,72 @@ func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Res
 	response.WriteEntity(sourcesList)
 }
 
-// retrieve retistry secret, helm secret and pipeline name for the github url
+/* Tekton dashboard/extension created PipelineRuns are labelled, e.g. with:
+"gitOrg": "myorg"
+"gitRepo": "myrepo"
+"gitServer": "github.com"
+Delete them if the repository URL is what's provided as a parameter. */
+
+func (r Resource) deletePipelineRunsByRepoURL(gitrepourl, namespace string) error {
+	logging.Log.Debugf("Deleting PipelineRuns in namespace %s with repositoryURL %s.", namespace, gitrepourl)
+
+	allPipelineRuns, err := r.TektonClient.TektonV1alpha1().PipelineRuns(namespace).List(metav1.ListOptions{})
+
+	if err != nil {
+		return err
+	}
+
+	for _, pipelineRun := range allPipelineRuns.Items {
+		labels := pipelineRun.GetLabels()
+		serverURL := labels["gitServer"]
+		orgName := labels["gitOrg"]
+		repoName := labels["gitRepo"]
+		foundRepoURL := fmt.Sprintf("https://%s/%s/%s", serverURL, orgName, repoName)
+		if foundRepoURL == gitrepourl {
+			err := r.TektonClient.TektonV1alpha1().PipelineRuns(namespace).Delete(pipelineRun.Name, &metav1.DeleteOptions{})
+			if err != nil {
+				logging.Log.Errorf("failed to delete %s, error: %s", pipelineRun.Name, err.Error())
+				return err
+			}
+			logging.Log.Infof("Deleted PipelineRun %s", pipelineRun.Name)
+		}
+	}
+	// All is good
+	return nil
+}
+
+/* Delete a GitHubSource based on its name and namespace, returns no error (nil) if all is OK.
+   Optionally deletes PipelineRuns too. This method does not delete from the ConfigMap, that's done as an additional step. */
+
+func (r Resource) deleteGitHubWebhookByName(name, namespace, foundRepoURL string, deletePipelineRuns bool) error {
+	logging.Log.Debugf("Deleting GitHub webhook in namespace %s with name %s.", namespace, name)
+
+	foundRealGitHubSource, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(namespace).Get(name, metav1.GetOptions{})
+
+	if err != nil {
+		return fmt.Errorf("could not find webhook with name: %s", name)
+	}
+
+	err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(namespace).Delete(foundRealGitHubSource.Name, &metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("could not delete webhook with name: %s", name)
+	}
+
+	if deletePipelineRuns {
+		err := r.deletePipelineRunsByRepoURL(foundRepoURL, namespace)
+		if err != nil {
+			return fmt.Errorf("could not delete the pipelineruns associated with repo URL %s in namespace %s", foundRepoURL, namespace)
+		}
+		logging.Log.Infof("Deleted PipelineRuns OK")
+
+	} else {
+		logging.Log.Info("Preserving PipelineRuns")
+	}
+	// All good
+	return nil
+}
+
+// Retrieve registry secret, helm secret and pipeline name for the GitHub URL
 func (r Resource) getGitHubWebhook(gitrepourl string, namespace string) (webhook, error) {
 	logging.Log.Debugf("Get GitHub webhook in namespace %s with repositoryURL %s.", namespace, gitrepourl)
 
@@ -253,19 +470,4 @@ func RespondErrorAndMessage(response *restful.Response, err error, message strin
 	logging.Log.Errorf("Message for RespondErrorAndMesage: %s.", message)
 	response.AddHeader("Content-Type", "text/plain")
 	response.WriteErrorString(statusCode, message)
-}
-
-// ExtensionWebService returns the webhook webservice
-func ExtensionWebService(r Resource) *restful.WebService {
-	ws := new(restful.WebService)
-	ws.
-		Path("/webhooks").
-		Consumes(restful.MIME_JSON, restful.MIME_JSON).
-		Produces(restful.MIME_JSON, restful.MIME_JSON)
-
-	ws.Route(ws.POST("/").To(r.createWebhook))
-	ws.Route(ws.GET("/").To(r.getAllWebhooks))
-	ws.Route(ws.GET("/defaults").To(r.getDefaults))
-
-	return ws
 }

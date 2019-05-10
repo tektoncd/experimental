@@ -32,7 +32,8 @@ func main() {
 	// Set up routes
 	wsContainer := restful.NewContainer()
 	// Add extension
-	wsContainer.Add(endpoints.ExtensionWebService(r))
+
+	r.RegisterEndpoints(wsContainer)
 	// Add liveness/readiness
 	wsContainer.Add(endpoints.LivenessWebService())
 	wsContainer.Add(endpoints.ReadinessWebService())
