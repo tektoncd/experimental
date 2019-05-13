@@ -29,6 +29,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var statusLock sync.Mutex
+var createLock sync.Mutex
+
 // RegisterEndpoints registers the endpoints for a container
 // Do it this way so we can create our own test server too
 func (r Resource) RegisterEndpoints(container *restful.Container) {
@@ -49,6 +52,9 @@ func (r Resource) RegisterEndpoints(container *restful.Container) {
 
 // Creates a webhook for a given repository and populates (creating if doesn't yet exist) a ConfigMap storing this information
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
+	createLock.Lock()
+	defer createLock.Unlock()
+
 	logging.Log.Infof("Creating webhook with request: %+v.", request)
 	installNs := r.Defaults.Namespace
 	if installNs == "" {
@@ -237,8 +243,6 @@ func (r Resource) findRepoURLFromConfigMap(webhookName, namespace string) string
 	foundURL = itsANestedMap[webhookName]["gitrepositoryurl"]
 	return foundURL
 }
-
-var statusLock sync.Mutex
 
 // Delete the webhook information from our ConfigMap
 func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string) error {
