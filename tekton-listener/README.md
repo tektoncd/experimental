@@ -11,7 +11,7 @@ The first new CRD, `TektonListener`, provides support for consuming CloudEvent a
 
 An example TektonListener:
 ```
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tektonexperimental.dev/v1alpha1
 kind: TektonListener
 metadata:
   name: test-build-tekton-listener
@@ -57,7 +57,7 @@ The `EventBinding` CRD provides a new high-level means of managing all of the re
 An example EventBinding:
 
 ```
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tektonexperimental.dev/v1alpha1
 kind: EventBinding
 metadata:
   name: test-event-binding
