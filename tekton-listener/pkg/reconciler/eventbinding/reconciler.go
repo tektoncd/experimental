@@ -160,6 +160,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	tektonListenerName := fmt.Sprintf("%s-listener", binding.Name)
 
+	c.logger.Infof("creating listener for event-type: %q for event-name: %q", binding.Spec.EventRef.EventType, binding.Spec.EventRef.EventName)
+
 	// Create a tekton listener!
 	newListener := &v1alpha1.TektonListener{
 		ObjectMeta: metav1.ObjectMeta{

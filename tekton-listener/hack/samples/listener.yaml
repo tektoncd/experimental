@@ -1,5 +1,5 @@
 ---
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tektonexperimental.dev/v1alpha1
 kind: TektonListener
 metadata:
   name: test-build-tekton-listener

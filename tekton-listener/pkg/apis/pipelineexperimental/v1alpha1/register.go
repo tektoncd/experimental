@@ -8,7 +8,7 @@ import (
 
 // Define your schema name and the version
 var SchemeGroupVersion = schema.GroupVersion{
-	Group:   "tekton.dev",
+	Group:   "tektonexperimental.dev",
 	Version: "v1alpha1",
 }
 

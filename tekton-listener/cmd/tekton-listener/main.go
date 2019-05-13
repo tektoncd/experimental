@@ -24,13 +24,13 @@ import (
 )
 
 const (
-	listenerPath   = "/events"
+	listenerPath   = "/"
 	cloudEventType = "cloudevent"
 )
 
 type Config struct {
 	Event            string `env:"EVENT,default=cloudevent"`
-	EventType        string `env:"EVENT_TYPE,default=com.github.checksuite"`
+	EventType        string `env:"EVENT_TYPE,default=dev.knative.source.github.push"`
 	MasterURL        string `env:"MASTER_URL"`
 	Kubeconfig       string `env:"KUBECONFIG"`
 	Namespace        string `env:"NAMESPACE"`
@@ -141,19 +141,26 @@ func (e *EventListener) HandleRequest(ctx context.Context, event cloudevents.Eve
 		return errors.New("Only cloudevents version 0.2 supported")
 	}
 	if event.Type() != e.eventType {
-		return errors.New("Mismatched event type submitted")
-
+		return fmt.Errorf("Mismatched event type submitted. e.eventType %s event.Type() %s", e.eventType, event.Type())
 	}
 
 	log.Printf("Handling event Type: %q", event.Type())
 
 	switch event.Type() {
-	case "com.github.checksuite":
+	case "dev.knative.source.github.checksuite":
 		cs := &gh.CheckSuitePayload{}
 		if err := event.DataAs(cs); err != nil {
 			return errors.Wrap(err, "Error handling check suite payload")
 		}
 		if err := e.handleCheckSuite(event, cs); err != nil {
+			return err
+		}
+	case "dev.knative.source.github.push":
+		cs := &gh.PushPayload{}
+		if err := event.DataAs(cs); err != nil {
+			return errors.Wrap(err, "Error handling check suite payload")
+		}
+		if err := e.handlePush(event, cs); err != nil {
 			return err
 		}
 	}
@@ -170,6 +177,23 @@ func (r *EventListener) handleCheckSuite(event cloudevents.Event, cs *gh.CheckSu
 
 		log.Printf("Created pipeline run %q!", build.Name)
 	}
+	return nil
+}
+
+func (r *EventListener) handlePush(event cloudevents.Event, p *gh.PushPayload) error {
+	sha := ""
+	for _, commit := range p.Commits {
+		if commit.ID == p.HeadCommit.ID {
+			sha = commit.Sha
+		}
+	}
+
+	build, err := r.createPipelineRun(sha)
+	if err != nil {
+		return errors.Wrapf(err, "Error creating pipeline run for push: %q", event.Type())
+	}
+
+	log.Printf("Created pipeline run %q!", build.Name)
 	return nil
 }
 

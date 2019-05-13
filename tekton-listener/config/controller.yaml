@@ -15,7 +15,7 @@ apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: tekton-experimental-controller
-  namespace: tekton-pipelines
+  namespace: tekton-experimental
 spec:
   replicas: 1
   template:

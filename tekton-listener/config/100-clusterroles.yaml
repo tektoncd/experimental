@@ -16,7 +16,7 @@ rules:
     resources: ["mutatingwebhookconfigurations"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["tekton.dev"]
-    resources: ["tasks", "clustertasks", "taskruns", "pipelines", "pipelineruns", "pipelineresources", "tektonlisteners", "eventbindings"] # experimental apigroup?
+    resources: ["tasks", "clustertasks", "taskruns", "pipelines", "pipelineruns", "pipelineresources"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["tekton.dev"]
     resources: ["taskruns/finalizers", "pipelineruns/finalizers"]
@@ -28,4 +28,6 @@ rules:
     resources: ["podsecuritypolicies"]
     resourceNames: ["tekton-pipelines"]
     verbs: ["use"]
-
+  - apiGroups: ["tektonexperimental.dev"]
+    resources: ["tektonlisteners", "eventbindings"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]

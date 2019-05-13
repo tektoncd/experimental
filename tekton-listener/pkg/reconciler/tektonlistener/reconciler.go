@@ -143,8 +143,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		pl.Spec.Namespace,
 	)
 
-	c.logger.Infof("\n StatefulSet matchlabels: %q\n", pl.Labels)
-
 	// Create a stateful set for the listener. It mounts a secret containing the build information.
 	// The build spec may contain sensetive data and therefore the whole thing seems safest/easiest as a secret
 	set := &appsv1.StatefulSet{
@@ -199,7 +197,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	if !reflect.DeepEqual(set.Spec, found.Spec) {
 		found.Spec = set.Spec
-		c.logger.Info("Updating Stateful Set", "namespace", set.Namespace, "name", set.Name)
+		c.logger.Info("Updating Stateful Set", "namespace", set.Namespace, "name", found.Name)
 		updated, err := c.kubeclientset.AppsV1().StatefulSets(pl.Namespace).Update(found)
 		if err != nil {
 			return err

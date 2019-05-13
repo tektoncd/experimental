@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tektonexperimental.dev/v1alpha1
 kind: EventBinding
 metadata:
   name: test-event-binding
@@ -6,6 +6,9 @@ metadata:
   labels:
     app: test-build-tekton-listener
 spec:
+  eventref:
+    eventname: pushevents
+    eventtype: push
   serviceAccount: tekton-experimental-controller
   selector:
     matchLabels:
