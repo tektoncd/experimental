@@ -1,17 +1,15 @@
 #!/bin/bash
 
-function install_istio_nodeport() {
+function install_istio() {
     if [ -z "$1" ]; then
-        echo "Usage ERROR for function: install_istio_nodeport [version]"
+        echo "Usage ERROR for function: install_istio [version]"
         echo "Missing [version]"
         exit 1
     fi
     version="$1"
     # Install on Minikube or Docker Desktop
-    # We are changing LoadBalancer to NodePort for the istio-ingress service
     kubectl apply --filename https://github.com/knative/serving/releases/download/${version}/istio-crds.yaml &&
     curl -L https://github.com/knative/serving/releases/download/${version}/istio.yaml \
-      | sed 's/LoadBalancer/NodePort/' \
       | kubectl apply --filename -
 
     # This works but why are we only labelling the default namespace? 
@@ -23,16 +21,14 @@ function install_istio_nodeport() {
     wait_for_ready_pods istio-system 300 30
 }
 
-function install_knative_serving_nodeport() {
+function install_knative_serving() {
     if [ -z "$1" ]; then
-        echo "Usage ERROR for function: install_knative_serving_nodeport [version]"
+        echo "Usage ERROR for function: install_knative_serving [version]"
         echo "Missing [version]"
         exit 1
     fi
     version="$1"
-    # Use NodePort instead of LoadBalancer for Minikube or Docker Desktop
     curl -L https://github.com/knative/serving/releases/download/${version}/serving.yaml \
-    | sed 's/LoadBalancer/NodePort/' \
     | kubectl apply --filename -
     # Wait until all the pods come up
     wait_for_ready_pods knative-serving 180 20

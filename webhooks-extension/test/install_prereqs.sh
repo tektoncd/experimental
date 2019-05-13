@@ -10,9 +10,8 @@ export test_dir="${tekton_repo_dir}/webhooks-extension/test"
 source ${test_dir}/config.sh
 source ${test_dir}/util.sh
   
-# Required for devops-back-end: istio, knative eventing, knative eventing sources, knative serving, and tekton
-install_istio_nodeport ${KNATIVE_VERSION}
-install_knative_serving_nodeport ${KNATIVE_VERSION}
+install_istio ${KNATIVE_VERSION}
+install_knative_serving ${KNATIVE_VERSION}
 install_knative_eventing ${KNATIVE_VERSION}
 install_knative_eventing_sources ${KNATIVE_VERSION}
 install_tekton ${TEKTON_VERSION}
