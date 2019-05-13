@@ -27,6 +27,8 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"runtime"
+	"sync"
 )
 
 var server *httptest.Server
@@ -220,14 +222,14 @@ func TestDeleteByNameNoName405(t *testing.T) {
 
 func TestDeleteByNameNoNamespaceBadRequest(t *testing.T) {
 	setUpServer()
-	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/name=foo", nil)
+	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/foo", nil)
 	response, _ := http.DefaultClient.Do(httpReq)
 	if response.StatusCode != 400 {
 		t.Errorf("Status code not set to 400 when deleting without a namespace, it's: %d", response.StatusCode)
 	}
 }
 
-// Verify it's gone, inc from configmap, and no pipelineruns were deleted for that repo as wasn't specified
+// Verify it's gone, including from ConfigMap, and no PipelineRuns were deleted for that repo as wasn't specified
 func TestDeleteByNameKeepRuns(t *testing.T) {
 	t.Log("In testDeleteByNameKeepRuns")
 
@@ -267,7 +269,7 @@ func TestDeleteByNameKeepRuns(t *testing.T) {
 	resp := createWebhook(theWebhook, r)
 
 	if resp.StatusCode() != http.StatusCreated {
-		t.Error("Didn't create the webhook ok for the deletion test")
+		t.Error("Didn't create the webhook OK for the deletion test")
 	} else {
 		_, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 		if err != nil {
@@ -300,24 +302,24 @@ func TestDeleteByNameKeepRuns(t *testing.T) {
 
 	configMapToCheck, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 	if err != nil {
-		t.Errorf("Uh oh, we got an error looking up the configmap for webhooks to check if our entry was removed from it. Error is: %s", err)
+		t.Errorf("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was removed from it. Error is: %s", err)
 		t.Fail()
 	}
 
 	if configMapToCheck == nil {
-		t.Errorf("Uh oh, we didn't find the configmap named %s in namespace %s", ConfigMapName, installNs)
+		t.Errorf("Uh oh, we didn't find the ConfigMap named %s in namespace %s", ConfigMapName, installNs)
 		t.Fail()
 	}
 
 	contents := string(configMapToCheck.BinaryData["GitHubSource"])
 
 	if contents == "" {
-		t.Errorf("Uh oh, nothing in the configmap for GitHubSource, failing")
+		t.Errorf("Uh oh, nothing in the ConfigMap for GitHubSource, failing")
 		t.Fail()
 	}
 
 	if strings.Contains(contents, "webhooktodelete") || strings.Contains(contents, "https://github.com/owner/repo") {
-		t.Errorf("Found the webhook name or the repository URL in the configmap data when it should have been removed, data is: %s", contents)
+		t.Errorf("Found the webhook name or the repository URL in the ConfigMap data when it should have been removed, data is: %s", contents)
 	}
 }
 
@@ -395,7 +397,7 @@ func TestDeleteByNameDeleteRuns(t *testing.T) {
 	resp := createWebhook(theWebhook, r)
 
 	if resp.StatusCode() != http.StatusCreated {
-		t.Error("Didn't create the webhook ok for the deletion test")
+		t.Error("Didn't create the webhook OK for the deletion test")
 		t.Fail()
 	}
 
@@ -452,12 +454,12 @@ func TestDeleteByNameDeleteRuns(t *testing.T) {
 
 	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 	if err != nil {
-		t.Error("Uh oh, we got an error looking up the configmap for webhooks to check if our entry was removed from it")
+		t.Error("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was removed from it")
 	}
 
 	contents := string(configMap.BinaryData["GitHubSource"])
 	if strings.Contains(contents, "DeleteByNameDeleteRunsHook") || strings.Contains(contents, "https://funkygithub.com/iamgettingdeleted/barfoobar") {
-		t.Errorf("Found the webhook name or the repository URL in the configmap data when it should have been removed, data is: %s", contents)
+		t.Errorf("Found the webhook name or the repository URL in the ConfigMap data when it should have been removed, data is: %s", contents)
 	}
 }
 
@@ -488,4 +490,92 @@ func testGithubSourceReleaseNameTooLong(r *Resource, t *testing.T) {
 	if resp.StatusCode() != http.StatusBadRequest {
 		t.Error("Expected a bad request when the release name exceeded 63 chars")
 	}
+}
+
+func TestMultipleDeletesCorrectData(t *testing.T) {
+	t.Log("in TestMultipleDeletesCorrectData")
+	r := setUpServer()
+
+	numTimes := 100
+	runtime.GOMAXPROCS(2)
+
+	for i := 0; i < numTimes; i++ {
+		theWebhook1 := webhook{
+			Name:             "routine1hook",
+			Namespace:        installNs,
+			GitRepositoryURL: "https://a.com/b/c", // Same repo URL as pipelineRun
+			AccessTokenRef:   "token1",
+			Pipeline:         "pipeline1",
+		}
+
+		resp := createWebhook(theWebhook1, r)
+
+		if resp.StatusCode() != http.StatusCreated {
+			t.Error("Didn't create the first webhook OK for the multiple request deletion test")
+			t.Fail()
+		}
+
+		theWebhook2 := webhook{
+			Name:             "routine2hook",
+			Namespace:        installNs,
+			GitRepositoryURL: "https://b.com/c/d", // Same repo URL as pipelineRun
+			AccessTokenRef:   "token1",
+			Pipeline:         "pipeline1",
+		}
+
+		resp = createWebhook(theWebhook2, r)
+
+		if resp.StatusCode() != http.StatusCreated {
+			t.Error("Didn't create the second webhook OK for the multiple request deletion test")
+			t.Fail()
+		}
+
+		firstReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
+		secondReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook2.Name+"?namespace="+installNs, nil)
+
+		// Fire them off at the same time, then check the resulting ConfigMap is accurate: containing no entries and not just one.
+
+		var firstResponse *http.Response
+		var secondResponse *http.Response
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			firstResponse, _ = http.DefaultClient.Do(firstReq)
+		}()
+
+		go func() {
+			defer wg.Done()
+			secondResponse, _ = http.DefaultClient.Do(secondReq)
+		}()
+
+		wg.Wait()
+
+		if firstResponse.StatusCode != 201 {
+			t.Errorf("Should have deleted the first webhook OK, return code wasn't 201 - it's: %d", firstResponse.StatusCode)
+		}
+
+		if secondResponse.StatusCode != 201 {
+			t.Errorf("Should have deleted the second webhook OK, return code wasn't 201 - it's: %d", secondResponse.StatusCode)
+		}
+
+		//	Check both are gone from the ConfigMap
+
+		configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
+
+		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+		if err != nil {
+			t.Error("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was removed from it")
+		}
+
+		contents := string(configMap.BinaryData["GitHubSource"])
+		if strings.Contains(contents, theWebhook1.Name) || strings.Contains(contents, "https://a.com/b/c") ||
+			strings.Contains(contents, theWebhook2.Name) || strings.Contains(contents, "https://b.com/c/d") {
+			t.Errorf("For iteration %d, we found a webhook name or repository URL in "+
+				"the ConfigMap data when both should have been removed through simultaneous requests, data is: %s", i, contents)
+		}
+	}
+
 }

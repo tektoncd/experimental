@@ -59,7 +59,6 @@ Example POST
 
 ```
 DELETE /webhooks/<webhookid>?namespace=<my namespace>
-```
 
 You can optionally add &deletepipelineruns=true to remove all PipelineRuns associated with the same repository.
 
@@ -71,6 +70,7 @@ Returns HTTP code 500 if any other errors occurred
 
 Deletes the GithubSource (therefore the webhook from the repository) and optionally deletes all PipelineRuns for the configured repository. 
 The ConfigMap used to maintain a list of configured webhooks to Pipelines is also updated.
+```
 
 
 These endpoints can be accessed through the dashboard.
