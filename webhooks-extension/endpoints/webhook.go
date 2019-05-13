@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	restful "github.com/emicklei/go-restful"
 	eventapi "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
@@ -237,8 +238,14 @@ func (r Resource) findRepoURLFromConfigMap(webhookName, namespace string) string
 	return foundURL
 }
 
+var statusLock sync.Mutex
+
 // Delete the webhook information from our ConfigMap
 func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string) error {
+	// We don't want any other requests going through here so use a mutex
+	// otherwise we'll end up with operations performed on old configmaps so we'll have invalid data
+	statusLock.Lock()
+	defer statusLock.Unlock()
 	logging.Log.Debug("Deleting webhook info from ConfigMap")
 
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
@@ -287,7 +294,6 @@ func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string
 	if err != nil {
 		logging.Log.Errorf("error updating ConfigMap for GitHub webhooks: %s.", err.Error())
 	}
-
 	return nil
 }
 
