@@ -169,6 +169,7 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 			theError := errors.New("bad request information provided, cannot handle deletepipelineruns query (should be set to true or not provided)")
 			logging.Log.Error(theError)
 			RespondError(response, err, http.StatusInternalServerError)
+			return
 		}
 	}
 
@@ -176,7 +177,10 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 		theError := errors.New("no namespace was provided")
 		logging.Log.Error(theError)
 		RespondError(response, theError, http.StatusBadRequest)
+		return
 	}
+
+	logging.Log.Debugf("in deleteWebhook, name: %s, namespace: %s, delete pipeline runs: %s", name, namespace, deletePipelineRuns)
 
 	if name != "" {
 		foundRepoURL := r.findRepoURLFromConfigMap(name, namespace)
@@ -186,22 +190,26 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 			if strings.Contains(err.Error(), "could not find webhook with name") {
 				logging.Log.Errorf("webhook (name %s) not found in namespace %s", name, namespace)
 				RespondError(response, err, http.StatusNotFound)
-			} else {
-				logging.Log.Errorf("error deleting the webhook (name %s), error: %s", name, err)
-				RespondError(response, err, http.StatusInternalServerError)
+				return
 			}
+			logging.Log.Errorf("error deleting the webhook (name %s), error: %s", name, err)
+			RespondError(response, err, http.StatusInternalServerError)
+			return
+
 		} else {
-			logging.Log.Info("Deleted the webhook OK, deleting from ConfigMap next")
+			logging.Log.Infof("Deleted the webhook %s OK, deleting from ConfigMap next", name)
 		}
 
 		err = r.deleteWebhookFromConfigMapByName(name, namespace)
 		if err != nil {
 			logging.Log.Errorf("error deleting the webhook information (name %s) from the ConfigMap, error: %s", name, err)
 			RespondError(response, err, http.StatusInternalServerError)
+			return
 		}
 	} else {
 		logging.Log.Error("no name was provided")
 		RespondError(response, err, http.StatusBadRequest)
+		return
 	}
 	response.WriteHeader(201)
 }
@@ -251,8 +259,8 @@ func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string
 			"name":"myhook",
 			"namespace":"default",
 			"gitrepositoryurl":"https://myrepourl",
-		  "accesstoken":"my-secret-for-hooks",
-		  "pipeline":"simple-helm-pipeline-insecure",
+			"accesstoken":"my-secret-for-hooks",
+			"pipeline":"simple-helm-pipeline-insecure",
 			"dockerregistry":"adamroberts"
 		}
 	}
@@ -270,7 +278,7 @@ func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string
 
 	itsANestedMapAsBytes, err := json.Marshal(itsANestedMap)
 	if err != nil {
-		logging.Log.Errorf("Couldn't go back to bytes from the nested map, error is: %s", err.Error())
+		logging.Log.Errorf("error marshalling the nested map, error is: %s", err.Error())
 	}
 
 	configMap.BinaryData["GitHubSource"] = itsANestedMapAsBytes
