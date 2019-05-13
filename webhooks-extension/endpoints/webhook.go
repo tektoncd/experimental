@@ -212,7 +212,7 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
-	response.WriteHeader(201)
+	response.WriteHeader(200)
 }
 
 // Find the repository URL for a webhook. We store webhook in a ConfigMap
