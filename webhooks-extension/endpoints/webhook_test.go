@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors
+Copyright 2009 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -281,8 +281,8 @@ func TestDeleteByNameKeepRuns(t *testing.T) {
 
 	response, _ := http.DefaultClient.Do(httpReq)
 
-	if response.StatusCode != 201 {
-		t.Errorf("Status code not set to 201 when deleting, it's: %d", response.StatusCode)
+	if response.StatusCode != 200 {
+		t.Errorf("Status code not set to 200 when deleting, it's: %d", response.StatusCode)
 	}
 	_, err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Get(theWebhook.Name, metav1.GetOptions{})
 
@@ -404,8 +404,8 @@ func TestDeleteByNameDeleteRuns(t *testing.T) {
 	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook.Name+"?namespace="+installNs+"&deletepipelineruns=true", nil)
 
 	response, _ := http.DefaultClient.Do(httpReq)
-	if response.StatusCode != 201 {
-		t.Error("Status code not set to 201 when deleting")
+	if response.StatusCode != 200 {
+		t.Error("Status code not set to 200 when deleting")
 	}
 
 	_, err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Get(theWebhook.Name, metav1.GetOptions{})
@@ -553,12 +553,12 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 
 		wg.Wait()
 
-		if firstResponse.StatusCode != 201 {
-			t.Errorf("Should have deleted the first webhook OK, return code wasn't 201 - it's: %d", firstResponse.StatusCode)
+		if firstResponse.StatusCode != 200 {
+			t.Errorf("Should have deleted the first webhook OK, return code wasn't 200 - it's: %d", firstResponse.StatusCode)
 		}
 
-		if secondResponse.StatusCode != 201 {
-			t.Errorf("Should have deleted the second webhook OK, return code wasn't 201 - it's: %d", secondResponse.StatusCode)
+		if secondResponse.StatusCode != 200 {
+			t.Errorf("Should have deleted the second webhook OK, return code wasn't 200 - it's: %d", secondResponse.StatusCode)
 		}
 
 		//	Check both are gone from the ConfigMap
