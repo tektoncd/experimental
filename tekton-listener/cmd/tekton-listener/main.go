@@ -206,6 +206,9 @@ func (e *EventListener) createPipelineRun(sha string) (*pipelinev1alpha1.Pipelin
 			Name:      e.runName,
 			Namespace: e.namespace,
 		},
+		Spec: &pipelinev1alpha1.PipelineTrigger{
+			Type: "tekton-listener",
+		},
 	}
 	// copy the spec template into place
 	pr.Spec = e.runSpec
