@@ -247,8 +247,6 @@ func (r Resource) findRepoURLFromConfigMap(webhookName, namespace string) string
 
 // Delete the webhook information from our ConfigMap
 func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string) error {
-	// We don't want any other requests going through here so use a mutex
-	// otherwise we'll end up with operations performed on old configmaps so we'll have invalid data
 	logging.Log.Debug("Deleting webhook info from ConfigMap")
 
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
