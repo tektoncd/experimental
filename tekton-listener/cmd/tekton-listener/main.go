@@ -134,14 +134,18 @@ func (e *EventListener) startCloudEventListener() {
 func (e *EventListener) HandleRequest(ctx context.Context, event cloudevents.Event) error {
 	// todo: contribute nil check upstream
 	if event.Context == nil {
-		return errors.New("Empty event context")
+		log.Print("Empty event context")
+		return nil
 	}
 
 	if event.SpecVersion() != "0.2" {
-		return errors.New("Only cloudevents version 0.2 supported")
+		log.Print("Only cloudevents version 0.2 supported")
+		return nil
 	}
 	if event.Type() != e.eventType {
-		return fmt.Errorf("Mismatched event type submitted. e.eventType %s event.Type() %s", e.eventType, event.Type())
+		log.Printf("Mismatched event type submitted. Expected %s Got %s", e.eventType, event.Type())
+
+		return nil
 	}
 
 	log.Printf("Handling event Type: %q", event.Type())
@@ -150,18 +154,22 @@ func (e *EventListener) HandleRequest(ctx context.Context, event cloudevents.Eve
 	case "dev.knative.source.github.checksuite":
 		cs := &gh.CheckSuitePayload{}
 		if err := event.DataAs(cs); err != nil {
-			return errors.Wrap(err, "Error handling check suite payload")
+			log.Printf("Error decoding check suite payload: %q", err)
+			return nil
 		}
 		if err := e.handleCheckSuite(event, cs); err != nil {
-			return err
+			log.Printf("Error handling check suite payload: %q", err)
+			return nil
 		}
 	case "dev.knative.source.github.push":
 		cs := &gh.PushPayload{}
 		if err := event.DataAs(cs); err != nil {
-			return errors.Wrap(err, "Error handling check suite payload")
+			log.Printf("Error decoding push payload: %q", err)
+			return nil
 		}
 		if err := e.handlePush(event, cs); err != nil {
-			return err
+			log.Printf("Error handling push payload: %q", err)
+			return nil
 		}
 	}
 
@@ -172,7 +180,8 @@ func (r *EventListener) handleCheckSuite(event cloudevents.Event, cs *gh.CheckSu
 	if cs.CheckSuite.Conclusion == "success" {
 		build, err := r.createPipelineRun(cs.CheckSuite.HeadSHA)
 		if err != nil {
-			return errors.Wrapf(err, "Error creating pipeline run for check_suite event: %q", event.Type())
+			log.Printf("Error creating pipeline run for check_suite event %s: %q", event.Type, err)
+			return nil
 		}
 
 		log.Printf("Created pipeline run %q!", build.Name)
@@ -206,8 +215,10 @@ func (e *EventListener) createPipelineRun(sha string) (*pipelinev1alpha1.Pipelin
 			Name:      e.runName,
 			Namespace: e.namespace,
 		},
-		Spec: &pipelinev1alpha1.PipelineTrigger{
-			Type: "tekton-listener",
+		Spec: pipelinev1alpha1.PipelineRunSpec{
+			Trigger: pipelinev1alpha1.PipelineTrigger{
+				Type: "manual",
+			},
 		},
 	}
 	// copy the spec template into place
