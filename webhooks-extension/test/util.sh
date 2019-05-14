@@ -117,6 +117,9 @@ function install_dashboard() {
 
 # Install https://github.com/tektoncd/experimental/tree/master/webhooks-extension
 function install_webhooks_extension() { 
+  check GOPATH
+  check KO_DOCKER_REPO 'export KO_DOCKER_REPO=docker.io/your_docker_id'
+
   pushd $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension
   if [ -z "$1" ]; then
     echo "Usage ERROR for function: install_webhooks_extension [target-namespace]"
