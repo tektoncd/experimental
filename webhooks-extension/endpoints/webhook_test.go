@@ -20,15 +20,15 @@ import (
 	restful "github.com/emicklei/go-restful"
 	v1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
-	"strings"
-	"testing"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"runtime"
+	"strings"
 	"sync"
+	"testing"
 )
 
 var server *httptest.Server
@@ -511,7 +511,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		resp := createWebhook(theWebhook1, r)
 
 		if resp.StatusCode() != http.StatusCreated {
-			t.Error("Didn't create the first webhook OK for the multiple request deletion test")
+			t.Error("Didn't create the first webhook OK for the safe multiple request deletion test")
 			t.Fail()
 		}
 
@@ -526,7 +526,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		resp = createWebhook(theWebhook2, r)
 
 		if resp.StatusCode() != http.StatusCreated {
-			t.Error("Didn't create the second webhook OK for the multiple request deletion test")
+			t.Error("Didn't create the second webhook OK for the safe multiple request deletion test")
 			t.Fail()
 		}
 
@@ -574,8 +574,176 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		if strings.Contains(contents, theWebhook1.Name) || strings.Contains(contents, "https://a.com/b/c") ||
 			strings.Contains(contents, theWebhook2.Name) || strings.Contains(contents, "https://b.com/c/d") {
 			t.Errorf("For iteration %d, we found a webhook name or repository URL in "+
-				"the ConfigMap data when both should have been removed through simultaneous requests, data is: %s", i, contents)
+				"the ConfigMap data when both should have been removed through simultaneous deletion requests, data is: %s", i, contents)
+		}
+	}
+}
+
+func TestMultipleCreatesCorrectData(t *testing.T) {
+	t.Log("in TestMultipleCreatesCorrectData")
+	r := setUpServer()
+
+	numTimes := 100
+	runtime.GOMAXPROCS(2)
+
+	// This test is super noisy because of writeGitHubWebhooks having a logging.Log.Debugf
+	os.Stdout, _ = os.Open(os.DevNull)
+
+	for i := 0; i < numTimes; i++ {
+		theWebhook1 := webhook{
+			Name:             fmt.Sprintf("routine1createhook-%d", i),
+			Namespace:        installNs,
+			GitRepositoryURL: "https://a.com/b/c",
+			AccessTokenRef:   "token1",
+			Pipeline:         "pipeline1",
+		}
+
+		theWebhook2 := webhook{
+			Name:             fmt.Sprintf("routine2createhook-%d", i),
+			Namespace:        installNs,
+			GitRepositoryURL: "https://b.com/c/d",
+			AccessTokenRef:   "token1",
+			Pipeline:         "pipeline1",
+		}
+
+		var firstResponse *restful.Response
+		var secondResponse *restful.Response
+
+		// Fire them off at the same time, then check the resulting ConfigMap is accurate: containing both entries and not just one.
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			firstResponse = createWebhook(theWebhook1, r)
+		}()
+
+		go func() {
+			defer wg.Done()
+			secondResponse = createWebhook(theWebhook2, r)
+		}()
+
+		wg.Wait()
+
+		if firstResponse.StatusCode() != http.StatusCreated {
+			t.Errorf("Iteration %d, didn't create the first webhook OK for the safe multiple request creation test, response: %d", i, firstResponse.StatusCode())
+			t.Fail()
+		}
+
+		if secondResponse.StatusCode() != http.StatusCreated {
+			t.Errorf("Iteration %d, didn't create the second webhook OK for the safe multiple request creation test, response: %d", i, secondResponse.StatusCode())
+			t.Fail()
+		}
+
+		//	Check both are present in the ConfigMap
+
+		configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
+
+		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+		if err != nil {
+			t.Error("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entries were added to it")
+		}
+
+		contents := string(configMap.BinaryData["GitHubSource"])
+		if !!!strings.Contains(contents, theWebhook1.Name) || !!!strings.Contains(contents, "https://a.com/b/c") ||
+			!!!strings.Contains(contents, theWebhook2.Name) || !!!strings.Contains(contents, "https://b.com/c/d") {
+			t.Errorf("For iteration %d, we we did not find a webhook name and repository URL in "+
+				"the ConfigMap data when both should have been added through simultaneous creation requests, data is: %s", i, contents)
 		}
 	}
 
+}
+
+func TestCreateDeleteCorrectData(t *testing.T) {
+	t.Log("in TestCreateDeleteCorrectData")
+	r := setUpServer()
+
+	numTimes := 100
+	runtime.GOMAXPROCS(2)
+
+	// This test is super noisy because of writeGitHubWebhooks having a logging.Log.Debugf
+	os.Stdout, _ = os.Open(os.DevNull)
+
+	for i := 0; i < numTimes; i++ {
+		theWebhook1 := webhook{
+			Name:             fmt.Sprintf("routine1createhook-%d", i),
+			Namespace:        installNs,
+			GitRepositoryURL: "https://a.com/b/c",
+			AccessTokenRef:   "token1",
+			Pipeline:         "pipeline1",
+		}
+
+		theWebhook2 := webhook{
+			Name:             fmt.Sprintf("routine2createhook-%d", i),
+			Namespace:        installNs,
+			GitRepositoryURL: "https://b.com/c/d",
+			AccessTokenRef:   "token1",
+			Pipeline:         "pipeline1",
+		}
+
+		var firstResponse *restful.Response
+		var secondResponse *restful.Response
+		var deleteResponse *http.Response
+
+		deleteRequest, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
+
+		var wg sync.WaitGroup
+		wg.Add(3)
+
+		go func() {
+			defer wg.Done()
+			firstResponse = createWebhook(theWebhook1, r)
+		}()
+
+		go func() {
+			defer wg.Done()
+			secondResponse = createWebhook(theWebhook2, r)
+		}()
+
+		go func() {
+			defer wg.Done()
+			deleteResponse, _ = http.DefaultClient.Do(deleteRequest)
+		}()
+
+		wg.Wait()
+
+		if firstResponse.StatusCode() != http.StatusCreated {
+			t.Errorf("Iteration %d, didn't create the first webhook OK for the safe multiple request creation and deletion test, response: %d", i, firstResponse.StatusCode())
+			t.Fail()
+		}
+
+		if secondResponse.StatusCode() != http.StatusCreated {
+			t.Errorf("Iteration %d, didn't create the second webhook OK for the safe multiple request creation and deletion test, response: %d", i, secondResponse.StatusCode())
+			t.Fail()
+		}
+
+		if deleteResponse.StatusCode != http.StatusOK {
+			t.Errorf("Iteration %d, didn't delete the first webhook OK for the safe multiple request creation and deletion test, response: %d", i, deleteResponse.StatusCode)
+			t.Fail()
+		}
+
+		//	Check just the second entry is present in the ConfigMap
+
+		configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
+
+		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+		if err != nil {
+			t.Error("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was present")
+		}
+
+		contents := string(configMap.BinaryData["GitHubSource"])
+
+		if strings.Contains(contents, theWebhook1.Name) {
+			t.Errorf("For iteration %d we found %s when it should have been deleted", i, theWebhook1.Name)
+		} else {
+			t.Logf("For iteration %d, %s was successfully deleted as expected", i, theWebhook1.Name)
+		}
+
+		if !!!strings.Contains(contents, theWebhook2.Name) {
+			t.Errorf("For iteration %d we did not find %s. It should not have been deleted", i, theWebhook2.Name)
+		} else {
+			t.Logf("For iteration %d, %s was successfully kept around as expected", i, theWebhook2.Name)
+		}
+	}
 }
