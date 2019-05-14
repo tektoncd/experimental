@@ -29,8 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var statusLock sync.Mutex
-var createLock sync.Mutex
+var modifyingConfigMapLock sync.Mutex
 
 // RegisterEndpoints registers the endpoints for a container
 // Do it this way so we can create our own test server too
@@ -52,8 +51,8 @@ func (r Resource) RegisterEndpoints(container *restful.Container) {
 
 // Creates a webhook for a given repository and populates (creating if doesn't yet exist) a ConfigMap storing this information
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
-	createLock.Lock()
-	defer createLock.Unlock()
+	modifyingConfigMapLock.Lock()
+	defer modifyingConfigMapLock.Unlock()
 
 	logging.Log.Infof("Creating webhook with request: %+v.", request)
 	installNs := r.Defaults.Namespace
@@ -162,6 +161,8 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 
 // Removes from ConfigMap, removes the actual GitHubSource, removes the webhook
 func (r Resource) deleteWebhook(request *restful.Request, response *restful.Response) {
+	modifyingConfigMapLock.Lock()
+	defer modifyingConfigMapLock.Unlock()
 	logging.Log.Debug("In deleteWebhook")
 	name := request.PathParameter("name")
 	namespace := request.QueryParameter("namespace")
@@ -248,8 +249,6 @@ func (r Resource) findRepoURLFromConfigMap(webhookName, namespace string) string
 func (r Resource) deleteWebhookFromConfigMapByName(webhookName, namespace string) error {
 	// We don't want any other requests going through here so use a mutex
 	// otherwise we'll end up with operations performed on old configmaps so we'll have invalid data
-	statusLock.Lock()
-	defer statusLock.Unlock()
 	logging.Log.Debug("Deleting webhook info from ConfigMap")
 
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
