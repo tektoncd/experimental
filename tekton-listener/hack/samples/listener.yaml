@@ -16,8 +16,6 @@ spec:
   runspec:
     pipelineRef:
       name: demo-pipeline
-    trigger:
-      type: manual
     serviceAccount: tekton-experimental-controller
     resources:
     - name: source-repo

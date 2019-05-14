@@ -152,7 +152,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		pipelineResourceBindings = append(pipelineResourceBindings, pipelinev1alpha1.PipelineResourceBinding{
 			Name: resource.Name,
 			ResourceRef: pipelinev1alpha1.PipelineResourceRef{
-				Name:       string(resource.Spec.Type), // TODO: ? is this right?
+				Name:       string(resource.Name),
 				APIVersion: "v1alpha1",
 			},
 		})
@@ -178,7 +178,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 				PipelineRef: binding.Spec.PipelineRef,
 				Trigger: pipelinev1alpha1.PipelineTrigger{
 					Name: binding.Name,
-					Type: "eventbinding",
+					Type: "manual",
 				},
 				Resources:      pipelineResourceBindings,
 				Params:         binding.Spec.Params,
