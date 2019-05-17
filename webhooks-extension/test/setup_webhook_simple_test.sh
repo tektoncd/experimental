@@ -54,7 +54,7 @@ post_data='{
     "url": {"tekton.dev/git-0": "'"${GITHUB_URL}"'"},
     "serviceaccount": "default"
 }'
-curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credential
+curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credentials
 echo 'created github-repo-access-secret'
 
 ## docker-push secret used to push images to dockerhub
@@ -66,7 +66,7 @@ post_data='{
     "url": {"tekton.dev/docker-0": "https://index.docker.io/v1/"},
     "serviceaccount": "default"
 }'
-curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credential
+curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credentials
 echo 'created docker-push'
 
 ## Install pipelines. This first test uses our simplest pipeline: docker build/tag/push, kubectl apply -f config 
@@ -84,6 +84,6 @@ post_data='{
   "dockerregistry": "'"${DOCKERHUB_USERNAME}"'",
   "namespace": "'"${DASHBOARD_INSTALL_NS}"'"
 }'
-curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/extension/webhooks-extension/webhooks
+curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/extensions/webhooks-extension/webhooks
 
 popd

@@ -1,9 +1,9 @@
 # Webhooks Extension
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/kubernetes/experimental/blob/master/LICENSE)
 
-The Webhooks Extension for Tekton provides allows users to set up Git webhooks that will trigger Tekton PipelineRuns and TaskRuns. An initial implementation will use Knative Eventing but we're closely following the eventing discussion in  [Tekton Pipeline](https://github.com/tektoncd/pipeline) to minimize necessary componentry.
+The Webhooks Extension for Tekton allows users to set up Git webhooks that will trigger Tekton PipelineRuns and TaskRuns. An initial implementation will use Knative Eventing but we're closely following the eventing discussion in  [Tekton Pipeline](https://github.com/tektoncd/pipeline) to minimize necessary componentry.
 
-In addition to Tekton/Knative Eventing glue, it includes an extension to the Tekton dashboard.
+In addition to Tekton/Knative Eventing glue, it includes an extension to the Tekton Dashboard.
 
 ## Dependencies
 
@@ -25,7 +25,7 @@ $ ko apply -f config/
 
 Alternatively, without `ko`, you can use the install script we provided:
 
-The script will build the image, push to your registry of choice and then kubectl apply the relevant yaml into the specified namespace. Please note this namespace needs to be the namespace into which you have installed the tekton dashboard.
+The script will build the image, push to your registry of choice and then kubectl apply the relevant yaml into the specified namespace. Please note this namespace needs to be the namespace into which you have installed the Tekton Dashboard.
 
 To initiate this installation, run `development_install.sh`.
 
@@ -45,7 +45,7 @@ docker build -f cmd/extension/Dockerfile_test .
 
 ### Example creating a webhook
 
-You should be able to use the extension via the Tekton dashboard UI - however, until the UI is coded or if you would prefer to interact with REST endpoint directly, you can create your webhook using curl:
+You should be able to use the extension via the Tekton Dashboard UI - however, until the UI is coded or if you would prefer to interact with REST endpoint directly, you can create your webhook using curl:
 
 ```bash
 data='{
