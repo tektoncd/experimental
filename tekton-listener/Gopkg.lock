@@ -164,21 +164,11 @@
   revision = "5b532d6fd5efaf7fa130d4e859a2fde0fc3a9e1b"
 
 [[projects]]
-  digest = "1:c2fafaba5f6e1663acfc3c9ebb9a5919f4b6ff5bbeb2b88f02995af5abdf2502"
+  digest = "1:99d26c39807a3709c762366daaaa7b58805163882d9cea00076327583984f5b1"
   name = "github.com/golang/protobuf"
   packages = [
-    "conformance/internal/conformance_proto",
-    "descriptor",
-    "jsonpb",
-    "jsonpb/jsonpb_test_proto",
     "proto",
-    "proto/proto3_proto",
-    "proto/test_proto",
     "protoc-gen-go/descriptor",
-    "protoc-gen-go/generator",
-    "protoc-gen-go/generator/internal/remap",
-    "protoc-gen-go/grpc",
-    "protoc-gen-go/plugin",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -602,12 +592,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a2fc247e64b5dafd3251f12d396ec85f163d5bb38763c4997856addddf6e78d8"
+  digest = "1:382bb5a7fb4034db3b6a2d19e5a4a6bcf52f4750530603c01ca18a172fa3089b"
   name = "golang.org/x/sync"
-  packages = [
-    "errgroup",
-    "semaphore",
-  ]
+  packages = ["semaphore"]
   pruneopts = "NUT"
   revision = "112230192c580c3556b8cee6403af37a4fc5f28c"
 
@@ -1106,24 +1093,6 @@
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
-    "github.com/golang/protobuf/conformance/internal/conformance_proto",
-    "github.com/golang/protobuf/descriptor",
-    "github.com/golang/protobuf/jsonpb",
-    "github.com/golang/protobuf/jsonpb/jsonpb_test_proto",
-    "github.com/golang/protobuf/proto",
-    "github.com/golang/protobuf/proto/proto3_proto",
-    "github.com/golang/protobuf/proto/test_proto",
-    "github.com/golang/protobuf/protoc-gen-go/descriptor",
-    "github.com/golang/protobuf/protoc-gen-go/generator",
-    "github.com/golang/protobuf/protoc-gen-go/generator/internal/remap",
-    "github.com/golang/protobuf/protoc-gen-go/grpc",
-    "github.com/golang/protobuf/protoc-gen-go/plugin",
-    "github.com/golang/protobuf/ptypes",
-    "github.com/golang/protobuf/ptypes/any",
-    "github.com/golang/protobuf/ptypes/duration",
-    "github.com/golang/protobuf/ptypes/struct",
-    "github.com/golang/protobuf/ptypes/timestamp",
-    "github.com/golang/protobuf/ptypes/wrappers",
     "github.com/joeshaw/envdecode",
     "github.com/knative/caching/pkg/apis/caching",
     "github.com/knative/caching/pkg/client/clientset/versioned",
@@ -1145,8 +1114,6 @@
     "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1alpha1",
     "github.com/tektoncd/pipeline/pkg/logging",
     "go.uber.org/zap",
-    "golang.org/x/sync/errgroup",
-    "google.golang.org/genproto/protobuf/field_mask",
     "gopkg.in/go-playground/webhooks.v5/github",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
