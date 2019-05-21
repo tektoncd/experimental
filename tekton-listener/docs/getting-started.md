@@ -14,10 +14,10 @@ Then we will
 
 ## Requirements
 
-- [envsubst](https://linux.die.net/man/1/envsubst) substitutes environment variables in shell format strings
-- [A kubernetes space](https://kubernetes.io/docs/setup/pick-right-solution/)
-- [Knative Serving and Eventing Installed](https://knative.dev/docs/install/)
-- [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
+- [envsubst](https://linux.die.net/man/1/envsubst) - substitutes environment variables in shell format strings
+- [A kubernetes space](https://kubernetes.io/docs/setup/pick-right-solution/) - A Kubernetes cluster accessible from the public internet (not minikube).
+- [Knative Serving and Eventing Installed](https://knative.dev/docs/install/) - Knative resources installed.
+- [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) - Tekton Pipelines installed.
 - A Github repository to use as your deployment source
   - If you dont have one, you can use [this demo repo](https://github.com/iancoffey/ulmaceae)
 - A Dockerhub registry
@@ -61,7 +61,7 @@ The Eventbinding resource aims to bind an actual Event with a Pipeline, and crea
 
 The EventBinding also creates a TektonListener to listen for a specified CloudEvent.
 
-![TektonListener](./images/eventbinding.png)
+![TektonListener](../images/eventbinding.png)
 
 ### TektonListener
 
@@ -69,7 +69,7 @@ The TektonListener is another new concept created to solve the issue of connecti
 
 TektonListeners can be deployed as a standalone solution but they managed automatically by the EventBinding resource.
 
-![TektonListener](./images/tektonlistenerflow.png)
+![TektonListener](../images/tektonlistenerflow.png)
 
 ## Set up necessary environment
 
@@ -83,15 +83,15 @@ export PIPELINE_NAME=ulmaceae
 
 ### Github ENV variables
 
-Choose git repository for the code we want to build and deploy, like so:
+Choose a Github repository for the code we want to build and deploy, like so:
 
 `export GHREPO=iancoffey/ulmaceae`
 
-Finally, we need some GH token secrets to create our `GitHubSource`.
+Finally, we need a Github token to create our `GitHubSource`.
 
-Create these creds inside github and put the secret and access tokens in two ENV vars:
+Create these creds inside Github and put the secret and access tokens in two ENV vars:
 
-`export GHACCESSTOKEN=accessstoken`
+`export GHACCESSTOKEN=youraccessstoken`
 
 The secret token is just random characters.
 
@@ -101,7 +101,6 @@ The secret token is just random characters.
 
 Lastly, we need to export Dockerhub creds so we can push our images there:
 
-```
 # We need the plaintext dockerhub username
 
 `export DOCKER_HUB_USERNAME=YOURUSER`
