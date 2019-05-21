@@ -46,7 +46,7 @@ Once the system is built, we expect to be able to:
 - A Dockerhub registry
   - `docker login` needs to succeed
 - `ko` installed
-  - go get github.com/google/ko/cmd/ko
+  - `go get github.com/google/ko/cmd/ko`
 
 ## Experimental Resources
 
