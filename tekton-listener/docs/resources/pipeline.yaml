@@ -1,0 +1,119 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: $PIPELINE_NAME
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dockerhub-user-pass
+  namespace: $PIPELINE_NAME
+  annotations:
+    build.knative.dev/docker-0: https://index.docker.io
+    tekton.dev/docker-0: https://index.docker.io
+type: kubernetes.io/basic-auth
+data:
+  # Use 'echo -n "username" | base64' to generate this string
+  username: $BASE64_ENCODED_DOCKER_HUB_USERNAME
+  # Use 'echo -n "password" | base64' to generate this string
+  password: $BASE64_ENCODED_DOCKER_HUB_PASSWORD
+
+---
+
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: build-docker-image-from-git-source
+  namespace: $PIPELINE_NAME
+spec:
+  inputs:
+    resources:
+      - name: docker-source
+        type: git
+    params:
+      - name: pathToDockerFile
+        description: The path to the dockerfile to build
+        default: /workspace/docker-source/Dockerfile
+      - name: pathToContext
+        description:
+          The build context used by Kaniko
+          (https://github.com/GoogleContainerTools/kaniko#kaniko-build-contexts)
+        default: /workspace/docker-source
+  outputs:
+    resources:
+      - name: builtImage
+        type: image
+  steps:
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor
+      command:
+        - /kaniko/executor
+      args:
+        - --dockerfile=${inputs.params.pathToDockerFile}
+        - --destination=${outputs.resources.builtImage.url}
+        - --context=${inputs.params.pathToContext}
+
+---
+
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: run-using-kubectl
+  namespace: $PIPELINE_NAME
+spec:
+  inputs:
+    resources:
+      - name: image-$PIPELINE_NAME
+        type: image
+  steps:
+    - name: run-kubectl
+      image: lachlanevenson/k8s-kubectl
+      command: ["kubectl"]
+      args:
+        - "run"
+        - "tekton-$PIPELINE_NAME"
+        - "--image"
+        - "${inputs.resources.image-$PIPELINE_NAME.url}"
+        - "--env=PORT=8080"
+
+---
+
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: $PIPELINE_NAME-pipeline
+  namespace: $PIPELINE_NAME
+spec:
+  resources:
+    - name: source-repo
+      type: git
+    - name: image-$PIPELINE_NAME
+      type: image
+  tasks:
+    - name: build-docker-image
+      taskRef:
+        name: build-docker-image-from-git-source
+      params:
+        - name: pathToDockerFile
+          value: Dockerfile
+        - name: pathToContext
+          value: /workspace/docker-source
+      resources:
+        inputs:
+          - name: docker-source
+            resource: source-repo
+        outputs:
+          - name: builtImage
+            resource: image-$PIPELINE_NAME
+    - name: deploy-docker-image
+      taskRef:
+        name: run-using-kubectl
+      resources:
+        inputs:
+          - name: image-$PIPELINE_NAME
+            resource: image-$PIPELINE_NAME
+            from:
+              - build-docker-image
