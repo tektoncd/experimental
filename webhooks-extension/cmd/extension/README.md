@@ -32,6 +32,21 @@ Example payload response
  "namespace": "default",
  "dockerregistry": "mydockerhubregistry"
 }
+
+
+GET /webhooks/credentials?namespace=x
+Get all credentials in namespace x
+Returns HTTP code 200 and all the credentials
+Returns HTTP code 500 if an error occurred getting the credentials
+
+Example payload response
+[ 
+  { 
+    "name": "anAccessToken", 
+    accesstoken: "********",
+    secrettoken: "thisIsMySecretToken"
+  }
+]
 ```
 
 ### POST endpoints
@@ -53,9 +68,25 @@ Example POST
   "accesstoken": "github-secret",
   "pipeline": "simple-pipeline"
 }
+
+
+POST /webhooks/credentials?namespace=x
+Create a new credential in namespace x
+Request body must contain name and accesstoken. 
+Request body may contain secrettoken. See https://github.com/knative/docs/blob/master/docs/eventing/samples/github-source/README.md for a discussion of this field. A random secrettoken will be created if none is supplied. 
+Returns HTTP code 201 if the secret was created successfully
+Returns HTTP code 400 if an error occurred with the request body 
+Returns HTTP code 500 if an error occurred while creating the secret
+
+Example POST
+{
+  "name": "my-access-token",
+  "accesstoken": "ksdufbliubsliuvbsliucbsiucslicbsh98wehr8w9huwbcwb87ec"
+}
 ```
 
-### DELETE endpoint
+
+### DELETE endpoints
 
 ```
 DELETE /webhooks/<webhookid>?namespace=<my namespace>
@@ -70,6 +101,14 @@ Returns HTTP code 500 if any other errors occurred
 
 Deletes the GithubSource (therefore the webhook from the repository) and optionally deletes all PipelineRuns for the configured repository. 
 The ConfigMap used to maintain a list of configured webhooks to Pipelines is also updated.
+
+
+DELETE /webhooks/credentials/<credential-name>?namespace=x
+
+Deletes credential 'credential-name' from namespace x
+Returns HTTP code 201 if the credential was deleted successfully
+Returns HTTP code 404 if the credential wasn't found
+Returns HTTP code 500 if any other errors occurred
 ```
 
 
