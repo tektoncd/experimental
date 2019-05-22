@@ -17,11 +17,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 
 	restful "github.com/emicklei/go-restful"
 	eventapi "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
@@ -45,6 +46,10 @@ func (r Resource) RegisterEndpoints(container *restful.Container) {
 	ws.Route(ws.GET("/defaults").To(r.getDefaults))
 
 	ws.Route(ws.DELETE("/{name}").To(r.deleteWebhook))
+
+	ws.Route(ws.POST("/credentials").To(r.createCredential))
+	ws.Route(ws.GET("/credentials").To(r.getAllCredentials))
+	ws.Route(ws.DELETE("/credentials/{name}").To(r.deleteCredential))
 
 	container.Add(ws)
 }
