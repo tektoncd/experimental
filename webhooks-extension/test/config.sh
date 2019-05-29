@@ -1,10 +1,17 @@
 #!/bin/bash
 
-# Version specs
-export KNATIVE_VERSION="v0.5.0"
+##### Version specs
+# These defaults are known compatible versions
+export KNATIVE_VERSION="v0.6.0"
 export TEKTON_VERSION="0.3.0"
+# You can also Specify exact version/release: https://github.com/istio/istio/releases
+export ISTIO_VERSION="latest"
+# Side car injection gets stuck in "Container Creating" state when disabled
+export ISTIO_SIDECAR_INJECTION="true"
+# To prevent Git Hub rate limiting when pulling latest Istio
+export GITHUB_TOKEN=''
 
-# Dashboard specs
+##### Dashboard specs
 export DASHBOARD_INSTALL_NS="default"
 
 # Note that to receive webhooks, your github must be able to http POST to your Tekton installation. 

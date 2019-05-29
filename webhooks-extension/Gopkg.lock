@@ -209,6 +209,14 @@
   version = "v2.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5e79da07f6f1177d84d92ac73e2cd222013b8d8f6a8bcb2cc967f49e609211a4"
+  name = "github.com/tektoncd/dashboard"
+  packages = ["pkg/logging"]
+  pruneopts = "UT"
+  revision = "7e6c0036e6ed0252b33804af8bb5812a92eb2b35"
+
+[[projects]]
   digest = "1:1aec373958064996926528aa0f992914d4e9612c3dc478b60c92dab906a55238"
   name = "github.com/tektoncd/pipeline"
   packages = [
@@ -593,6 +601,7 @@
     "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned/fake",
+    "github.com/tektoncd/dashboard/pkg/logging",
     "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake",

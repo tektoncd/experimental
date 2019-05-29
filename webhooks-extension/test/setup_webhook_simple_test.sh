@@ -22,7 +22,7 @@ if [ ! -f $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension/test/c
   exit 1
 fi
 pushd $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension/test
-. ./credentials.sh
+source credentials.sh
 
 kubectl apply -f dashboard-service.yaml -n ${DASHBOARD_INSTALL_NS} 
 
