@@ -39,12 +39,10 @@ func main() {
 
 	// Serve
 	logging.Log.Info("Creating server and entering wait loop.")
-	port := ":8080"
-	portnum := os.Getenv("PORT")
-	if portnum != "" {
-		port = ":" + portnum
-		logging.Log.Infof("Port number from config: %s.", portnum)
+	port := os.Getenv("PORT")
+	if port == "" {
+		logging.Log.Fatal("Knative runtime contract should specify PORT env via single container port in yaml")
 	}
-	server := &http.Server{Addr: port, Handler: wsContainer}
+	server := &http.Server{Addr: ":"+port, Handler: wsContainer}
 	logging.Log.Fatal(server.ListenAndServe())
 }

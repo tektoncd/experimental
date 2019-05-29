@@ -10,7 +10,7 @@ export test_dir="${tekton_repo_dir}/webhooks-extension/test"
 source ${test_dir}/config.sh
 source ${test_dir}/util.sh
   
-install_istio ${KNATIVE_VERSION}
+install_istio
 install_knative_serving ${KNATIVE_VERSION}
 install_knative_eventing ${KNATIVE_VERSION}
 install_knative_eventing_sources ${KNATIVE_VERSION}

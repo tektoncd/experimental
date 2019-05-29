@@ -5,25 +5,21 @@ metadata:
   labels:
     app: webhooks-extension-sink
 spec:
-  runLatest:
-    configuration:
-      revisionTemplate:
-        spec:
-          container:
-            image: "github.com/tektoncd/experimental/webhooks-extension/cmd/sink"
-            imagePullPolicy: Always
-            ports:
-            - containerPort: 8080
-            livenessProbe:
-              httpGet:
-                path: /liveness
-            readinessProbe:
-              httpGet:
-                path: /readiness
-            env:
-            - name: PORT
-              value: "8080"
-            - name: INSTALLED_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+  template:
+    spec:
+      containers:
+      - image: "github.com/tektoncd/experimental/webhooks-extension/cmd/sink"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /liveness
+        readinessProbe:
+          httpGet:
+            path: /readiness
+        env:
+        # PORT var resolved via containerPort by Knative
+        # TODO: Find better way to provide INSTALL_NAMESPACE since Knative does not support Downward API
+        - name: INSTALLED_NAMESPACE
+          value: "default"

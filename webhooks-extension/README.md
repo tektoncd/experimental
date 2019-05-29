@@ -5,31 +5,12 @@ The Webhooks Extension for Tekton allows users to set up Git webhooks that will 
 
 In addition to Tekton/Knative Eventing glue, it includes an extension to the Tekton Dashboard.
 
-## Dependencies
-
-This project requires Knative [eventing](https://knative.dev/docs/eventing/), [eventing sources](https://knative.dev/docs/eventing/sources/), and [serving](https://knative.dev/docs/serving/). Install these components [here](https://knative.dev/docs/install/).
+## Runtime Dependencies
+- [Tekton](https://github.com/tektoncd/pipeline) & [Tekton Dashboard](https://github.com/tektoncd/dashboard)
+- Knative [eventing](https://knative.dev/docs/eventing/), [eventing sources](https://knative.dev/docs/eventing/sources/), & [serving](https://knative.dev/docs/serving/)
 
 ## Install
-
-Verify that you have installed the [dependencies](#dependencies).
-
-Until such a time an official release is hosted you will need to use the development process to install this extension.
-
-If you have `ko`:
-
-```
-$ docker login
-$ export KO_DOCKER_REPO=docker.io/<mydockername>
-$ ko apply -f config/
-```
-
-Alternatively, without `ko`, you can use the install script we provided:
-
-The script will build the image, push to your registry of choice and then kubectl apply the relevant yaml into the specified namespace. Please note this namespace needs to be the namespace into which you have installed the Tekton Dashboard.
-
-To initiate this installation, run `development_install.sh`.
-
-_Note: Your git provider must be able to reach the address of this extension's sink. The sink is deployed with a Knative service, so you may need to configure Knative serving. We recommend [setting up a custom domain](https://knative.dev/v0.3-docs/serving/using-a-custom-domain/) with the extension `.nip.io`._
+Please see the [development installation guide](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/README.md#scripting)
 
 ## Running tests
 
@@ -69,10 +50,10 @@ Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/e
 
 ## Limitations
 
-- Only GitHub webhooks are currently supported.
+- Only Git Hub webhooks are currently supported.
 - Only `push` and `pull_request` events are supported at the moment. The webhook is currently only created with both `push` and `pull_request` events.
-- All knative event sources are created in the namespace into which the dashboard and this extension are installed.
-- Currently the docker registry to which built images are pushed is hard coded from the registry you specified at install time, there is work underway to change this restriction.
+- All Knative event sources are created in the namespace into which the dashboard and this extension are installed.
+- Currently the Docker registry to which built images are pushed is hard coded from the registry you specified at install time, there is work underway to change this restriction.
 - Only one webhook can be created for each git repository, so each repository will only be able to trigger a PipelineRun from one webhook.
 
 - Three pipeline definitions are currently supported.
