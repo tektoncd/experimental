@@ -22,8 +22,10 @@ import (
 	"reflect"
 
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
@@ -160,7 +162,11 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	tektonListenerName := fmt.Sprintf("%s-listener", binding.Name)
 
-	c.logger.Infof("creating listener for event-type: %q for event-name: %q", binding.Spec.EventRef.EventType, binding.Spec.EventRef.EventName)
+	c.logger.Infof(
+		"Creating listener for event-type %q for event-name %q",
+		binding.Spec.EventRef.EventType,
+		binding.Spec.EventRef.EventName,
+	)
 
 	// Create a tekton listener!
 	newListener := &v1alpha1.TektonListener{
@@ -187,14 +193,14 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		},
 	}
 
-	c.logger.Info("attempting to retrieve associated tekton-listener")
+	c.logger.Info("Retrieving associated tekton-listener")
 	found, err := c.tektonListenerLister.TektonListeners(binding.Namespace).Get(tektonListenerName)
 	if errors.IsNotFound(err) {
 		created, err := c.ExperimentClientSet.Pipelineexperimental().TektonListeners(binding.Namespace).Create(newListener)
 		if err != nil {
 			return err
 		}
-		c.logger.Infof("created tekton listener %q for eventbinding %q", created.Name, binding.Name)
+		c.logger.Infof("Created tekton listener %q for eventbinding %q", created.Name, binding.Name)
 	}
 	if err != nil {
 		return err
@@ -209,8 +215,41 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		}
 	}
 
+	tektonServiceName := fmt.Sprintf("%s-listener-service", binding.Name)
+
+	c.logger.Infof("Creating Service %s for TektonListener: %s", tektonServiceName, tektonListenerName)
+	listenerSvc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tektonServiceName,
+			Namespace: binding.Namespace,
+			Labels:    binding.Labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port:       80,
+					TargetPort: intstr.FromInt(8082),
+				},
+			},
+		},
+	}
+
+	c.logger.Infof("Retrieving associated service %s", listenerSvc.Name)
+	foundSvc, err := c.kubeclientset.CoreV1().Services(listenerSvc.Namespace).Get(listenerSvc.Name, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		created, err := c.kubeclientset.CoreV1().Services(listenerSvc.Namespace).Create(foundSvc)
+		if err != nil {
+			return err
+		}
+		c.logger.Infof("Created Service %s", created.Name)
+	}
+	if err != nil {
+		return err
+	}
+
 	binding.Status = v1alpha1.EventBindingStatus{
 		ListenerName: newListener.Name,
+		ServiceName:  listenerSvc.Name,
 		Namespace:    newListener.Namespace,
 	}
 	return nil

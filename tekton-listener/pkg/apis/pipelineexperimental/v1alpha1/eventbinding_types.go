@@ -77,6 +77,8 @@ type EventBindingStatus struct {
 	Namespace string `json:"namespace"`
 	// name of the tekton listeners resource
 	ListenerName string `json:"listenername"`
+	// name of the service for the listener
+	ServiceName string `json:"servicename"`
 	// The listener is addressable
 	// +optional
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
