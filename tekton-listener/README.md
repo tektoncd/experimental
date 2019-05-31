@@ -14,39 +14,28 @@ An example TektonListener:
 apiVersion: tektonexperimental.dev/v1alpha1
 kind: TektonListener
 metadata:
-  name: test-build-tekton-listener
-  namespace: tekton-pipelines
+  labels:
+    app: ulmaceae
+  name: ulmaceae-binding-listener
+  namespace: ulmaceae
 spec:
-  selector:
-    matchLabels:
-      app: test-build-tekton-listener
-  serviceName: test-build-tekton-listener
-  template:
-    metadata:
-      labels:
-        role: test-build-tekton-listener
-    spec:
-      serviceAccountName: tekton-pipelines-controller
-  listener-image: github.com/tektoncd/pipeline/cmd/tektonlistener
-  event-type: com.github.checksuite
-  namespace: tekton-pipelines
-  port: 80
+  event: cloudevent
+  namespace: ulmaceae
+  pipelineRef:
+    name: ulmaceae-pipeline
   runspec:
     pipelineRef:
-      name: demo-pipeline
-    trigger:
-      type: manual
-    serviceAccount: 'default'
+      name: ulmaceae-pipeline
     resources:
     - name: source-repo
       resourceRef:
-        name: skaffold-git
-    - name: web-image
+        apiVersion: v1alpha1
+        name: source-repo
+    - name: image-ulmaceae
       resourceRef:
-        name: skaffold-image-leeroy-web
-    - name: app-image
-      resourceRef:
-        name: skaffold-image-leeroy-app
+        apiVersion: v1alpha1
+        name: image-ulmaceae
+    serviceAccount: ulmaceae-account
 ```
 
 Since the Service fullfills the [Addressable](https://github.com/knative/eventing/blob/master/docs/spec/interfaces.md#addressable) contract, the listener service can be used as a sink for [github source](https://knative.dev/docs/reference/eventing/eventing-sources-api/#GitHubSource), for example.
@@ -60,40 +49,36 @@ An example EventBinding:
 apiVersion: tektonexperimental.dev/v1alpha1
 kind: EventBinding
 metadata:
-  name: test-event-binding
-  namespace: tekton-pipelines
+  labels:
+    app: ulmaceae
+  name: ulmaceae-binding
+  namespace: ulmaceae
 spec:
-  selector:
-    matchLabels:
-      app: test-event-binding
-  template:
-    metadata:
-      labels:
-        role: test-build-tekton-listener
+  eventname: pushevents
+  eventtype: dev.knative.source.github.push
   pipelineRef:
-    name: demo-pipeline
-  sourceref:
-    name: demo-source
+    name: ulmaceae-pipeline
   resourceTemplates:
-   - name: gitTemplate
-     template:
-       metadata:
-       spec:
-         type: git
-         params:
-         - name: revision
-           valueFrom:
-             fieldName: event.repo.revision
-         - name: url
-           valueFrom:
-             fieldName: event.repo.name
-  resources:
-  - templateRef:
-     name: gitTemplate
-   resourceName: git
-  - pipelineRef:
-   name: demo-pipeline
-
+  - metadata:
+      name: source-repo
+    name: source-repo
+    spec:
+      params:
+      - name: url
+        value: https://github.com/iancoffey/ulmaceae
+      type: git
+  - metadata:
+      name: image-ulmaceae
+      namespace: ulmaceae
+    name: image-ulmaceae
+    spec:
+      params:
+      - name: url
+        value: /
+      type: image
+  serviceAccount: ulmaceae-account
+  sourceref:
+    name: ulmaceae-source
 ```
 
 # Instructions

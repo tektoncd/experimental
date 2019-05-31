@@ -43,6 +43,8 @@ Once the system is built, we expect to be able to:
 - [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) - Tekton Pipelines installed.
 - A Github repository to use as your deployment source
   - If you dont have one, you can use [this demo repo](https://github.com/iancoffey/ulmaceae)
+- [Github Access Token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line) - A token to allow webhooks to be created in GitHub.
+  - The token needs `public_repo` and 'webhook_admin' permissions
 - A Dockerhub registry
   - `docker login` needs to succeed
 - `ko` installed
