@@ -42,6 +42,11 @@ import (
 	"github.com/tektoncd/experimental/tekton-listener/pkg/reconciler"
 )
 
+var (
+	servicePort = int32(80)
+	targetPort  = intstr.FromInt(8082)
+)
+
 const controllerAgentName = "eventbinding-controller"
 
 // Reconciler is the controller.Reconciler implementation for eventbinding resources
@@ -227,8 +232,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Port:       80,
-					TargetPort: intstr.FromInt(8082),
+					Port:       servicePort,
+					TargetPort: targetPort,
 				},
 			},
 		},
