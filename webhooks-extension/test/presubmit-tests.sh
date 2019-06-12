@@ -32,16 +32,28 @@ function extra_initialization() {
     dep ensure -v
 }
 
+function post_build_tests() {
+    popd
+}
+
+function post_unit_tests() {
+    popd
+}
+
+function post_integration_tests() {
+    popd
+}
+
 function pre_build_tests() {
-    cd ${TEST_FOLDER}
+    pushd ${TEST_FOLDER}
 }
 
 function pre_unit_tests() {
-    cd ${TEST_FOLDER}
+    pushd ${TEST_FOLDER}
 }
 
 function pre_integration_tests() {
-    cd ${TEST_FOLDER}
+    pushd ${TEST_FOLDER}
 }
 
 # We use the default build, unit and integration test runners.

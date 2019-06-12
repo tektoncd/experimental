@@ -26,15 +26,17 @@ source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/presubmit-te
 IS_TEKTONCD_LISTENER_ONLY=0
 IS_WEBHOOKS_EXTENSION_ONLY=0
 
+CHANGED_FILES="$(list_changed_files)"
 pr_only_contains "tekton-listener" && IS_TEKTONCD_LISTENER_ONLY=1
 pr_only_contains "webhooks-extension" && IS_WEBHOOKS_EXTENSION_ONLY=1
 
 function run() {
     folder=$1
+    header "${folder}"
     shift
-    pushd $(dirname $0)/../${folder} >/dev/null 2>/dev/null
+    pushd $(dirname $0)/../${folder} || return 1
     ./test/presubmit-tests.sh $@ || exited=1
-    popd >/dev/null 2>/dev/null
+    popd >/dev/null
     return $exited
 }
 
@@ -43,10 +45,10 @@ if (( IS_TEKTONCD_LISTENER_ONLY )); then
     run tekton-listener $@ || exit 1
 elif (( IS_WEBHOOKS_EXTENSION_ONLY)); then
     header "Only webhookS-extension"
-    run webhook-extension $@ || exit 1
+    run webhooks-extension $@ || exit 1
 else
     header "All the tests"
     run tekton-listener $@ || exited=1
-    run webhook-extension $@ || exited=1
+    run webhooks-extension $@ || exited=1
     exit $exited
 fi
