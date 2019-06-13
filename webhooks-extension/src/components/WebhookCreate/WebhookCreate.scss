@@ -96,20 +96,22 @@
     visibility: hidden;
   }
   
-  %cancel-submit-shared {
+  %submit-shared {
     font-weight: bold;
-    float: left;
+    
     padding-left: 15%;
     padding-right: 15%;
   }
 
   #cancel {
-    @extend %cancel-submit-shared;
+    @extend %submit-shared;
+    float: left;
     background-color: red; 
   }
   
   #submit {
-    @extend %cancel-submit-shared;
+    @extend %submit-shared;
+    float: right;
     background-color: green; 
   }
   
