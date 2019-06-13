@@ -111,7 +111,7 @@ describe('create secret', () => {
       return Promise.resolve({});
     });
 
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotification={() => { }} />); 
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />); 
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
     fireEvent.click(await waitForElement(() => document.getElementById('create-secret-button')));
