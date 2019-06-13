@@ -111,7 +111,7 @@ describe('confirm deletion errors', () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
 
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotification={() => { }} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
     await waitForElement(() => document.getElementsByClassName('secButtonEnabled'));
