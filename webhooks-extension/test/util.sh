@@ -179,7 +179,10 @@ function install_webhooks_extension() {
   npm rebuild node-sass
   npm run build_ko
   dep ensure -v
+
+  sed -i "" "/value:/ s/$/$namespace/" config/sink-kservice.yaml
   timeout 60 "ko apply -f config -n $namespace"
+  sed -i "" -e "25s/$namespace//" config/sink-kservice.yaml
   popd
   wait_for_ready_pods $namespace 60 10
 }

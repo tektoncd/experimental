@@ -5,6 +5,17 @@
 
 .table-container {
   
+  .header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .header-title {
+    width: 8rem;
+    margin-left: 2px;
+  }
+
   #toolbar {
     background: transparent;
   }
@@ -24,9 +35,13 @@
     padding: 0.875rem 2.5rem 0.875rem 0.5rem;
   }
 
-  .create-icon {
-    fill: white;
-    padding-top: 5%;
+  .add-icon-div {
+    padding-right: 0.2rem;
+    fill: green;
+  }
+
+  .add-icon {
+    vertical-align: middle;
   }
 
   .search-bar {
@@ -34,12 +49,8 @@
     display: contents;
   }
 
-  .btn-div {
-    width: 10%;
-  }
-
   .bx--btn--ghost {
-    background-color: white; 
+    color: green; 
   }
 
   .bx--batch-actions--active {

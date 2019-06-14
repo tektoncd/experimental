@@ -31,7 +31,8 @@ export function checkStatus(response = {}) {
       case 204:
         return {};
       default:
-        return response.json();
+        let responseAsJson = response.json();
+        return responseAsJson;
     }
   }
 
