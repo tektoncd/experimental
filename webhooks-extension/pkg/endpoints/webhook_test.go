@@ -1,5 +1,5 @@
 /*
-Copyright 2009 The Tekton Authors
+Copyright 2019 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -281,8 +281,8 @@ func TestDeleteByNameKeepRuns(t *testing.T) {
 
 	response, _ := http.DefaultClient.Do(httpReq)
 
-	if response.StatusCode != 200 {
-		t.Errorf("Status code not set to 200 when deleting, it's: %d", response.StatusCode)
+	if response.StatusCode != 204 {
+		t.Errorf("Status code not set to 204 when deleting, it's: %d", response.StatusCode)
 	}
 	_, err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Get(theWebhook.Name, metav1.GetOptions{})
 
@@ -404,8 +404,9 @@ func TestDeleteByNameDeleteRuns(t *testing.T) {
 	httpReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook.Name+"?namespace="+installNs+"&deletepipelineruns=true", nil)
 
 	response, _ := http.DefaultClient.Do(httpReq)
-	if response.StatusCode != 200 {
-		t.Error("Status code not set to 200 when deleting")
+
+	if response.StatusCode != 204 {
+		t.Error("Status code not set to 204 when deleting")
 	}
 
 	_, err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Get(theWebhook.Name, metav1.GetOptions{})
@@ -553,12 +554,12 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 
 		wg.Wait()
 
-		if firstResponse.StatusCode != 200 {
-			t.Errorf("Should have deleted the first webhook OK, return code wasn't 200 - it's: %d", firstResponse.StatusCode)
+		if firstResponse.StatusCode != 204 {
+			t.Errorf("Should have deleted the first webhook OK, return code wasn't 204 - it's: %d", firstResponse.StatusCode)
 		}
 
-		if secondResponse.StatusCode != 200 {
-			t.Errorf("Should have deleted the second webhook OK, return code wasn't 200 - it's: %d", secondResponse.StatusCode)
+		if secondResponse.StatusCode != 204 {
+			t.Errorf("Should have deleted the second webhook OK, return code wasn't 204 - it's: %d", secondResponse.StatusCode)
 		}
 
 		//	Check both are gone from the ConfigMap
@@ -689,21 +690,17 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 		deleteRequest, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
 
 		var wg sync.WaitGroup
-		wg.Add(3)
+		wg.Add(2)
 
 		go func() {
 			defer wg.Done()
 			firstResponse = createWebhook(theWebhook1, r)
+			deleteResponse, _ = http.DefaultClient.Do(deleteRequest)
 		}()
 
 		go func() {
 			defer wg.Done()
 			secondResponse = createWebhook(theWebhook2, r)
-		}()
-
-		go func() {
-			defer wg.Done()
-			deleteResponse, _ = http.DefaultClient.Do(deleteRequest)
 		}()
 
 		wg.Wait()
@@ -718,7 +715,7 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 			t.Fail()
 		}
 
-		if deleteResponse.StatusCode != http.StatusOK {
+		if deleteResponse.StatusCode != http.StatusNoContent {
 			t.Errorf("Iteration %d, didn't delete the first webhook OK for the safe multiple request creation and deletion test, response: %d", i, deleteResponse.StatusCode)
 			t.Fail()
 		}
@@ -736,14 +733,10 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 
 		if strings.Contains(contents, theWebhook1.Name) {
 			t.Errorf("For iteration %d we found %s when it should have been deleted", i, theWebhook1.Name)
-		} else {
-			t.Logf("For iteration %d, %s was successfully deleted as expected", i, theWebhook1.Name)
 		}
 
 		if !!!strings.Contains(contents, theWebhook2.Name) {
 			t.Errorf("For iteration %d we did not find %s. It should not have been deleted", i, theWebhook2.Name)
-		} else {
-			t.Logf("For iteration %d, %s was successfully kept around as expected", i, theWebhook2.Name)
 		}
 	}
 }

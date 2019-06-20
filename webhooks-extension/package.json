@@ -9,7 +9,9 @@
     "test": "./test-it.sh"
   },
   "dependencies": {
-    "@carbon/icons-react": "^10.2.0"
+    "@carbon/icons-react": "^10.2.0",
+    "stream": "0.0.2",
+    "styled-components": "^4.3.1"
   },
   "devDependencies": {
     "@babel/core": "^7.4.4",
@@ -29,8 +31,7 @@
     "carbon-components-react": "^7.2.0",
     "carbon-icons": "^7.0.7",
     "cross-env": "^5.2.0",
-    "enzyme": "^3.9.0",
-    "enzyme-adapter-react-16": "^1.12.1",
+    "dom-testing-library": "^5.0.0",
     "eslint": "^5.16.0",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-plugin-import": "^2.17.2",
@@ -49,6 +50,7 @@
     "react": "^16.8.6",
     "react-app-polyfill": "^1.0.0",
     "react-dom": "^16.8.6",
+    "react-router": "^5.0.1",
     "react-router-dom": "^5.0.0",
     "react-testing-library": "^7.0.1",
     "rollup": "^1.10.1",

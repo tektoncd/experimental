@@ -19,6 +19,7 @@ import { WebhookCreate } from '../WebhookCreate';
 import * as API from '../../../api/index';
 import 'jest-dom/extend-expect'
 
+window.scrollTo = jest.fn();
 
 const namespacesFailResponseMock = {
   response: {
@@ -183,7 +184,7 @@ describe('drop downs should be enabled when a namespace is selected', () => {
 //-----------------------------------//
 describe('create button enablement', () => {
   // Increase timeout as lots involved in this test
-  //jest.setTimeout(7500);
+  jest.setTimeout(7500);
   it('create button should be enabled only when all fields complete', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
@@ -247,7 +248,7 @@ describe('create button enablement', () => {
 //-----------------------------------//
 describe('create button', () => {
   // Increase timeout as lots involved in this test
-  //jest.setTimeout(7500);
+  jest.setTimeout(7500);
   it('create failure should return notification', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));

@@ -9,7 +9,6 @@ import SubtractAlt20 from '@carbon/icons-react/lib/subtract--alt/20';
 import ViewFilled from '@carbon/icons-react/lib/view--filled/20';
 import ViewOffFilled from '@carbon/icons-react/lib/view--off--filled/20';
 
-
 import './WebhookCreate.scss';
 
 class WebhookCreatePage extends Component {
@@ -44,7 +43,7 @@ class WebhookCreatePage extends Component {
       // whether or not to show error for delete with no secret selected
       showNotification: false,
       // error messages
-      notificationErrorMessage: "",
+      notificationMessage: "",
       notificationStatus: 'success', // or error, or warning,
       notificationStatusMsgShort: 'Secret deleted successfully',
       // create secret vars
@@ -67,7 +66,7 @@ class WebhookCreatePage extends Component {
         error.response.text().then((text) => {
           this.setState({
             namespaceFail: true,
-            notificationErrorMessage: "Failed to get namespaces, error returned was : " + text,
+            notificationMessage: "Failed to get namespaces, error returned was : " + text,
             notificationStatus: 'error',
             notificationStatusMsgShort: 'Error:',
             showNotification: true,
@@ -85,7 +84,7 @@ class WebhookCreatePage extends Component {
         error.response.text().then((text) => {
           this.setState({
             pipelineFail: true,
-            notificationErrorMessage: "Failed to get pipelines, error returned was : " + text,
+            notificationMessage: "Failed to get pipelines, error returned was : " + text,
             notificationStatus: 'error',
             notificationStatusMsgShort: 'Error:',
             showNotification: true,
@@ -103,7 +102,7 @@ class WebhookCreatePage extends Component {
         error.response.text().then((text) => {
           this.setState({
             secretsFail: true,
-            notificationErrorMessage: "Failed to get secrets, error returned was : " + text,
+            notificationMessage: "Failed to get secrets, error returned was : " + text,
             notificationStatus: 'error',
             notificationStatusMsgShort: 'Error:',
             showNotification: true,
@@ -121,7 +120,7 @@ class WebhookCreatePage extends Component {
         error.response.text().then((text) => {
           this.setState({
             serviceAccountsFail: true,
-            notificationErrorMessage: "Failed to get service accounts, error returned was : " + text,
+            notificationMessage: "Failed to get service accounts, error returned was : " + text,
             notificationStatus: 'error',
             notificationStatusMsgShort: 'Error:',
             showNotification: true,
@@ -189,7 +188,7 @@ class WebhookCreatePage extends Component {
     }).catch(error => {
        error.response.text().then((text) => {
         this.setState({
-          notificationErrorMessage: "Failed to create webhook, error returned was : " + text,
+          notificationMessage: "Failed to create webhook, error returned was : " + text,
           notificationStatus: 'error',
           notificationStatusMsgShort: 'Error:',
           showNotification: true,
@@ -307,7 +306,7 @@ class WebhookCreatePage extends Component {
     } else {
       this.setState({
         showNotification: true,
-        notificationErrorMessage: "No secret selected. A secret must be selected from the drop down before selecting delete.",
+        notificationMessage: "No secret selected. A secret must be selected from the drop down before selecting delete.",
         notificationStatus: "error",
         notificationStatusMsgShort: "Error:"
       })
@@ -335,7 +334,7 @@ class WebhookCreatePage extends Component {
         apiSecrets: '',
         gitsecret: '',
         showNotification: true,
-        notificationErrorMessage: "",
+        notificationMessage: "",
         notificationStatus: "success",
         notificationStatusMsgShort: "Secret deleted."
       });
@@ -343,7 +342,7 @@ class WebhookCreatePage extends Component {
       error.response.text().then((text) => {
         this.toggleDeleteDialog();
         this.setState({
-          notificationErrorMessage: "Failed to delete secret, error returned was : " + text,
+          notificationMessage: "Failed to delete secret, error returned was : " + text,
           notificationStatus: 'error',
           notificationStatusMsgShort: 'Error:',
           showNotification: true,
@@ -366,7 +365,7 @@ class WebhookCreatePage extends Component {
         newSecretName: '',
         newTokenValue: '',
         showNotification: true,
-        notificationErrorMessage: "",
+        notificationMessage: "",
         notificationStatus: "success",
         notificationStatusMsgShort: "Secret created."
       });
@@ -376,7 +375,7 @@ class WebhookCreatePage extends Component {
         this.setState({
           newSecretName: '',
           newTokenValue: '',
-          notificationErrorMessage: "Failed to create secret, error returned was : " + text,
+          notificationMessage: "Failed to create secret, error returned was : " + text,
           notificationStatus: 'error',
           notificationStatusMsgShort: 'Error:',
           showNotification: true,
@@ -456,7 +455,7 @@ class WebhookCreatePage extends Component {
           {this.state.showNotification && (
             <InlineNotification
               kind={this.state.notificationStatus}
-              subtitle={this.state.notificationErrorMessage}
+              subtitle={this.state.notificationMessage}
               title={this.state.notificationStatusMsgShort}>
             </InlineNotification>
           )}

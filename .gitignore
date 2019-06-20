@@ -31,4 +31,4 @@ dist/
 coverage/
 
 # Kodata
-cmd/extension/kodata/
+kodata
