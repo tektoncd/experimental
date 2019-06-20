@@ -12,4 +12,4 @@ RUN chmod +x /usr/bin/dep
 RUN dep ensure -vendor-only
 
 # Run endpoints go tests
-RUN CGO_ENABLED=0 go test github.com/tektoncd/experimental/webhooks-extension/endpoints -v
+RUN CGO_ENABLED=0 go test github.com/tektoncd/experimental/webhooks-extension/pkg/endpoints -v

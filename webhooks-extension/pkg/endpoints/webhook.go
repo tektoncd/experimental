@@ -203,7 +203,7 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
-	response.WriteHeader(200)
+	response.WriteHeader(204)
 }
 
 // Find the repository URL for a webhook. We store webhook in a ConfigMap
@@ -308,12 +308,13 @@ func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Res
 "gitServer": "github.com"
 Delete them if the repository URL is what's provided as a parameter. */
 
-func (r Resource) deletePipelineRunsByRepoURL(gitrepourl, namespace string) error {
-	logging.Log.Debugf("Deleting PipelineRuns in namespace %s with repositoryURL %s.", namespace, gitrepourl)
+func (r Resource) deletePipelineRunsByRepoURL(gitRepoURL, namespace string) error {
+	logging.Log.Debugf("Deleting PipelineRuns in namespace %s with repository URL %s", namespace, gitRepoURL)
 
 	allPipelineRuns, err := r.TektonClient.TektonV1alpha1().PipelineRuns(namespace).List(metav1.ListOptions{})
 
 	if err != nil {
+		logging.Log.Errorf("Unable to retrieve PipelineRuns in the namespace %s! Error: %s", namespace, err.Error())
 		return err
 	}
 
@@ -323,7 +324,11 @@ func (r Resource) deletePipelineRunsByRepoURL(gitrepourl, namespace string) erro
 		orgName := labels["gitOrg"]
 		repoName := labels["gitRepo"]
 		foundRepoURL := fmt.Sprintf("https://%s/%s/%s", serverURL, orgName, repoName)
-		if foundRepoURL == gitrepourl {
+
+		gitRepoURL = strings.ToLower(gitRepoURL)
+		foundRepoURL = strings.ToLower(foundRepoURL)
+
+		if foundRepoURL == gitRepoURL {
 			err := r.TektonClient.TektonV1alpha1().PipelineRuns(namespace).Delete(pipelineRun.Name, &metav1.DeleteOptions{})
 			if err != nil {
 				logging.Log.Errorf("failed to delete %s, error: %s", pipelineRun.Name, err.Error())
@@ -340,7 +345,7 @@ func (r Resource) deletePipelineRunsByRepoURL(gitrepourl, namespace string) erro
    Optionally deletes PipelineRuns too. This method does not delete from the ConfigMap, that's done as an additional step. */
 
 func (r Resource) deleteGitHubWebhookByName(name, namespace, foundRepoURL string, deletePipelineRuns bool) error {
-	logging.Log.Debugf("Deleting GitHub webhook in namespace %s with name %s.", namespace, name)
+	logging.Log.Debugf("Deleting GitHub webhook in namespace %s with name %s", namespace, name)
 
 	foundRealGitHubSource, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(namespace).Get(name, metav1.GetOptions{})
 
@@ -368,19 +373,19 @@ func (r Resource) deleteGitHubWebhookByName(name, namespace, foundRepoURL string
 }
 
 // Retrieve registry secret, helm secret and pipeline name for the GitHub URL
-func (r Resource) getGitHubWebhook(gitrepourl string, namespace string) (webhook, error) {
-	logging.Log.Debugf("Get GitHub webhook in namespace %s with repositoryURL %s.", namespace, gitrepourl)
+func (r Resource) getGitHubWebhook(gitRepoURL string, namespace string) (webhook, error) {
+	logging.Log.Debugf("Getting GitHub webhook in namespace %s with repository URL %s", namespace, gitRepoURL)
 
 	sources, err := r.readGitHubWebhooks(namespace)
 	if err != nil {
 		return webhook{}, err
 	}
 	for _, source := range sources {
-		if source.GitRepositoryURL == gitrepourl {
+		if source.GitRepositoryURL == gitRepoURL {
 			return source, nil
 		}
 	}
-	return webhook{}, fmt.Errorf("could not find webhook with GitRepositoryURL: %s", gitrepourl)
+	return webhook{}, fmt.Errorf("could not find webhook with GitRepositoryURL: %s", gitRepoURL)
 }
 
 func (r Resource) readGitHubWebhooks(namespace string) (map[string]webhook, error) {
@@ -388,7 +393,7 @@ func (r Resource) readGitHubWebhooks(namespace string) (map[string]webhook, erro
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
 	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 	if err != nil {
-		logging.Log.Debugf("Creating empty configmap because error getting configmap: %s.", err.Error())
+		logging.Log.Debugf("Creating a new ConfigMap as an error occurred retrieving an existing one: %s.", err.Error())
 		configMap = &corev1.ConfigMap{}
 		configMap.BinaryData = make(map[string][]byte)
 	}
@@ -403,12 +408,11 @@ func (r Resource) readGitHubWebhooks(namespace string) (map[string]webhook, erro
 	} else {
 		result = make(map[string]webhook)
 	}
-	logging.Log.Debugf("Found GitHub sources: %v.", result)
 	return result, nil
 }
 
 func (r Resource) writeGitHubWebhooks(namespace string, sources map[string]webhook) error {
-	logging.Log.Debugf("In writeGitHubWebhooks, namespace: %s, webhooks found: %+v", namespace, sources)
+	logging.Log.Debugf("In writeGitHubWebhooks, namespace: %s", namespace)
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(namespace)
 	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 	var create = false

@@ -31,14 +31,18 @@ export default {
       exclude: 'node_modules/**'
     }),
     commonjs({
-      include: 'node_modules/**'
+      include: 'node_modules/**',
+      namedExports: {
+        'node_modules/react-is/index.js': ['ForwardRef', 'isValidElementType', 'isElement']
+      }
     }),
     externalGlobals({
       'carbon-components-react': 'CarbonComponentsReact',
       'react': 'React',
       'react-dom': 'ReactDOM',
       'react-redux': 'ReactRedux',
-      'react-router-dom': 'ReactRouterDOM'
+      'react-router-dom': 'ReactRouterDOM',
+      'stream': 'Stream',
     }),
     postcss({
       //modules: true

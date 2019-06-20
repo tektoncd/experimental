@@ -16,6 +16,12 @@ import { get, post, deleteRequest } from './comms';
 const apiRoot = getAPIRoot();
 const dashboardAPIRoot = getDashboardAPIRoot();
 
+// Defined here for ease of mocking to test: would be great to remove
+// perhaps using enzyme and mocking state?
+export function getSelectedRows(selectedRows) {
+  return selectedRows
+}
+
 export function getAPIRoot() {
   const { href, hash } = window.location;
   let newHash = hash.replace('#/extensions','v1/extensions')
@@ -74,4 +80,15 @@ export function getPipelines(namespace) {
 export function getServiceAccounts(namespace) {
   const uri = `${dashboardAPIRoot}/namespaces/${namespace}/serviceaccounts`;
   return get(uri);
+}
+
+export function deleteWebhooks(id, namespace, deleteRuns) {
+  let deleteRunsQuery = ""
+  if (deleteRuns) {
+    deleteRunsQuery = "&deletepipelineruns=true";
+    console.log('Will delete PipelineRuns for this repository');
+  }
+  const uri = `${apiRoot}/webhooks/${id}?namespace=${namespace}${deleteRunsQuery}`;
+  console.log(`Deleting with request: ${uri}`);
+  return deleteRequest(uri);
 }
