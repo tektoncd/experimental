@@ -64,7 +64,7 @@ func TestGitHubSource(t *testing.T) {
 		{
 			Name:             "name2",
 			Namespace:        installNs,
-			GitRepositoryURL: "https://github.company.com/owner2/repo2",
+			GitRepositoryURL: "https://github.company.com/owner2/repo2.git",
 			AccessTokenRef:   "token2",
 			Pipeline:         "pipeline2",
 			DockerRegistry:   "registry2",
@@ -115,6 +115,8 @@ func TestGitHubSource(t *testing.T) {
 	// Check all entries (check with GET all webhooks)
 	testGetAllWebhooks(sources, r, t)
 
+	// Check the second entry matches in getGitHubWebhook i.e .git URL matches without git
+	testGetGitHubWebhook(sources[1].GitRepositoryURL, r, t)
 }
 
 func testDockerRegUnset(r *Resource, t *testing.T) {
@@ -209,6 +211,37 @@ func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("Webhook error: expected: \n%v \nbut received \n%v", expected, actual)
 	}
+}
+
+// Checks that URLs without .git match a .git URL in the configmap
+func testGetGitHubWebhook(gitURL string, r *Resource, t *testing.T) {
+
+	configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
+	_, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("Uh oh, we got an error looking up the ConfigMap for webhooks. Error is: %s", err)
+	}
+
+	if strings.HasSuffix(gitURL, ".git") {
+		blank := webhook{}
+		// Trim the suffix - as this is how it comes from the actual webhook
+		// r.getGitHubWebhook should still match and return the webhook from the configmap
+		whookReturned, err := r.getGitHubWebhook(strings.TrimSuffix(gitURL, ".git"), installNs)
+		if err != nil {
+			t.Errorf("Error occurred in getGitHubWebhook: %s", err)
+		} else {
+			if whookReturned == blank {
+				t.Errorf("Weirdly an empty webhook was returned without an error from getGitHubWebhook")
+				t.Fail()
+			}
+			t.Logf("Webhook found in configmap: %s", whookReturned)
+		}
+	} else {
+		// The source needs to end in .git as this is what we need to test - and what would have been
+		// stored in the configmap
+		t.Error("Uh oh, someone has changed the repo URL - it needs to end in .git")
+	}
+
 }
 
 func TestDeleteByNameNoName405(t *testing.T) {

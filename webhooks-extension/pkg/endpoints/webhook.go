@@ -381,7 +381,7 @@ func (r Resource) getGitHubWebhook(gitRepoURL string, namespace string) (webhook
 		return webhook{}, err
 	}
 	for _, source := range sources {
-		if source.GitRepositoryURL == gitRepoURL {
+		if strings.TrimSuffix(strings.ToLower(source.GitRepositoryURL), ".git") == strings.TrimSuffix(strings.ToLower(gitRepoURL), ".git") {
 			return source, nil
 		}
 	}
