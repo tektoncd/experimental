@@ -232,26 +232,29 @@ export class WebhookDisplayTable extends Component {
                   selectedRows,
                   onInputChange
                 }) => (
-                  <TableContainer title="Webhooks">
+                  <TableContainer>
+                    <div className="header">
+                    <div className="header-title">
+                        <h4 class="bx--data-table-header__title">Webhooks</h4>
+                    </div>
+                      <TableToolbarContent>
+                        <div className="search-bar">
+                          <TableToolbarSearch onChange={onInputChange} />
+                        </div>
+                        <div className="add-div">
+                          <Button kind="ghost" as={Link} id="add-btn" to={this.props.match.url + "/create"}>
+                            <div className="add-icon-div">
+                              <AddAlt16 className="add-icon"/>
+                            </div>
+                            Add Webhook
+                          </Button>
+                        </div>
+                        </TableToolbarContent>
+                    </div>
                     <TableToolbar>
                       <TableBatchActions {...getBatchActionProps()}>
                         <TableBatchAction id="delete-btn" renderIcon={Delete} onClick={() => {this.showDeleteDialogHandlerVisible(selectedRows)}}>Delete</TableBatchAction>
                       </TableBatchActions>
-
-                      <TableToolbarContent>
-                        <div className="search-bar">
-                          <TableToolbarSearch onChange={onInputChange} />
-                          </div>
-                              <div className="btn-div">
-                                <Button as={Link} id="create-btn" to={this.props.match.url + "/create"}>
-                                  Add
-                                  <div className="create-icon">
-                                    <AddAlt16 />
-                                  </div>
-                                </Button>
-                          </div>
-                      </TableToolbarContent>
-
                     </TableToolbar>
           
                     <Table className="bx--data-table--zebra">
