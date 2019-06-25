@@ -21,8 +21,9 @@ import 'react-testing-library/cleanup-after-each';
 beforeEach(jest.restoreAllMocks);
 
 describe('without webhooks', () => {
+  const noWebhooks = [ {} ];
   it('should display Loading when loading', () => {
-    jest.spyOn(WebhookDisplayTable.prototype, 'getWebhooks').mockImplementation(() => {});
+    jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve([noWebhooks]));
     const { queryByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
     expect(queryByTestId('webhook-notification')).toBeNull();
     expect(queryByText(/Loading/i)).toBeTruthy();
@@ -37,7 +38,8 @@ describe('displays an add button', () => {
     expect(queryByTestId('webhook-notification')).toBeNull();
     await waitForElement(() => getByText(/Add/i));
    });
-}); 
+});
+ 
 
 describe('with webhooks', () => {
   const webhooks = [

@@ -8,3 +8,9 @@ If modifying the UI code and wanting to deploy your updated version:
     `tekton-dashboard-bundle-location: "web/extension.214d2396.js"`
 
 3) Reinstall (If not re-installing the main dashboard, you will need to kill the dashboard pod after the new extension pod starts.  This only needs doing until https://github.com/tektoncd/dashboard/issues/215 is completed.)
+
+### Linting
+
+Run `npm run lint` to execute the linter. This will ensure code follows the conventions and standards used by the project.
+
+Run `npm run lint:fix` to automatically fix a number of types of problem including code style.

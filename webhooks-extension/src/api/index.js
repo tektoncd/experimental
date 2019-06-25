@@ -86,9 +86,7 @@ export function deleteWebhooks(id, namespace, deleteRuns) {
   let deleteRunsQuery = ""
   if (deleteRuns) {
     deleteRunsQuery = "&deletepipelineruns=true";
-    console.log('Will delete PipelineRuns for this repository');
   }
   const uri = `${apiRoot}/webhooks/${id}?namespace=${namespace}${deleteRunsQuery}`;
-  console.log(`Deleting with request: ${uri}`);
   return deleteRequest(uri);
 }

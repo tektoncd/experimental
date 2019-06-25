@@ -315,7 +315,7 @@ describe('create button', () => {
       return Promise.resolve({})
     });
 
-    const { getByText, getByTestId } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText, getByTestId } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     
     fireEvent.click(await waitForElement(() => getByTestId('display-name-entry')));
     await wait(() => expect(getByTestId('create-button')).toBeDisabled())
@@ -358,44 +358,44 @@ describe('create button', () => {
 
 describe('tooltips', () => {
   it('click on name tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('name-tooltip'))
     fireEvent.click(document.getElementById('name-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
     await waitForElement(() => getByText(/The display name for your webhook in this user interface./i))
   });
 
   it('click on git url tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('git-tooltip'))
     fireEvent.click(document.getElementById('git-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
     await waitForElement(() => getByText(/The URL of the git repository to create the webhook on./i))
   });
   it('click on pipeline tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('pipeline-tooltip'))
     fireEvent.click(document.getElementById('pipeline-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
     await waitForElement(() => getByText(/The pipeline from the selected namespace to run when the webhook is triggered./i))
   });
   it('click on namespace tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('namespace-tooltip'))
     fireEvent.click(document.getElementById('namespace-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
     await waitForElement(() => getByText(/The namespace to operate in./i))
   });
   it('click on secrets tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('secret-tooltip'))
     fireEvent.click(document.getElementById('secret-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
     await waitForElement(() => getByText(/The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository./i))
   });
   it('click on service account tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('serviceaccount-tooltip'))
     fireEvent.click(document.getElementById('serviceaccount-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
     await waitForElement(() => getByText(/The service account under which to run the pipeline run./i))
   });
   it('click on docker registry tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={(v) => {}} />);
+    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('docker-tooltip'))
     fireEvent.click(document.getElementById('docker-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
     await waitForElement(() => getByText(/The docker registry to push images to./i))
