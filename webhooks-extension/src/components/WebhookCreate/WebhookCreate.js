@@ -136,7 +136,7 @@ class WebhookCreatePage extends Component {
     this.setState({[name]: value});
   }
 
-  handleChangeNamespace = (itemText, value) => {
+  handleChangeNamespace = (itemText) => {
     this.setState({
       namespace: itemText.selectedItem,
       apiPipelines: '',
@@ -157,15 +157,15 @@ class WebhookCreatePage extends Component {
     }
   }
 
-  handleChangePipeline = (itemText, value) => {
+  handleChangePipeline = (itemText) => {
     this.setState({pipeline: itemText.selectedItem });
   }
 
-  handleChangeSecret = (itemText, value) => {
+  handleChangeSecret = (itemText) => {
     this.setState({gitsecret: itemText.selectedItem });
   }
 
-  handleChangeServiceAcct = (itemText, value) => {
+  handleChangeServiceAcct = (itemText) => {
     this.setState({serviceAccount: itemText.selectedItem });
   }
 

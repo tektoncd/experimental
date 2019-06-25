@@ -12,7 +12,7 @@ limitations under the License.
 */
 
 import React from 'react';
-import { waitForElement, wait, fireEvent, cleanup } from 'react-testing-library';
+import { waitForElement, fireEvent, cleanup } from 'react-testing-library';
 import { renderWithRouter } from '../../../test/utils/test';
 import 'react-testing-library/cleanup-after-each';
 import { WebhookCreate } from '../WebhookCreate';

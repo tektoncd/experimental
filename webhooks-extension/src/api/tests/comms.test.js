@@ -13,7 +13,7 @@ limitations under the License.
 
 import fetchMock from 'fetch-mock';
 
-import { checkStatus, get, getHeaders, post, request, put, deleteRequest} from '../comms';
+import { checkStatus, get, getHeaders, post, request, put } from '../comms';
 
 const uri = 'http://example.com';
 

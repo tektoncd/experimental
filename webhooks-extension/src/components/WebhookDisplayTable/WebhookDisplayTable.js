@@ -46,45 +46,36 @@ export class WebhookDisplayTable extends Component {
     notificationStatusMsgShort: 'Webhook created successfully.',
   };
 
-  async componentDidMount() {
-    let data;
-    try {
-      data = await getWebhooks();
-      this.setState({
-        isLoaded: true,
-        webhooks: data
-      });
-    } catch (error) {
-      error.response.text().then((text) => {
-        this.setState({
-          notificationMessage: "Failure occured fetching webhooks, error returned from the REST endpoint was : " + text,
-          notificationStatus: 'error',
-          notificationStatusMsgShort: 'Error:',
-          showNotificationOnTable: true,
-        });
-      });
-    }
-  }
-
   formatCellContent(id, value) {
     // Render the git repo as a clickable link
     if (id.endsWith(":repository")) {
-      return <a href={value} target="_blank">{value}</a>
+      return <a href={value} target="_blank" rel="noopener noreferrer">{value}</a>
     } else {
       return value
     }
   }
 
-  componentDidMount() {
-    this.getWebhooks();
+  componentDidMount() { 
+    this.fetchWebhooksForTable()
   }
 
-  async getWebhooks() {
-    const webhookData = await getWebhooks();
-    this.setState({
-      isLoaded: true,
-      webhooks: webhookData
-    });
+  async fetchWebhooksForTable() {
+    try { 
+      const webhookData = await getWebhooks();
+      this.setState({
+        isLoaded: true,
+        webhooks: webhookData
+      });
+    } catch (error) {
+        error.response.text().then((text) => {
+          this.setState({
+            notificationMessage: "Failure occured fetching webhooks, error returned from the REST endpoint was : " + text,
+            notificationStatus: 'error',
+            notificationStatusMsgShort: 'Error:',
+            showNotificationOnTable: true,
+          });
+        });
+      }
   }
 
   showDeleteDialogHandlerInvisible = () => {
@@ -105,13 +96,13 @@ export class WebhookDisplayTable extends Component {
 
     if (this.state.checked) {
         deleteRuns = true;
-    };
+    }
 
     let rowsToUse = getSelectedRows(this.state.userSelectedRows);
 
     let deletePromises = [];
 
-    deletePromises = rowsToUse.map(function(rowIDObject, indexInTheMap) {
+    deletePromises = rowsToUse.map(function(rowIDObject) {
       let id = rowIDObject.id;
       let theName = id.substring(0, id.lastIndexOf('|'));
       let namespace = id.substring(id.lastIndexOf('|') + 1, id.length);
@@ -128,8 +119,8 @@ export class WebhookDisplayTable extends Component {
       return deleteWithinTimePromise;
     })
 
-    Promise.all(deletePromises).then(values => {
-      this.getWebhooks();
+    Promise.all(deletePromises).then( () => {
+      this.fetchWebhooksForTable();
       this.setState({
         showNotificationOnTable: true,
         showDeleteDialog: false,
@@ -137,8 +128,7 @@ export class WebhookDisplayTable extends Component {
         notificationStatusMsgShort: 'Webhook(s) deleted successfully.',
         notificationMessage: '',
       });
-     }).catch(error => {
-      console.log(`error is: ${error}`)
+     }).catch( () => {
       this.setState({
         showNotificationOnTable: true,
         showDeleteDialog: false,
@@ -159,7 +149,7 @@ export class WebhookDisplayTable extends Component {
 
   getContent(id, value) {
     if (id.endsWith(":repository")) {
-      return <a href={value} target="_blank">{value}</a>
+      return <a href={value} target="_blank" rel="noopener noreferrer">{value}</a>
     } else {
       return value
     }
@@ -235,7 +225,7 @@ export class WebhookDisplayTable extends Component {
                   <TableContainer>
                     <div className="header">
                     <div className="header-title">
-                        <h4 class="bx--data-table-header__title">Webhooks</h4>
+                        <h4 className="bx--data-table-header__title">Webhooks</h4>
                     </div>
                       <TableToolbarContent>
                         <div className="search-bar">
@@ -262,7 +252,7 @@ export class WebhookDisplayTable extends Component {
                         <TableRow>
                           <TableSelectAll {...getSelectionProps()} />
                           {headers.map(header => (
-                            <TableHeader {...getHeaderProps({ header })} isSortable={true} isSortHeader={true}>{header.header}</TableHeader>
+                            <TableHeader key={header.id} {...getHeaderProps({ header })} isSortable={true} isSortHeader={true}>{header.header}</TableHeader>
                           ))}
                         </TableRow>
                       </TableHead>

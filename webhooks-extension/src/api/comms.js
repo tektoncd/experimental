@@ -26,13 +26,14 @@ export function getHeaders(headers = {}) {
 export function checkStatus(response = {}) {
   if (response.ok) {
     switch (response.status) {
-      case 201:
+      case 201: 
         return response.headers;
-      case 204:
+      case 204: 
         return {};
-      default:
+      default: {
         let responseAsJson = response.json();
         return responseAsJson;
+      }
     }
   }
 

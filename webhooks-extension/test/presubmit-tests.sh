@@ -28,12 +28,46 @@ export TEST_FOLDER=$(pwd)
 
 source $(dirname $0)/../../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
+function get_node() {
+    echo "Script is running as $(whoami) on $(hostname) and directory structure is $(find .)"
+    # It's Stretch and https://github.com/tektoncd/dashboard/blob/master/package.json
+    # denotes the Node.js and npm versions
+    apt-get update
+    apt-get install -y curl
+    curl -O https://nodejs.org/dist/v10.15.3/node-v10.15.3-linux-x64.tar.xz
+    tar xf node-v10.15.3-linux-x64.tar.xz
+    export PATH=$PATH:$(pwd)/node-v10.15.3-linux-x64/bin
+}
+
 function extra_initialization() {
     dep ensure -v
+    get_node
+    echo ">> npm version"
+    npm --version
+    echo ">> Node.js version"
+    node --version
 }
 
 function post_build_tests() {
     popd
+}
+
+function node_npm_install() {
+    local failed=0
+    mkdir ~/.npm-global
+    npm config set prefix '~/.npm-global'
+    export PATH=$PATH:$HOME/.npm-global/bin
+    npm ci || failed=1 # similar to `npm install` but ensures all versions from lock file
+    return ${failed}
+}
+
+function node_test() { 
+    local failed=0
+    echo "Running node tests from $(pwd)"
+    node_npm_install || failed=1
+    npm run lint || failed=1
+    echo ""
+    return ${failed}
 }
 
 function post_unit_tests() {
@@ -50,6 +84,8 @@ function pre_build_tests() {
 
 function pre_unit_tests() {
     pushd ${TEST_FOLDER}
+    header "webhooks-extension pre_unit_tests"
+    node_test
 }
 
 function pre_integration_tests() {
