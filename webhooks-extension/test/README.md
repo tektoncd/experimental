@@ -19,7 +19,6 @@ You must install these tools:
 - helm: Templating is used to install Istio according to [Knative docs](https://knative.dev/docs/install/installing-istio/)
 - npm: For building the user interface
 
-
 ## Dependency Versioning
 The installation script installs the latest version of Istio and known compatible versions of Knative as per values in the version section of [config.sh](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/config.sh). Knative Serving 0.6 has made considerable changes to the service definition so levels below this are not supported.
 

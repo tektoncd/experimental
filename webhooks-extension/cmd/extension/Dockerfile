@@ -16,14 +16,11 @@ RUN dep ensure -vendor-only
 
 RUN npm install
 RUN npm rebuild node-sass
-RUN ls -l
 RUN cat ./build-it.sh
 RUN npm run build
 
 # # Build the extension command inside the container.
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -o /app github.com/tektoncd/experimental/webhooks-extension/cmd/extension
-
-
 
 FROM scratch
 COPY --from=builder /app .
