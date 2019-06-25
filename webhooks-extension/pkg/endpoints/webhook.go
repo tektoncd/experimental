@@ -502,18 +502,21 @@ func (r Resource) RegisterWeb(container *restful.Container) {
 	var handler http.Handler
 	webResourcesDir := os.Getenv("WEB_RESOURCES_DIR")
 	koDataPath := os.Getenv("KO_DATA_PATH")
-	if _, err := os.Stat(webResourcesDir); err != nil {
+	_, err := os.Stat(webResourcesDir)
+	if err != nil {
 		if os.IsNotExist(err) {
 			if koDataPath != "" {
 				logging.Log.Warnf("WEB_RESOURCES_DIR %s not found, serving static content from KO_DATA_PATH instead.", webResourcesDir)
 				handler = http.FileServer(http.Dir(koDataPath))
 			} else {
-				logging.Log.Errorf("WEB_RESOURCES %s not found and KO_DATA_PATH not found, static resource (UI) problems to be expected.")
+				logging.Log.Errorf("WEB_RESOURCES_DIR %s not found and KO_DATA_PATH not found, static resource (UI) problems to be expected.", webResourcesDir)
 			}
 		} else {
-			logging.Log.Infof("Serving static files from WEB_RESOURCES_DIR: %s", webResourcesDir)
-			handler = http.FileServer(http.Dir(webResourcesDir))
+			logging.Log.Errorf("error returned while checking for WEB_RESOURCES_DIR %s", webResourcesDir)
 		}
+	} else {
+		logging.Log.Infof("Serving static files from WEB_RESOURCES_DIR: %s", webResourcesDir)
+		handler = http.FileServer(http.Dir(webResourcesDir))
 	}
 	container.Handle("/web/", http.StripPrefix("/web/", handler))
 }

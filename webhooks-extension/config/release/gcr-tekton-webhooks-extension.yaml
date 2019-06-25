@@ -1,0 +1,87 @@
+# ------------------- Extension Deployment ------------------- #
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhooks-extension
+  labels:
+    app: webhooks-extension
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhooks-extension
+  template:
+    metadata:
+      labels:
+        app: webhooks-extension
+    spec:
+      containers:
+        - name: webhooks-extension
+          image: "gcr.io/tekton-nightly/extension:latest"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8080
+          env:
+          - name: PORT
+            value: "8080"
+          - name: INSTALLED_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DOCKER_REGISTRY_LOCATION
+            value: DOCKER_REPO
+          - name: WEB_RESOURCES_DIR
+            value: web
+---
+# ------------------- Extension Service ------------------- #
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhooks-extension
+  labels:
+    app: webhooks-extension
+    tekton-dashboard-extension: "true"
+  annotations:
+    tekton-dashboard-display-name: Webhooks
+    tekton-dashboard-endpoints: "webhooks.web"
+    tekton-dashboard-bundle-location: "web/extension.bac9f2ac.js"
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: webhooks-extension
+---
+# ------------------- Sink Knative Service ------------------- #
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: webhooks-extension-sink
+  labels:
+    app: webhooks-extension-sink
+spec:
+  template:
+    spec:
+      containers:
+      - image: "gcr.io/tekton-nightly/sink:latest"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /liveness
+        readinessProbe:
+          httpGet:
+            path: /readiness
+        env:
+        - name: INSTALLED_NAMESPACE
+          value: tekton-pipelines
