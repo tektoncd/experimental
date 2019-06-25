@@ -125,6 +125,7 @@ describe('create secret', () => {
     fireEvent.click(document.getElementsByClassName('create-modal').item(0).getElementsByClassName('bx--btn--primary').item(0))
     await waitForElement(() => getByText(/Secret created/i));
     expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(1);
+    expect(document.getElementById('git').getElementsByClassName('bx--list-box__label').item(0).textContent).toBe("new-secret-foo")
   });
   
 })

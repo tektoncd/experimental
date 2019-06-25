@@ -321,9 +321,7 @@ class WebhookCreatePage extends Component {
     }
     let invert = !this.state.showCreateDialog;
     this.setState({
-      showCreateDialog: invert,
-      newSecretName: '',
-      newTokenValue: '',
+      showCreateDialog: invert
     });
   }
 
