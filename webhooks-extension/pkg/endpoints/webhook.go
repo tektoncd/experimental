@@ -381,15 +381,7 @@ func (r Resource) getGitHubWebhook(gitRepoURL string, namespace string) (webhook
 		return webhook{}, err
 	}
 	for _, source := range sources {
-<<<<<<< HEAD
-<<<<<<< HEAD
 		if strings.TrimSuffix(strings.ToLower(source.GitRepositoryURL), ".git") == strings.TrimSuffix(strings.ToLower(gitRepoURL), ".git") {
-=======
-		if source.GitRepositoryURL == gitRepoURL {
->>>>>>> d50b91a... Deletion of webhooks
-=======
-		if strings.TrimSuffix(strings.ToLower(source.GitRepositoryURL), ".git") == strings.TrimSuffix(strings.ToLower(gitRepoURL), ".git") {
->>>>>>> 3c18936... Fix issue with user supplying repo with .git suffix
 			return source, nil
 		}
 	}
