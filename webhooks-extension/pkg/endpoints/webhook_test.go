@@ -530,7 +530,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 	t.Log("in TestMultipleDeletesCorrectData")
 	r := setUpServer()
 
-	numTimes := 100
+	numTimes := 15
 	runtime.GOMAXPROCS(2)
 
 	for i := 0; i < numTimes; i++ {
