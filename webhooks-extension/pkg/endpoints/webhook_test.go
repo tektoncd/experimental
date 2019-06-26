@@ -531,7 +531,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 	t.Log("in TestMultipleDeletesCorrectData")
 	r := setUpServer()
 
-	numTimes := 20
+	numTimes := 50
 	runtime.GOMAXPROCS(2)
 
 	for i := 0; i < numTimes; i++ {
@@ -586,11 +586,6 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		}()
 
 		wg.Wait()
-
-		/*
-			firstResponse, _ = http.DefaultClient.Do(firstReq)
-			secondResponse, _ = http.DefaultClient.Do(secondReq)
-		*/
 
 		if firstResponse.StatusCode != 204 {
 			t.Errorf("Should have deleted the first webhook OK, return code wasn't 204 - it's: %d", firstResponse.StatusCode)
