@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -535,7 +536,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 
 	for i := 0; i < numTimes; i++ {
 		theWebhook1 := webhook{
-			Name:             "routine1hook",
+			Name:             "routine1hook-" + strconv.Itoa(i),
 			Namespace:        installNs,
 			GitRepositoryURL: "https://a.com/b/c", // Same repo URL as pipelineRun
 			AccessTokenRef:   "token1",
@@ -550,7 +551,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		}
 
 		theWebhook2 := webhook{
-			Name:             "routine2hook",
+			Name:             "routine2hook-" + strconv.Itoa(i),
 			Namespace:        installNs,
 			GitRepositoryURL: "https://b.com/c/d", // Same repo URL as pipelineRun
 			AccessTokenRef:   "token1",
