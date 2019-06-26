@@ -20,7 +20,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	restful "github.com/emicklei/go-restful"
@@ -524,8 +526,7 @@ func testGithubSourceReleaseNameTooLong(r *Resource, t *testing.T) {
 	}
 }
 
-// TODO: debug and re-enable this test. It's currently flaky and can fail under Prow.
-/* func TestMultipleDeletesCorrectData(t *testing.T) {
+func TestMultipleDeletesCorrectData(t *testing.T) {
 	t.Log("in TestMultipleDeletesCorrectData")
 	r := setUpServer()
 
@@ -611,7 +612,6 @@ func testGithubSourceReleaseNameTooLong(r *Resource, t *testing.T) {
 		}
 	}
 }
-*/
 
 /* This test has also been seen to crash or fail under Prow
 func TestMultipleCreatesCorrectData(t *testing.T) {
