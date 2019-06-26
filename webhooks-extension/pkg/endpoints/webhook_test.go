@@ -531,7 +531,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 	r := setUpServer()
 
 	numTimes := 100
-	runtime.GOMAXPROCS(16)
+	runtime.GOMAXPROCS(2)
 
 	for i := 0; i < numTimes; i++ {
 		theWebhook1 := webhook{
@@ -564,13 +564,12 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 			t.Fail()
 		}
 
-		firstReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
-		secondReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook2.Name+"?namespace="+installNs, nil)
-
 		// Fire them off at the same time, then check the resulting ConfigMap is accurate: containing no entries and not just one.
 
 		var firstResponse *http.Response
 		var secondResponse *http.Response
+		firstReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
+		secondReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook2.Name+"?namespace="+installNs, nil)
 
 		var wg sync.WaitGroup
 		wg.Add(2)
@@ -596,7 +595,6 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		}
 
 		//	Check both are gone from the ConfigMap
-
 		configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
 
 		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
@@ -610,7 +608,10 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 			t.Errorf("For iteration %d, we found a webhook name or repository URL in "+
 				"the ConfigMap data when both should have been removed through simultaneous deletion requests, data is: %s", i, contents)
 		}
+
+		t.Logf("Iteration %d complete", i)
 	}
+	t.Log("Test complete")
 }
 
 /* This test has also been seen to crash or fail under Prow
