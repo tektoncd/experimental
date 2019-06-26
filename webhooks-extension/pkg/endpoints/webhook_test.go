@@ -531,7 +531,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 	r := setUpServer()
 
 	numTimes := 100
-	runtime.GOMAXPROCS(2)
+	runtime.GOMAXPROCS(16)
 
 	for i := 0; i < numTimes; i++ {
 		theWebhook1 := webhook{

@@ -38,6 +38,10 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	modifyingConfigMapLock.Lock()
 	defer modifyingConfigMapLock.Unlock()
 
+	if request == nil {
+		logging.Log.Fatal("nil request in createWebhook, it's all over")
+	}
+
 	logging.Log.Infof("Creating webhook with request: %+v.", request)
 	installNs := r.Defaults.Namespace
 	if installNs == "" {
