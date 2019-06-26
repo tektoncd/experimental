@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	restful "github.com/emicklei/go-restful"
@@ -571,25 +572,25 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		firstReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
 		secondReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook2.Name+"?namespace="+installNs, nil)
 
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			firstResponse, _ = http.DefaultClient.Do(firstReq)
+		}()
+
+		go func() {
+			defer wg.Done()
+			secondResponse, _ = http.DefaultClient.Do(secondReq)
+		}()
+
+		wg.Wait()
+
 		/*
-			var wg sync.WaitGroup
-			wg.Add(2)
-
-			go func() {
-				defer wg.Done()
-				firstResponse, _ = http.DefaultClient.Do(firstReq)
-			}()
-
-			go func() {
-				defer wg.Done()
-				secondResponse, _ = http.DefaultClient.Do(secondReq)
-			}()
-
-			wg.Wait()
+			firstResponse, _ = http.DefaultClient.Do(firstReq)
+			secondResponse, _ = http.DefaultClient.Do(secondReq)
 		*/
-
-		firstResponse, _ = http.DefaultClient.Do(firstReq)
-		secondResponse, _ = http.DefaultClient.Do(secondReq)
 
 		if firstResponse.StatusCode != 204 {
 			t.Errorf("Should have deleted the first webhook OK, return code wasn't 204 - it's: %d", firstResponse.StatusCode)
