@@ -147,14 +147,6 @@ export class WebhookDisplayTable extends Component {
 		});	
   }
 
-  getContent(id, value) {
-    if (id.endsWith(":repository")) {
-      return <a href={value} target="_blank" rel="noopener noreferrer">{value}</a>
-    } else {
-      return value
-    }
-  }
-
   render() {
 
     if (this.state.isLoaded) {

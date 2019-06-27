@@ -488,8 +488,6 @@ func (r Resource) RegisterExtensionWebService(container *restful.Container) {
 	ws.Route(ws.GET("/defaults").To(r.getDefaults))
 	ws.Route(ws.DELETE("/{name}").To(r.deleteWebhook))
 
-	ws.Route(ws.DELETE("/{name}").To(r.deleteWebhook))
-
 	ws.Route(ws.POST("/credentials").To(r.createCredential))
 	ws.Route(ws.GET("/credentials").To(r.getAllCredentials))
 	ws.Route(ws.DELETE("/credentials/{name}").To(r.deleteCredential))
