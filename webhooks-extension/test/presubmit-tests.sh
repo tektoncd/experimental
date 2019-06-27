@@ -115,12 +115,13 @@ function pre_integration_tests() {
     pushd ${TEST_FOLDER}
 }
 
-function unit_tests() {
-  echo "Using overridden unit_tests"  
-  go test -v -race ./...
-  echo "unit_tests returning $@"
-  return $?
-}
+
+#function unit_tests() {
+#  echo "Using overridden unit_tests"  
+#  go test -v -race ./...
+#  echo "unit_tests returning $@"
+#  return $?
+#}
 
 # We use the default build, unit and integration test runners.
 main $@
