@@ -16,6 +16,14 @@
 
 # This script runs at the postsubmit phase; it is started by prow when a push event
 # happens on master, via a PR merge for example.
+set -e
+source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
-$(dirname $0)/../webhooks-extension/publish-images.sh
-$(dirname $0)/../tekton-listener/publish-images.sh
+for p in webhooks-extension tekton-listener; do
+    header "Publish image for ${p}"
+    pushd $(dirname $0)/../${p} > /dev/null
+    set +e
+    ./test/publish-images.sh
+    set -e
+    popd > /dev/null
+done
