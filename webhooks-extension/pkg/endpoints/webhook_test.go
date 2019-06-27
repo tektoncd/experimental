@@ -532,7 +532,7 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 	r := setUpServer()
 
 	numTimes := 1
-	numHooks := 50
+	numHooks := 40
 	runtime.GOMAXPROCS(2)
 
 	for i := 0; i < numTimes; i++ {
