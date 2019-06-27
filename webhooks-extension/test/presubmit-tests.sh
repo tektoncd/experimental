@@ -66,6 +66,7 @@ function node_test() {
     echo "Running node tests from $(pwd)"
     node_npm_install || failed=1
     npm run lint || failed=1
+    npm run test ci || failed=1
     echo ""
     return ${failed}
 }
@@ -85,7 +86,10 @@ function pre_build_tests() {
 function pre_unit_tests() {
     pushd ${TEST_FOLDER}
     header "webhooks-extension pre_unit_tests"
+    # Runs linting and UI tests and returns the exit code
     node_test
+    exit_code=$?
+    return $exit_code
 }
 
 function pre_integration_tests() {

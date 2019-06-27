@@ -184,7 +184,7 @@ describe('drop downs should be enabled when a namespace is selected', () => {
 //-----------------------------------//
 describe('create button enablement', () => {
   // Increase timeout as lots involved in this test
-  jest.setTimeout(7500);
+  jest.setTimeout(15000);
   it('create button should be enabled only when all fields complete', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
