@@ -21,20 +21,6 @@ set -e
 
 dep ensure
 
-# It's Stretch and https://github.com/tektoncd/dashboard/blob/master/package.json
-# denotes the Node.js and npm versions
-apt-get update
-apt-get install -y curl
-curl -O https://nodejs.org/dist/v10.15.3/node-v10.15.3-linux-x64.tar.xz
-tar xf node-v10.15.3-linux-x64.tar.xz
-export PATH=$PATH:$(pwd)/node-v10.15.3-linux-x64/bin
-
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global'
-export PATH=$PATH:$HOME/.npm-global/bin
-npm ci
-npm run build_ko
-
 export KO_DOCKER_REPO=gcr.io/tekton-nightly
 
 for img in controller tekton-listener; do
