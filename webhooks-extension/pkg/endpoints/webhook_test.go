@@ -531,71 +531,58 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 	t.Log("in TestMultipleDeletesCorrectData")
 	r := setUpServer()
 
-	numTimes := 50
+	numTimes := 10
+	numHooks := 10
 	runtime.GOMAXPROCS(2)
 
 	for i := 0; i < numTimes; i++ {
-		theWebhook1 := webhook{
-			Name:             "routine1hook-" + strconv.Itoa(i),
-			Namespace:        installNs,
-			GitRepositoryURL: "https://a.com/b/c", // Same repo URL as pipelineRun
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
+
+		// Create n webhook requests
+		var hooks = []webhook{}
+		for j := 0; j < numHooks; j++ {
+			hooks = append(hooks, webhook{
+				Name:             "hook-loop" + strconv.Itoa(i) + "-num-" + strconv.Itoa(j),
+				Namespace:        installNs,
+				GitRepositoryURL: "https://a.com/b/c" + strconv.Itoa(j),
+				AccessTokenRef:   "token1",
+				Pipeline:         "pipeline1",
+			})
+			resp := createWebhook(hooks[j], r)
+			if resp.StatusCode() != http.StatusCreated {
+				t.Errorf("Didn't create webhook %d in loop %d of the safe multiple request deletion test", j, i)
+				t.Fail()
+			}
 		}
-
-		resp := createWebhook(theWebhook1, r)
-
-		if resp.StatusCode() != http.StatusCreated {
-			t.Error("Didn't create the first webhook OK for the safe multiple request deletion test")
-			t.Fail()
+		var requests = []*http.Request{}
+		for j := 0; j < numHooks; j++ {
+			newReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+hooks[j].Name+"?namespace="+installNs, nil)
+			requests = append(requests, newReq)
 		}
-
-		theWebhook2 := webhook{
-			Name:             "routine2hook-" + strconv.Itoa(i),
-			Namespace:        installNs,
-			GitRepositoryURL: "https://b.com/c/d", // Same repo URL as pipelineRun
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
-		}
-
-		resp = createWebhook(theWebhook2, r)
-
-		if resp.StatusCode() != http.StatusCreated {
-			t.Error("Didn't create the second webhook OK for the safe multiple request deletion test")
-			t.Fail()
-		}
-
-		// Fire them off at the same time, then check the resulting ConfigMap is accurate: containing no entries and not just one.
-
-		var firstResponse *http.Response
-		var secondResponse *http.Response
-		firstReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
-		secondReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook2.Name+"?namespace="+installNs, nil)
 
 		var wg sync.WaitGroup
-		wg.Add(2)
+		wg.Add(numHooks)
 
-		go func() {
-			defer wg.Done()
-			firstResponse, _ = http.DefaultClient.Do(firstReq)
-		}()
+		// Fire requests and check responses
 
-		go func() {
-			defer wg.Done()
-			secondResponse, _ = http.DefaultClient.Do(secondReq)
-		}()
+		var responses = make([]*http.Response, numHooks)
+		for j := 0; j < numHooks; j++ {
+			respNum := j
+			outerLoopIndex := i
+			go func(loopIndex int) {
+				defer wg.Done()
+				t.Logf("r%d loop %d entry", respNum, outerLoopIndex)
+				resp, _ := http.DefaultClient.Do(requests[respNum])
+				if resp.StatusCode != 204 {
+					t.Errorf("Resp %d loop %d should wasn't 204 - it's: %d", respNum, outerLoopIndex, resp.StatusCode)
+				}
+				responses[loopIndex] = resp
+				t.Logf("r%d loop %d exit", respNum, outerLoopIndex)
+			}(j)
+		}
 
 		wg.Wait()
 
-		if firstResponse.StatusCode != 204 {
-			t.Errorf("Should have deleted the first webhook OK, return code wasn't 204 - it's: %d", firstResponse.StatusCode)
-		}
-
-		if secondResponse.StatusCode != 204 {
-			t.Errorf("Should have deleted the second webhook OK, return code wasn't 204 - it's: %d", secondResponse.StatusCode)
-		}
-
-		//	Check both are gone from the ConfigMap
+		//	Check all hooks are gone from the ConfigMap
 		configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
 
 		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
@@ -604,12 +591,11 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		}
 
 		contents := string(configMap.BinaryData["GitHubSource"])
-		if strings.Contains(contents, theWebhook1.Name) || strings.Contains(contents, "https://a.com/b/c") ||
-			strings.Contains(contents, theWebhook2.Name) || strings.Contains(contents, "https://b.com/c/d") {
-			t.Errorf("For iteration %d, we found a webhook name or repository URL in "+
-				"the ConfigMap data when both should have been removed through simultaneous deletion requests, data is: %s", i, contents)
+		for _, hook := range hooks {
+			if strings.Contains(contents, hook.Name) || strings.Contains(contents, hook.GitRepositoryURL) {
+				t.Fatalf("For iteration %d we found request name %s or url %s in GitHubSource %s", i, hook.Name, hook.GitRepositoryURL, contents)
+			}
 		}
-
 		t.Logf("Iteration %d complete", i)
 	}
 	t.Log("Test complete")
