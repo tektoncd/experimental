@@ -2,8 +2,7 @@ import React, { Component } from 'react';
 import './WebhookDisplayTable.scss';
 import Delete from '@carbon/icons-react/lib/delete/16';
 import AddAlt16 from '@carbon/icons-react/lib/add--alt/16';
-import { Modal } from 'carbon-components-react';
-import { Checkbox } from './StyledCheckbox.js'
+import { Modal, Checkbox } from 'carbon-components-react';
 import { getWebhooks, deleteWebhooks, getSelectedRows } from '../../api';
 
 import { Link, Redirect } from 'react-router-dom'; 
@@ -141,9 +140,9 @@ export class WebhookDisplayTable extends Component {
     });
   }
 
-  togglePipelineRunClicked = event => {
+  togglePipelineRunClicked = () => {
 		this.setState({
-      checked: event.target.checked
+      checked: !this.state.checked
 		});	
   }
 
@@ -283,15 +282,18 @@ export class WebhookDisplayTable extends Component {
                 onRequestSubmit={this.handleDeleteWebhook}
                 onSecondarySubmit={this.showDeleteDialogHandlerInvisible}
                 onRequestClose={this.showDeleteDialogHandlerInvisible}
-                >
-              <label>
-                <p>Selecting the checkbox below will cause the deletion of associated PipelineRuns</p>
-                <Checkbox
-                  checked={this.state.checked}
-                  onChange={this.togglePipelineRunClicked}
-                />
-                <span>Delete PipelineRuns?</span>
-              </label>
+              >
+                <fieldset>
+                  <legend className="modal-legend"><b>Delete Associated PipelineRuns</b></legend>
+                  <div className="checkbox-div">
+                    <Checkbox
+                      id="pipelinerun-checkbox"
+                      labelText="Check here to indicate that PipelineRuns associated with this webhook should also be deleted."
+                      checked={this.state.checked}
+                      onChange={this.togglePipelineRunClicked}
+                      />
+                    </div>
+                </fieldset>
               </Modal>
             </div>
           </div>
