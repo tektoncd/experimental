@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: webhooks-extension
+  namespace: tekton-pipelines
   labels:
     app: webhooks-extension
 spec:
@@ -40,12 +41,14 @@ spec:
             value: DOCKER_REPO
           - name: WEB_RESOURCES_DIR
             value: web
+      serviceAccountName: tekton-dashboard
 ---
 # ------------------- Extension Service ------------------- #
 apiVersion: v1
 kind: Service
 metadata:
   name: webhooks-extension
+  namespace: tekton-pipelines
   labels:
     app: webhooks-extension
     tekton-dashboard-extension: "true"
@@ -66,6 +69,7 @@ apiVersion: serving.knative.dev/v1alpha1
 kind: Service
 metadata:
   name: webhooks-extension-sink
+  namespace: tekton-pipelines
   labels:
     app: webhooks-extension-sink
 spec:
@@ -85,3 +89,4 @@ spec:
         env:
         - name: INSTALLED_NAMESPACE
           value: tekton-pipelines
+      serviceAccountName: tekton-dashboard
