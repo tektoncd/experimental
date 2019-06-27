@@ -84,8 +84,9 @@ export class WebhookDisplayTable extends Component {
   }
 
   showDeleteDialogHandlerVisible = rowsInput => {
-		this.setState({
-			showDeleteDialog: true,
+    this.setState({
+      showDeleteDialog: true,
+      checked: false,
       userSelectedRows: rowsInput,
     });
   }
