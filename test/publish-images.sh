@@ -17,5 +17,5 @@
 # This script runs at the postsubmit phase; it is started by prow when a push event
 # happens on master, via a PR merge for example.
 
-./webhooks-extension/publish-images.sh
-./tekton-listener/publish-images.sh
+../webhooks-extension/publish-images.sh
+../tekton-listener/publish-images.sh
