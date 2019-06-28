@@ -654,7 +654,6 @@ func TestMultipleCreatesCorrectData(t *testing.T) {
 
 }
 
-/* This third test method is also failing under Prow
 func TestCreateDeleteCorrectData(t *testing.T) {
 	t.Log("in TestCreateDeleteCorrectData")
 	r := setUpServer()
@@ -739,4 +738,3 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 		}
 	}
 }
-*/
