@@ -9,9 +9,9 @@ source ${test_dir}/util.sh
 if [ $DASHBOARD_INSTALL_NS != "default" ]; then
   kubectl delete ns ${DASHBOARD_INSTALL_NS}
 else
-  kubectl delete deployment tekton-dashboard -n default
-  kubectl delete deployment webhooks-extension -n default
-  kubectl delete githubsource knative-demo-test -n default
+  kubectl delete deployment tekton-dashboard -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete deployment webhooks-extension -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete githubsource knative-demo-test -n ${DASHBOARD_INSTALL_NS}
 fi
 kubectl delete ns tekton-pipelines
 kubectl delete ns knative-eventing
