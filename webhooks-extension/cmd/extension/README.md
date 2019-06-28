@@ -29,7 +29,7 @@ Returns HTTP code 200
 
 Example payload response
 {
- "namespace": "default",
+ "namespace": "tekton-pipelines",
  "dockerregistry": "mydockerhubregistry"
 }
 
