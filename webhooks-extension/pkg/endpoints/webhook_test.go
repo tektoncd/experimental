@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -41,6 +42,7 @@ const defaultRegistry = "default.docker.reg:8500/foo"
 func setUpServer() *Resource {
 	wsContainer := restful.NewContainer()
 	resource := dummyResource()
+	resource.K8sClient.CoreV1().Namespaces().Delete(installNs, &metav1.DeleteOptions{})
 	resource.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: installNs}})
 	server = httptest.NewServer(wsContainer)
 	resource.RegisterExtensionWebService(wsContainer)
@@ -531,15 +533,15 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 	t.Log("in TestMultipleDeletesCorrectData")
 	r := setUpServer()
 
-	numTimes := 20
-	numHooks := 50
+	numLoops := 20
+	numHooksPerLoop := 50
 	runtime.GOMAXPROCS(2)
 
-	for i := 0; i < numTimes; i++ {
+	for i := 0; i < numLoops; i++ {
 
-		// Create n webhook requests
+		// Create webhooks and prepare delete requests
 		var hooks = []webhook{}
-		for j := 0; j < numHooks; j++ {
+		for j := 0; j < numHooksPerLoop; j++ {
 			hooks = append(hooks, webhook{
 				Name:             "hook-loop" + strconv.Itoa(i) + "-num-" + strconv.Itoa(j),
 				Namespace:        installNs,
@@ -554,29 +556,26 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 			}
 		}
 		var requests = []*http.Request{}
-		for j := 0; j < numHooks; j++ {
+		for j := 0; j < numHooksPerLoop; j++ {
 			newReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+hooks[j].Name+"?namespace="+installNs, nil)
 			requests = append(requests, newReq)
 		}
 
 		var wg sync.WaitGroup
-		wg.Add(numHooks)
+		wg.Add(numHooksPerLoop)
 
-		// Fire requests and check responses
-
-		var responses = make([]*http.Response, numHooks)
-		for j := 0; j < numHooks; j++ {
+		// Fire delete requests and check responses
+		var responses = make([]*http.Response, numHooksPerLoop)
+		for j := 0; j < numHooksPerLoop; j++ {
 			respNum := j
 			outerLoopIndex := i
 			go func(loopIndex int) {
 				defer wg.Done()
-				t.Logf("r%d loop %d entry", respNum, outerLoopIndex)
 				resp, _ := http.DefaultClient.Do(requests[respNum])
 				if resp.StatusCode != 204 {
-					t.Errorf("Resp %d loop %d should wasn't 204 - it's: %d", respNum, outerLoopIndex, resp.StatusCode)
+					t.Errorf("Response %d loop %d should be 204 but wasn't 204 - it's: %d", respNum, outerLoopIndex, resp.StatusCode)
 				}
 				responses[loopIndex] = resp
-				t.Logf("r%d loop %d exit", respNum, outerLoopIndex)
 			}(j)
 		}
 
@@ -584,12 +583,10 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 
 		//	Check all hooks are gone from the ConfigMap
 		configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
-
 		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 		if err != nil {
 			t.Error("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was removed from it")
 		}
-
 		contents := string(configMap.BinaryData["GitHubSource"])
 		for _, hook := range hooks {
 			if strings.Contains(contents, hook.Name) || strings.Contains(contents, hook.GitRepositoryURL) {
@@ -598,86 +595,64 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 		}
 		t.Logf("Iteration %d complete", i)
 	}
-	t.Log("Test complete")
 }
 
-/* This test has also been seen to crash or fail under Prow
 func TestMultipleCreatesCorrectData(t *testing.T) {
 	t.Log("in TestMultipleCreatesCorrectData")
 	r := setUpServer()
 
-	numTimes := 100
+	numTimes := 10
+	numHooksPerLoop := 50
 	runtime.GOMAXPROCS(2)
 
 	// This test is super noisy because of writeGitHubWebhooks having a logging.Log.Debugf
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	for i := 0; i < numTimes; i++ {
-		theWebhook1 := webhook{
-			Name:             fmt.Sprintf("routine1createhook-%d", i),
-			Namespace:        installNs,
-			GitRepositoryURL: "https://a.com/b/c",
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
-		}
 
-		theWebhook2 := webhook{
-			Name:             fmt.Sprintf("routine2createhook-%d", i),
-			Namespace:        installNs,
-			GitRepositoryURL: "https://b.com/c/d",
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
+		// Create [numHooksPerLoop] in parallel
+		var hooks = []webhook{}
+		for j := 0; j < numHooksPerLoop; j++ {
+			hooks = append(hooks, webhook{
+				Name:             fmt.Sprintf("testMultipleCreatesCorrectDataroutine-hook-run-%d-loop-%d", i, j),
+				Namespace:        installNs,
+				GitRepositoryURL: fmt.Sprintf("https://a.com/b/c-%d", j),
+				AccessTokenRef:   "token1",
+				Pipeline:         "pipeline1",
+			})
 		}
-
-		var firstResponse *restful.Response
-		var secondResponse *restful.Response
 
 		// Fire them off at the same time, then check the resulting ConfigMap is accurate: containing both entries and not just one.
-
 		var wg sync.WaitGroup
-		wg.Add(2)
-
-		go func() {
-			defer wg.Done()
-			firstResponse = createWebhook(theWebhook1, r)
-		}()
-
-		go func() {
-			defer wg.Done()
-			secondResponse = createWebhook(theWebhook2, r)
-		}()
+		wg.Add(numHooksPerLoop)
+		for j := 0; j < numHooksPerLoop; j++ {
+			go func(runNumber int, loopIndex int) {
+				defer wg.Done()
+				resp := createWebhook(hooks[loopIndex], r)
+				if resp.StatusCode() != http.StatusCreated {
+					t.Fatalf("Iteration %d, createWebhook returned %d instead of %d", runNumber, resp.StatusCode(), http.StatusCreated)
+				}
+			}(i, j)
+		}
 
 		wg.Wait()
 
-		if firstResponse.StatusCode() != http.StatusCreated {
-			t.Errorf("Iteration %d, didn't create the first webhook OK for the safe multiple request creation test, response: %d", i, firstResponse.StatusCode())
-			t.Fail()
-		}
-
-		if secondResponse.StatusCode() != http.StatusCreated {
-			t.Errorf("Iteration %d, didn't create the second webhook OK for the safe multiple request creation test, response: %d", i, secondResponse.StatusCode())
-			t.Fail()
-		}
-
-		//	Check both are present in the ConfigMap
-
+		//	Check all are present in the ConfigMap
+		t.Logf("Validating all webhooks are present")
 		configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
-
 		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 		if err != nil {
 			t.Error("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entries were added to it")
 		}
-
 		contents := string(configMap.BinaryData["GitHubSource"])
-		if !!!strings.Contains(contents, theWebhook1.Name) || !!!strings.Contains(contents, "https://a.com/b/c") ||
-			!!!strings.Contains(contents, theWebhook2.Name) || !!!strings.Contains(contents, "https://b.com/c/d") {
-			t.Errorf("For iteration %d, we we did not find a webhook name and repository URL in "+
-				"the ConfigMap data when both should have been added through simultaneous creation requests, data is: %s", i, contents)
+		for _, hook := range hooks {
+			if !strings.Contains(contents, hook.Name) || !strings.Contains(contents, hook.GitRepositoryURL) {
+				t.Fatalf("Iteration %d webhook missing: name %s url %s in GitHubSource %s", i, hook.Name, hook.GitRepositoryURL, contents)
+			}
 		}
 	}
 
 }
-*/
 
 /* This third test method is also failing under Prow
 func TestCreateDeleteCorrectData(t *testing.T) {
