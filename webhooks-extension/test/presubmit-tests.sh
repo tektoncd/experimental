@@ -68,6 +68,25 @@ function node_test() {
     npm run lint || failed=1
     npm run test ci || failed=1
     echo ""
+    
+    echo "Checking bundle hash matches"
+    npm run build
+  
+    hash=$(ls -t dist/extension.*.js | head -1 | cut -f 2 -d '.')
+    echo "LATEST HASH: $hash"
+
+    yaml=$(grep -i "tekton-dashboard-bundle-location:" config/extension-service.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
+    echo "YAML HASH: $yaml"
+
+    if [[ $hash != $yaml ]] ; then
+      echo "######## FAIL/ERROR ########"
+      echo "--------------------------------------------------------------------------"
+      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: config/extension-service.yaml"
+      echo "--------------------------------------------------------------------------"
+      failed=1
+    fi
+    
+    echo ""
     return ${failed}
 }
 

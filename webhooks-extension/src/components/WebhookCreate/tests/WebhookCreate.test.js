@@ -247,8 +247,6 @@ describe('create button enablement', () => {
 
 //-----------------------------------//
 describe('create button', () => {
-  // Increase timeout as lots involved in this test
-  jest.setTimeout(7500);
   it('create failure should return notification', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
@@ -294,7 +292,7 @@ describe('create button', () => {
     fireEvent.click(document.getElementById('submit'));
     await waitForElement(() => getByText(/Mock Error Creating Webhook/i));
     expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(1)
-  })
+  }, 15000)
 
   it('success should set showNotification and call returnToTable', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
