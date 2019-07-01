@@ -10,6 +10,7 @@ In addition to Tekton/Knative Eventing glue, it includes an extension to the Tek
 
 ## Prerequisites
 
+
 - Install [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) and the [Tekton Dashboard](https://github.com/tektoncd/dashboard)
 
 - Install Istio - for a quickstart install, for example of version 1.1.8 run `./scripts/install_istio.sh 1.1.8` _or_ follow https://knative.dev/docs/install/installing-istio/ for a more customised install _(Istio version 1.1.8 is recommended)_
