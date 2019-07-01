@@ -38,6 +38,7 @@ func RespondErrorMessage(response *restful.Response, message string, statusCode 
 func RespondMessageAndLogError(response *restful.Response, err error, message string, statusCode int) {
 	logging.Log.Error("Error: ", strings.Replace(err.Error(), "/", "", -1))
 	logging.Log.Debugf("Message: %s", message)
+	logging.Log.Debug("Message")
 	response.AddHeader("Content-Type", "text/plain")
 	response.WriteErrorString(statusCode, message)
 }
