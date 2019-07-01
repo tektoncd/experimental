@@ -21,9 +21,10 @@ Run `npm run lint:fix` to automatically fix a number of types of problem includi
 
 ## Running tests
 
-```bash
-docker build -f cmd/extension/Dockerfile_test .
-```
+`GO_ENABLED=0 go test github.com/tektoncd/experimental/webhooks-extension/pkg/endpoints -v -race`
+
+To run a specific test:
+`GO_ENABLED=1 go test github.com/tektoncd/experimental/webhooks-extension/pkg/endpoints -v -race -run [test_name]`
 
 ## API Definitions
 
