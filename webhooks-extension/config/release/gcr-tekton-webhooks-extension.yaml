@@ -40,7 +40,7 @@ spec:
           - name: DOCKER_REGISTRY_LOCATION
             value: DOCKER_REPO
           - name: WEB_RESOURCES_DIR
-            value: web
+            value: /var/run/ko
       serviceAccountName: tekton-dashboard
 ---
 # ------------------- Extension Service ------------------- #

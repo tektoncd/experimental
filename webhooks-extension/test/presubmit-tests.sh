@@ -76,12 +76,15 @@ function node_test() {
     echo "LATEST HASH: $hash"
 
     yaml=$(grep -i "tekton-dashboard-bundle-location:" config/extension-service.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
-    echo "YAML HASH: $yaml"
+    yaml2=$(grep -i "tekton-dashboard-bundle-location:" config/release/gcr-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
+    echo "YAML HASH in config/extension-service.yaml: $yaml"
+    echo "YAML HASH config/release/gcr-tekton-webhooks-extension.yaml: $yaml2"
 
-    if [[ $hash != $yaml ]] ; then
+
+    if [[ $hash != $yaml ]] || [[ $hash != $yaml2 ]] ; then
       echo "######## FAIL/ERROR ########"
       echo "--------------------------------------------------------------------------"
-      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: config/extension-service.yaml"
+      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: check values in config/extension-service.yaml and config/release/gcr-tekton-webhooks-extension.yaml"
       echo "--------------------------------------------------------------------------"
       failed=1
     fi
