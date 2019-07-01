@@ -24,6 +24,7 @@ import (
 func RespondError(response *restful.Response, err error, statusCode int) {
 	logging.Log.Error("Error: ", strings.Replace(err.Error(), "/", "", -1))
 	response.AddHeader("Content-Type", "text/plain")
+	logging.Log.Debug("Message")
 	response.WriteError(statusCode, err)
 }
 
