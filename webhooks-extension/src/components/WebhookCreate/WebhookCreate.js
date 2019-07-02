@@ -618,7 +618,7 @@ class WebhookCreatePage extends Component {
               <div className="item-label"></div>
               <div className="entry-field">
                 <Button data-testid="cancel-button" id="cancel" tabIndex={13} onClick={() => { this.returnToTable() }}>Cancel</Button>
-                <Button data-testid="create-button" type="submit" tabIndex={14} id={this.createButtonIDForCSS()} disabled={this.isFormIncomplete()}>Create</Button>
+                <Button className="modal-btn" data-testid="create-button" type="submit" tabIndex={14} id={this.createButtonIDForCSS()} disabled={this.isFormIncomplete()}>Create</Button>
               </div>
             </div>
 

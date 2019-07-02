@@ -159,9 +159,12 @@
     background-color: lightgrey;
     font-weight: bold;
     float: right;
-    padding-left: 15%;
-    padding-right: 15%;
     color: white;
+  }
+
+  .modal-btn {
+    padding-left: 15% !important;
+    padding-right: 15% !important;
   }
   
   .modal-row {
