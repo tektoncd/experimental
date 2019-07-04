@@ -33,7 +33,8 @@ func TestCreateBadAccessToken(t *testing.T) {
 	namespace := "default"
 	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 	badAccessToken := credential{
-		Name: "badToken",
+		Name:      "badToken",
+		Namespace: namespace,
 	}
 	expectedError := fmt.Sprintf("error: AccessToken must be specified")
 	createAndCheckCredential(namespace, badAccessToken, expectedError, r, t)
@@ -45,8 +46,10 @@ func TestCreateBadAccessToken(t *testing.T) {
 func TestCreateTokenInNamespaceThatDoesNotExist(t *testing.T) {
 	r := dummyResource()
 	namespace := "iDoNotExist"
+
 	accessToken := credential{
 		Name:        "wrongPlaceToken",
+		Namespace:   namespace,
 		AccessToken: "aLongStringOfh3x",
 	}
 	expectedError := fmt.Sprintf("error: namespace does not exist: '%s'", namespace)
@@ -60,27 +63,80 @@ func TestAccessTokenWithSecret(t *testing.T) {
 	r := dummyResource()
 	namespace := "default"
 	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
+
 	accessTokenWithSecret := credential{
 		Name:        "accesstoken-with-secret",
 		AccessToken: "alongstringofcharacters",
+		Namespace:   namespace,
 		SecretToken: "thisIsMySecretToken",
 	}
 	createAndCheckCredential(namespace, accessTokenWithSecret, "", r, t)
 }
 
-func TestAccessTokenWithNoSecret(t *testing.T) {
+// Should be "default" which is r.dummyResource.namespace's value
+
+func TestAccessTokenWithNoNamespaceUsesDefault(t *testing.T) {
+	r := dummyResource()
+	namespace := "b-namespace"
+	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
+
+	accessTokenNoNamespace := credential{
+		Name:        "accesstoken",
+		AccessToken: "anotherlongstringofcharacters",
+		SecretToken: "thisIsMySecretToken",
+	}
+
+	jsonBody, _ := json.Marshal(accessTokenNoNamespace)
+	t.Logf("json body for create cred test with no namespace: %s", jsonBody)
+	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(jsonBody))
+	req := dummyRestfulRequest(httpReq, namespace, "")
+	httpWriter := httptest.NewRecorder()
+	resp := dummyRestfulResponse(httpWriter)
+	r.createCredential(req, resp)
+
+	httpReq = dummyHTTPRequest("GET", "http://wwww.dummy.com:8383/webhooks/credentials?namespace=b-namespace", bytes.NewBuffer(nil))
+	req = dummyRestfulRequest(httpReq, namespace, "")
+	httpWriter = httptest.NewRecorder()
+	resp = dummyRestfulResponse(httpWriter)
+	r.getAllCredentials(req, resp)
+
+	result := []credential{}
+	b, err := ioutil.ReadAll(httpWriter.Body)
+	if err != nil {
+		t.Fatalf("FAIL: ERROR - reading response body: %s", err.Error())
+	}
+	err = json.Unmarshal(b, &result)
+
+	t.Logf("unmarshalled result '%+v'", result)
+
+	if result[0].Name != accessTokenNoNamespace.Name {
+		t.Fatalf("Result came back with name %s but expected %s", result[0].Name, accessTokenNoNamespace.Name)
+	}
+
+	if result[0].Namespace != r.Defaults.Namespace {
+		t.Fatalf("Result came back with namespace %s but expected %s", result[0].Name, r.Defaults.Namespace)
+	}
+	// Finally check that result has a SecretToken set
+	if strings.Count(result[0].SecretToken, "") < 20 {
+		t.Fatalf("Result came back with less than twenty chars of secret token: '%s'", result[0].SecretToken)
+	}
+
+}
+
+func TetAccessTokenWithNoSecret(t *testing.T) {
 	r := dummyResource()
 	namespace := "b-namespace"
 	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 
 	accessTokenNoSecret := credential{
 		Name:        "accesstoken-nosecret",
+		Namespace:   namespace,
 		AccessToken: "anotherlongstringofcharacters",
 	}
 
 	jsonBody, _ := json.Marshal(accessTokenNoSecret)
 	t.Logf("json body for create cred test: %s", jsonBody)
-	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8383/webhooks/credentials?namespace=b-namespace", bytes.NewBuffer(jsonBody))
+	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(jsonBody))
 	req := dummyRestfulRequest(httpReq, namespace, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
@@ -117,6 +173,7 @@ func TestDeleteCredential(t *testing.T) {
 	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 	accessTokenToDelete := credential{
 		Name:        "accesstokenToDelete",
+		Namespace:   namespace,
 		AccessToken: "sdkfhighregusfbliusbbbwhfwiehw8hwefhw938hf497fhw97b47",
 		SecretToken: "provideASecretTokenSoThatCreateAndCheckCredCanDoDeepEquals",
 	}
@@ -149,7 +206,7 @@ func TestDeleteACredentialThatDoesNotExist(t *testing.T) {
 }
 
 //----------------------------------------
-// end of Tests. Helper functions bbelow.
+// end of Tests. Helper functions below.
 //----------------------------------------
 
 // SecretTokens are twenty characters randomly selected from a set of sixty one. 61^20=5.08e35. We should 'never' get the same token twice.
@@ -170,7 +227,7 @@ func createAndCheckCredential(namespace string, cred credential, expectError str
 	// Create dummy rest api request and response
 	jsonBody, _ := json.Marshal(cred)
 	t.Logf("json body for create cred test: %s", jsonBody)
-	url := fmt.Sprintf("http://wwww.dummy.com:8383/webbhooks/credentials/?namespace=%s", namespace)
+	url := "http://wwww.dummy.com:8383/webhooks/credentials"
 	httpReq := dummyHTTPRequest("POST", url, bytes.NewBuffer(jsonBody))
 	req := dummyRestfulRequest(httpReq, namespace, "")
 	httpWriter := httptest.NewRecorder()
