@@ -12,7 +12,7 @@
     "test": "./test-it.sh"
   },
   "dependencies": {
-    "@carbon/icons-react": "^10.2.0",
+    "@carbon/icons-react": "^10.3.0",
     "stream": "0.0.2",
     "styled-components": "^4.3.1"
   },
@@ -31,8 +31,8 @@
     "babel-jest": "^24.7.1",
     "babel-plugin-transform-react-remove-prop-types": "^0.4.24",
     "babel-preset-react-app": "^7.0.0",
-    "carbon-components": "^10.2.0",
-    "carbon-components-react": "^7.2.0",
+    "carbon-components": "^10.3.2",
+    "carbon-components-react": "^7.3.2",
     "carbon-icons": "^7.0.7",
     "cross-env": "^5.2.0",
     "dom-testing-library": "^5.0.0",
