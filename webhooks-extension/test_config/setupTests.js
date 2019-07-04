@@ -3,3 +3,5 @@ import fetchMock from 'fetch-mock';
 
 fetchMock.catch();
 fetchMock.config.overwriteRoutes = true;
+
+window.scrollTo = function scrollTo() {};
