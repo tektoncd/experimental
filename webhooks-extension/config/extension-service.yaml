@@ -8,7 +8,7 @@ metadata:
   annotations:
     tekton-dashboard-display-name: Webhooks
     tekton-dashboard-endpoints: "webhooks.web"
-    tekton-dashboard-bundle-location: "web/extension.561352d4.js"
+    tekton-dashboard-bundle-location: "web/extension.9654f6cc.js"
 spec:
   type: NodePort
   ports:
