@@ -81,7 +81,8 @@
   }
   
   %token-icon-shared {
-    right: 2.25rem;
+    right: 3em;
+    margin-right: 0.6em;
     position: fixed;
     cursor: pointer;
   }
@@ -121,6 +122,10 @@
   
   .bx--text-input__field-wrapper {
     width: 100%;
+  }
+
+  #tokenValue {
+    padding-right: 3em;
   }
   
   .bx--modal-content {
@@ -186,4 +191,3 @@
   }
 
 }
-
