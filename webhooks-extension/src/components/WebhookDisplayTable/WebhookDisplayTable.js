@@ -68,7 +68,7 @@ export class WebhookDisplayTable extends Component {
     } catch (error) {
         error.response.text().then((text) => {
           this.setState({
-            notificationMessage: "Failure occured fetching webhooks, error returned from the REST endpoint was : " + text,
+            notificationMessage: "Failure occurred fetching webhooks, error returned from the REST endpoint was : " + text,
             notificationStatus: 'error',
             notificationStatusMsgShort: 'Error:',
             showNotificationOnTable: true,
@@ -84,11 +84,21 @@ export class WebhookDisplayTable extends Component {
   }
 
   showDeleteDialogHandlerVisible = rowsInput => {
-    this.setState({
-      showDeleteDialog: true,
-      checked: false,
-      userSelectedRows: rowsInput,
-    });
+    if (rowsInput.length > 0) {
+      this.setState({
+        showDeleteDialog: true,
+        checked: false,
+        userSelectedRows: rowsInput,
+      });
+    } else {
+      this.setState({
+        checked: false,
+        notificationMessage: "Error occurred deleting webhooks - no webhook was selected in the table.",
+        notificationStatus: 'error',
+        notificationStatusMsgShort: 'Error:',
+        showNotificationOnTable: true,
+      });
+    }
   }
 
   handleDeleteWebhook = () => {

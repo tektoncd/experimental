@@ -117,6 +117,42 @@ it('should display a success message on a good delete', async () => {
   await waitForElement(() => getByText('Webhook(s) deleted successfully.'));
 });
 
+it('should display an error message on delete with no webhook selected', async () => {
+  let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
+  let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
+  let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
+
+  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+
+  expect(queryByTestId('webhook-notification')).toBeNull();
+
+  await waitForElement(() => getByText('first test webhook'));
+
+  const foundDeleteButton = document.getElementById('delete-btn');
+  await waitForElement(() => foundDeleteButton);
+
+  // Delete a webhook successfully, this leaves the delete button visible with 0 selected afterwards
+  fireEvent.click(foundDeleteButton);
+
+  const foundDeleteButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--danger').item(0);
+  await waitForElement(() => foundDeleteButtonOnModal);
+
+  fireEvent.click(foundDeleteButtonOnModal);
+  
+  expect(getWebhooksMock).toHaveBeenCalled();
+  expect(getRowsMock).toHaveBeenCalled();
+  expect(deleteWebhooksMock).toHaveBeenCalled();
+  
+  await waitForElement(() => getByText('Webhook(s) deleted successfully.'));
+
+  // Click delete again and expect error notification
+  await waitForElement(() => foundDeleteButton);
+  fireEvent.click(foundDeleteButton);
+
+  await waitForElement(() => getByText('Error occurred deleting webhooks - no webhook was selected in the table.'));
+
+}, 7500);
+
 it('should display a fail message on a bad delete', async () => {  
   jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
   jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
