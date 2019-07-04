@@ -354,6 +354,7 @@ class WebhookCreatePage extends Component {
   createAccessTokenSecret = () => {
     const requestBody = {
       name: this.state.newSecretName,
+      namespace: this.state.namespace,
       accesstoken: this.state.newTokenValue
     };
     createSecret(requestBody, this.state.namespace).then(() => {

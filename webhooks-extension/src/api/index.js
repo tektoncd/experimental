@@ -57,8 +57,8 @@ export function getSecrets(namespace) {
   return get(uri);
 }
 
-export function createSecret(data, namespace) {
-  const uri = `${apiRoot}/webhooks/credentials?namespace=${namespace}`;
+export function createSecret(data) {
+  const uri = `${apiRoot}/webhooks/credentials`;
   return post(uri, data);
 }
 
