@@ -52,7 +52,7 @@ post_data='{
     "username": "'"${GITHUB_USERNAME}"'",
     "password": "'"${GITHUB_TOKEN}"'",
     "url": {"tekton.dev/git-0": "'"${GITHUB_URL}"'"},
-    "serviceaccount": "default"
+    "serviceaccount": "tekton-dashboard"
 }'
 curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credentials
 echo 'created github-repo-access-secret'
@@ -64,7 +64,7 @@ post_data='{
     "username": "'"${DOCKERHUB_USERNAME}"'",
     "password": "'"${DOCKERHUB_PASSWORD}"'",
     "url": {"tekton.dev/docker-0": "https://index.docker.io/v1/"},
-    "serviceaccount": "default"
+    "serviceaccount": "tekton-dashboard"
 }'
 curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credentials
 echo 'created docker-push'

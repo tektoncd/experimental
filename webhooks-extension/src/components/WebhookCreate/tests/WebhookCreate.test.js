@@ -19,7 +19,7 @@ import { WebhookCreate } from '../WebhookCreate';
 import * as API from '../../../api/index';
 import 'jest-dom/extend-expect'
 
-window.scrollTo = jest.fn();
+global.scrollTo = jest.fn();
 
 const namespacesFailResponseMock = {
   response: {
@@ -184,7 +184,7 @@ describe('drop downs should be enabled when a namespace is selected', () => {
 //-----------------------------------//
 describe('create button enablement', () => {
   // Increase timeout as lots involved in this test
-  jest.setTimeout(7500);
+  jest.setTimeout(15000);
   it('create button should be enabled only when all fields complete', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
@@ -247,8 +247,6 @@ describe('create button enablement', () => {
 
 //-----------------------------------//
 describe('create button', () => {
-  // Increase timeout as lots involved in this test
-  jest.setTimeout(7500);
   it('create failure should return notification', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
@@ -294,7 +292,7 @@ describe('create button', () => {
     fireEvent.click(document.getElementById('submit'));
     await waitForElement(() => getByText(/Mock Error Creating Webhook/i));
     expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(1)
-  })
+  }, 15000)
 
   it('success should set showNotification and call returnToTable', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
@@ -357,47 +355,47 @@ describe('create button', () => {
 })
 
 describe('tooltips', () => {
-  it('click on name tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
-    await waitForElement(() => document.getElementById('name-tooltip'))
-    fireEvent.click(document.getElementById('name-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByText(/The display name for your webhook in this user interface./i))
+  it('hover on name tooltip', async () => {
+    const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
+    await waitForElement(() => document.getElementById('name-tooltip'));
+    fireEvent.focus(document.getElementById('name-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0));
+    await waitForElement(() => getByLabelText(/The display name for your webhook in this user interface./i));
   });
 
-  it('click on git url tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
-    await waitForElement(() => document.getElementById('git-tooltip'))
-    fireEvent.click(document.getElementById('git-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByText(/The URL of the git repository to create the webhook on./i))
+  it('hover on git url tooltip', async () => {
+    const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
+    await waitForElement(() => document.getElementById('git-tooltip'));
+    fireEvent.focus(document.getElementById('git-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0));
+    await waitForElement(() => getByLabelText(/The URL of the git repository to create the webhook on./i));
   });
-  it('click on pipeline tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
+  it('hover on pipeline tooltip', async () => {
+    const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('pipeline-tooltip'))
-    fireEvent.click(document.getElementById('pipeline-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByText(/The pipeline from the selected namespace to run when the webhook is triggered./i))
+    fireEvent.focus(document.getElementById('pipeline-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
+    await waitForElement(() => getByLabelText(/The pipeline from the selected namespace to run when the webhook is triggered./i))
   });
-  it('click on namespace tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
+  it('hover on namespace tooltip', async () => {
+    const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('namespace-tooltip'))
-    fireEvent.click(document.getElementById('namespace-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByText(/The namespace to operate in./i))
+    fireEvent.focus(document.getElementById('namespace-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
+    await waitForElement(() => getByLabelText(/The namespace to operate in./i))
   });
-  it('click on secrets tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
+  it('hover on secrets tooltip', async () => {
+    const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('secret-tooltip'))
-    fireEvent.click(document.getElementById('secret-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByText(/The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository./i))
+    fireEvent.focus(document.getElementById('secret-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
+    await waitForElement(() => getByLabelText(/The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository./i))
   });
-  it('click on service account tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
+  it('hover on service account tooltip', async () => {
+    const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('serviceaccount-tooltip'))
-    fireEvent.click(document.getElementById('serviceaccount-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByText(/The service account under which to run the pipeline run./i))
+    fireEvent.focus(document.getElementById('serviceaccount-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
+    await waitForElement(() => getByLabelText(/The service account under which to run the pipeline run./i))
   });
-  it('click on docker registry tooltip', async () => {
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
+  it('hover on docker registry tooltip', async () => {
+    const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('docker-tooltip'))
-    fireEvent.click(document.getElementById('docker-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByText(/The docker registry to push images to./i))
+    fireEvent.focus(document.getElementById('docker-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
+    await waitForElement(() => getByLabelText(/The docker registry to push images to./i))
   });
 })

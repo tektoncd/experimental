@@ -34,8 +34,7 @@ export function getAPIRoot() {
 
 export function getDashboardAPIRoot() {
   const { href, hash } = window.location;
-  let newHash = hash.replace('#/extensions/webhooks-extension','v1')
-  let baseURL = href.replace(hash, newHash);
+  let baseURL = href.replace(hash, '');
   if (baseURL.endsWith('/')) {
     baseURL = baseURL.slice(0, -1);
   }
@@ -57,8 +56,8 @@ export function getSecrets(namespace) {
   return get(uri);
 }
 
-export function createSecret(data, namespace) {
-  const uri = `${apiRoot}/webhooks/credentials?namespace=${namespace}`;
+export function createSecret(data) {
+  const uri = `${apiRoot}/webhooks/credentials`;
   return post(uri, data);
 }
 
@@ -68,17 +67,17 @@ export function deleteSecret(name, namespace) {
 }
 
 export function getNamespaces() {
-  const uri = `${dashboardAPIRoot}/namespaces`;
+  const uri = `${dashboardAPIRoot}/proxy/api/v1/namespaces`;
   return get(uri);
 }
 
 export function getPipelines(namespace) {
-  const uri = `${dashboardAPIRoot}/namespaces/${namespace}/pipelines`;
+  const uri = `${dashboardAPIRoot}/proxy/apis/tekton.dev/v1alpha1/namespaces/${namespace}/pipelines`;
   return get(uri);
 }
 
 export function getServiceAccounts(namespace) {
-  const uri = `${dashboardAPIRoot}/namespaces/${namespace}/serviceaccounts`;
+  const uri = `${dashboardAPIRoot}/proxy/api/v1/namespaces/${namespace}/serviceaccounts`;
   return get(uri);
 }
 

@@ -22,4 +22,4 @@ spec:
         # PORT var resolved via containerPort by Knative
         # TODO: Find better way to provide INSTALL_NAMESPACE since Knative does not support Downward API
         - name: INSTALLED_NAMESPACE
-          value: "default"
+          value: "tekton-pipelines"

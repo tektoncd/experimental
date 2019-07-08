@@ -29,7 +29,7 @@ Returns HTTP code 200
 
 Example payload response
 {
- "namespace": "default",
+ "namespace": "tekton-pipelines",
  "dockerregistry": "mydockerhubregistry"
 }
 
@@ -70,8 +70,8 @@ Example POST
 }
 
 
-POST /webhooks/credentials?namespace=x
-Create a new credential in namespace x
+POST /webhooks/credentials
+Create a new credential in the namespace specified in the request body
 Request body must contain name and accesstoken. 
 Request body may contain secrettoken. See https://github.com/knative/docs/blob/master/docs/eventing/samples/github-source/README.md for a discussion of this field. A random secrettoken will be created if none is supplied. 
 Returns HTTP code 201 if the secret was created successfully
@@ -81,6 +81,7 @@ Returns HTTP code 500 if an error occurred while creating the secret
 Example POST
 {
   "name": "my-access-token",
+  "namespace": "green",
   "accesstoken": "ksdufbliubsliuvbsliucbsiucslicbsh98wehr8w9huwbcwb87ec"
 }
 ```

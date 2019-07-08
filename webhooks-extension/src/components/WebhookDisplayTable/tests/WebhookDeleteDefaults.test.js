@@ -52,19 +52,10 @@ const webhooks = [
   }
 ];
 
-it('should show a delete button on webhook load', async () => {
+it('should reset checkbox being checked on delete modal display', async () => {
   jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
-  expect(queryByTestId('webhook-notification')).toBeNull();
-  await waitForElement(() => getByText('first test webhook'));
-  const foundDeleteButton = document.getElementById('delete-btn');
-  await waitForElement(() => foundDeleteButton);
-});
-
-it('should hide the delete modal on cancel click', async () => {
-  jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
-  expect(queryByTestId('webhook-notification')).toBeNull();
+  const { getByText } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+  expect(document.getElementById('webhook-notification')).toBeNull();
   await waitForElement(() => getByText('first test webhook'));
   await waitForElement(() => getByText('second test webhook'));
   await waitForElement(() => getByText('third test webhook'));
@@ -73,12 +64,24 @@ it('should hide the delete modal on cancel click', async () => {
   await waitForElement(() => foundDeleteButton);
   fireEvent.click(foundDeleteButton);
 
-  const foundDeleteButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--danger').item(0);
-  const foundCancelButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--secondary').item(0);
+  await waitForElement(() => getByText('Delete Associated PipelineRuns'));
+
+  const checkbox = document.getElementById('pipelinerun-checkbox');
+
+  expect(checkbox.checked).toEqual(false);
+
+  fireEvent.click(checkbox);
+
+  expect(checkbox.checked).toEqual(true);
+
+  const foundCancelButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--secondary').item(0);  
+  await waitForElement(() => foundCancelButtonOnModal);
+  fireEvent.click(foundCancelButtonOnModal);
+
+  await waitForElement(() => getByText('Delete Associated PipelineRuns')) == false;
+  fireEvent.click(foundDeleteButton);
   
-  await waitForElement(() => foundDeleteButtonOnModal);
   await waitForElement(() => foundCancelButtonOnModal);
 
-  fireEvent.click(foundCancelButtonOnModal) // We click the cancel button on the modal
-  await waitForElement(() => getByText('Delete Associated PipelineRuns')) == false; // Delete dialog's now gone
+  expect(checkbox.checked).toEqual(false);
 });
