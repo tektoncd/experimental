@@ -1,13 +1,14 @@
 import React, { Component } from 'react';
 import { withRouter } from 'react-router-dom';
 
-import { Button, TextInput, Dropdown, Form, Tooltip, DropdownSkeleton, Modal, InlineNotification } from 'carbon-components-react';
+import { Button, TextInput, Dropdown, Form, Tooltip, DropdownSkeleton, Modal, InlineNotification, TooltipIcon } from 'carbon-components-react';
 import { getNamespaces, getPipelines, getSecrets, getServiceAccounts, createWebhook, createSecret, deleteSecret } from '../../api/index';
 
 import AddAlt20 from '@carbon/icons-react/lib/add--alt/20';
 import SubtractAlt20 from '@carbon/icons-react/lib/subtract--alt/20';
 import ViewFilled from '@carbon/icons-react/lib/view--filled/20';
 import ViewOffFilled from '@carbon/icons-react/lib/view--off--filled/20';
+import Infomation from "@carbon/icons-react/lib/information/16";
 
 import './WebhookCreate.scss';
 
@@ -55,6 +56,16 @@ class WebhookCreatePage extends Component {
       visibleCSS: 'token-visible',
       invisibleCSS: 'token-invisible'
     };
+  }
+
+  componentDidMount() {
+    if (this.isDisabled()) {
+      document.getElementById("pipeline").firstElementChild.tabIndex = -1;
+      document.getElementById("git").firstElementChild.tabIndex = -1;
+      document.getElementById(
+        "serviceAccounts"
+      ).firstElementChild.tabIndex = -1;
+    }
   }
 
   async fetchNamespaces() {
@@ -235,7 +246,6 @@ class WebhookCreatePage extends Component {
         id="namespace"
         label="select namespace"
         items={namespaceItems}
-        tabIndex={5}
         onChange={this.handleChangeNamespace}
       />
   }
@@ -250,7 +260,6 @@ class WebhookCreatePage extends Component {
       id="pipeline"
       label="select pipeline"
       items={pipelineItems}
-      tabIndex={7}
       disabled={this.isDisabled()}
       onChange={this.handleChangePipeline}
     />
@@ -266,7 +275,6 @@ class WebhookCreatePage extends Component {
       id="git"
       label="select secret"
       items={secretItems}
-      tabIndex={9}
       disabled={this.isDisabled()}
       onChange={this.handleChangeSecret}
       selectedItem={this.state.gitsecret}
@@ -283,7 +291,6 @@ class WebhookCreatePage extends Component {
       id="serviceAccounts"
       label="select service account"
       items={saItems}
-      tabIndex={11}
       disabled={this.isDisabled()}
       onChange={this.handleChangeServiceAcct}
     />
@@ -460,16 +467,16 @@ class WebhookCreatePage extends Component {
           )}
           {this.state.showNotification && window.scrollTo(0,0)}
         </div>
-      
+
         <div className="create-container">
           <Form onSubmit={this.handleSubmit}>
             <div className="title">Create Webhook</div>
 
             <div className="row">
               <div className="help-icon" id="name-tooltip">
-                <Tooltip direction="bottom" triggerText="" tabIndex={0}>
-                  <p>The display name for your webhook in this user interface.</p>
-                </Tooltip>
+                <TooltipIcon tooltipText="The display name for your webhook in this user interface.">
+                  <Infomation />
+                </TooltipIcon>
               </div>
               <div className="item-label">
                 <div className="createLabel">Name</div>
@@ -482,7 +489,6 @@ class WebhookCreatePage extends Component {
                     name="name"
                     value={this.state.name}
                     onChange={this.handleChange}
-                    tabIndex={1}
                     hideLabel
                     labelText="Display Name"
                     data-testid="display-name-entry"
@@ -492,10 +498,10 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-            <div className="help-icon" id="git-tooltip">
-                <Tooltip direction="bottom" triggerText="" tabIndex={2}>
-                  <p>The URL of the git repository to create the webhook on.</p>
-                </Tooltip>
+              <div className="help-icon" id="git-tooltip">
+                <TooltipIcon tooltipText="The URL of the git repository to create the webhook on.">
+                  <Infomation />
+                </TooltipIcon>
               </div>
               <div className="item-label">
                 <div className="createLabel">Repository URL</div>
@@ -508,7 +514,6 @@ class WebhookCreatePage extends Component {
                     name="repository"
                     value={this.state.repo}
                     onChange={this.handleChange}
-                    tabIndex={3}
                     hideLabel
                     labelText="Repository"
                     data-testid="git-url-entry"
@@ -518,10 +523,10 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-            <div className="help-icon" id="namespace-tooltip">
-                <Tooltip direction="bottom" triggerText="" tabIndex={4}>
-                  <p>The namespace to operate in.</p>
-                </Tooltip>
+              <div className="help-icon" id="namespace-tooltip">
+                <TooltipIcon tooltipText="The namespace to operate in.">
+                  <Infomation />
+                </TooltipIcon>
               </div>
               <div className="item-label">
                 <div className="createLabel">Namespace</div>
@@ -534,10 +539,10 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-            <div className="help-icon" id="pipeline-tooltip">
-                <Tooltip direction="bottom" triggerText="" tabIndex={6}>
-                  <p>The pipeline from the selected namespace to run when the webhook is triggered.</p>
-                </Tooltip>
+              <div className="help-icon" id="pipeline-tooltip">
+                <TooltipIcon tooltipText="The pipeline from the selected namespace to run when the webhook is triggered.">
+                  <Infomation />
+                </TooltipIcon>
               </div>
               <div className="item-label">
                 <div className="createLabel">Pipeline</div>
@@ -550,10 +555,10 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-            <div className="help-icon" id="secret-tooltip">
-                <Tooltip direction="bottom" triggerText="" tabIndex={8}>
-                  <p>The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository.</p>
-                </Tooltip>
+              <div className="help-icon" id="secret-tooltip">
+                <TooltipIcon tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository.">
+                  <Infomation />
+                </TooltipIcon>
               </div>
               <div className="item-label">
                 <div className="createLabel">Access Token</div>
@@ -568,10 +573,10 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-            <div className="help-icon" id="serviceaccount-tooltip">
-                <Tooltip direction="bottom" triggerText="" tabIndex={10}>
-                  <p>The service account under which to run the pipeline run.</p><br></br><p>The service account needs to be patched with secrets to access both git and docker.</p>
-                </Tooltip>
+              <div className="help-icon" id="serviceaccount-tooltip">
+                <TooltipIcon tooltipText="The service account under which to run the pipeline run. The service account needs to be patched with secrets to access both git and docker.">
+                  <Infomation />
+                </TooltipIcon>
               </div>
               <div className="item-label">
                 <div className="createLabel">Service Account</div>
@@ -585,9 +590,9 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="docker-tooltip">
-                <Tooltip direction="bottom" triggerText="" tabIndex={12}>
-                  <p>The docker registry to push images to.</p>
-                </Tooltip>
+                <TooltipIcon tooltipText="The docker registry to push images to.">
+                  <Infomation />
+                </TooltipIcon>
               </div>
               <div className="item-label">
                 <div className="createLabel">Docker Registry</div>
@@ -618,8 +623,8 @@ class WebhookCreatePage extends Component {
             <div className="help-icon"></div>
               <div className="item-label"></div>
               <div className="entry-field">
-                <Button data-testid="cancel-button" id="cancel" tabIndex={13} onClick={() => { this.returnToTable() }}>Cancel</Button>
-                <Button className="modal-btn" data-testid="create-button" type="submit" tabIndex={14} id={this.createButtonIDForCSS()} disabled={this.isFormIncomplete()}>Create</Button>
+                <Button data-testid="cancel-button" id="cancel" onClick={() => { this.returnToTable() }}>Cancel</Button>
+                <Button className="modal-btn" data-testid="create-button" type="submit" tabIndex={this.isFormIncomplete() ? -1 : 0} id={this.createButtonIDForCSS()} disabled={this.isFormIncomplete()}>Create</Button>
               </div>
             </div>
 
@@ -653,12 +658,12 @@ class WebhookCreatePage extends Component {
               onSecondarySubmit={() => this.toggleCreateDialog()}
               onRequestSubmit={() => this.createAccessTokenSecret()}
               onRequestClose={() => this.toggleCreateDialog()}>
-            
+
               <div className="title">Create Access Token Secret</div>
 
               <div className="modal-row">
                 <div className="modal-row-help-icon">
-                  <Tooltip direction="bottom" triggerText="" tabIndex={15}>
+                  <Tooltip direction="bottom" triggerText="">
                     <p>The name of the secret to create.</p>
                   </Tooltip>
                 </div>
@@ -676,7 +681,6 @@ class WebhookCreatePage extends Component {
                       onChange={this.handleModalText}
                       hideLabel
                       labelText="Secret Name"
-                      tabIndex={16}
                     />
                   </div>
                 </div>
@@ -684,7 +688,7 @@ class WebhookCreatePage extends Component {
 
               <div className="modal-row">
                 <div className="modal-row-help-icon">
-                  <Tooltip direction="bottom" triggerText="" tabIndex={17}>
+                  <Tooltip direction="bottom" triggerText="">
                     <p>The access token.</p>
                   </Tooltip>
                 </div>
@@ -702,7 +706,6 @@ class WebhookCreatePage extends Component {
                       onChange={this.handleModalText}
                       hideLabel
                       labelText="Access Token"
-                      tabIndex={18}
                     />
                     <ViewFilled id="token-visible-svg" className={this.state.visibleCSS} onClick={this.togglePasswordVisibility} />
                     <ViewOffFilled id="token-invisible-svg" className={this.state.invisibleCSS} onClick={this.togglePasswordVisibility} />

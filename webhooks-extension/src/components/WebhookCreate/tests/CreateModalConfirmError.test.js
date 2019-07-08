@@ -19,6 +19,7 @@ import { WebhookCreate } from '../WebhookCreate';
 import * as API from '../../../api/index';
 import 'jest-dom/extend-expect'
 
+global.scrollTo = jest.fn();
 
 const namespacesResponseMock = {
   "items": [
