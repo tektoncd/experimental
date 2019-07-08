@@ -86,6 +86,13 @@ const webhooks = [
     gitrepositoryurl: 'repo1',
     pipeline: 'pipeline1',
     namespace: 'namespace1'
+  },
+  {
+    id: '1|namespace',
+    name: 'second test webhook',
+    gitrepositoryurl: 'repo2',
+    pipeline: 'pipeline1',
+    namespace: 'namespace1'
   }
 ];
 
