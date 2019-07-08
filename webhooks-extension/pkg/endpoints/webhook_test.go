@@ -58,6 +58,9 @@ func TestGitHubSource(t *testing.T) {
 			DockerRegistry:   "registry1",
 			HelmSecret:       "helmsecret1",
 			ReleaseName:      "releasename1",
+			PullTask:         "pulltask1",
+			PullTaskParam1:   "pulltask1param11",
+			PullTaskParam2:   "pulltask1param21",
 		},
 		{
 			Name:             "name2",
@@ -78,6 +81,9 @@ func TestGitHubSource(t *testing.T) {
 			DockerRegistry:   "",
 			HelmSecret:       "helmsecret3",
 			ReleaseName:      "releasename3",
+			PullTask:         "pulltask3",
+			PullTaskParam1:   "pulltask1param13",
+			PullTaskParam2:   "pulltask1param23",
 		},
 	}
 
@@ -293,6 +299,9 @@ func TestDeleteByNameKeepRuns(t *testing.T) {
 		Pipeline:         "pipeline1",
 		HelmSecret:       "helmsecret1",
 		ReleaseName:      "foo",
+		PullTask:         "pulltask1",
+		PullTaskParam1:   "pulltask1param11",
+		PullTaskParam2:   "pulltask1param21",
 	}
 
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
@@ -423,6 +432,9 @@ func TestDeleteByNameDeleteRuns(t *testing.T) {
 		Pipeline:         "pipeline1",
 		HelmSecret:       "helmsecret1",
 		ReleaseName:      "foo",
+		PullTask:         "pulltask1",
+		PullTaskParam1:   "pulltask1param11",
+		PullTaskParam2:   "pulltask1param21",
 	}
 
 	resp := createWebhook(theWebhook, r)

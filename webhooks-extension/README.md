@@ -37,7 +37,10 @@ data='{
   "gitrepositoryurl": "https://github.com/ncskier/go-hello-world",
   "accesstoken": "github-secret",
   "pipeline": "simple-pipeline",
-  "dockerregistry": "mydockerregistry"
+  "dockerregistry": "mydockerregistry",
+  "pulltask": "monitor-result-task",
+  "pulltaskparam1": "OK",
+  "pulltaskparam2": "ERROR",
 }'
 curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:8080/webhooks
 ```
@@ -62,6 +65,10 @@ Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/e
   - [simple-pipeline](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/pipeline.yaml)
   - [simple-helm-pipeline](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/helm-pipeline.yaml) (requires a secret to talk to a secure Tiller)
   - [simple-helm-pipeline-insecure](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/helm-insecure-pipeline.yaml.yaml)
+
+- One task definition for the pull request update is currently tested.
+
+  - [monitor-result-task](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/task-monitor-result.yaml)
 
 ## Architecture information
 

@@ -85,6 +85,9 @@ type webhook struct {
 	DockerRegistry   string `json:"dockerregistry,omitempty"`
 	HelmSecret       string `json:"helmsecret,omitempty"`
 	ReleaseName      string `json:"releasename,omitempty"`
+	PullTask         string `json:"pulltask,omitempty"`
+	PullTaskParam1   string `json:"pulltaskparam1,omitempty"`
+	PullTaskParam2   string `json:"pulltaskparam2,omitempty"`
 }
 
 // ConfigMapName ... the name of the ConfigMap to create
