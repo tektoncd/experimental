@@ -58,7 +58,16 @@ class WebhookCreatePage extends Component {
     };
   }
 
-  componentDidMount() {
+  componentDidMount(){
+    if(this.props.showLastWebhookDeletedNotification){
+      this.setState({
+        notificationMessage: "Last webhook deleted successfully.",
+        notificationStatus: 'success',
+        notificationStatusMsgShort: 'Success:',
+        showNotification: true
+      });
+      this.props.setshowLastWebhookDeletedNotification(false);
+    }
     if (this.isDisabled()) {
       document.getElementById("pipeline").firstElementChild.tabIndex = -1;
       document.getElementById("git").firstElementChild.tabIndex = -1;
@@ -455,8 +464,8 @@ class WebhookCreatePage extends Component {
     }
 
     return (
-      
-      <div className="webhook-create">
+
+      <div className="webhook-create" data-testid="webhook-create">
         <div className="notification">
           {this.state.showNotification && (
             <InlineNotification

@@ -131,13 +131,18 @@ export class WebhookDisplayTable extends Component {
 
     Promise.all(deletePromises).then( () => {
       this.fetchWebhooksForTable();
-      this.setState({
-        showNotificationOnTable: true,
-        showDeleteDialog: false,
-        notificationStatus: 'success',
-        notificationStatusMsgShort: 'Webhook(s) deleted successfully.',
-        notificationMessage: '',
-      });
+      if(this.state.webhooks.length - 1 === 0){
+        this.props.setshowLastWebhookDeletedNotification(true);
+      }
+      else {
+        this.setState({
+          showNotificationOnTable: true,
+          showDeleteDialog: false,
+          notificationStatus: 'success',
+          notificationStatusMsgShort: 'Webhook(s) deleted successfully.',
+          notificationMessage: '',
+        });
+      }
      }).catch( () => {
       this.setState({
         showNotificationOnTable: true,
@@ -197,12 +202,12 @@ export class WebhookDisplayTable extends Component {
             namespace: webhook['namespace'],
           }
         })
-        
+
         return (
           <div>
-            <div className="table-container">
+            <div className="table-container" data-testid="table-container">
 
-              {(this.props.showNotificationOnTable || this.state.showNotificationOnTable) && (              
+              {(this.props.showNotificationOnTable || this.state.showNotificationOnTable) && (
                 <InlineNotification
                   data-testid='webhook-notification'
                   kind={this.state.notificationStatus}
