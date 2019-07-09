@@ -471,7 +471,8 @@ class WebhookCreatePage extends Component {
             <InlineNotification
               kind={this.state.notificationStatus}
               subtitle={this.state.notificationMessage}
-              title={this.state.notificationStatusMsgShort}>
+              title={this.state.notificationStatusMsgShort}
+              lowContrast>
             </InlineNotification>
           )}
           {this.state.showNotification && window.scrollTo(0,0)}

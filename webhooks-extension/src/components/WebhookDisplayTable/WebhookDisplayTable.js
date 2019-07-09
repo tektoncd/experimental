@@ -212,7 +212,8 @@ export class WebhookDisplayTable extends Component {
                   data-testid='webhook-notification'
                   kind={this.state.notificationStatus}
                   subtitle={this.state.notificationMessage}
-                  title={this.state.notificationStatusMsgShort}>
+                  title={this.state.notificationStatusMsgShort}
+                  lowContrast>
                 </InlineNotification>
               )}
               
