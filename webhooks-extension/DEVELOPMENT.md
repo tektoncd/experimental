@@ -11,7 +11,7 @@ If modifying the UI code and wanting to deploy your updated version:
 
     `tekton-dashboard-bundle-location: "web/extension.214d2396.js"`
 
-3) Reinstall (If not re-installing the main dashboard, you will need to kill the dashboard pod after the new extension pod starts.  This only needs doing until https://github.com/tektoncd/dashboard/issues/215 is completed.)
+3) Reinstall the extension. It will automatically be picked up by the running dashboard
 
 ## Linting
 
