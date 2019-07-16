@@ -2,8 +2,7 @@ import React, { Component } from 'react';
 import './WebhookDisplayTable.scss';
 import Delete from '@carbon/icons-react/lib/delete/16';
 import AddAlt16 from '@carbon/icons-react/lib/add--alt/16';
-import { Modal } from 'carbon-components-react';
-import { Checkbox } from './StyledCheckbox.js'
+import { Modal, Checkbox } from 'carbon-components-react';
 import { getWebhooks, deleteWebhooks, getSelectedRows } from '../../api';
 
 import { Link, Redirect } from 'react-router-dom'; 
@@ -69,7 +68,7 @@ export class WebhookDisplayTable extends Component {
     } catch (error) {
         error.response.text().then((text) => {
           this.setState({
-            notificationMessage: "Failure occured fetching webhooks, error returned from the REST endpoint was : " + text,
+            notificationMessage: "Failure occurred fetching webhooks, error returned from the REST endpoint was : " + text,
             notificationStatus: 'error',
             notificationStatusMsgShort: 'Error:',
             showNotificationOnTable: true,
@@ -85,10 +84,21 @@ export class WebhookDisplayTable extends Component {
   }
 
   showDeleteDialogHandlerVisible = rowsInput => {
-		this.setState({
-			showDeleteDialog: true,
-      userSelectedRows: rowsInput,
-    });
+    if (rowsInput.length > 0) {
+      this.setState({
+        showDeleteDialog: true,
+        checked: false,
+        userSelectedRows: rowsInput,
+      });
+    } else {
+      this.setState({
+        checked: false,
+        notificationMessage: "Error occurred deleting webhooks - no webhook was selected in the table.",
+        notificationStatus: 'error',
+        notificationStatusMsgShort: 'Error:',
+        showNotificationOnTable: true,
+      });
+    }
   }
 
   handleDeleteWebhook = () => {
@@ -141,18 +151,10 @@ export class WebhookDisplayTable extends Component {
     });
   }
 
-  togglePipelineRunClicked = event => {
+  togglePipelineRunClicked = () => {
 		this.setState({
-      checked: event.target.checked
+      checked: !this.state.checked
 		});	
-  }
-
-  getContent(id, value) {
-    if (id.endsWith(":repository")) {
-      return <a href={value} target="_blank" rel="noopener noreferrer">{value}</a>
-    } else {
-      return value
-    }
   }
 
   render() {
@@ -283,15 +285,18 @@ export class WebhookDisplayTable extends Component {
                 onRequestSubmit={this.handleDeleteWebhook}
                 onSecondarySubmit={this.showDeleteDialogHandlerInvisible}
                 onRequestClose={this.showDeleteDialogHandlerInvisible}
-                >
-              <label>
-                <p>Selecting the checkbox below will cause the deletion of associated PipelineRuns</p>
-                <Checkbox
-                  checked={this.state.checked}
-                  onChange={this.togglePipelineRunClicked}
-                />
-                <span>Delete PipelineRuns?</span>
-              </label>
+              >
+                <fieldset>
+                  <legend className="modal-legend"><b>Delete Associated PipelineRuns</b></legend>
+                  <div className="checkbox-div">
+                    <Checkbox
+                      id="pipelinerun-checkbox"
+                      labelText="Check here to indicate that PipelineRuns associated with this webhook should also be deleted."
+                      checked={this.state.checked}
+                      onChange={this.togglePipelineRunClicked}
+                      />
+                    </div>
+                </fieldset>
               </Modal>
             </div>
           </div>

@@ -19,6 +19,7 @@ import { WebhookCreate } from '../WebhookCreate';
 import * as API from '../../../api/index';
 import 'jest-dom/extend-expect'
 
+global.scrollTo = jest.fn();
 
 const namespacesResponseMock = {
   "items": [
@@ -135,23 +136,6 @@ describe('delete secret', () => {
 
   });
 
-  it('modal should be shown to confirm deletion and include selected secret name', async () => {  
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
-    jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
-    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />); 
-    fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
-    fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
-    fireEvent.click(await waitForElement(() => getByText(/select secret/i)));
-    fireEvent.click(await waitForElement(() => getByText(/ghe/i)));
-
-    expect(document.getElementById('delete-modal').getAttribute('class')).not.toContain('is-visible');
-    fireEvent.click(document.getElementById('delete-secret-button'));
-    expect(document.getElementById('delete-modal').getAttribute('class')).toContain('is-visible');
-
-  });
-  
   it('cancel button should hide modal', async () => {
 
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));

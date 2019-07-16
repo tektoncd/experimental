@@ -102,3 +102,49 @@
     max-width: 100%;
   }
 }
+
+.modal {
+
+  .checkbox-div {
+    margin-top: 0.25rem;
+  }
+
+  .bx--modal-content {
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-legend {
+    font-weight: bold;
+  }
+
+  .bx--checkbox-label::before {
+    margin-left: 0.25rem;
+  }
+
+  .bx--checkbox-label::after {
+    margin-left: 0.125rem;
+  }
+
+  .bx--checkbox-label {
+    font-size: 80%;
+    line-height: 1rem;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  %primary-secondary-shared {
+    display: inline;
+    text-align: center;
+    padding: 0px;
+    font-weight: bold;
+  }
+
+  .bx--btn.bx--btn--danger {
+    @extend %primary-secondary-shared;
+  }
+  
+  .bx--btn.bx--btn--secondary {
+    @extend %primary-secondary-shared;
+  }
+
+}

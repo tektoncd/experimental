@@ -1,34 +1,30 @@
 # Webhooks Extension
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/kubernetes/experimental/blob/master/LICENSE)
 
-The Webhooks Extension for Tekton allows users to set up Git webhooks that will trigger Tekton PipelineRuns and TaskRuns. An initial implementation will use Knative Eventing but we're closely following the eventing discussion in  [Tekton Pipeline](https://github.com/tektoncd/pipeline) to minimize necessary componentry.
+The Webhooks Extension for Tekton allows users to set up GitHub webhooks that will trigger Tekton `PipelineRuns` and associated `TaskRuns`.
+
+This initial implementation utilises Knative Eventing but there is discussion and work in [Tekton Pipelines](https://github.com/tektoncd/pipeline) to minimize necessary componentry in future.
 
 In addition to Tekton/Knative Eventing glue, it includes an extension to the Tekton Dashboard.
 
-## Runtime Dependencies
-- [Tekton](https://github.com/tektoncd/pipeline) & [Tekton Dashboard](https://github.com/tektoncd/dashboard)
-- Knative [eventing](https://knative.dev/docs/eventing/), [eventing sources](https://knative.dev/docs/eventing/sources/), & [serving](https://knative.dev/docs/serving/)
+## Prerequisites
 
-## Install
-Please see the [development installation guide](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/README.md#scripting)
+- Install [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) and the [Tekton Dashboard](https://github.com/tektoncd/dashboard)
 
-_Note: The main dashboard user interface (UI) finds registered extension UIs when the main dashboard pod starts.  If you have installed this extension after you installed the dashboard you will need to restart the dashboard pod (`kubectl delete pod -l app=tekton-dashboard`). This only needs doing until https://github.com/tektoncd/dashboard/issues/215 is completed such that the dashboard dynamically finds extensions._
+- Install Istio - for a quickstart install, for example of version 1.1.8 run `./scripts/install_istio.sh 1.1.8` _or_ follow https://knative.dev/docs/install/installing-istio/ for a more customised install _(Istio version 1.1.8 is recommended)_
 
-## Running tests
+- Install Knative Eventing, Eventing Sources & Serving - for a quickstart install, for example of version 0.6.0 run `./scripts/install_knative.sh v0.6.0`, for more detailed instructions see the [Knative docs](https://knative.dev/docs/install/index.html) _(Knative version 0.6.0 is recommended)_
 
-```bash
-docker build -f cmd/extension/Dockerfile_test .
-```
+*If running on Docker for Desktop*
 
-## API Definitions
+- Knative requires a Kubernetes cluster running version v.1.11 or greater. Currently this requires the edge version of Docker for Desktop. Your cluster must also be supplied with sufficient resources _(6 CPUs, 10GiB Memory & 2.5GiB swap is known good)_.
 
-- [Extension API definitions](cmd/extension/README.md)
-  - The extension API endpoints can be accessed through the dashboard.
-- [Sink API definitions](cmd/sink/README.md)
+## Install Quickstart
 
-### Example creating a webhook
+### Domain setup for Knative Serving
 
-You should be able to use the extension via the Tekton Dashboard UI - however, until the UI is coded or if you would prefer to interact with REST endpoint directly, you can create your webhook using curl:
+Set your own domain and selectors following the [configuring Knative Serving docs](https://github.com/knative/serving/blob/master/install/CONFIG.md) which outline setting up routes in the `config-domain` ConfigMap in the `knative-serving` namespace
 
 ```bash
 data='{
@@ -44,36 +40,53 @@ data='{
 }'
 curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:8080/webhooks
 ```
+On Docker Desktop, you can retrieve your IP and patch it to the ConfigMap by running:
 
-When curling through the dashboard, use the same endpoints; for example, assuming the dashboard is at `localhost:9097`:
+`ip=$(ifconfig | grep netmask | sed -n 2p | cut -d ' ' -f2)`
 
-```bash
-curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:9097/webhooks
+```
+kubectl patch configmap config-domain --namespace knative-serving --type='json' \
+  --patch '[{"op": "add", "path": "/data/'"${ip}.nip.io"'", "value": ""}]'
 ```
 
-Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/eventing/samples/github-source/) to properly create the `accesstoken` secret. This is the secret that is used to create GitHub webhooks.
+### Install the Webhooks Extension 
+
+The Tekton Webhooks Extension has hosted images located at `gcr.io/tekton-nightly/extension:latest` and `gcr.io/tekton-nightly/extension:latest`, to install the latest extension and sink using these images:
+
+`kubectl apply -f config/release/gcr-tekton-webhooks-extension.yaml`
+
+### Access the Extension through the Dashboard UI 
+
+Restart the dashboard to register the extension:
+
+`kubectl delete pod -l app=tekton-dashboard`
+
+Access the Dashboard through its ClusterIP Service by running `kubectl proxy`. Assuming tekton-pipelines is the install namespace for the dashboard, you can access the web UI at localhost:8001/api/v1/namespaces/tekton-pipelines/services/tekton-dashboard:http/proxy/ 
+
+## Architecture information
+Navigate to `Webhooks`, listed in the navigation under `Extensions`
+
+## Uninstall
+
+`kubectl delete -f config/release/gcr-tekton-webhooks-extension.yaml`
 
 ## Limitations
 
-- Only Git Hub webhooks are currently supported.
-- Only `push` and `pull_request` events are supported at the moment. The webhook is currently only created with both `push` and `pull_request` events.
-- All knative event sources are created in the namespace into which the dashboard and this extension are installed.
-- Only one webhook can be created for each git repository, so each repository will only be able to trigger a PipelineRun from one webhook.
-
-- Three pipeline definitions are currently supported.
-
-  - [simple-pipeline](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/pipeline.yaml)
-  - [simple-helm-pipeline](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/helm-pipeline.yaml) (requires a secret to talk to a secure Tiller)
-  - [simple-helm-pipeline-insecure](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/helm-insecure-pipeline.yaml.yaml)
+- Only GitHub webhooks are currently supported.
+- Only `push` and `pull_request` events are currently supported, these are the events defined on the webhook.
+- Only one webhook can be created for each Git repository, so each repository will only be able to trigger a `PipelineRun` from one webhook.
 
 - One task definition for the pull request update is currently tested.
 
   - [monitor-result-task](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/task-monitor-result.yaml)
 
-## Architecture information
-
-Each webhook that the user creates will store its configuration information as a configmap in the install namespace. The information is used later by the sink to create PipelineRuns for webhook events.
 
 ## Want to get involved
 
 Visit the [Tekton Community](https://github.com/tektoncd/community) project for an overview of our processes.
+
+## For developers
+
+If you are looking to develop or contribute to this repository please see the [development docs](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/DEVELOPMENT.md)
+
+For more involved development scripts please see the [development installation guide](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/README.md#scripting)

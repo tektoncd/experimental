@@ -29,6 +29,7 @@ import (
 // 'credentials' from the webhooks-extension's point of view, are access tokens. That's the only sort we handle right now.
 type credential struct {
 	Name        string `json:"name"`
+	Namespace   string `json:"namespace,omitempty"`
 	AccessToken string `json:"accesstoken"`
 	SecretToken string `json:"secrettoken,omitempty"`
 }
@@ -41,21 +42,34 @@ This file implements three endpoints from webhooks.go:
 ---------------------------------------*/
 
 func (r Resource) createCredential(request *restful.Request, response *restful.Response) {
+	logging.Log.Debug("In createCredential")
 	cred := credential{}
+
 	if err := getQueryEntity(&cred, request, response); err != nil {
+		logging.Log.Errorf("Error processing query entity: %s", err.Error())
 		return
 	}
+
 	if !r.verifyCredentialParameters(cred, response) {
+		logging.Log.Error("Error verifying credential parameters")
 		return
 	}
-	targetNamespace := request.QueryParameter("namespace")
+	targetNamespace := cred.Namespace
+	logging.Log.Debugf("Specified namespace: %s", targetNamespace)
+
 	if targetNamespace == "" {
+		logging.Log.Debugf("No namespace provided so using %s", r.Defaults.Namespace)
 		targetNamespace = r.Defaults.Namespace
 	}
 	if !r.namespaceExists(targetNamespace, response) {
+		logging.Log.Errorf("Target namespace %s does not exist, unable to create credential %s", targetNamespace, cred.Name)
 		return
 	}
+
 	secret := credentialToSecret(cred, targetNamespace, response)
+
+	logging.Log.Debugf("Creating credential %s in namespace %s", cred.Name, cred.Namespace)
+
 	if _, err := r.K8sClient.CoreV1().Secrets(targetNamespace).Create(secret); err != nil {
 		errorMessage := fmt.Sprintf("error creating secret in K8sClient: %s", err.Error())
 		utils.RespondMessageAndLogError(response, err, errorMessage, http.StatusBadRequest)
@@ -180,6 +194,7 @@ func secretToCredential(secret *corev1.Secret, mask bool) credential {
 	if secret.Data["accessToken"] != nil {
 		cred = credential{
 			Name:        secret.GetName(),
+			Namespace:   secret.Namespace,
 			AccessToken: string(secret.Data["accessToken"]),
 			SecretToken: string(secret.Data["secretToken"]),
 		}

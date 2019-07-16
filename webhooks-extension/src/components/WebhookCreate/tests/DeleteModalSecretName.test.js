@@ -70,14 +70,6 @@ const secretsResponseMock = [
   }
 ]
 
-const secretsDeletedMock = [
-  {
-    "name": "git",
-  }
-]
-
-const deleteSecretSuccessMock = {}
-
 const serviceAccountsResponseMock = {
   "items": [
     {
@@ -97,36 +89,28 @@ beforeEach(() => {
   jest.restoreAllMocks
   jest.resetModules()
  });
- 
+
 afterEach(() => {
   jest.clearAllMocks()
   cleanup()
  });
 
 //-----------------------------------//
-describe('confirm deletion success', () => {
-  it('delete button should hide modal, remove secret from listing and reset dropdown', async () => {
+describe('delete modal secret name', () => {
+
+  it('modal should be shown to confirm deletion and include selected secret name', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    jest.spyOn(API, 'deleteSecret').mockImplementation(() => Promise.resolve(deleteSecretSuccessMock));
     const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
-    await waitForElement(() => document.getElementsByClassName('secButtonEnabled'));
     fireEvent.click(await waitForElement(() => getByText(/select secret/i)));
     fireEvent.click(await waitForElement(() => getByText(/ghe/i)));
-    await waitForElement(() => document.getElementsByClassName('secButtonEnabled'));
+
+    expect(document.getElementById('delete-modal').getAttribute('class')).not.toContain('is-visible');
     fireEvent.click(document.getElementById('delete-secret-button'));
     expect(document.getElementById('delete-modal').getAttribute('class')).toContain('is-visible');
-
-    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsDeletedMock));
-    fireEvent.click(document.getElementById('delete-modal').getElementsByClassName('bx--btn--primary').item(0));
-
-    await waitForElement(() => getByText(/Secret deleted./));
-    expect(document.getElementById('delete-modal').getAttribute('class')).not.toContain('is-visible');
-    await waitForElement(() => getByText(/select secret/i));
   });
-
 })

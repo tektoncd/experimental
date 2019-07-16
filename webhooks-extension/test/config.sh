@@ -12,7 +12,7 @@ export ISTIO_SIDECAR_INJECTION="true"
 export GITHUB_TOKEN=''
 
 ##### Dashboard specs
-export DASHBOARD_INSTALL_NS="default"
+export DASHBOARD_INSTALL_NS="tekton-pipelines"
 
 # Note that to receive webhooks, your github must be able to http POST to your Tekton installation. 
 # Our initial testing has used Docker Desktop and GitHub Enterprise. 
