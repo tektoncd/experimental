@@ -24,9 +24,9 @@ describe('without webhooks', () => {
   const noWebhooks = [ {} ];
   it('should display Loading when loading', () => {
     jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve([noWebhooks]));
-    const { queryByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+    const { queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
     expect(queryByTestId('webhook-notification')).toBeNull();
-    expect(queryByText(/Loading/i)).toBeTruthy();
+    expect(queryByTestId("loading-table")).toBeTruthy();
   });
 }); 
 
