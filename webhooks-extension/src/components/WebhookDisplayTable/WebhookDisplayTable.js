@@ -10,6 +10,7 @@ import { Link, Redirect } from 'react-router-dom';
 import {
   Button,
   DataTable,
+  DataTableSkeleton,
   TableSelectAll,
   TableSelectRow,
   TableToolbar,
@@ -17,7 +18,6 @@ import {
   TableBatchActions,
   TableBatchAction,
   TableToolbarSearch,
-  Loading,
   InlineNotification,
 } from 'carbon-components-react';
 
@@ -164,8 +164,7 @@ export class WebhookDisplayTable extends Component {
 
   render() {
 
-    if (this.state.isLoaded) {
-      if (!this.state.webhooks.length) {
+      if (this.state.webhooks.length === 0 && this.state.isLoaded) {
         return (
           // There are no webhooks, so redirect to the create panel
           <Redirect to={this.props.match.url + "/create"} />
@@ -237,10 +236,10 @@ export class WebhookDisplayTable extends Component {
                     </div>
                       <TableToolbarContent>
                         <div className="search-bar">
-                          <TableToolbarSearch onChange={onInputChange} />
+                          <TableToolbarSearch disabled={!this.state.isLoaded} onChange={onInputChange} />
                         </div>
                         <div className="add-div">
-                          <Button kind="ghost" as={Link} id="add-btn" to={this.props.match.url + "/create"}>
+                          <Button disabled={!this.state.isLoaded} kind="ghost" as={Link} id="add-btn" to={this.props.match.url + "/create"}>
                             <div className="add-icon-div">
                               <AddAlt16 className="add-icon"/>
                             </div>
@@ -254,27 +253,32 @@ export class WebhookDisplayTable extends Component {
                         <TableBatchAction id="delete-btn" renderIcon={Delete} onClick={() => {this.showDeleteDialogHandlerVisible(selectedRows)}}>Delete</TableBatchAction>
                       </TableBatchActions>
                     </TableToolbar>
-          
-                    <Table className="bx--data-table--zebra">
-                      <TableHead>
-                        <TableRow>
-                          <TableSelectAll {...getSelectionProps()} />
-                          {headers.map(header => (
-                            <TableHeader key={header.id} {...getHeaderProps({ header })} isSortable={true} isSortHeader={true}>{header.header}</TableHeader>
-                          ))}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {rows.map(row => (
-                          <TableRow {...getRowProps({ row })} key={row.id}>
-                            <TableSelectRow {...getSelectionProps({ row })} />
-                            {row.cells.map(cell => (
-                              <TableCell key={cell.id}>{this.formatCellContent(cell.id, cell.value)}</TableCell>
+                    {
+                      !this.state.isLoaded ? (
+                        <DataTableSkeleton rowCount={1} columnCount={headers.length} data-testid="loading-table"/>
+                      ) : (
+                        <Table className="bx--data-table--zebra">
+                          <TableHead>
+                            <TableRow>
+                              <TableSelectAll {...getSelectionProps()} />
+                              {headers.map(header => (
+                                <TableHeader key={header.id} {...getHeaderProps({ header })} isSortable={true} isSortHeader={true}>{header.header}</TableHeader>
+                              ))}
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {rows.map(row => (
+                              <TableRow {...getRowProps({ row })} key={row.id}>
+                                <TableSelectRow {...getSelectionProps({ row })} />
+                                {row.cells.map(cell => (
+                                  <TableCell key={cell.id}>{this.formatCellContent(cell.id, cell.value)}</TableCell>
+                                ))}
+                              </TableRow>
                             ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                          </TableBody>
+                        </Table>
+                      )
+                    }
                   </TableContainer>
                 )}
               />
@@ -308,10 +312,5 @@ export class WebhookDisplayTable extends Component {
           </div>
         );
       }
-    } else {
-      return(
-        <div className="spinner-div"><Loading withOverlay={false} active className="loading-spinner" /></div>
-      )
     }
   }
-}
