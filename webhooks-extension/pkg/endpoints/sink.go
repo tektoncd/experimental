@@ -230,11 +230,10 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	logging.Log.Debugf("PipelineRun created: %+v.", pipelineRun)
 }
 
-// This is the task creation for the minitoring the main pipelinerun and reporting the resule to the github
+// This creates TaskRun for monitoring the main PipelineRun and reporting the result to the github
 func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource) {
 	logging.Log.Debugf("In createTaskRunFromWebhookData, build information: %s.", buildInformation)
 
-	// Install namespace
 	installNs := os.Getenv("INSTALLED_NAMESPACE")
 	if installNs == "" {
 		installNs = "default"
@@ -274,7 +273,7 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource)
 
 	logging.Log.Debugf("Build information: %+v.", buildInformation)
 
-	// Assumes you've already applied the yml: so the task difinition must exist upfront.
+	// Assumes you've already applied the yml: so the task definition must exist upfront.
 	startTime := buildInformation.TIMESTAMP
 	generatedPipelineRunName := fmt.Sprintf("%s-%s", webhook.Name, startTime)
 	generatedTaskRunName := generatedPipelineRunName
@@ -309,11 +308,11 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource)
 		{Name: "commentfailure", Value: pullTaskParam2},
 		{Name: "pipelinerun", Value: generatedPipelineRunName }}
 
-	// PipelineRun yml defines the references to the above named resources.
-	taskRunData, err := defineTaskRun(generatedTaskRunName, taskNs, saName, buildInformation.REPOURL,
+	// TaskRun yml defines the references to the above named resources.
+	taskRunData, err := defineTaskRun(generatedTaskRunName, taskNs, saName, buildInformation.REPOURL, buildInformation.BRANCH,
 		task, v1alpha1.TaskTriggerTypeManual, resources, params)
 
-	logging.Log.Infof("Creating a new PipelineRun named %s in the namespace %s using the service account %s.", generatedPipelineRunName, taskNs, saName)
+	logging.Log.Infof("Creating a new TaskRun named %s in the namespace %s using the service account %s.", generatedPipelineRunName, taskNs, saName)
 
 	taskRun, err := r.TektonClient.TektonV1alpha1().TaskRuns(taskNs).Create(taskRunData)
 	if err != nil {
@@ -368,22 +367,6 @@ func definePipelineResource(name, namespace string, params []v1alpha1.Param, sec
 	resourcePointer := &pipelineResource
 	return resourcePointer
 }
-/* Create a new PipelineResource: this should be of type git or image 
-func defineTaskResource(name, namespace string, params []v1alpha1.Param, secrets []v1alpha1.SecretParam, resourceType v1alpha1.PipelineResourceType) *v1alpha1.TaskResource {
-	taskResource := v1alpha1.TaskResource{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Spec: v1alpha1.TaskResourceSpec{
-			Type:   resourceType,
-			Params: params,
-		},
-	}
-	if secrets != nil {
-		taskResource.Spec.SecretParams = secrets
-	}
-	resourcePointer := &taskResource
-	return resourcePointer
-}
-*/
 /* Create a new PipelineRun - repoUrl, resourceBinding and params can be nill depending on the Pipeline
 each PipelineRun has a 1 hour timeout: */
 func definePipelineRun(pipelineRunName, namespace, saName, repoURL string,
@@ -430,7 +413,7 @@ func definePipelineRun(pipelineRunName, namespace, saName, repoURL string,
 
 /* Create a new TaskRun - repoUrl, resourceBinding and params can be nill depending on the Pipeline
 each TaskRun has a 1 hour timeout: */
-func defineTaskRun(taskRunName, namespace, saName, repoURL string,
+func defineTaskRun(taskRunName, namespace, saName, repoURL string, branch string,
 	task v1alpha1.Task,
 	triggerType v1alpha1.TaskTriggerType,
 	resourceBinding []v1alpha1.TaskResourceBinding,
@@ -455,6 +438,7 @@ func defineTaskRun(taskRunName, namespace, saName, repoURL string,
 				gitServerLabel: gitServer,
 				gitOrgLabel:    gitOrg,
 				gitRepoLabel:   gitRepo,
+				gitBranchLabel: branch,
 			},
 		},
 
