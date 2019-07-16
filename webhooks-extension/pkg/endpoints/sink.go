@@ -31,10 +31,12 @@ import (
 const gitServerLabel = "gitServer"
 const gitOrgLabel = "gitOrg"
 const gitRepoLabel = "gitRepo"
+const gitBranchLabel = "gitBranch"
 const githubEventParameter = "Ce-Github-Event"
 
 // BuildInformation - information required to build a particular commit from a Git repository.
 type BuildInformation struct {
+	BRANCH         string
 	REPOURL        string
 	SHORTID        string
 	COMMITID       string
@@ -79,6 +81,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.COMMITID = webhookData.HeadCommit.ID
 		buildInformation.REPONAME = webhookData.Repository.Name
 		buildInformation.TIMESTAMP = timestamp
+		buildInformation.BRANCH = extractBranchFromRef(webhookData.Ref)
 
 		createPipelineRunFromWebhookData(buildInformation, r)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
@@ -99,6 +102,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.REPONAME = webhookData.Repository.Name
 		buildInformation.PULLURL = strings.Replace(webhookData.PullRequest.URL, "api/v3/repos/", "", 1)
 		buildInformation.TIMESTAMP = timestamp
+		buildInformation.BRANCH = extractBranchFromRef(webhookData.PullRequest.Head.Ref)
 
 		createPipelineRunFromWebhookData(buildInformation, r)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
@@ -107,6 +111,20 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 	} else {
 		logging.Log.Errorf("error: event wasn't a push, pull, or ping event, no action will be taken. Request is: %+v.", request)
 	}
+}
+
+func extractBranchFromRef(ref string) string {
+	// ref typically resembles "refs/heads/branchhere", so extract "branchhere" from this string
+	if ref != "" {
+		if strings.Count(ref, "/") == 2 {
+			lastIndex := strings.LastIndex(ref, "/")
+			toReturn := ref[lastIndex+1:]
+			logging.Log.Debugf("Determined branch from ref field: %s", toReturn)
+			return toReturn
+		}
+	}
+	logging.Log.Warnf("Couldn't determine the branch from ref field: %s", ref)
+	return ""
 }
 
 // This is the main flow that handles building and deploying: given everything we need to kick off a build, do so
@@ -217,7 +235,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	}
 
 	// PipelineRun yml defines the references to the above named resources.
-	pipelineRunData, err := definePipelineRun(generatedPipelineRunName, pipelineNs, saName, buildInformation.REPOURL,
+	pipelineRunData, err := definePipelineRun(generatedPipelineRunName, pipelineNs, saName, buildInformation.REPOURL, buildInformation.BRANCH,
 		pipeline, v1alpha1.PipelineTriggerTypeManual, resources, params)
 
 	logging.Log.Infof("Creating a new PipelineRun named %s in the namespace %s using the service account %s.", generatedPipelineRunName, pipelineNs, saName)
@@ -369,7 +387,7 @@ func definePipelineResource(name, namespace string, params []v1alpha1.Param, sec
 }
 /* Create a new PipelineRun - repoUrl, resourceBinding and params can be nill depending on the Pipeline
 each PipelineRun has a 1 hour timeout: */
-func definePipelineRun(pipelineRunName, namespace, saName, repoURL string,
+func definePipelineRun(pipelineRunName, namespace, saName, repoURL, branch string,
 	pipeline v1alpha1.Pipeline,
 	triggerType v1alpha1.PipelineTriggerType,
 	resourceBinding []v1alpha1.PipelineResourceBinding,
@@ -394,6 +412,7 @@ func definePipelineRun(pipelineRunName, namespace, saName, repoURL string,
 				gitServerLabel: gitServer,
 				gitOrgLabel:    gitOrg,
 				gitRepoLabel:   gitRepo,
+				gitBranchLabel: branch,
 			},
 		},
 
@@ -407,6 +426,7 @@ func definePipelineRun(pipelineRunName, namespace, saName, repoURL string,
 			Params:         params,
 		},
 	}
+
 	pipelineRunPointer := &pipelineRunData
 	return pipelineRunPointer, nil
 }

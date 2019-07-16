@@ -10,20 +10,27 @@ class WebhooksApp extends Component {
     super(props);
     this.state = {
       showNotificationOnTable: false,
+      showLastWebhookDeletedNotification: false
     }
     this.setShowNotificationOnTable = this.setShowNotificationOnTable.bind(this);
+    this.setshowLastWebhookDeletedNotification = this.setshowLastWebhookDeletedNotification.bind(this);
   }
 
   setShowNotificationOnTable(value) {
     this.setState({showNotificationOnTable: value})
   }
 
+  setshowLastWebhookDeletedNotification(value) {
+    this.setState({showLastWebhookDeletedNotification: value})
+  }
+
   render() {
     const { match } = this.props;
+
       return (
         <div>
-          <Route exact path={`${match.path}/`} render={props => <WebhookDisplayTable {...props} showNotificationOnTable={this.state.showNotificationOnTable} />} />
-          <Route path={`${match.path}/create`} render={props => <WebhookCreate {...props} setShowNotificationOnTable={this.setShowNotificationOnTable} />} />
+          <Route exact path={`${match.path}/`} render={props => <WebhookDisplayTable {...props} showNotificationOnTable={this.state.showNotificationOnTable} setshowLastWebhookDeletedNotification={this.setshowLastWebhookDeletedNotification}/>} />
+          <Route path={`${match.path}/create`} render={props => <WebhookCreate {...props} setShowNotificationOnTable={this.setShowNotificationOnTable} setshowLastWebhookDeletedNotification={this.setshowLastWebhookDeletedNotification} showLastWebhookDeletedNotification={this.state.showLastWebhookDeletedNotification}/>} />
         </div>
       )
   }
