@@ -95,29 +95,6 @@ afterEach(() => {
   cleanup()
  });
 
-
- //-----------------------------------//
-describe('delete and create secret', () => {
-  it('buttons should be disabled until namespace selected', async () => {   
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
-    jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
-    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />); 
-    fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
-    await waitForElement(() => document.getElementsByClassName('del-sec-btn'));
-
-    expect(document.getElementById('delete-secret-button').getAttribute('class')).toBe('secButtonDisabled');
-    expect(document.getElementById('create-secret-button').getAttribute('class')).toBe('secButtonDisabled');
-
-    fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
-    await waitForElement(() => document.getElementsByClassName('secButtonEnabled'));
-
-    expect(document.getElementById('delete-secret-button').getAttribute('class')).toBe('secButtonEnabled');
-    expect(document.getElementById('create-secret-button').getAttribute('class')).toBe('secButtonEnabled');
-    });
-})
-
 //-----------------------------------//
 describe('delete secret', () => {
 
