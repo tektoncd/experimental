@@ -54,23 +54,12 @@ func (r Resource) createCredential(request *restful.Request, response *restful.R
 		logging.Log.Error("Error verifying credential parameters")
 		return
 	}
-	targetNamespace := cred.Namespace
-	logging.Log.Debugf("Specified namespace: %s", targetNamespace)
 
-	if targetNamespace == "" {
-		logging.Log.Debugf("No namespace provided so using %s", r.Defaults.Namespace)
-		targetNamespace = r.Defaults.Namespace
-	}
-	if !r.namespaceExists(targetNamespace, response) {
-		logging.Log.Errorf("Target namespace %s does not exist, unable to create credential %s", targetNamespace, cred.Name)
-		return
-	}
+	secret := credentialToSecret(cred, r.Defaults.Namespace, response)
 
-	secret := credentialToSecret(cred, targetNamespace, response)
+	logging.Log.Debugf("Creating credential %s in namespace %s", cred.Name, r.Defaults.Namespace)
 
-	logging.Log.Debugf("Creating credential %s in namespace %s", cred.Name, cred.Namespace)
-
-	if _, err := r.K8sClient.CoreV1().Secrets(targetNamespace).Create(secret); err != nil {
+	if _, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Create(secret); err != nil {
 		errorMessage := fmt.Sprintf("error creating secret in K8sClient: %s", err.Error())
 		utils.RespondMessageAndLogError(response, err, errorMessage, http.StatusBadRequest)
 		return
@@ -79,18 +68,11 @@ func (r Resource) createCredential(request *restful.Request, response *restful.R
 }
 
 func (r Resource) deleteCredential(request *restful.Request, response *restful.Response) {
-	targetNamespace := request.QueryParameter("namespace")
-	if targetNamespace == "" {
-		targetNamespace = r.Defaults.Namespace
-	}
-	if !r.namespaceExists(targetNamespace, response) {
-		return
-	}
 	credName := request.PathParameter("name")
-	if !r.verifySecretExists(credName, targetNamespace, response) {
+	if !r.verifySecretExists(credName, r.Defaults.Namespace, response) {
 		return
 	}
-	err := r.K8sClient.CoreV1().Secrets(targetNamespace).Delete(credName, &metav1.DeleteOptions{})
+	err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Delete(credName, &metav1.DeleteOptions{})
 	if err != nil {
 		errorMessage := fmt.Sprintf("error deleting secret from K8sClient: %s.", err.Error())
 		utils.RespondMessageAndLogError(response, err, errorMessage, http.StatusInternalServerError)
@@ -100,16 +82,8 @@ func (r Resource) deleteCredential(request *restful.Request, response *restful.R
 }
 
 func (r Resource) getAllCredentials(request *restful.Request, response *restful.Response) {
-	targetNamespace := request.QueryParameter("namespace")
-	if targetNamespace == "" {
-		targetNamespace = r.Defaults.Namespace
-	}
-	if !r.namespaceExists(targetNamespace, response) {
-		return
-	}
-
 	// Get secrets from the resource K8sClient
-	secrets, err := r.K8sClient.CoreV1().Secrets(targetNamespace).List(metav1.ListOptions{})
+	secrets, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).List(metav1.ListOptions{})
 
 	if err != nil {
 		errorMessage := fmt.Sprintf("error getting secrets from K8sClient: %s.", err.Error())
