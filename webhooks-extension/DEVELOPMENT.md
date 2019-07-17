@@ -44,9 +44,19 @@ data='{
   "accesstoken": "github-secret",
   "pipeline": "simple-pipeline",
   "dockerregistry": "mydockerregistry"
+  "pulltask": "monitor-result-task",
+  "onsuccesscomment": "OK",
+  "onfailurecomment": "ERROR",
 }'
 curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:8080/webhooks
 ```
+
+`pulltask`: task name that monitors the pipeline and updates the pull request when it finishes. The dfault task is `monitor-result-task`
+
+`onsuccesscomment`: comment text that is put into the pull request when the pipelinerun finishes sccessfully.  The default is `OK: <pipelinerun name>`
+
+`onfailurecomment`: comment text that is put into the pull request when the pipelinerun finishes with errors.  The default is `ERROR: <pipelinerun name>`
+
 
 When curling through the dashboard, use the same endpoints; for example, assuming the dashboard is at `localhost:9097`:
 

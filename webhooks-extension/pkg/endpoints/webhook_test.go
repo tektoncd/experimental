@@ -55,14 +55,17 @@ func TestGitHubSource(t *testing.T) {
 
 	sources := []webhook{
 		{
-			Name:             "name1",
-			Namespace:        installNs,
-			GitRepositoryURL: "https://github.com/owner/repo",
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
-			DockerRegistry:   "registry1",
-			HelmSecret:       "helmsecret1",
-			ReleaseName:      "releasename1",
+			Name:               "name1",
+			Namespace:          installNs,
+			GitRepositoryURL:   "https://github.com/owner/repo",
+			AccessTokenRef:     "token1",
+			Pipeline:           "pipeline1",
+			DockerRegistry:     "registry1",
+			HelmSecret:         "helmsecret1",
+			ReleaseName:        "releasename1",
+			PullTask:           "pulltask1",
+			OnSuccessComment:   "onsuccesscomment1",
+			OnFailureComment:   "onfailurecomment1",
 		},
 		{
 			Name:             "name2",
@@ -75,14 +78,17 @@ func TestGitHubSource(t *testing.T) {
 			ReleaseName:      "releasename2",
 		},
 		{
-			Name:             "name3",
-			Namespace:        installNs,
-			GitRepositoryURL: "https://github.company.com/owner3/repo3",
-			AccessTokenRef:   "token3",
-			Pipeline:         "pipeline3",
-			DockerRegistry:   "",
-			HelmSecret:       "helmsecret3",
-			ReleaseName:      "releasename3",
+			Name:               "name3",
+			Namespace:          installNs,
+			GitRepositoryURL:   "https://github.company.com/owner3/repo3",
+			AccessTokenRef:     "token3",
+			Pipeline:           "pipeline3",
+			DockerRegistry:     "",
+			HelmSecret:         "helmsecret3",
+			ReleaseName:        "releasename3",
+			PullTask:           "pulltask3",
+			OnSuccessComment:   "onsuccesscomment3",
+			OnFailureComment:   "onfailurecomment3",
 		},
 	}
 
@@ -291,13 +297,16 @@ func TestDeleteByNameKeepRuns(t *testing.T) {
 	}
 
 	theWebhook := webhook{
-		Name:             "webhooktodelete",
-		Namespace:        installNs,
-		GitRepositoryURL: "https://github.com/owner/repo",
-		AccessTokenRef:   "token1",
-		Pipeline:         "pipeline1",
-		HelmSecret:       "helmsecret1",
-		ReleaseName:      "foo",
+		Name:               "webhooktodelete",
+		Namespace:          installNs,
+		GitRepositoryURL:   "https://github.com/owner/repo",
+		AccessTokenRef:     "token1",
+		Pipeline:           "pipeline1",
+		HelmSecret:         "helmsecret1",
+		ReleaseName:        "foo",
+		PullTask:           "pulltask1",
+		OnSuccessComment:   "onsuccesscomment1",
+		OnFailureComment:   "onfailurecomment1",
 	}
 
 	configMapClient := r.K8sClient.CoreV1().ConfigMaps(installNs)
@@ -421,13 +430,16 @@ func TestDeleteByNameDeleteRuns(t *testing.T) {
 
 	// Maps to the second PipelineRun which must be deleted
 	theWebhook := webhook{
-		Name:             "DeleteByNameDeleteRunsHook",
-		Namespace:        installNs,
-		GitRepositoryURL: "https://funkygithub.com/iamgettingdeleted/barfoobar", // Same repo URL as pipelineRun2
-		AccessTokenRef:   "token1",
-		Pipeline:         "pipeline1",
-		HelmSecret:       "helmsecret1",
-		ReleaseName:      "foo",
+		Name:                 "DeleteByNameDeleteRunsHook",
+		Namespace:            installNs,
+		GitRepositoryURL:     "https://funkygithub.com/iamgettingdeleted/barfoobar", // Same repo URL as pipelineRun2
+		AccessTokenRef:       "token1",
+		Pipeline:             "pipeline1",
+		HelmSecret:           "helmsecret1",
+		ReleaseName:          "foo",
+		PullTask:             "pulltask1",
+		OnSuccessComment:     "onsuccesscomment1",
+		OnFailureComment:     "onfailurecomment1",
 	}
 
 	resp := createWebhook(theWebhook, r)

@@ -61,6 +61,11 @@ Navigate to `Webhooks`, listed in the navigation under `Extensions`
 - Only `push` and `pull_request` events are currently supported, these are the events defined on the webhook.
 - Only one webhook can be created for each Git repository, so each repository will only be able to trigger a `PipelineRun` from one webhook.
 
+- One task definition for the pull request update is currently tested.
+
+  - [monitor-result-task](https://github.com/tektoncd/experimental/webhooks-extension/config/task-monitor-result.yaml)
+
+
 ## Want to get involved
 
 Visit the [Tekton Community](https://github.com/tektoncd/community) project for an overview of our processes.
