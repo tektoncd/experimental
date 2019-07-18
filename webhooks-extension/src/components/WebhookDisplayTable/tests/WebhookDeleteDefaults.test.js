@@ -54,7 +54,7 @@ const webhooks = [
 
 it('should reset checkbox being checked on delete modal display', async () => {
   jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  const { getByText } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+  const { getByText } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
   expect(document.getElementById('webhook-notification')).toBeNull();
   await waitForElement(() => getByText('first test webhook'));
   await waitForElement(() => getByText('second test webhook'));

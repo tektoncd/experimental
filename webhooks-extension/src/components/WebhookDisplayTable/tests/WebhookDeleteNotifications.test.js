@@ -101,7 +101,7 @@ it('should display a success message on a good delete', async () => {
   let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
   let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
 
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
 
   expect(queryByTestId('webhook-notification')).toBeNull();
 
@@ -129,7 +129,7 @@ it('should display an error message on delete with no webhook selected', async (
   let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
   let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
 
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
 
   expect(queryByTestId('webhook-notification')).toBeNull();
 
@@ -165,7 +165,7 @@ it('should display a fail message on a bad delete', async () => {
   jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
   jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.reject(fakeDeleteWebhooksFailure()));
 
-  let { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+  let { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
 
   expect(queryByTestId('webhook-notification')).toBeNull();
   await waitForElement(() => getByText('first test webhook'));
