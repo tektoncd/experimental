@@ -174,6 +174,7 @@ func secretToCredential(secret *corev1.Secret, mask bool) credential {
 		}
 		if mask {
 			cred.AccessToken = "********"
+			cred.SecretToken = "********"
 		}
 	}
 	return cred
