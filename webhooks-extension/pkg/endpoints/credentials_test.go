@@ -310,6 +310,13 @@ func checkCredentials(namespace string, expectCreds []credential, expectError st
 		accessTokens = append(accessTokens, accessToken)
 		expectCreds[i].AccessToken = "********"
 	}
+	// Look for secret token "********"
+	secretTokens := []string{}
+	for i, cred := range expectCreds {
+		secretToken := cred.SecretToken
+		secretTokens = append(secretTokens, secretToken)
+		expectCreds[i].SecretToken = "********"
+	}
 	// Read result
 	resultCreds := []credential{}
 	if !checkResponseError(httpWriter.Body, &resultCreds, expectError, t) {
