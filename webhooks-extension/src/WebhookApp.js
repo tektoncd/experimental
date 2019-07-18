@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Route, withRouter } from "react-router-dom";
+import { connect } from 'react-redux';
 
 import { WebhookCreate } from './components/WebhookCreate';
 import { WebhookDisplayTable } from './components/WebhookDisplayTable';
@@ -25,15 +26,23 @@ class WebhooksApp extends Component {
   }
 
   render() {
-    const { match } = this.props;
+    const { match, namespace } = this.props;
 
       return (
         <div>
-          <Route exact path={`${match.path}/`} render={props => <WebhookDisplayTable {...props} showNotificationOnTable={this.state.showNotificationOnTable} setshowLastWebhookDeletedNotification={this.setshowLastWebhookDeletedNotification}/>} />
+          <Route exact path={`${match.path}/`} render={props => <WebhookDisplayTable {...props} selectedNamespace={namespace} showNotificationOnTable={this.state.showNotificationOnTable} setshowLastWebhookDeletedNotification={this.setshowLastWebhookDeletedNotification}/>} />
           <Route path={`${match.path}/create`} render={props => <WebhookCreate {...props} setShowNotificationOnTable={this.setShowNotificationOnTable} setshowLastWebhookDeletedNotification={this.setshowLastWebhookDeletedNotification} showLastWebhookDeletedNotification={this.state.showLastWebhookDeletedNotification}/>} />
         </div>
       )
   }
 }
 
-export default withRouter(WebhooksApp)
+function mapStateToProps(state, props) {
+  return {
+    namespace: props.selectors.getSelectedNamespace(state)
+  };
+}
+
+export default connect(
+  mapStateToProps
+)(withRouter(WebhooksApp));

@@ -31,6 +31,7 @@ const {
   TableHeader,
 } = DataTable;
 
+const ALL_NAMESPACES = "*";
 export class WebhookDisplayTable extends Component {
   state = {
     showTable: true,
@@ -170,37 +171,48 @@ export class WebhookDisplayTable extends Component {
           <Redirect to={this.props.match.url + "/create"} />
         )
       } else {
+        const { selectedNamespace } = this.props;
         // There are webhooks so display table
         const headers = [
           {
             key: 'name',
-            header: 'Name',
+            header: 'Name'
           },
           {
             key: 'repository',
-            header: 'Git Repository',
+            header: 'Git Repository'
           },
           {
             key: 'pipeline',
-            header: 'Pipeline',
-          },
-          {
-            key: 'namespace',
-            header: 'Namespace',
+            header: 'Pipeline'
           }
         ];
-    
-        let initialRows = []
+
+        if (selectedNamespace === ALL_NAMESPACES) {
+          headers.push({
+            key: 'namespace',
+            header: 'Namespace'
+          });
+        }
+
+        let initialRows = [];
         // Populate the data for the rows array from the data from the webhooks get request made on page load
-        this.state.webhooks.map(function (webhook, keyIndex) {
-          initialRows[keyIndex] = {
-            id: webhook['name']+"|"+webhook['namespace'],
-            name: webhook['name'],
-            repository: webhook['gitrepositoryurl'],
-            pipeline: webhook['pipeline'],
-            namespace: webhook['namespace'],
+        this.state.webhooks.forEach(function({ gitrepositoryurl, name, namespace, pipeline}) {
+          if (selectedNamespace === ALL_NAMESPACES || namespace === selectedNamespace) {
+            let webhook = {
+              id: name + "|" + namespace,
+              name,
+              pipeline: pipeline,
+              repository: gitrepositoryurl
+            }
+
+            if (selectedNamespace === ALL_NAMESPACES) {
+              webhook.namespace = namespace;
+            }
+
+            initialRows.push(webhook);
           }
-        })
+        });
 
         return (
           <div>
@@ -284,6 +296,12 @@ export class WebhookDisplayTable extends Component {
               />
             </div>
 
+            {initialRows.length === 0 && selectedNamespace !== ALL_NAMESPACES && (
+                <p className="noWebhooks">
+                  {`No webhooks created under namespace '${selectedNamespace}', click 'Add Webhook' button to add a new one.`}
+                </p>
+              )
+            }
             <div className="modal">
               <Modal open={this.state.showDeleteDialog}
                 id='webhook-delete-modal'
