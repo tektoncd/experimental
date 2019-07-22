@@ -27,6 +27,7 @@ import (
 
 	restful "github.com/emicklei/go-restful"
 	eventapi "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -75,7 +76,14 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		return
 	}
 
-	logging.Log.Debugf("Webhook to be created in namespace %s", namespace)
+	hook, err := r.getGitHubWebhook(webhook.GitRepositoryURL, r.Defaults.Namespace)
+	if hook.Name != "" {
+		logging.Log.Errorf("error creating webhook: A webhook already exists for GitRepositoryURL %+v.", webhook.GitRepositoryURL)
+		RespondError(response, errors.New("Webhook already exists for Git repository"), http.StatusBadRequest)
+		return
+	}
+
+	logging.Log.Debugf("Webhook will create pipelineruns in namespace %s", namespace)
 
 	logging.Log.Infof("Creating webhook: %v.", webhook)
 	pieces := strings.Split(webhook.GitRepositoryURL, "/")
@@ -125,7 +133,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
-	_, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Create(&entry)
+	_, err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(installNs).Create(&entry)
 	if err != nil {
 		logging.Log.Errorf("Error creating GitHub source: %s.", err.Error())
 		RespondError(response, err, http.StatusBadRequest)
@@ -172,15 +180,15 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 		return
 	}
 
-	logging.Log.Debugf("in deleteWebhook, name: %s, namespace: %s, delete pipeline runs: %s", name, namespace, deletePipelineRuns)
+	logging.Log.Debugf("in deleteWebhook, name: %s, pipelinerun namespace: %s, delete pipeline runs: %s", name, namespace, deletePipelineRuns)
 
 	if name != "" {
-		foundRepoURL := r.findRepoURLFromConfigMap(name, namespace)
+		foundRepoURL := r.findRepoURLFromConfigMap(name, r.Defaults.Namespace)
 		// This will remove any PipelineRuns too if specified to, hence the need for the repository URL
 		err = r.deleteGitHubWebhookByName(name, namespace, foundRepoURL, toDeletePipelineRuns)
 		if err != nil {
 			if strings.Contains(err.Error(), "could not find webhook with name") {
-				logging.Log.Errorf("webhook (name %s) not found in namespace %s", name, namespace)
+				logging.Log.Errorf("webhook (name %s) not found", name)
 				RespondError(response, err, http.StatusNotFound)
 				return
 			}
@@ -192,7 +200,7 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 			logging.Log.Infof("Deleted the webhook %s OK, deleting from ConfigMap next", name)
 		}
 
-		err = r.deleteWebhookFromConfigMapByName(name, namespace)
+		err = r.deleteWebhookFromConfigMapByName(name, r.Defaults.Namespace)
 		if err != nil {
 			logging.Log.Errorf("error deleting the webhook information (name %s) from the ConfigMap, error: %s", name, err)
 			RespondError(response, err, http.StatusInternalServerError)
@@ -288,7 +296,7 @@ func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Res
 		installNs = "default"
 	}
 
-	logging.Log.Debugf("Get all webhooks in namespace: %s.", installNs)
+	logging.Log.Debugf("Get all webhooks")
 	sources, err := r.readGitHubWebhooks(installNs)
 	if err != nil {
 		logging.Log.Errorf("error trying to get webhooks: %s.", err.Error())
@@ -345,22 +353,25 @@ func (r Resource) deletePipelineRunsByRepoURL(gitRepoURL, namespace string) erro
    Optionally deletes PipelineRuns too. This method does not delete from the ConfigMap, that's done as an additional step. */
 
 func (r Resource) deleteGitHubWebhookByName(name, namespace, foundRepoURL string, deletePipelineRuns bool) error {
-	logging.Log.Debugf("Deleting GitHub webhook in namespace %s with name %s", namespace, name)
+	logging.Log.Debugf("Deleting GitHub webhook with name %s", name)
 
-	foundRealGitHubSource, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(namespace).Get(name, metav1.GetOptions{})
+	foundRealGitHubSource, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(r.Defaults.Namespace).Get(name, metav1.GetOptions{})
 
 	if err != nil {
+		logging.Log.Errorf("error fetching webhook: %s", err.Error())
 		return fmt.Errorf("could not find webhook with name: %s", name)
 	}
 
-	err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(namespace).Delete(foundRealGitHubSource.Name, &metav1.DeleteOptions{})
+	err = r.EventSrcClient.SourcesV1alpha1().GitHubSources(r.Defaults.Namespace).Delete(foundRealGitHubSource.Name, &metav1.DeleteOptions{})
 	if err != nil {
+		logging.Log.Errorf("error deleting webhook: %s", err.Error())
 		return fmt.Errorf("could not delete webhook with name: %s", name)
 	}
 
 	if deletePipelineRuns {
 		err := r.deletePipelineRunsByRepoURL(foundRepoURL, namespace)
 		if err != nil {
+			logging.Log.Errorf("error deleting pipelineruns in namespace %s: %s", namespace, err.Error())
 			return fmt.Errorf("could not delete the pipelineruns associated with repo URL %s in namespace %s", foundRepoURL, namespace)
 		}
 		logging.Log.Infof("Deleted PipelineRuns OK")

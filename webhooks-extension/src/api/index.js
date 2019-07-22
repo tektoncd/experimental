@@ -51,8 +51,8 @@ export function createWebhook(data) {
   return post(uri, data);
 }
 
-export function getSecrets(namespace) {
-  const uri = `${apiRoot}/webhooks/credentials?namespace=${namespace}`;
+export function getSecrets() {
+  const uri = `${apiRoot}/webhooks/credentials`;
   return get(uri);
 }
 
@@ -61,8 +61,8 @@ export function createSecret(data) {
   return post(uri, data);
 }
 
-export function deleteSecret(name, namespace) {
-  const uri = `${apiRoot}/webhooks/credentials/${name}?namespace=${namespace}`;
+export function deleteSecret(name) {
+  const uri = `${apiRoot}/webhooks/credentials/${name}`;
   return deleteRequest(uri);
 }
 

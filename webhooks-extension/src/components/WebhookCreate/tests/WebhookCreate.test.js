@@ -115,6 +115,7 @@ afterEach(() => {
 describe('error fetching namespaces should give error notification', () => {
   it('should display create wizard with form properties and error notification', async () => {   
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.reject(namespacesFailResponseMock));
+    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}}/>); 
       await waitForElement(() => getByText(/Mock Error Fetching Namespaces/i));
     });
@@ -124,20 +125,15 @@ describe('error fetching namespaces should give error notification', () => {
 describe('drop downs should be disabled while no namespace selected', () => {
   it('pipelines dropdown should be disabled', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
+    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
     expect(document.getElementById("pipeline").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true)
 
   });
-  it('secrets dropdown should be disabled', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
-    fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
-    expect(document.getElementById("git").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true)
-
-  });
   it('service accounts dropdown should be disabled', async () => {
     jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
+    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
     expect(document.getElementById("serviceAccounts").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true)
