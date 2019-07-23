@@ -404,6 +404,12 @@ class WebhookCreatePage extends Component {
     });
   };
 
+  handleNotificationClose = () => {
+    this.setState({
+      showNotification: false
+    });
+  }
+
   render() {
 
     const namespaceItems = [];
@@ -455,7 +461,9 @@ class WebhookCreatePage extends Component {
               kind={this.state.notificationStatus}
               subtitle={this.state.notificationMessage}
               title={this.state.notificationStatusMsgShort}
-              lowContrast>
+              lowContrast
+              onCloseButtonClick={this.handleNotificationClose}
+            >
             </InlineNotification>
           )}
           {this.state.showNotification && window.scrollTo(0,0)}
