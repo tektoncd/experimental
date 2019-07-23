@@ -17,7 +17,7 @@ You must install these tools:
 - ko: For development. ko version v0.1 or higher is required for pipeline to work correctly.
 - kubectl: For interacting with your kube cluster
 - helm: Templating is used to install Istio according to [Knative docs](https://knative.dev/docs/install/installing-istio/)
-- npm: For building the user interface
+- [Node.js & npm](https://nodejs.org/): For building and running the frontend locally. _Node.js 10.x is strongly recommended_
 
 ## Dependency Versioning
 The installation script installs the latest version of Istio and known compatible versions of Knative as per values in the version section of [config.sh](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/config.sh). Knative Serving 0.6 has made considerable changes to the service definition so levels below this are not supported.
