@@ -62,6 +62,11 @@
 
   .bx--batch-actions--active {
     justify-content: flex-end;
+    visibility: visible !important;
+  }
+
+  .bx--batch-actions {
+    visibility: hidden;
   }
 
   .bx--data-table-header {
@@ -95,6 +100,7 @@
   .bx--btn--primary {
     color: #ffffff;
     white-space: nowrap;
+    height: 3rem;
   }
 
   .bx--data-table--zebra tbody tr:nth-child(odd) td {
