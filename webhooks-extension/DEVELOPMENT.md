@@ -4,6 +4,8 @@ Involved development scripts and instructions can be found in the [development i
 
 ## UI development
 
+Use `npm ci` when installing from source to install with a clean set of dependencies, if a node_modules folder is already present in the project root it will be automatically removed before install.
+
 If modifying the UI code and wanting to deploy your updated version:
 
 1) Run `npm run build` this will create a new file in the dist directory
