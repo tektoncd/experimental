@@ -24,22 +24,21 @@ describe('without webhooks', () => {
   const noWebhooks = [ {} ];
   it('should display Loading when loading', () => {
     jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve([noWebhooks]));
-    const { queryByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+    const { queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
     expect(queryByTestId('webhook-notification')).toBeNull();
-    expect(queryByText(/Loading/i)).toBeTruthy();
+    expect(queryByTestId("loading-table")).toBeTruthy();
   });
-}); 
+});
 
 describe('displays an add button', () => {
   const noWebhooks = [ {} ];
   it('display an add button for creating webhooks', async () => {
     jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve([noWebhooks]));
-    const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+    const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
     expect(queryByTestId('webhook-notification')).toBeNull();
     await waitForElement(() => getByText(/Add/i));
    });
 });
- 
 
 describe('with webhooks', () => {
   const webhooks = [
@@ -54,14 +53,14 @@ describe('with webhooks', () => {
 
   it('displays webhooks table when webhooks are present', async () => {
     jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve(webhooks));
-    const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+    const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
     expect(queryByTestId('webhook-notification')).toBeNull();
     await waitForElement(() => getByText(/webhooks/i)); // Webhooks header (table visible) only when webhooks present
   });
 
   it('displays webhooks table and data webhooks are present', async () => {
     jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve(webhooks));
-    const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+    const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
     expect(queryByTestId('webhook-notification')).toBeNull();
     await waitForElement(() => getByText(/first-test-webhook/i));
     await waitForElement(() => getByText(/the-webhook-repo/i));
@@ -70,14 +69,20 @@ describe('with webhooks', () => {
   });
 
   it('displays webhook created successfully on show notification being set', async () => {
-    const props = { 
+    const props = {
       showNotificationOnTable: true,
       match: {
         url: "/"
       }
     }
     jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve(webhooks));
-    const { getByText } = renderWithRouter(<WebhookDisplayTable {...props} />);
+    const { getByText } = renderWithRouter(<WebhookDisplayTable {...props} selectedNamespace="*"/>);
     await waitForElement(() => getByText('Webhook created successfully.'));
   });
-}); 
+
+  it('should display string suggesting to create webhooks when namespace selected has no webhooks', async () => {
+    jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve(webhooks));
+    const { getByText } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="default"/>);
+    await waitForElement(() => getByText("No webhooks created under namespace 'default', click 'Add Webhook' button to add a new one."));
+  });
+});

@@ -50,12 +50,14 @@ class WebhookCreatePage extends Component {
       // create secret vars
       newSecretName: '',
       newTokenValue: '',
-      createSecretDisabled: true,
       // toggle access token 'password' or 'text'
       pwType: 'password',
       visibleCSS: 'token-visible',
       invisibleCSS: 'token-invisible'
     };
+
+    this.fetchSecrets();
+    this.fetchNamespaces();
   }
 
   componentDidMount(){
@@ -70,7 +72,6 @@ class WebhookCreatePage extends Component {
     }
     if (this.isDisabled()) {
       document.getElementById("pipeline").firstElementChild.tabIndex = -1;
-      document.getElementById("git").firstElementChild.tabIndex = -1;
       document.getElementById(
         "serviceAccounts"
       ).firstElementChild.tabIndex = -1;
@@ -113,10 +114,10 @@ class WebhookCreatePage extends Component {
     }
   }
   
-  async fetchSecrets(namespace) {
+  async fetchSecrets() {
     let s;
     try {
-      s = await getSecrets(namespace);
+      s = await getSecrets();
       this.setState({apiSecrets: s})
     } catch (error) {
         error.response.text().then((text) => {
@@ -160,17 +161,12 @@ class WebhookCreatePage extends Component {
     this.setState({
       namespace: itemText.selectedItem,
       apiPipelines: '',
-      apiSecrets: '',
       apiServiceAccounts: '',
       pipeline: '',
-      gitsecret: '',
       serviceAccount: '',
     });
     if (!this.state.pipelineFail) {
       this.fetchPipelines(itemText.selectedItem);
-    }
-    if (!this.state.secretsFail) {
-      this.fetchSecrets(itemText.selectedItem);
     }
     if (!this.state.serviceAccountsFail) {
       this.fetchServiceAccounts(itemText.selectedItem);
@@ -275,21 +271,19 @@ class WebhookCreatePage extends Component {
   }
 
   displaySecretDropDown = (secretItems) => {
-    if (!this.isDisabled()) {
-      if (!this.state.apiSecrets) {
-        return <DropdownSkeleton />
-      }
+    if (!this.state.apiSecrets) {
+      return <DropdownSkeleton />
     }
+
     return <Dropdown
       id="git"
       label="select secret"
       items={secretItems}
-      disabled={this.isDisabled()}
       onChange={this.handleChangeSecret}
       selectedItem={this.state.gitsecret}
     />
   }
-
+  
   displayServiceAccountDropDown = (saItems) => {
     if (!this.isDisabled()) {
       if (!this.state.apiServiceAccounts) {
@@ -303,13 +297,6 @@ class WebhookCreatePage extends Component {
       disabled={this.isDisabled()}
       onChange={this.handleChangeServiceAcct}
     />
-  }
-
-  getSecretButtonCSSID = () => {
-    if (this.isDisabled()) {
-      return "secButtonDisabled"
-    }
-    return "secButtonEnabled"
   }
 
   toggleDeleteDialog = () => {
@@ -342,7 +329,7 @@ class WebhookCreatePage extends Component {
   }
 
   deleteAccessTokenSecret = () => {
-    deleteSecret(this.state.gitsecret, this.state.namespace).then(() => {
+    deleteSecret(this.state.gitsecret).then(() => {
       this.toggleDeleteDialog();
       this.setState({
         apiSecrets: '',
@@ -363,17 +350,16 @@ class WebhookCreatePage extends Component {
         });
       });
     }).finally(() => {
-      this.fetchSecrets(this.state.namespace);
+      this.fetchSecrets();
     })
   }
 
   createAccessTokenSecret = () => {
     const requestBody = {
       name: this.state.newSecretName,
-      namespace: this.state.namespace,
       accesstoken: this.state.newTokenValue
     };
-    createSecret(requestBody, this.state.namespace).then(() => {
+    createSecret(requestBody).then(() => {
       this.toggleCreateDialog()
       this.setState({
         gitsecret: this.state.newSecretName,
@@ -397,7 +383,7 @@ class WebhookCreatePage extends Component {
         });
       });
     }).finally(() => {
-      this.fetchSecrets(this.state.namespace);
+      this.fetchSecrets();
     })
   }
 
@@ -418,6 +404,12 @@ class WebhookCreatePage extends Component {
     });
   };
 
+  handleNotificationClose = () => {
+    this.setState({
+      showNotification: false
+    });
+  }
+
   render() {
 
     const namespaceItems = [];
@@ -425,22 +417,19 @@ class WebhookCreatePage extends Component {
     const secretItems = [];
     const saItems = [];
 
-    if (!this.state.apiNamespaces) {
-      if (!this.state.namespaceFail) {
-        this.fetchNamespaces();
-      }
-    } else {
+    if (this.state.apiSecrets) {
+      this.state.apiSecrets.map(function (secretResource, index) {
+        secretItems[index] = secretResource['name'];
+      });
+    }
+
+    if (this.state.apiNamespaces) {
       this.state.apiNamespaces.items.map(function (namespaceResource, index) {
         namespaceItems[index] = namespaceResource.metadata['name'];
       });
       if (this.state.apiPipelines) {
         this.state.apiPipelines.items.map(function (pipelineResource, index) {
           pipelineItems[index] = pipelineResource.metadata['name'];
-        });
-      }
-      if (this.state.apiSecrets) {
-        this.state.apiSecrets.map(function (secretResource, index) {
-          secretItems[index] = secretResource['name'];
         });
       }
       if (this.state.apiServiceAccounts) {
@@ -472,7 +461,9 @@ class WebhookCreatePage extends Component {
               kind={this.state.notificationStatus}
               subtitle={this.state.notificationMessage}
               title={this.state.notificationStatusMsgShort}
-              lowContrast>
+              lowContrast
+              onCloseButtonClick={this.handleNotificationClose}
+            >
             </InlineNotification>
           )}
           {this.state.showNotification && window.scrollTo(0,0)}
@@ -482,9 +473,16 @@ class WebhookCreatePage extends Component {
           <Form onSubmit={this.handleSubmit}>
             <div className="title">Create Webhook</div>
 
+            <div className="row" id="sectionTitle">
+              <u>Webhook Settings</u>
+              <div className="sectionDescription">
+                These settings are used for creating the webhook.
+              </div>
+            </div>
+
             <div className="row">
               <div className="help-icon" id="name-tooltip">
-                <TooltipIcon tooltipText="The display name for your webhook in this user interface.">
+                <TooltipIcon tooltipText="The display name for your webhook in this user interface. This name must consist of lower case alphanumeric characters, '-' or '.'">
                   <Infomation />
                 </TooltipIcon>
               </div>
@@ -533,7 +531,33 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-              <div className="help-icon" id="namespace-tooltip">
+              <div className="help-icon" id="secret-tooltip">
+                <TooltipIcon tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository and the secret must exist in the same namespace as the dashboard.">
+                  <Infomation />
+                </TooltipIcon>
+              </div>
+              <div className="item-label">
+                <div className="createLabel">Access Token</div>
+              </div>
+              <div className="del-sec-btn"><SubtractAlt20 id="delete-secret-button" onClick={() => { this.toggleDeleteDialog() }}/></div>
+              <div className="git-access-drop-down-div">
+                <div className="createDropDown">
+                  {this.displaySecretDropDown(secretItems)}
+                </div>
+              </div>
+              <div className="add-sec-btn"><AddAlt20 id="create-secret-button" onClick={() => { this.toggleCreateDialog() }}/></div>
+            </div>
+
+            <div className="row"/>
+            <div className="row" id="sectionTitle">
+              <u>Target Pipeline Settings</u>
+              <div className="sectionDescription">
+                These settings select and configure the pipeline to execute when the webhook triggers.
+              </div>
+            </div>
+            
+            <div className="row">
+            <div className="help-icon" id="namespace-tooltip">
                 <TooltipIcon tooltipText="The namespace to operate in.">
                   <Infomation />
                 </TooltipIcon>
@@ -565,26 +589,8 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-              <div className="help-icon" id="secret-tooltip">
-                <TooltipIcon tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository.">
-                  <Infomation />
-                </TooltipIcon>
-              </div>
-              <div className="item-label">
-                <div className="createLabel">Access Token</div>
-              </div>
-              <div className="del-sec-btn"><SubtractAlt20 id="delete-secret-button" className={this.getSecretButtonCSSID()} onClick={() => { this.toggleDeleteDialog() }}/></div>
-              <div className="git-access-drop-down-div">
-                <div className="createDropDown">
-                  {this.displaySecretDropDown(secretItems)}
-                </div>
-              </div>
-              <div className="add-sec-btn"><AddAlt20 id="create-secret-button" className={this.getSecretButtonCSSID()} onClick={() => { this.toggleCreateDialog() }}/></div>
-            </div>
-
-            <div className="row">
               <div className="help-icon" id="serviceaccount-tooltip">
-                <TooltipIcon tooltipText="The service account under which to run the pipeline run. The service account needs to be patched with secrets to access both git and docker.">
+                <TooltipIcon tooltipText="The service account under which to run the pipeline run. The service account needs to be patched with secrets to access both the Git repository and the Docker registry.">
                   <Infomation />
                 </TooltipIcon>
               </div>

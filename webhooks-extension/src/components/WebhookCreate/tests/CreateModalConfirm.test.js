@@ -105,7 +105,7 @@ describe('create secret', () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     jest.spyOn(API, 'createSecret').mockImplementation((request) => {
-      const expectRequest = { name: 'new-secret-foo', namespace: 'istio-system', accesstoken: '1234567890bar' };
+      const expectRequest = { name: 'new-secret-foo', accesstoken: '1234567890bar' };
       expect(request).toStrictEqual(expectRequest);
       return Promise.resolve({});
     });

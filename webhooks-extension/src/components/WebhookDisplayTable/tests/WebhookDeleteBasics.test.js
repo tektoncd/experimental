@@ -54,7 +54,7 @@ const webhooks = [
 
 it('should show a delete button on webhook load', async () => {
   jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
   expect(queryByTestId('webhook-notification')).toBeNull();
   await waitForElement(() => getByText('first test webhook'));
   const foundDeleteButton = document.getElementById('delete-btn');
@@ -63,7 +63,7 @@ it('should show a delete button on webhook load', async () => {
 
 it('should hide the delete modal on cancel click', async () => {
   jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} />);
+  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
   expect(queryByTestId('webhook-notification')).toBeNull();
   await waitForElement(() => getByText('first test webhook'));
   await waitForElement(() => getByText('second test webhook'));

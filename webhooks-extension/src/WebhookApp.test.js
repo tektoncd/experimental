@@ -12,11 +12,17 @@ limitations under the License.
 */
 
 import React from 'react';
+import { Provider } from 'react-redux';
+import configureStore from 'redux-mock-store';
+import thunk from 'redux-thunk';
 import { waitForElement, cleanup, fireEvent } from 'react-testing-library';
 import WebhookApp from './WebhookApp'
 import * as API from './api';
 import { renderWithRouter } from './test/utils/test'
 import 'react-testing-library/cleanup-after-each';
+
+const middleware = [thunk];
+const mockStore = configureStore(middleware);
 
 global.scrollTo = jest.fn();
 
@@ -28,6 +34,30 @@ beforeEach(() => {
 afterEach(() => {
   jest.clearAllMocks()
   cleanup()
+});
+
+const namespaces = {
+  byName: {
+    default: {
+      metadata: {
+        name: 'default',
+        uid: '32b35d3b-6ce1-11e9-af21-025000000001',
+      },
+      spec: {
+        finalizers: ['kubernetes']
+      },
+      status: {
+        phase: 'Active'
+      }
+    }
+  },
+  errorMessage: null,
+  isFetching: false,
+  selected: 'default'
+};
+
+let store = mockStore({
+  namespaces
 });
 
 function fakeDeleteWebhooksSuccess() {
@@ -141,7 +171,7 @@ const webhooks = [
     name: 'first test webhook',
     gitrepositoryurl: 'repo1',
     pipeline: 'pipeline1',
-    namespace: 'namespace1'
+    namespace: 'default'
   }
 ];
 
@@ -150,7 +180,13 @@ it('change in components after last webhook deleted', async () => {
   let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
   let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
 
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookApp match={{}} />);
+  const selectors = {getSelectedNamespace: jest.fn(() => "default")};
+
+  const { getByText, queryByTestId } = renderWithRouter(
+    <Provider store={store}>
+      <WebhookApp match={{}} namespace="default" selectors={selectors}/>
+    </Provider>);
+
 
   await waitForElement(() => getByText('first test webhook'));
   expect(queryByTestId('table-container')).not.toBeNull();

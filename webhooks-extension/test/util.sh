@@ -175,7 +175,7 @@ function install_webhooks_extension() {
   fi 
   namespace=$1
   docker login
-  npm install
+  npm ci
   npm rebuild node-sass
   npm run build_ko
   dep ensure -v
