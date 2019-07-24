@@ -48,13 +48,9 @@ func dummyRestfulResponse(httpWriter http.ResponseWriter) *restful.Response {
 	result.SetRequestAccepts(restful.MIME_JSON)
 	return result
 }
-
-func dummyRestfulRequest(httpReq *http.Request, namespace string, name string) *restful.Request {
+func dummyRestfulRequest(httpReq *http.Request, name string) *restful.Request {
 	restfulReq := restful.NewRequest(httpReq)
 	params := restfulReq.PathParameters()
-	if namespace != "" {
-		params["namespace"] = namespace
-	}
 	if name != "" {
 		params["name"] = name
 	}

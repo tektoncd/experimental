@@ -34,6 +34,9 @@ import (
 
 var modifyingConfigMapLock sync.Mutex
 
+/* Currently Webhooks (GitHubSource must exist in the install namespace only - as must the ConfigMap)
+This means that any credentials must also exist in the install namespace. */
+
 // Creates a webhook for a given repository and populates (creating if doesn't yet exist) a ConfigMap storing this information
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
 	modifyingConfigMapLock.Lock()
@@ -70,7 +73,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 
 	namespace := webhook.Namespace
 	if namespace == "" {
-		err := errors.New("namespace is required, but none was given")
+		err := errors.New("a namespace for creating a webhook is required, but none was given")
 		logging.Log.Errorf("error: %s.", err.Error())
 		RespondError(response, err, http.StatusBadRequest)
 		return

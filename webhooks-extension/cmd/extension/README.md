@@ -104,9 +104,9 @@ Deletes the GithubSource (therefore the webhook from the repository) and optiona
 The ConfigMap used to maintain a list of configured webhooks to Pipelines is also updated.
 
 
-DELETE /webhooks/credentials/<credential-name>?namespace=x
+DELETE /webhooks/credentials/<credential-name>
 
-Deletes credential 'credential-name' from namespace x
+Deletes credential 'credential-name' from the install namespace
 Returns HTTP code 201 if the credential was deleted successfully
 Returns HTTP code 404 if the credential wasn't found
 Returns HTTP code 500 if any other errors occurred
