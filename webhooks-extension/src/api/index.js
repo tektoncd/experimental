@@ -81,11 +81,11 @@ export function getServiceAccounts(namespace) {
   return get(uri);
 }
 
-export function deleteWebhooks(id, namespace, deleteRuns) {
+export function deleteWebhooks(id, namespace, repo, deleteRuns) {
   let deleteRunsQuery = ""
   if (deleteRuns) {
     deleteRunsQuery = "&deletepipelineruns=true";
   }
-  const uri = `${apiRoot}/webhooks/${id}?namespace=${namespace}${deleteRunsQuery}`;
+  const uri = `${apiRoot}/webhooks/${id}?namespace=${namespace}&repository=${repo}${deleteRunsQuery}`;
   return deleteRequest(uri);
 }
