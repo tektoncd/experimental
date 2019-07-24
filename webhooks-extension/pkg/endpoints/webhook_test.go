@@ -101,7 +101,7 @@ func TestGitHubSource(t *testing.T) {
 	createWebhook(sources[0], r)
 
 	// Check the first entry (check with k8s)
-	testGitHubSource(sources[0].Name, "owner/repo", "", installNs, r, t)
+	testGitHubSource(sources[0].Name, "owner/repo", "", r, t)
 
 	// Check the first entry (check with GET all webhooks)
 	testGetAllWebhooks(sources[:1], r, t)
@@ -110,7 +110,7 @@ func TestGitHubSource(t *testing.T) {
 	createWebhook(sources[1], r)
 
 	// Check the second entry (check with k8s)
-	testGitHubSource(sources[1].Name, "owner2/repo2", "https://github.company.com/api/v3/", installNs, r, t)
+	testGitHubSource(sources[1].Name, "owner2/repo2", "https://github.company.com/api/v3/", r, t)
 
 	// Create the third entry source specifies no docker registry so should use env var
 	createWebhook(sources[2], r)
@@ -142,7 +142,7 @@ func testDockerRegSet(r *Resource, t *testing.T) {
 
 func getEnvDefaults(r *Resource, t *testing.T) EnvDefaults {
 	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhooks/defaults", nil)
-	req := dummyRestfulRequest(httpReq, "", "")
+	req := dummyRestfulRequest(httpReq, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.getDefaults(req, resp)
@@ -157,9 +157,14 @@ func getEnvDefaults(r *Resource, t *testing.T) EnvDefaults {
 
 func createWebhook(webhook webhook, r *Resource) (response *restful.Response) {
 	// Create the first entry
-	b, _ := json.Marshal(webhook)
+	b, err := json.Marshal(webhook)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Marshal error when creating webhook, data is: %s, error is: %s", b, err))
+		return nil
+	}
+
 	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8080/webhooks/", bytes.NewBuffer(b))
-	req := dummyRestfulRequest(httpReq, "", "")
+	req := dummyRestfulRequest(httpReq, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.createWebhook(req, resp)
@@ -167,10 +172,10 @@ func createWebhook(webhook webhook, r *Resource) (response *restful.Response) {
 }
 
 // Check a webhook's github source against k8s
-func testGitHubSource(expectedName string, expectedOwnerAndRepo string, expectedGitHubAPIURL string, namespace string, r *Resource, t *testing.T) {
-	ghSrc, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(namespace).Get(expectedName, metav1.GetOptions{})
+func testGitHubSource(expectedName, expectedOwnerAndRepo, expectedGitHubAPIURL string, r *Resource, t *testing.T) {
+	ghSrc, err := r.EventSrcClient.SourcesV1alpha1().GitHubSources(r.Defaults.Namespace).Get(expectedName, metav1.GetOptions{})
 	if err != nil {
-		t.Errorf("GitHubSource %s was not found in namespace %s: %s", expectedName, namespace, err.Error())
+		t.Errorf("GitHubSource %s was not found: %s", expectedName, err.Error())
 	}
 	realOwnerAndRepo := ghSrc.Spec.OwnerAndRepository
 	if expectedOwnerAndRepo != realOwnerAndRepo {
@@ -185,7 +190,7 @@ func testGitHubSource(expectedName string, expectedOwnerAndRepo string, expected
 // Check the webhooks against the GET all webhooks
 func testGetAllWebhooks(expectedWebhooks []webhook, r *Resource, t *testing.T) {
 	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8080/webhooks/", nil)
-	req := dummyRestfulRequest(httpReq, "", "")
+	req := dummyRestfulRequest(httpReq, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.getAllWebhooks(req, resp)
@@ -523,7 +528,6 @@ func testGithubSourceReleaseNameTooLong(r *Resource, t *testing.T) {
 
 	// Create the first entry
 	resp := createWebhook(data, r)
-
 	if resp.StatusCode() != http.StatusBadRequest {
 		t.Error("Expected a bad request when the release name exceeded 63 chars")
 	}
@@ -598,7 +602,6 @@ func TestMultipleDeletesCorrectData(t *testing.T) {
 }
 
 func TestMultipleCreatesCorrectData(t *testing.T) {
-	t.Skip("BROKEN - NEEDS FIXING - Commented out for PR166")
 	t.Log("in TestMultipleCreatesCorrectData")
 	r := setUpServer()
 
@@ -617,7 +620,7 @@ func TestMultipleCreatesCorrectData(t *testing.T) {
 			hooks = append(hooks, webhook{
 				Name:             fmt.Sprintf("testMultipleCreatesCorrectDataroutine-hook-run-%d-loop-%d", i, j),
 				Namespace:        installNs,
-				GitRepositoryURL: fmt.Sprintf("https://a.com/b/c-%d", j),
+				GitRepositoryURL: fmt.Sprintf("https://a.com/b/c-%d-%d", i, j),
 				AccessTokenRef:   "token1",
 				Pipeline:         "pipeline1",
 			})
@@ -656,7 +659,6 @@ func TestMultipleCreatesCorrectData(t *testing.T) {
 }
 
 func TestCreateDeleteCorrectData(t *testing.T) {
-	t.Skip("BROKEN - NEEDS FIXING - Commented out for PR166")
 	t.Log("in TestCreateDeleteCorrectData")
 	r := setUpServer()
 
@@ -669,16 +671,16 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 	for i := 0; i < numTimes; i++ {
 		theWebhook1 := webhook{
 			Name:             fmt.Sprintf("routine1createhook-%d", i),
-			Namespace:        installNs,
-			GitRepositoryURL: "https://a.com/b/c",
+			GitRepositoryURL: fmt.Sprintf("https://a.com/b/c-%d", i),
+			Namespace:        r.Defaults.Namespace,
 			AccessTokenRef:   "token1",
 			Pipeline:         "pipeline1",
 		}
 
 		theWebhook2 := webhook{
 			Name:             fmt.Sprintf("routine2createhook-%d", i),
-			Namespace:        installNs,
-			GitRepositoryURL: "https://b.com/c/d",
+			GitRepositoryURL: fmt.Sprintf("https://b.com/c/d-%d", i),
+			Namespace:        r.Defaults.Namespace,
 			AccessTokenRef:   "token1",
 			Pipeline:         "pipeline1",
 		}
@@ -687,7 +689,7 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 		var secondResponse *restful.Response
 		var deleteResponse *http.Response
 
-		deleteRequest, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+installNs, nil)
+		deleteRequest, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+theWebhook1.Name+"?namespace="+r.Defaults.Namespace, nil)
 
 		var wg sync.WaitGroup
 		wg.Add(2)
@@ -706,17 +708,20 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 		wg.Wait()
 
 		if firstResponse.StatusCode() != http.StatusCreated {
-			t.Errorf("Iteration %d, didn't create the first webhook OK for the safe multiple request creation and deletion test, response: %d", i, firstResponse.StatusCode())
+			t.Errorf("Iteration %d, didn't create the first webhook OK for the safe multiple request creation and deletion test, response: %d, message: %v",
+				i, firstResponse.StatusCode(), firstResponse)
 			t.Fail()
 		}
 
 		if secondResponse.StatusCode() != http.StatusCreated {
-			t.Errorf("Iteration %d, didn't create the second webhook OK for the safe multiple request creation and deletion test, response: %d", i, secondResponse.StatusCode())
+			t.Errorf("Iteration %d, didn't create the second webhook OK for the safe multiple request creation and deletion test, response: %d, %v",
+				i, secondResponse.StatusCode(), secondResponse)
 			t.Fail()
 		}
 
 		if deleteResponse.StatusCode != http.StatusNoContent {
-			t.Errorf("Iteration %d, didn't delete the first webhook OK for the safe multiple request creation and deletion test, response: %d", i, deleteResponse.StatusCode)
+			t.Errorf("Iteration %d, didn't delete the first webhook OK for the safe multiple request creation and deletion test, response: %d, %v",
+				i, deleteResponse.StatusCode, deleteResponse)
 			t.Fail()
 		}
 
@@ -726,7 +731,7 @@ func TestCreateDeleteCorrectData(t *testing.T) {
 
 		configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
 		if err != nil {
-			t.Error("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was present")
+			t.Errorf("Uh oh, we got an error looking up the ConfigMap for webhooks to check if our entry was present: %s", err.Error())
 		}
 
 		contents := string(configMap.BinaryData["GitHubSource"])

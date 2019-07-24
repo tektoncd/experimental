@@ -29,7 +29,6 @@ import (
 // 'credentials' from the webhooks-extension's point of view, are access tokens. That's the only sort we handle right now.
 type credential struct {
 	Name        string `json:"name"`
-	Namespace   string `json:"namespace,omitempty"`
 	AccessToken string `json:"accesstoken"`
 	SecretToken string `json:"secrettoken,omitempty"`
 }
@@ -55,7 +54,7 @@ func (r Resource) createCredential(request *restful.Request, response *restful.R
 		return
 	}
 
-	secret := credentialToSecret(cred, r.Defaults.Namespace, response)
+	secret := r.credentialToSecret(cred, response)
 
 	logging.Log.Debugf("Creating credential %s in namespace %s", cred.Name, r.Defaults.Namespace)
 
@@ -69,9 +68,10 @@ func (r Resource) createCredential(request *restful.Request, response *restful.R
 
 func (r Resource) deleteCredential(request *restful.Request, response *restful.Response) {
 	credName := request.PathParameter("name")
-	if !r.verifySecretExists(credName, r.Defaults.Namespace, response) {
+	if !r.verifySecretExists(credName, response) {
 		return
 	}
+	logging.Log.Debugf("Deleting credential %s", credName)
 	err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Delete(credName, &metav1.DeleteOptions{})
 	if err != nil {
 		errorMessage := fmt.Sprintf("error deleting secret from K8sClient: %s.", err.Error())
@@ -111,8 +111,8 @@ func (r Resource) getAllCredentials(request *restful.Request, response *restful.
 }
 
 // Sends error message 404 if the secret does not exist in the resource K8sClient
-func (r Resource) verifySecretExists(secretName string, namespace string, response *restful.Response) bool {
-	_, err := r.K8sClient.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
+func (r Resource) verifySecretExists(secretName string, response *restful.Response) bool {
+	_, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Get(secretName, metav1.GetOptions{})
 	if err != nil {
 		errorMessage := fmt.Sprintf("error getting secret from K8sClient: '%s'.", secretName)
 		utils.RespondMessageAndLogError(response, err, errorMessage, http.StatusNotFound)
@@ -122,11 +122,11 @@ func (r Resource) verifySecretExists(secretName string, namespace string, respon
 }
 
 // Convert credential struct into K8s secret struct
-func credentialToSecret(cred credential, namespace string, response *restful.Response) *corev1.Secret {
+func (r Resource) credentialToSecret(cred credential, response *restful.Response) *corev1.Secret {
 	// Create new secret struct
 	secret := corev1.Secret{}
 	secret.Type = corev1.SecretTypeOpaque
-	secret.SetNamespace(namespace)
+	secret.SetNamespace(r.Defaults.Namespace)
 	secret.SetName(cred.Name)
 	secret.Data = make(map[string][]byte)
 	secret.Data["accessToken"] = []byte(cred.AccessToken)
@@ -168,7 +168,6 @@ func secretToCredential(secret *corev1.Secret, mask bool) credential {
 	if secret.Data["accessToken"] != nil {
 		cred = credential{
 			Name:        secret.GetName(),
-			Namespace:   secret.Namespace,
 			AccessToken: string(secret.Data["accessToken"]),
 			SecretToken: string(secret.Data["secretToken"]),
 		}

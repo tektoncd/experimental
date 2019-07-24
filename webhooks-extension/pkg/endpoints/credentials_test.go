@@ -18,69 +18,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestCreateBadAccessToken(t *testing.T) {
 	r := dummyResource()
-	namespace := "default"
-	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 	badAccessToken := credential{
-		Name:      "badToken",
-		Namespace: namespace,
+		Name: "badToken",
 	}
 	expectedError := fmt.Sprintf("error: AccessToken must be specified")
-	createAndCheckCredential(namespace, badAccessToken, expectedError, r, t)
+	createAndCheckCredential(badAccessToken, expectedError, r, t)
 
 	// Verify no credentials have been created
-	checkCredentials(namespace, []credential{}, "", r, t)
-}
-
-func TestCreateTokenInNamespaceThatDoesNotExist(t *testing.T) {
-	t.Skip("BROKEN - NEEDS FIXING - Commented out for PR166")
-	r := dummyResource()
-	namespace := "iDoNotExist"
-
-	accessToken := credential{
-		Name:        "wrongPlaceToken",
-		Namespace:   namespace,
-		AccessToken: "aLongStringOfh3x",
-	}
-	expectedError := fmt.Sprintf("error: namespace does not exist: '%s'", namespace)
-	createAndCheckCredential(namespace, accessToken, expectedError, r, t)
-
-	// Verify no credentials have been created
-	checkCredentials(namespace, []credential{}, "", r, t)
+	checkCredentials([]credential{}, "", r, t)
 }
 
 func TestAccessTokenWithSecret(t *testing.T) {
 	r := dummyResource()
-	namespace := "default"
-	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 
 	accessTokenWithSecret := credential{
 		Name:        "accesstoken-with-secret",
 		AccessToken: "alongstringofcharacters",
-		Namespace:   namespace,
 		SecretToken: "thisIsMySecretToken",
 	}
-	createAndCheckCredential(namespace, accessTokenWithSecret, "", r, t)
+	createAndCheckCredential(accessTokenWithSecret, "", r, t)
 }
 
 // Should be "default" which is r.dummyResource.namespace's value
 
 func TestAccessTokenWithNoNamespaceUsesDefault(t *testing.T) {
-	t.Skip("BROKEN - NEEDS FIXING - Commented out for PR166")
 	r := dummyResource()
-	namespace := "b-namespace"
-	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 
 	accessTokenNoNamespace := credential{
 		Name:        "accesstoken",
@@ -91,13 +63,13 @@ func TestAccessTokenWithNoNamespaceUsesDefault(t *testing.T) {
 	jsonBody, _ := json.Marshal(accessTokenNoNamespace)
 	t.Logf("json body for create cred test with no namespace: %s", jsonBody)
 	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(jsonBody))
-	req := dummyRestfulRequest(httpReq, namespace, "")
+	req := dummyRestfulRequest(httpReq, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.createCredential(req, resp)
 
-	httpReq = dummyHTTPRequest("GET", "http://wwww.dummy.com:8383/webhooks/credentials?namespace=b-namespace", bytes.NewBuffer(nil))
-	req = dummyRestfulRequest(httpReq, namespace, "")
+	httpReq = dummyHTTPRequest("GET", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(nil))
+	req = dummyRestfulRequest(httpReq, "")
 	httpWriter = httptest.NewRecorder()
 	resp = dummyRestfulResponse(httpWriter)
 	r.getAllCredentials(req, resp)
@@ -115,37 +87,31 @@ func TestAccessTokenWithNoNamespaceUsesDefault(t *testing.T) {
 		t.Fatalf("Result came back with name %s but expected %s", result[0].Name, accessTokenNoNamespace.Name)
 	}
 
-	if result[0].Namespace != r.Defaults.Namespace {
-		t.Fatalf("Result came back with namespace %s but expected %s", result[0].Name, r.Defaults.Namespace)
-	}
-	// Finally check that result has a SecretToken set
-	if strings.Count(result[0].SecretToken, "") < 20 {
-		t.Fatalf("Result came back with less than twenty chars of secret token: '%s'", result[0].SecretToken)
+	// Finally check that result has a SecretToken set and it's starred out
+	if result[0].SecretToken != "********" {
+		t.Fatalf("Result came back with something other than eight chars for the secret token: '%s'", result[0].SecretToken)
 	}
 
 }
 
 func TetAccessTokenWithNoSecret(t *testing.T) {
 	r := dummyResource()
-	namespace := "b-namespace"
-	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 
 	accessTokenNoSecret := credential{
 		Name:        "accesstoken-nosecret",
-		Namespace:   namespace,
 		AccessToken: "anotherlongstringofcharacters",
 	}
 
 	jsonBody, _ := json.Marshal(accessTokenNoSecret)
 	t.Logf("json body for create cred test: %s", jsonBody)
 	httpReq := dummyHTTPRequest("POST", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(jsonBody))
-	req := dummyRestfulRequest(httpReq, namespace, "")
+	req := dummyRestfulRequest(httpReq, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.createCredential(req, resp)
 
-	httpReq = dummyHTTPRequest("GET", "http://wwww.dummy.com:8383/webhooks/credentials?namespace=b-namespace", bytes.NewBuffer(nil))
-	req = dummyRestfulRequest(httpReq, namespace, "")
+	httpReq = dummyHTTPRequest("GET", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(nil))
+	req = dummyRestfulRequest(httpReq, "")
 	httpWriter = httptest.NewRecorder()
 	resp = dummyRestfulResponse(httpWriter)
 	r.getAllCredentials(req, resp)
@@ -170,36 +136,31 @@ func TetAccessTokenWithNoSecret(t *testing.T) {
 }
 
 func TestDeleteCredential(t *testing.T) {
-	t.Skip("BROKEN - NEEDS FIXING - Commented out for PR166")
 	r := dummyResource()
-	namespace := "ns2"
-	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 	accessTokenToDelete := credential{
 		Name:        "accesstokenToDelete",
-		Namespace:   namespace,
 		AccessToken: "sdkfhighregusfbliusbbbwhfwiehw8hwefhw938hf497fhw97b47",
 		SecretToken: "provideASecretTokenSoThatCreateAndCheckCredCanDoDeepEquals",
 	}
-	createAndCheckCredential(namespace, accessTokenToDelete, "", r, t)
+	createAndCheckCredential(accessTokenToDelete, "", r, t)
 
-	httpReq := dummyHTTPRequest("DELETE", "http://wwww.dummy.com:8383/webhooks/credentials/accesstokenToDelete?namespace=ns2", bytes.NewBuffer(nil))
-	req := dummyRestfulRequest(httpReq, namespace, "accesstokenToDelete")
+	httpReq := dummyHTTPRequest("DELETE", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(nil))
+
+	req := dummyRestfulRequest(httpReq, "accesstokenToDelete")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.deleteCredential(req, resp)
 
-	creds := r.getK8sCredentials(namespace)
+	creds := r.getK8sCredentials()
 	if len(creds) > 0 {
-		t.Fatalf("Namespace %s should contain no credentials, but we found %+v", namespace, creds)
+		t.Fatalf("Namespace %s should contain no credentials, but we found %+v", r.Defaults.Namespace, creds)
 	}
 }
 
 func TestDeleteACredentialThatDoesNotExist(t *testing.T) {
 	r := dummyResource()
-	namespace := "ns3"
-	r.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
-	httpReq := dummyHTTPRequest("DELETE", "http://wwww.dummy.com:8383/webhooks/credentials/accesstokenToDelete?namespace=ns3", bytes.NewBuffer(nil))
-	req := dummyRestfulRequest(httpReq, namespace, "accesstokenToDelete")
+	httpReq := dummyHTTPRequest("DELETE", "http://wwww.dummy.com:8383/webhooks/credentials", bytes.NewBuffer(nil))
+	req := dummyRestfulRequest(httpReq, "accesstokenToDelete")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.deleteCredential(req, resp)
@@ -224,7 +185,7 @@ func TestRandomStringGenerator(t *testing.T) {
 	}
 }
 
-func createAndCheckCredential(namespace string, cred credential, expectError string, r *Resource, t *testing.T) {
+func createAndCheckCredential(cred credential, expectError string, r *Resource, t *testing.T) {
 	t.Logf("CREATE credential %+v", cred)
 
 	// Create dummy rest api request and response
@@ -232,7 +193,7 @@ func createAndCheckCredential(namespace string, cred credential, expectError str
 	t.Logf("json body for create cred test: %s", jsonBody)
 	url := "http://wwww.dummy.com:8383/webhooks/credentials"
 	httpReq := dummyHTTPRequest("POST", url, bytes.NewBuffer(jsonBody))
-	req := dummyRestfulRequest(httpReq, namespace, "")
+	req := dummyRestfulRequest(httpReq, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 	r.createCredential(req, resp)
@@ -242,12 +203,12 @@ func createAndCheckCredential(namespace string, cred credential, expectError str
 		resultCred := credential{}
 		checkResponseError(httpWriter.Body, &resultCred, expectError, t)
 	} else {
-		compareCredentials(r.getK8sCredential(namespace, cred.Name), cred, t)
+		compareCredentials(r.getK8sCredential(cred.Name), cred, t)
 	}
 }
 
-func (r Resource) getK8sCredentials(namespace string) (credentials []credential) {
-	secrets, err := r.K8sClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
+func (r Resource) getK8sCredentials() (credentials []credential) {
+	secrets, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return
 	}
@@ -257,8 +218,8 @@ func (r Resource) getK8sCredentials(namespace string) (credentials []credential)
 	return credentials
 }
 
-func (r Resource) getK8sCredential(namespace string, name string) (credential credential) {
-	secret, err := r.K8sClient.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
+func (r Resource) getK8sCredential(name string) (credential credential) {
+	secret, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return
 	}
@@ -294,12 +255,11 @@ func checkResponseError(body *bytes.Buffer, result interface{}, expectError stri
 	return true
 }
 
-func checkCredentials(namespace string, expectCreds []credential, expectError string, r *Resource, t *testing.T) {
+func checkCredentials(expectCreds []credential, expectError string, r *Resource, t *testing.T) {
 	t.Logf("READ all credentials. Expecting: %+v", expectCreds)
 	// Create dummy REST API request and response
-	url := fmt.Sprintf("http://wwww.dummy.com:8383/v1/webhooks/credentials?namespace=%s", namespace)
-	httpReq := dummyHTTPRequest("GET", url, nil)
-	req := dummyRestfulRequest(httpReq, namespace, "")
+	httpReq := dummyHTTPRequest("GET", "http://wwww.dummy.com:8383/v1/webhooks/credentials", nil)
+	req := dummyRestfulRequest(httpReq, "")
 	httpWriter := httptest.NewRecorder()
 	resp := dummyRestfulResponse(httpWriter)
 
@@ -331,7 +291,7 @@ func checkCredentials(namespace string, expectCreds []credential, expectError st
 	}
 
 	// Verify against K8s client
-	testCredentials(r.getK8sCredentials(namespace), expectCreds, t)
+	testCredentials(r.getK8sCredentials(), expectCreds, t)
 	t.Logf("Done in READ all credentials. Expecting: %+v", expectCreds)
 }
 
