@@ -21,7 +21,7 @@
 # Use the flags --build-tests, --unit-tests and --integration-tests
 # to run a specific set of tests.
 
-source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
+source $(dirname $0)/../vendor/github.com/a-roberts/plumbing/scripts/presubmit-tests.sh
 
 IS_TEKTONCD_LISTENER_ONLY=0
 IS_WEBHOOKS_EXTENSION_ONLY=0
