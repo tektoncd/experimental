@@ -9,18 +9,24 @@ spec:
       - name: pull-request
         type: pullRequest
     params:
-      - name: pipelinerun
-        description: The name of the pipelinerun to be monitored
+      - name: pipelineruns
+        description: The name of the pipelineruns (and their namespace) to be monitored in format pipelinerun1:namespace1, pipelinerun2:namespace2
         default: default pipelinerun
-      - name: pipelinerunnamespace
-        description: The namespace of the pipelinerun to be monitored
-        default: default namespace
       - name: commentsuccess
         description: The text of the success comment
-        default: Pipeline Succeeded
+        default: "Success"
       - name: commentfailure
         description: The text of the failure comment
-        default: Pipeline Failed
+        default: "Failed"
+      - name: dashboard-url
+        description: The URL to the pipelineruns page of the dashboard
+        default: "http://localhost:9097/"
+      # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
+      # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
+      # the github status URL to set the status into pending and use this secret to during that request.  
+      - name: secret
+        description: The secret containing the access token to access github
+      # Up to here
   outputs:
     resources:
       - name: pull-request
@@ -29,41 +35,111 @@ spec:
   - name: check
     image: maiwj/kubernetes-python-client
     env:
-      - name: PIPELINERUN
-        value: ${inputs.params.pipelinerun}
+      - name: PIPELINERUNS
+        value: ${inputs.params.pipelineruns}
       - name: COMMENT_SUCCESS
         value: ${inputs.params.commentsuccess}
       - name: COMMENT_FAILURE
         value: ${inputs.params.commentfailure}
-      - name: NAMESPACE
-        value: ${inputs.params.pipelinerunnamespace}
+      - name: URL
+        value: ${inputs.params.dashboard-url}
+      # This can be deleted after any fix to the above mentioned pending status change
+      - name: GITHUBTOKEN
+        valueFrom:
+          secretKeyRef:
+            key: accessToken
+            name: ${inputs.params.secret}
+      # Up to here
     command: ["/bin/bash"]
     args:
     - -ce
     - |
       set -e
       cat <<EOF | python
-      import time, os, json
+      import time, os, json, requests, pprint
       from kubernetes import client, config
       config.load_incluster_config()
       api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
-      comment = "$COMMENT_FAILURE"
-      i = range(100)
+      gitPRcontext = "Tekton"
+      gitPRurl = ""
+      # This is the code thats puts the pullrequest into pending status, this is code to rip out later if there
+      # is a fix to the above mentioned update status to pending issue.
+      with open("/workspace/pull-request/github/pr.json") as fp:
+        rawdata = json.load(fp)
+        statusurl = rawdata['statuses_url']
+      pendingData = {
+        "state": "pending",
+        "description": "pipelines in progress",
+        "target_url": "",
+        "context": "Tekton"
+      }
+      print("Setting status to pending with URL : " + statusurl)
+      resp = requests.post(statusurl, json.dumps(pendingData), headers = {'Content-Type': 'application/json', 'Authorization': "Bearer $GITHUBTOKEN"})
+      print(resp)
+      # End of code to replace
+      if not "$URL".startswith("http"):
+        pipelineRunURLPrefix = "http://" + "$URL"
+      else:
+        pipelineRunURLPrefix = "$URL"
+      runsToCheck = "$PIPELINERUNS".split(",")
+      runsPassed = []
+      runsFailed = []
+      runsIncomplete = []
+      failed = 0
+      i = range(180)
       for x in i:
           time.sleep( 10 )
-          output = api_instance.get_namespaced_custom_object("tekton.dev", "v1alpha1", "$NAMESPACE", "pipelineruns", "$PIPELINERUN")
-          if output["status"]["conditions"][0]["status"] == u'True' and output["status"]["conditions"][0]["type"] == u'Succeeded':
-              comment = "$COMMENT_SUCCESS"
-              break
-          if output["status"]["conditions"][0]["status"] == u'False' and output["status"]["conditions"][0]["type"] == u'Succeeded':
-              for y in output["status"]["taskRuns"]:
-                  if output["status"]["taskRuns"][y]["status"]["conditions"][0]["status"] == u'False' and \
-                  output["status"]["taskRuns"][y]["status"]["conditions"][0]["type"] == u'Succeeded': 
-                      comment = comment + ": " + output["status"]["taskRuns"][y]["status"]["conditions"][0]["message"]
-              break
+          if len(runsToCheck) > 0:
+            for entry in runsToCheck:
+              pr, namespace, pipeline = entry.split(":")
+              pr = pr.strip()
+              namespace = namespace.strip()
+              pipeline = pipeline.strip()
+              link = pipelineRunURLPrefix + "/#namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
+              print("Checking pipelinerun " + pr + " in namespace " + namespace)
+              output = api_instance.get_namespaced_custom_object("tekton.dev", "v1alpha1", namespace, "pipelineruns", pr)
+              if output["status"]["conditions"][0]["status"] == u'True' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+                print("Success - pipelinerun " + pr + " in namespace " + namespace)
+                runsToCheck.remove(entry)
+                runsPassed.append("[**$COMMENT_SUCCESS**](" + link + ") | " + pipeline + " | " +  pr + " | " + namespace)
+              if output["status"]["conditions"][0]["status"] == u'False' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+                failed =+ 1
+                print("Failed - pipelinerun " + pr + " in namespace " + namespace)
+                runsToCheck.remove(entry)
+                runsFailed.append("[**$COMMENT_FAILURE**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
+          else:
+            break
+      gitPRdescription = "All pipelines succeeded!"
+      gitPRcode = "success"
+      if failed > 0:
+        gitPRdescription = str(failed) + " pipeline(s) failed!"
+        gitPRcode = "failure"
+      if len(runsToCheck) > 0:
+        print("Some pipelineruns had not completed when the monitor reached its timeout")
+        gitPRdescription = "timed out monitoring pipeline runs"
+        gitPRcode = "error"
+        for entry in runsToCheck:
+          pr, namespace, pipeline = entry.split(":")
+          pr = pr.strip()
+          namespace = namespace.strip()
+          pipeline = pipeline.strip()
+          print("Still Running - pipelinerun " + pr + " in namespace " + namespace)
+          link = pipelineRunURLPrefix + "/#namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
+          runsIncomplete.append("[**??????**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
+      results = runsPassed + runsFailed + runsIncomplete
+      comment = ("## Tekton Status Report \n\n"
+                 "Status | Pipeline | PipelineRun | Namespace\n"
+                 ":----- | :------- | :--------------- | :--------\n"
+                 ) + "\n".join(results)
+      if not "$URL".startswith("http"):
+        detailsURL = "http://" + "$URL" + "/#/pipelineruns"
+      else:
+        detailsURL = "$URL" + "/#/pipelineruns"
+      print("Set details url to: " + detailsURL)
       with open("/workspace/pull-request/pr.json", 'r') as pr_file:
           data = json.load(pr_file)
           data['Comments'].append(dict(text=comment))
+          data['Statuses'].append(dict(code=gitPRcode, description=gitPRdescription, id=gitPRcontext, url=detailsURL))
       os.rename("/workspace/pull-request/pr.json", "/workspace/pull-request/pr.json.backup")
       with open("/workspace/pull-request/pr.json", 'w') as pr_file:
           json.dump(data, pr_file)

@@ -115,9 +115,10 @@ export class WebhookDisplayTable extends Component {
 
     deletePromises = rowsToUse.map(function(rowIDObject) {
       let id = rowIDObject.id;
-      let theName = id.substring(0, id.lastIndexOf('|'));
-      let namespace = id.substring(id.lastIndexOf('|') + 1, id.length);
-      let response = deleteWebhooks(theName, namespace, deleteRuns);
+      let theName = id.substring(0, id.indexOf('|'));
+      let namespace = id.substring(id.indexOf('|') + 1, id.lastIndexOf('|'));
+      let repository = id.substring(id.lastIndexOf('|') + 1, id.length);
+      let response = deleteWebhooks(theName, namespace, repository, deleteRuns);
       // Potentially needs to change or be configurable based on how many webhooks there are
       let deletionTimeoutInMs = 500;
       let theTimeout = new Promise((resolve, reject) => {
@@ -200,7 +201,7 @@ export class WebhookDisplayTable extends Component {
         this.state.webhooks.forEach(function({ gitrepositoryurl, name, namespace, pipeline}) {
           if (selectedNamespace === ALL_NAMESPACES || namespace === selectedNamespace) {
             let webhook = {
-              id: name + "|" + namespace,
+              id: name + "|" + namespace + "|" + gitrepositoryurl,
               name,
               pipeline: pipeline,
               repository: gitrepositoryurl
@@ -317,7 +318,7 @@ export class WebhookDisplayTable extends Component {
                 <ul>
                   {this.state.userSelectedRows.map(row => {
                     const { id } = row;
-                    return <li key={id}>{id.substring(0, id.lastIndexOf('|'))}</li>;
+                    return <li key={id}>{id.substring(0, id.indexOf('|'))}</li>;
                   })}
                 </ul>
                 <fieldset>

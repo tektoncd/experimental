@@ -1,4 +1,3 @@
-# ------------------- Extension Service Account ----------------------- #
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -7,62 +6,154 @@ metadata:
   name: tekton-webhooks-extension
   namespace: tekton-pipelines
 ---
-# ------------------- Extension Role & Role Binding ------------------- #
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
   name: tekton-webhooks-extension-minimal
   namespace: tekton-pipelines
 rules:
-  - apiGroups: [""]
-    resources: ["serviceaccounts"]
-    verbs: ["get", "list", "patch", "update", "watch"]
-  - apiGroups: [""]
-    resources: ["pods", "services"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: [""]
-    resources: ["pods/log", "namespaces", "events"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["secrets", "configmaps"]
-    verbs: ["get", "list", "create", "delete", "update", "watch"]
-  - apiGroups: ["extensions", "apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: ["tekton.dev"]
-    resources: ["tasks", "clustertasks", "taskruns", "pipelines", "pipelineruns", "pipelineresources"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: ["tekton.dev"]
-    resources: ["taskruns/finalizers", "pipelineruns/finalizers"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: ["tekton.dev"]
-    resources: ["tasks/status", "clustertasks/status", "taskruns/status", "pipelines/status", "pipelineruns/status"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
-  - apiGroups: ["sources.eventing.knative.dev"]
-    resources: ["githubsources"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  - namespaces
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+  - update
+  - watch
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks
+  - clustertasks
+  - taskruns
+  - pipelines
+  - pipelineruns
+  - pipelineresources
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - taskruns/finalizers
+  - pipelineruns/finalizers
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks/status
+  - clustertasks/status
+  - taskruns/status
+  - pipelines/status
+  - pipelineruns/status
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - sources.eventing.knative.dev
+  resources:
+  - githubsources
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: tekton-webhooks-extension-minimal
-subjects:
-  - kind: ServiceAccount
-    name: tekton-webhooks-extension
-    namespace: tekton-pipelines
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: tekton-webhooks-extension-minimal
+subjects:
+- kind: ServiceAccount
+  name: tekton-webhooks-extension
+  namespace: tekton-pipelines
 ---
-# ------------------- Extension Deployment ------------------- #
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webhooks-extension
-  namespace: tekton-pipelines
   labels:
     app: webhooks-extension
+  name: webhooks-extension
 spec:
   replicas: 1
   selector:
@@ -74,81 +165,80 @@ spec:
         app: webhooks-extension
     spec:
       containers:
-        - name: webhooks-extension
-          image: "gcr.io/tekton-nightly/extension:latest"
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-          livenessProbe:
-            httpGet:
-              path: /liveness
-              port: 8080
-          readinessProbe:
-            httpGet:
-              path: /readiness
-              port: 8080
-          env:
-          - name: PORT
-            value: "8080"
-          - name: INSTALLED_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: DOCKER_REGISTRY_LOCATION
-            value: DOCKER_REPO
-          - name: WEB_RESOURCES_DIR
-            value: /var/run/ko
+      - env:
+        - name: PORT
+          value: "8080"
+        - name: INSTALLED_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: DOCKER_REGISTRY_LOCATION
+          value: DOCKER_REPO
+        - name: WEB_RESOURCES_DIR
+          value: web
+        image: "gcr.io/tekton-nightly/extension:latest"
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 8080
+        name: webhooks-extension
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8080
       serviceAccountName: tekton-webhooks-extension
+
 ---
-# ------------------- Extension Service ------------------- #
 apiVersion: v1
 kind: Service
 metadata:
-  name: webhooks-extension
-  namespace: tekton-pipelines
+  annotations:
+    tekton-dashboard-bundle-location: web/extension.29d61abd.js
+    tekton-dashboard-display-name: Webhooks
+    tekton-dashboard-endpoints: webhooks.web
   labels:
     app: webhooks-extension
     tekton-dashboard-extension: "true"
-  annotations:
-    tekton-dashboard-display-name: Webhooks
-    tekton-dashboard-endpoints: "webhooks.web"
-    tekton-dashboard-bundle-location: "web/extension.29d61abd.js"
+  name: webhooks-extension
 spec:
-  type: NodePort
   ports:
-    - port: 8080
-      targetPort: 8080
+  - port: 8080
+    targetPort: 8080
   selector:
     app: webhooks-extension
+  type: NodePort
+
 ---
-# ------------------- Sink Knative Service ------------------- #
 apiVersion: serving.knative.dev/v1alpha1
 kind: Service
 metadata:
-  name: webhooks-extension-sink
-  namespace: tekton-pipelines
   labels:
     app: webhooks-extension-sink
+  name: webhooks-extension-sink
 spec:
   template:
     spec:
       containers:
-      - image: "gcr.io/tekton-nightly/sink:latest"
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8080
-        livenessProbe:
-          httpGet:
-            path: /liveness
-        readinessProbe:
-          httpGet:
-            path: /readiness
-        env:
+      - env:
         - name: INSTALLED_NAMESPACE
           value: tekton-pipelines
         - name: SERVICEACCOUNT
           value: tekton-webhooks-extension
+        image: "gcr.io/tekton-nightly/sink:latest"
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /liveness
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /readiness
       serviceAccountName: tekton-webhooks-extension
+
 ---
 # Monitor the pipelinerun status and update the pull request
 apiVersion: tekton.dev/v1alpha1
@@ -173,7 +263,9 @@ spec:
       - name: dashboard-url
         description: The URL to the pipelineruns page of the dashboard
         default: "http://localhost:9097/"
-      # This can be deleted after pending status change
+      # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
+      # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
+      # the github status URL to set the status into pending and use this secret to during that request.  
       - name: secret
         description: The secret containing the access token to access github
       # Up to here
@@ -193,7 +285,7 @@ spec:
         value: ${inputs.params.commentfailure}
       - name: URL
         value: ${inputs.params.dashboard-url}
-      # This can be deleted after pending status change
+      # This can be deleted after any fix to the above mentioned pending status change
       - name: GITHUBTOKEN
         valueFrom:
           secretKeyRef:
@@ -212,7 +304,8 @@ spec:
       api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
       gitPRcontext = "Tekton"
       gitPRurl = ""
-      # Some code to rip out later to update status to pending
+      # This is the code thats puts the pullrequest into pending status, this is code to rip out later if there
+      # is a fix to the above mentioned update status to pending issue.
       with open("/workspace/pull-request/github/pr.json") as fp:
         rawdata = json.load(fp)
         statusurl = rawdata['statuses_url']
@@ -294,3 +387,4 @@ spec:
           json.dump(data, pr_file)
       EOF
 ---
+

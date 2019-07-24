@@ -49,7 +49,7 @@ Create an access token via GitHub. As of August 2019, for a given GitHub reposit
 
 Store the access token in a Kubernetes secret via the Tekton Dashboard's 'Secrets' menu. This panel will help you add the right annotation to the secret, and patch it onto the specified service account. Annotations should typically be of the form, `tekton.dev/git-0: https://github.com`. If you are using an access token, store it in the 'password' field. Be sure to specify the service account that will be used by the associated Tekton pipeline. 
 
-![Creating a Git secret](createGitSecret.png?raw=true "Creating a Git secret")
+![Creating a Git secret](./images/createGitSecret.png?raw=true "Creating a Git secret")
 
 ### Create credentials: Docker
 
@@ -59,7 +59,7 @@ Credentials are normally required to push images to a Docker registry. Some Dock
 
 A Tekton Pipeline is composed of one or more Tasks. We expect that most users will store their Pipeline and Task definitions in Git. You may wish to `git clone` and `kubectl apply` these definitions manually, or more likely, as part of an automated installation and setup. For your convenience, the dashboard provides a menu option, 'Import Tekton resources'. 
 
-![Import pipeline definitions](importPipelines.png?raw=true "Importing pipeline definitions")
+![Import pipeline definitions](./images/importPipelines.png?raw=true "Importing pipeline definitions")
 
 This screen shot shows a user importing pipeline definitions from a Git repository. This panel will drive the Pipeline `pipeline0` 
 
@@ -68,7 +68,7 @@ This screen shot shows a user importing pipeline definitions from a Git reposito
 
 The Tekton dashboard webhooks extension creates an association between a Git repository and a Tekton pipeline. Changes to a branch or pull request in the associated Git repository will trigger a new PipelineRun with its accompanying PipelineResource objects. This section covers the various setup and configuration options in more detail. The image below shows the current form of the main 'Create Webhook' panel in the dashboard. 
 
-![Creating a new webhook](createWebhook.png?raw=true "Creating a new webhook")
+![Creating a new webhook](./images/createWebhook.png?raw=true "Creating a new webhook")
 
 ### Name
 
@@ -103,14 +103,20 @@ Finally, select the Docker registry that any built images should be pushed to. T
 
 ## Putting it all together: test it's working
 
-Once a webhook is set up, a `git push` or merged Pull Request to a branch in the monitored repository should trigger the creation of a correct PipelineRun. This PipelineRun will show up in the Tekton dashboard as usual. As of August 2019, a successful webhook will trigger pod changes in the target namespace of the form shown below. 
+Once a webhook is set up, a `git push` or creation of a pull request to the monitored repository should trigger the creation of the correct PipelineRun. This PipelineRun will show up in the Tekton dashboard as usual. As of August 2019, a successful webhook will trigger pods to be creted as follows: 
 
-- Firstly, webhook receipt will drive a pod whose name corresponds to the 'Name' field of the webhook. E.g. for a Name of `buildah-hook` we might see a pod `buildah-hook-xwxm5-rp6s6-deployment-6674f7fdbb-pdgmw` created. 
+- Firstly, webhook receipt will drive a pod whose name will be of the format `tekton-xwxm5-rp6s6-gldvf-deployment-6674f7fdbb-pdgmw` created. 
+
 - Next this pod will trigger the webhooks extension 'sink': a pod of the form `webhooks-extension-sink-dqxkm-deployment-5f64979c5b-8dk4k` will execute. 
-- The 'sink' will then create the expected PipelineRun. The PipelineRun will spawn pods for each of its Tasks, so for example we might see a pod `buildah-hook-1565009498-build-simple-6qc72-pod-1f0a5e` created to run the `build-simple` Task. 
+
+- The 'sink' will then create the expected PipelineRun. The PipelineRun will spawn pods for each of its Tasks, so for example we might see a pod `buildah-hook-1565009498-build-simple-6qc72-pod-1f0a5e` created to run the `build-simple` Task.
+
+- If the webhook's event type is a pull request, an additional pod will be seen for the monitoring task. This pod will monitor the PipelineRun and update the pull request with status.  The default monitoring task pod will be named similar to `pr-monitor-15657005244rsz8-pod-f5b42a`. For more on monitoring see [here](Monitoring.md)
+
 - Finally the 'sink' and '(webhook) Name' pods will be shut down by [Knative](https://knative.dev/docs/). 
 
 You can use `kubectl logs [pod-name] --all-containers` to check the output of each pod in turn, and of course the Tekton dashboard for the pods managed by a PipelineRun. In the case of any problems, check that all of the above steps were correctly performed:
 - Create a service account and RoleBinding for the PipelineRuns to use
 - Create the correct Git and Docker credentials and patch the right service account
 - Ensure that your GitHub can route correctly to the webhooks-extension-sink: use `kubectl get kservice` to check its value, and the GitHub web pages to see that the webhook was correctly created, and that it successfully delivered its result to the [kservice](https://github.com/knative/serving/blob/master/docs/spec/overview.md#service). 
+
