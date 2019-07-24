@@ -120,10 +120,11 @@ function pre_integration_tests() {
 
 # June 28th 2019: work around https://github.com/tektoncd/plumbing/issues/44
 function unit_tests() {
+  local failed=0
   echo "Using overridden unit_tests"  
-  go test -v -race ./...
+  go test -v -race ./... || failed=1
   echo "unit_tests returning $@"
-  return $?
+  return ${failed}
 }
 
 # We use the default build, unit and integration test runners.
