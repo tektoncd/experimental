@@ -295,25 +295,28 @@ export class WebhookDisplayTable extends Component {
                 )}
               />
             </div>
-
+             
             {initialRows.length === 0 && selectedNamespace !== ALL_NAMESPACES && (
                 <p className="noWebhooks">
                   {`No webhooks created under namespace '${selectedNamespace}', click 'Add Webhook' button to add a new one.`}
                 </p>
               )
             }
-            <div className="modal">
+            <div className="modal-delete">
               <Modal open={this.state.showDeleteDialog}
                 id='webhook-delete-modal'
                 modalLabel=''
-                modalHeading="Confirm deletion of webhook(s)?"
-                primaryButtonText="Delete"
+                modalHeading="Please confirm you want to delete the following webhook(s):"
+                primaryButtonText="Confirm"
                 secondaryButtonText="Cancel"
                 danger={true}
                 onRequestSubmit={this.handleDeleteWebhook}
                 onSecondarySubmit={this.showDeleteDialogHandlerInvisible}
                 onRequestClose={this.showDeleteDialogHandlerInvisible}
               >
+                {this.state.userSelectedRows.map(row => (
+                  <div key={row.id}>{row.id.substring(0, row.id.lastIndexOf('|'))}</div>
+                ))}
                 <fieldset>
                   <legend className="modal-legend"><b>Delete Associated PipelineRuns</b></legend>
                   <div className="checkbox-div">
