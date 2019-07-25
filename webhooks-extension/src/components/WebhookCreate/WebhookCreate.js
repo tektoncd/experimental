@@ -12,6 +12,16 @@ import Infomation from "@carbon/icons-react/lib/information/16";
 
 import './WebhookCreate.scss';
 
+const CustomTooltip = props => (
+  <TooltipIcon {...props} >
+    <Infomation />
+  </TooltipIcon>
+);
+
+CustomTooltip.defaultProps = {
+  onClick: e => e.preventDefault()
+};
+
 class WebhookCreatePage extends Component {
 
   constructor(props) {
@@ -482,9 +492,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="name-tooltip">
-                <TooltipIcon tooltipText="The display name for your webhook in this user interface. This name must consist of lower case alphanumeric characters, '-' or '.'">
-                  <Infomation />
-                </TooltipIcon>
+                <CustomTooltip tooltipText="The display name for your webhook in this user interface." />
               </div>
               <div className="item-label">
                 <div className="createLabel">Name</div>
@@ -507,9 +515,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="git-tooltip">
-                <TooltipIcon tooltipText="The URL of the git repository to create the webhook on.">
-                  <Infomation />
-                </TooltipIcon>
+                <CustomTooltip tooltipText="The URL of the git repository to create the webhook on."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Repository URL</div>
@@ -531,10 +537,8 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-              <div className="help-icon" id="secret-tooltip">
-                <TooltipIcon tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository and the secret must exist in the same namespace as the dashboard.">
-                  <Infomation />
-                </TooltipIcon>
+              <div className="help-icon" id="namespace-tooltip">
+                <CustomTooltip tooltipText="The namespace to operate in."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Access Token</div>
@@ -557,10 +561,8 @@ class WebhookCreatePage extends Component {
             </div>
             
             <div className="row">
-            <div className="help-icon" id="namespace-tooltip">
-                <TooltipIcon tooltipText="The namespace to operate in.">
-                  <Infomation />
-                </TooltipIcon>
+              <div className="help-icon" id="pipeline-tooltip">
+                <CustomTooltip tooltipText="The pipeline from the selected namespace to run when the webhook is triggered."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Namespace</div>
@@ -573,10 +575,8 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-              <div className="help-icon" id="pipeline-tooltip">
-                <TooltipIcon tooltipText="The pipeline from the selected namespace to run when the webhook is triggered.">
-                  <Infomation />
-                </TooltipIcon>
+              <div className="help-icon" id="secret-tooltip">
+                <CustomTooltip tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Pipeline</div>
@@ -590,9 +590,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="serviceaccount-tooltip">
-                <TooltipIcon tooltipText="The service account under which to run the pipeline run. The service account needs to be patched with secrets to access both the Git repository and the Docker registry.">
-                  <Infomation />
-                </TooltipIcon>
+                <CustomTooltip tooltipText="The service account under which to run the pipeline run. The service account needs to be patched with secrets to access both git and docker."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Service Account</div>
@@ -606,9 +604,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="docker-tooltip">
-                <TooltipIcon tooltipText="The docker registry to push images to.">
-                  <Infomation />
-                </TooltipIcon>
+                <CustomTooltip tooltipText="The docker registry to push images to."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Docker Registry</div>
