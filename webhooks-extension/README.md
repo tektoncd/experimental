@@ -8,6 +8,7 @@ This initial implementation utilises Knative Eventing but there is discussion an
 
 In addition to Tekton/Knative Eventing glue, it includes an extension to the Tekton Dashboard.
 
+
 ## Prerequisites
 
 - Install [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) and the [Tekton Dashboard](https://github.com/tektoncd/dashboard)
@@ -19,6 +20,7 @@ In addition to Tekton/Knative Eventing glue, it includes an extension to the Tek
 *If running on Docker for Desktop*
 
 - Knative requires a Kubernetes cluster running version v.1.11 or greater. Currently this requires the edge version of Docker for Desktop. Your cluster must also be supplied with sufficient resources _(6 CPUs, 10GiB Memory & 2.5GiB swap is known good)_.
+
 
 ## Install Quickstart
 
@@ -51,9 +53,58 @@ Access the Dashboard through its ClusterIP Service by running `kubectl proxy`. A
 
 Navigate to `Webhooks`, listed in the navigation under `Extensions`
 
-## Uninstall
 
-`kubectl delete -f config/release/gcr-tekton-webhooks-extension.yaml`
+## Notes On Using The Webhooks Extension
+
+Further to the limitations listed further below, it is worth noting that the webhooks extension does not currently work with all pipelines, it very specifically creates the following when the webhook is triggered:
+
+#### Git PipelineResource
+
+A PipelineResource of type git is created with:
+
+  - `revision` set to the short commit id from the webhook payload.
+  - `url` set to the repository url from the webhook payload.
+
+#### Image PipelineResource
+
+A PipelineResource of type image is created with:
+
+  - `url` set to ${REGISTRY}/${REPOSITORY-NAME}:${SHORT-COMMITID} where, REGISTRY is the value set when creating the webhook, other values are taken from the webhook payload.
+
+#### A PipelineRun
+
+A PipelineRun for your chosen pipeline, in the namespace specified when your webhook was created, the values assigned to parameters on the pipelinerun are taken from values provided when configuring the webhook or from the webhook payload itself.
+
+It is important to note the names of the parameters and resources, should you wish to use the extension with your own pipelines and make use of these values.
+
+PipelineRun params and resources made available:
+
+```
+  params:
+    - name: image-tag
+      value: ${SHORT-COMMITID}
+    - name: image-name
+      value: ${REGISTRY}/${REPOSITORY-NAME}
+    - name: release-name
+      value: ${REPOSITORY-NAME}
+    - name: repository-name
+      value: ${REPOSITORY-NAME}
+    - name: target-namespace
+      value: ${PIPELINERUN-NAMESPACE}
+    - name: docker-registry
+      value: ${REGISTRY}
+
+    resources:
+    - name: docker-image
+      resourceRef:
+        name: foo-docker-image-1563812630
+    - name: git-source
+      resourceRef:
+        name: bar-git-source-1563812630
+
+    serviceAccount: ${SERVICE-ACCOUNT}
+```
+
 
 ## Limitations
 
@@ -61,9 +112,16 @@ Navigate to `Webhooks`, listed in the navigation under `Extensions`
 - Only `push` and `pull_request` events are currently supported, these are the events defined on the webhook.
 - Only one webhook can be created for each Git repository, so each repository will only be able to trigger a `PipelineRun` from one webhook.
 
+
+## Uninstall
+
+`kubectl delete -f config/release/gcr-tekton-webhooks-extension.yaml`
+
+
 ## Want to get involved
 
 Visit the [Tekton Community](https://github.com/tektoncd/community) project for an overview of our processes.
+
 
 ## For developers
 
