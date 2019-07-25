@@ -114,9 +114,10 @@
   .bx--inline-notification {
     max-width: 100%;
   }
+
 }
 
-.modal {
+.modal-delete {
 
   .checkbox-div {
     margin-top: 0.25rem;
@@ -126,8 +127,14 @@
     margin-bottom: 1.5rem;
   }
 
+  .bx--modal-content > * {
+    font-size: 1.1rem;
+    line-height: 1.5rem;
+  }
+
   .modal-legend {
     font-weight: bold;
+    line-height: 3rem;
   }
 
   .bx--checkbox-label::before {
@@ -154,10 +161,13 @@
 
   .bx--btn.bx--btn--danger {
     @extend %primary-secondary-shared;
+    background-color: green;
+    border-color: green;
   }
   
   .bx--btn.bx--btn--secondary {
     @extend %primary-secondary-shared;
+    background-color: red;
   }
 
 }

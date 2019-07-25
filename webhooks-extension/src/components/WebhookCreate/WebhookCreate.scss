@@ -141,6 +141,10 @@
     padding-left: 1rem;
     padding-right: 1rem;
   }
+
+  .bx--modal-content > * {
+    font-size: 1.1rem;
+  }
   
   .bx--modal.is-visible {
     background-color: rgba(255,255,255,0.82);

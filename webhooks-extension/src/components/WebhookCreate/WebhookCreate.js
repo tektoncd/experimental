@@ -629,6 +629,7 @@ class WebhookCreatePage extends Component {
               onSecondarySubmit={() => this.toggleDeleteDialog()}
               onRequestSubmit={() => this.deleteAccessTokenSecret()}
               onRequestClose={() => this.toggleDeleteDialog()}>
+              
               <div className="secret-to-delete">{this.state.gitsecret}</div>
             </Modal>
           </div>
