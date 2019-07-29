@@ -104,9 +104,9 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.TIMESTAMP = timestamp
 		buildInformation.BRANCH = extractBranchFromRef(webhookData.PullRequest.Head.Ref)
 
-		createPipelineRunFromWebhookData(buildInformation, r)
+		pipelinerun := createPipelineRunFromWebhookData(buildInformation, r)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
-		createTaskRunFromWebhookData(buildInformation, r)
+		createTaskRunFromWebhookData(buildInformation, r, pipelinerun)
 		logging.Log.Debugf("created monitoring task for pipelinerun from build information for repository %s sha %s.", buildInformation.REPOURL, 
 			buildInformation.SHORTID)
 	} else {
@@ -129,7 +129,7 @@ func extractBranchFromRef(ref string) string {
 }
 
 // This is the main flow that handles building and deploying: given everything we need to kick off a build, do so
-func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resource) {
+func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resource) (result *v1alpha1.PipelineRun){
 	logging.Log.Debugf("In createPipelineRunFromWebhookData, build information: %s.", buildInformation)
 
 	// TODO: Use the dashboard endpoint to create the PipelineRun
@@ -148,7 +148,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	webhook, err := r.getGitHubWebhook(buildInformation.REPOURL, installNs)
 	if err != nil {
 		logging.Log.Errorf("error getting github webhook: %s.", err.Error())
-		return
+		return nil
 	}
 	dockerRegistry := webhook.DockerRegistry
 	helmSecret := webhook.HelmSecret
@@ -174,7 +174,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	pipeline, err := r.getPipelineImpl(pipelineTemplateName, pipelineNs)
 	if err != nil {
 		logging.Log.Errorf("could not find the pipeline template %s in namespace %s.", pipelineTemplateName, pipelineNs)
-		return
+		return nil
 	}
 	logging.Log.Debugf("Found the pipeline template %s OK.", pipelineTemplateName)
 
@@ -188,7 +188,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	createdPipelineImageResource, err := r.TektonClient.TektonV1alpha1().PipelineResources(pipelineNs).Create(pipelineImageResource)
 	if err != nil {
 		logging.Log.Errorf("error creating pipeline image resource to be used in the pipeline: %s.", err.Error())
-		return
+		return nil
 	}
 	logging.Log.Infof("Created pipeline image resource %s successfully.", createdPipelineImageResource.Name)
 
@@ -198,7 +198,7 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 
 	if err != nil {
 		logging.Log.Errorf("error creating pipeline git resource to be used in the pipeline: %s.", err.Error())
-		return
+		return nil
 	}
 	logging.Log.Infof("Created pipeline git resource %s successfully.", createdPipelineGitResource.Name)
 
@@ -244,13 +244,14 @@ func createPipelineRunFromWebhookData(buildInformation BuildInformation, r Resou
 	pipelineRun, err := r.TektonClient.TektonV1alpha1().PipelineRuns(pipelineNs).Create(pipelineRunData)
 	if err != nil {
 		logging.Log.Errorf("error creating the PipelineRun: %s", err.Error())
-		return
+		return nil
 	}
 	logging.Log.Debugf("PipelineRun created: %+v.", pipelineRun)
+	return pipelineRun
 }
 
 // This creates TaskRun for monitoring the main PipelineRun and reporting the result to the github
-func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource) {
+func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource, pipelinerun *v1alpha1.PipelineRun) {
 	logging.Log.Debugf("In createTaskRunFromWebhookData, build information: %s.", buildInformation)
 
 	installNs := os.Getenv("INSTALLED_NAMESPACE")
@@ -276,8 +277,8 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource)
 
 	// Assumes you've already applied the yml: so the task definition must exist upfront.
 	startTime := buildInformation.TIMESTAMP
-	generatedPipelineRunName := fmt.Sprintf("%s-%s", webhook.Name, startTime)
-	generatedTaskRunName := generatedPipelineRunName
+	generatedTaskRunName := fmt.Sprintf("%s-%s", webhook.Name, startTime)
+	pipelineRunName := pipelinerun.GetName()
 
 	if saName == "" {
 		saName = "default"
@@ -288,11 +289,11 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource)
 	}
 
 	if OnSuccessComment == "" {
-		OnSuccessComment = "OK: " + generatedPipelineRunName
+		OnSuccessComment = "OK: " + pipelineRunName
 	}
 
 	if OnFailureComment == "" {
-		OnFailureComment = "ERROR: " + generatedPipelineRunName
+		OnFailureComment = "ERROR: " + pipelineRunName
 	}
 
 	logging.Log.Debugf("Build information: %+v.", buildInformation)
@@ -325,13 +326,13 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource)
 
 	params := []v1alpha1.Param{{Name: "commentsuccess", Value: OnSuccessComment},
 		{Name: "commentfailure", Value: OnFailureComment},
-		{Name: "pipelinerun", Value: generatedPipelineRunName }}
+		{Name: "pipelinerun", Value: pipelineRunName }}
 
 	// TaskRun yml defines the references to the above named resources.
 	taskRunData, err := defineTaskRun(generatedTaskRunName, taskNs, saName, buildInformation.REPOURL, buildInformation.BRANCH,
-		task, resources, params)
+		task, pipelinerun, resources, params)
 
-	logging.Log.Infof("Creating a new TaskRun named %s in the namespace %s using the service account %s.", generatedPipelineRunName, taskNs, saName)
+	logging.Log.Infof("Creating a new TaskRun named %s in the namespace %s using the service account %s.", pipelineRunName, taskNs, saName)
 
 	taskRun, err := r.TektonClient.TektonV1alpha1().TaskRuns(taskNs).Create(taskRunData)
 	if err != nil {
@@ -433,6 +434,7 @@ func definePipelineRun(pipelineRunName, namespace, saName, repoURL, branch strin
 each TaskRun has a 1 hour timeout: */
 func defineTaskRun(taskRunName, namespace, saName, repoURL string, branch string,
 	task v1alpha1.Task,
+	pipelineRunRef  *v1alpha1.PipelineRun,
 	resourceBinding []v1alpha1.TaskResourceBinding,
 	params []v1alpha1.Param) (*v1alpha1.TaskRun, error) {
 
@@ -456,6 +458,14 @@ func defineTaskRun(taskRunName, namespace, saName, repoURL string, branch string
 				gitOrgLabel:    gitOrg,
 				gitRepoLabel:   gitRepo,
 				gitBranchLabel: branch,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "tekton.dev/v1alpha1",
+					Kind: "PipelineRun",
+					Name: pipelineRunRef.GetName(),
+					UID:  pipelineRunRef.GetUID(),
+				},
 			},
 		},
 
