@@ -21,30 +21,7 @@ import 'jest-dom/extend-expect'
 
 global.scrollTo = jest.fn();
 
-const namespacesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      }
-    },
-    {
-      "metadata": {
-        "name": "docker",
-      }
-    },
-    {
-      "metadata": {
-        "name": "istio-system",
-      },
-    },
-    {
-      "metadata": {
-        "name": "knative-eventing",
-      },
-    }
-  ]
-};
+const namespaces = ["default", "istio-system", "namespace3"];
 
 const pipelinesResponseMock = {
   "items": [
@@ -99,11 +76,16 @@ afterEach(() => {
 describe('delete modal secret name', () => {
 
   it('modal should be shown to confirm deletion and include selected secret name', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
     fireEvent.click(await waitForElement(() => getByText(/select secret/i)));

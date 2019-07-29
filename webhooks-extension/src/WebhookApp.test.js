@@ -43,12 +43,6 @@ const namespaces = {
         name: 'default',
         uid: '32b35d3b-6ce1-11e9-af21-025000000001',
       },
-      spec: {
-        finalizers: ['kubernetes']
-      },
-      status: {
-        phase: 'Active'
-      }
     }
   },
   errorMessage: null,
@@ -101,31 +95,6 @@ const fakeRowSelection = [
   ]}
 ]
 
-const namespacesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      }
-    },
-    {
-      "metadata": {
-        "name": "docker",
-      }
-    },
-    {
-      "metadata": {
-        "name": "istio-system",
-      },
-    },
-    {
-      "metadata": {
-        "name": "knative-eventing",
-      },
-    }
-  ]
-};
-
 const pipelinesResponseMock = {
   "items": [
     {
@@ -175,16 +144,20 @@ const webhooks = [
   }
 ];
 
+const selectors = {
+  getSelectedNamespace: jest.fn(() => "default"),
+  getNamespaces: jest.fn(() => ["default", "namespace2", "namespace3"]),
+  isFetchingNamespaces: jest.fn(() => false),
+}
+
 it('change in components after last webhook deleted', async () => {
   let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
   let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
   let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
 
-  const selectors = {getSelectedNamespace: jest.fn(() => "default")};
-
   const { getByText, queryByTestId } = renderWithRouter(
     <Provider store={store}>
-      <WebhookApp match={{}} namespace="default" selectors={selectors}/>
+      <WebhookApp match={{}} selectors={selectors}/>
     </Provider>);
 
 
@@ -207,7 +180,6 @@ it('change in components after last webhook deleted', async () => {
   expect(deleteWebhooksMock).toHaveBeenCalled();
 
   getWebhooksMock.mockImplementation(() => Promise.resolve([]));
-  jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
   jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
   jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
   jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));

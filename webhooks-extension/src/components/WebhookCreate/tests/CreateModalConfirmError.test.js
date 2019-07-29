@@ -21,30 +21,7 @@ import 'jest-dom/extend-expect'
 
 global.scrollTo = jest.fn();
 
-const namespacesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      }
-    },
-    {
-      "metadata": {
-        "name": "docker",
-      }
-    },
-    {
-      "metadata": {
-        "name": "istio-system",
-      },
-    },
-    {
-      "metadata": {
-        "name": "knative-eventing",
-      },
-    }
-  ]
-};
+const namespaces = ["default", "istio-system", "namespace3"];
 
 const pipelinesResponseMock = {
   "items": [
@@ -99,8 +76,7 @@ afterEach(() => {
 //-----------------------------------//
 describe('create secret', () => {
 
-  it('notification shown when error occurs creating secret', async () => {  
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
+  it('notification shown when error occurs creating secret', async () => {
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
@@ -109,13 +85,19 @@ describe('create secret', () => {
       expect(request).toStrictEqual(expectRequest);
       return Promise.reject({
         response: {
-        text() {
+        text: () => {
           return Promise.resolve("Mock Error Creating Secret")
         }
       }});
     });
 
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />); 
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
     fireEvent.click(await waitForElement(() => document.getElementById('create-secret-button')));

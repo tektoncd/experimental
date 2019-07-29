@@ -20,30 +20,7 @@ import * as API from '../../../api/index';
 import 'jest-dom/extend-expect'
 
 
-const namespacesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      }
-    },
-    {
-      "metadata": {
-        "name": "docker",
-      }
-    },
-    {
-      "metadata": {
-        "name": "istio-system",
-      },
-    },
-    {
-      "metadata": {
-        "name": "knative-eventing",
-      },
-    }
-  ]
-};
+const namespaces = ["default", "istio-system", "namespace3"];
 
 const pipelinesResponseMock = {
   "items": [
@@ -98,12 +75,17 @@ afterEach(() => {
 //-----------------------------------//
 describe('create secret', () => {
 
-  it('create button enabled only when name and token complete', async () => {  
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
+  it('create button enabled only when name and token complete', async () => {
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />); 
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
 
@@ -124,13 +106,18 @@ describe('create secret', () => {
     expect(document.getElementsByClassName('create-modal').item(0).getElementsByClassName('bx--btn--primary').item(0).getAttributeNames()).toContain('disabled')
 
   });
-  
-  it('should be able toggle visibility of token', async () => {  
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
+
+  it('should be able toggle visibility of token', async () => {
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />); 
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
 
