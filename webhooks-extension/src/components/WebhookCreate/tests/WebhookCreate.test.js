@@ -21,46 +21,15 @@ import 'jest-dom/extend-expect'
 
 global.scrollTo = jest.fn();
 
-const namespacesFailResponseMock = {
-  response: {
-    text() {
-      return Promise.resolve("Mock Error Fetching Namespaces")
-    }
-  }
-};
-
 const WebhookCreationFailMock = {
   response: {
-    text() {
+    text: () => {
       return Promise.resolve("Mock Error Creating Webhook")
     }
   }
 };
 
-const namespacesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      }
-    },
-    {
-      "metadata": {
-        "name": "docker",
-      }
-    },
-    {
-      "metadata": {
-        "name": "istio-system",
-      },
-    },
-    {
-      "metadata": {
-        "name": "knative-eventing",
-      },
-    }
-  ]
-};
+const namespaces = ["default", "istio-system", "namespace3"];
 
 const pipelinesResponseMock = {
   "items": [
@@ -105,36 +74,36 @@ beforeEach(() => {
   jest.restoreAllMocks
   jest.resetModules()
  });
- 
+
 afterEach(() => {
   jest.clearAllMocks()
   cleanup()
  });
 
 //-----------------------------------//
-describe('error fetching namespaces should give error notification', () => {
-  it('should display create wizard with form properties and error notification', async () => {   
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.reject(namespacesFailResponseMock));
-    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}}/>); 
-      await waitForElement(() => getByText(/Mock Error Fetching Namespaces/i));
-    });
-})
-
-//-----------------------------------//
 describe('drop downs should be disabled while no namespace selected', () => {
   it('pipelines dropdown should be disabled', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
     expect(document.getElementById("pipeline").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true)
 
   });
   it('service accounts dropdown should be disabled', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
     expect(document.getElementById("serviceAccounts").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true)
 
@@ -144,32 +113,47 @@ describe('drop downs should be disabled while no namespace selected', () => {
 //-----------------------------------//
 describe('drop downs should be enabled when a namespace is selected', () => {
   it('pipelines dropdown should be enabled', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)))
     await wait(() => expect(document.getElementById("pipeline").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(false))
   });
   it('secrets dropdown should be enabled', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)))
     await wait(() => expect(document.getElementById("git").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(false))
 
   });
   it('service accounts dropdown should be enabled', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
+    const { getByText } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)))
     await wait(() => expect(document.getElementById("serviceAccounts").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(false))
@@ -182,15 +166,20 @@ describe('create button enablement', () => {
   // Increase timeout as lots involved in this test
   jest.setTimeout(15000);
   it('create button should be enabled only when all fields complete', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
-    const { getByText, getByTestId } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
-    
+    const { getByText, getByTestId } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
+
     fireEvent.click(await waitForElement(() => getByTestId('display-name-entry')));
     await wait(() => expect(getByTestId('create-button')).toBeDisabled())
-    
+
     const name = getByTestId('display-name-entry')
     fireEvent.change(name, { target: { value: 'test-webhook-name' } });
     await wait(() => expect(getByTestId('create-button')).toBeDisabled())
@@ -244,16 +233,21 @@ describe('create button enablement', () => {
 //-----------------------------------//
 describe('create button', () => {
   it('create failure should return notification', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     jest.spyOn(API, 'createWebhook').mockImplementation(() => Promise.reject(WebhookCreationFailMock));
-    const { getByText, getByTestId } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => { }} />);
-    
+    const { getByText, getByTestId } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
+
     fireEvent.click(await waitForElement(() => getByTestId('display-name-entry')));
     await wait(() => expect(getByTestId('create-button')).toBeDisabled())
-    
+
     const name = getByTestId('display-name-entry')
     fireEvent.change(name, { target: { value: 'test-webhook-name' } });
     await wait(() => expect(getByTestId('create-button')).toBeDisabled())
@@ -291,7 +285,6 @@ describe('create button', () => {
   }, 15000)
 
   it('success should set showNotification and call returnToTable', async () => {
-    jest.spyOn(API, 'getNamespaces').mockImplementation(() => Promise.resolve(namespacesResponseMock));
     jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
@@ -309,11 +302,17 @@ describe('create button', () => {
       return Promise.resolve({})
     });
 
-    const { getByText, getByTestId } = renderWithRouter(<WebhookCreate match={{}} setShowNotificationOnTable={() => {}} />);
-    
+    const { getByText, getByTestId } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
+
     fireEvent.click(await waitForElement(() => getByTestId('display-name-entry')));
     await wait(() => expect(getByTestId('create-button')).toBeDisabled())
-    
+
     const name = getByTestId('display-name-entry')
     fireEvent.change(name, { target: { value: 'test-webhook-name' } });
     await wait(() => expect(getByTestId('create-button')).toBeDisabled())

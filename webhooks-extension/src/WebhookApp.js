@@ -26,20 +26,56 @@ class WebhooksApp extends Component {
   }
 
   render() {
-    const { match, namespace } = this.props;
+    const {
+      isFetchingNamespaces,
+      match,
+      namespace,
+      namespaces
+    } = this.props;
 
-      return (
-        <div>
-          <Route exact path={`${match.path}/`} render={props => <WebhookDisplayTable {...props} selectedNamespace={namespace} showNotificationOnTable={this.state.showNotificationOnTable} setshowLastWebhookDeletedNotification={this.setshowLastWebhookDeletedNotification}/>} />
-          <Route path={`${match.path}/create`} render={props => <WebhookCreate {...props} setShowNotificationOnTable={this.setShowNotificationOnTable} setshowLastWebhookDeletedNotification={this.setshowLastWebhookDeletedNotification} showLastWebhookDeletedNotification={this.state.showLastWebhookDeletedNotification}/>} />
-        </div>
-      )
+    return (
+      <div>
+        <Route
+          exact
+          path={`${match.path}/`}
+          render={props => (
+            <WebhookDisplayTable
+              {...props}
+              selectedNamespace={namespace}
+              showNotificationOnTable={this.state.showNotificationOnTable}
+              setshowLastWebhookDeletedNotification={
+                this.setshowLastWebhookDeletedNotification
+              }
+            />
+          )}
+        />
+        <Route
+          path={`${match.path}/create`}
+          render={props => (
+            <WebhookCreate
+              {...props}
+              namespaces={namespaces}
+              isFetchingNamespaces={isFetchingNamespaces}
+              setShowNotificationOnTable={this.setShowNotificationOnTable}
+              setshowLastWebhookDeletedNotification={
+                this.setshowLastWebhookDeletedNotification
+              }
+              showLastWebhookDeletedNotification={
+                this.state.showLastWebhookDeletedNotification
+              }
+            />
+          )}
+        />
+      </div>
+    );
   }
 }
 
 function mapStateToProps(state, props) {
   return {
-    namespace: props.selectors.getSelectedNamespace(state)
+    namespace: props.selectors.getSelectedNamespace(state),
+    namespaces: props.selectors.getNamespaces(state),
+    isFetchingNamespaces: props.selectors.isFetchingNamespaces(state),
   };
 }
 

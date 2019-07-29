@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { withRouter } from 'react-router-dom';
 
 import { Button, TextInput, Dropdown, Form, Tooltip, DropdownSkeleton, Modal, InlineNotification, TooltipIcon } from 'carbon-components-react';
-import { getNamespaces, getPipelines, getSecrets, getServiceAccounts, createWebhook, createSecret, deleteSecret } from '../../api/index';
+import { getPipelines, getSecrets, getServiceAccounts, createWebhook, createSecret, deleteSecret } from '../../api/index';
 
 import AddAlt20 from '@carbon/icons-react/lib/add--alt/20';
 import SubtractAlt20 from '@carbon/icons-react/lib/subtract--alt/20';
@@ -26,8 +26,6 @@ class WebhookCreatePage extends Component {
 
   constructor(props) {
     super(props);
-    // turn off webhook created message
-    this.props.setShowNotificationOnTable(false);
 
     this.state = {
       // variables to stop re-attempts to load
@@ -44,7 +42,6 @@ class WebhookCreatePage extends Component {
       serviceAccount: '',
       dockerRegistry: '',
       // fetched data from api calls
-      apiNamespaces: '',
       apiPipelines: '',
       apiSecrets: '',
       apiServiceAccounts: '',
@@ -65,12 +62,12 @@ class WebhookCreatePage extends Component {
       visibleCSS: 'token-visible',
       invisibleCSS: 'token-invisible'
     };
-
-    this.fetchSecrets();
-    this.fetchNamespaces();
   }
 
   componentDidMount(){
+    // turn off webhook created message
+    this.props.setShowNotificationOnTable(false);
+    this.fetchSecrets();
     if(this.props.showLastWebhookDeletedNotification){
       this.setState({
         notificationMessage: "Last webhook deleted successfully.",
@@ -85,24 +82,6 @@ class WebhookCreatePage extends Component {
       document.getElementById(
         "serviceAccounts"
       ).firstElementChild.tabIndex = -1;
-    }
-  }
-
-  async fetchNamespaces() {
-    let ns;
-    try {
-      ns = await getNamespaces();
-      this.setState({apiNamespaces: ns})
-    } catch (error) {
-        error.response.text().then((text) => {
-          this.setState({
-            namespaceFail: true,
-            notificationMessage: "Failed to get namespaces, error returned was : " + text,
-            notificationStatus: 'error',
-            notificationStatusMsgShort: 'Error:',
-            showNotification: true,
-          });
-        });
     }
   }
 
@@ -253,14 +232,14 @@ class WebhookCreatePage extends Component {
     return "submit"
   }
 
-  displayNamespaceDropDown = (namespaceItems) => {
-    if (!this.state.apiNamespaces) {
+  displayNamespaceDropDown = () => {
+    if (this.props.isFetchingNamespaces) {
       return <DropdownSkeleton/>
     }
     return <Dropdown
         id="namespace"
         label="select namespace"
-        items={namespaceItems}
+        items={this.props.namespaces}
         onChange={this.handleChangeNamespace}
       />
   }
@@ -422,7 +401,6 @@ class WebhookCreatePage extends Component {
 
   render() {
 
-    const namespaceItems = [];
     const pipelineItems = [];
     const secretItems = [];
     const saItems = [];
@@ -433,10 +411,7 @@ class WebhookCreatePage extends Component {
       });
     }
 
-    if (this.state.apiNamespaces) {
-      this.state.apiNamespaces.items.map(function (namespaceResource, index) {
-        namespaceItems[index] = namespaceResource.metadata['name'];
-      });
+    if (this.props.namespaces) {
       if (this.state.apiPipelines) {
         this.state.apiPipelines.items.map(function (pipelineResource, index) {
           pipelineItems[index] = pipelineResource.metadata['name'];
@@ -569,7 +544,7 @@ class WebhookCreatePage extends Component {
               </div>
               <div className="entry-field">
                 <div className="createDropDown">
-                  {this.displayNamespaceDropDown(namespaceItems)}
+                  {this.displayNamespaceDropDown()}
                 </div>
               </div>
             </div>
