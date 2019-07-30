@@ -27,10 +27,14 @@ class WebhooksApp extends Component {
 
   render() {
     const {
+      fetchPipelines,
+      getPipelinesErrorMessage,
       isFetchingNamespaces,
+      isFetchingPipelines,
       match,
       namespace,
-      namespaces
+      namespaces,
+      pipelines
     } = this.props;
 
     return (
@@ -55,7 +59,11 @@ class WebhooksApp extends Component {
             <WebhookCreate
               {...props}
               namespaces={namespaces}
+              pipelines={pipelines}
               isFetchingNamespaces={isFetchingNamespaces}
+              isFetchingPipelines={isFetchingPipelines}
+              getPipelinesErrorMessage={getPipelinesErrorMessage}
+              fetchPipelines={fetchPipelines}
               setShowNotificationOnTable={this.setShowNotificationOnTable}
               setshowLastWebhookDeletedNotification={
                 this.setshowLastWebhookDeletedNotification
@@ -75,10 +83,19 @@ function mapStateToProps(state, props) {
   return {
     namespace: props.selectors.getSelectedNamespace(state),
     namespaces: props.selectors.getNamespaces(state),
+    pipelines: props.selectors.getPipelines(state),
     isFetchingNamespaces: props.selectors.isFetchingNamespaces(state),
+    isFetchingPipelines: props.selectors.isFetchingPipelines(state),
+    getPipelinesErrorMessage: props.selectors.getPipelinesErrorMessage(state),
   };
 }
 
+const mapDispatchToProps = (dispatch, props) => ({
+  fetchPipelines: namespace =>
+    dispatch(props.actions.fetchPipelines({ namespace }))
+});
+
 export default connect(
-  mapStateToProps
+  mapStateToProps,
+  mapDispatchToProps
 )(withRouter(WebhooksApp));

@@ -23,20 +23,26 @@ global.scrollTo = jest.fn();
 
 const namespaces = ["default", "istio-system", "namespace3"];
 
-const pipelinesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "simple-helm-pipeline",
-      }
+const pipelines = [
+  {
+    metadata: {
+      name: "pipeline0",
+      namespace: "default",
     },
-    {
-      "metadata": {
-        "name": "simple-helm-pipeline-insecure",
-      }
+  },
+  {
+    metadata: {
+      name: "simple-pipeline",
+      namespace: "default",
     },
-  ]
-}
+  },
+  {
+    metadata: {
+      name: "simple-helm-pipeline-insecure",
+      namespace: "istio-system",
+    }
+  }
+];
 
 const secretsResponseMock = [
   {
@@ -77,7 +83,6 @@ afterEach(() => {
 describe('create secret', () => {
 
   it('notification shown when error occurs creating secret', async () => {
-    jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     jest.spyOn(API, 'createSecret').mockImplementation((request) => {
@@ -95,7 +100,10 @@ describe('create secret', () => {
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
+        pipelines={pipelines}
         setShowNotificationOnTable={() => {}}
+        fetchPipelines={() => {}}
+        isFetchingPipelines={false}
       />
     );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));

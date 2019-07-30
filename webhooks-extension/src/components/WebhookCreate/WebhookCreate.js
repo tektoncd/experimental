@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { withRouter } from 'react-router-dom';
 
 import { Button, TextInput, Dropdown, Form, Tooltip, DropdownSkeleton, Modal, InlineNotification, TooltipIcon } from 'carbon-components-react';
-import { getPipelines, getSecrets, getServiceAccounts, createWebhook, createSecret, deleteSecret } from '../../api/index';
+import { getSecrets, getServiceAccounts, createWebhook, createSecret, deleteSecret } from '../../api/index';
 
 import AddAlt20 from '@carbon/icons-react/lib/add--alt/20';
 import SubtractAlt20 from '@carbon/icons-react/lib/subtract--alt/20';
@@ -42,7 +42,6 @@ class WebhookCreatePage extends Component {
       serviceAccount: '',
       dockerRegistry: '',
       // fetched data from api calls
-      apiPipelines: '',
       apiSecrets: '',
       apiServiceAccounts: '',
       // whether or not to show secret modals
@@ -77,6 +76,14 @@ class WebhookCreatePage extends Component {
       });
       this.props.setshowLastWebhookDeletedNotification(false);
     }
+    if(this.props.getPipelinesErrorMessage){
+      this.setState({
+        notificationMessage: this.props.getPipelinesErrorMessage,
+        notificationStatus: 'error',
+        notificationStatusMsgShort: 'Error:',
+        showNotification: true
+      });
+    }
     if (this.isDisabled()) {
       document.getElementById("pipeline").firstElementChild.tabIndex = -1;
       document.getElementById(
@@ -85,24 +92,6 @@ class WebhookCreatePage extends Component {
     }
   }
 
-  async fetchPipelines(namespace) {
-    let pl;
-    try {
-      pl = await getPipelines(namespace);
-      this.setState({apiPipelines: pl})
-    } catch (error) {
-        error.response.text().then((text) => {
-          this.setState({
-            pipelineFail: true,
-            notificationMessage: "Failed to get pipelines, error returned was : " + text,
-            notificationStatus: 'error',
-            notificationStatusMsgShort: 'Error:',
-            showNotification: true,
-          });
-        });
-    }
-  }
-  
   async fetchSecrets() {
     let s;
     try {
@@ -155,7 +144,7 @@ class WebhookCreatePage extends Component {
       serviceAccount: '',
     });
     if (!this.state.pipelineFail) {
-      this.fetchPipelines(itemText.selectedItem);
+      this.props.fetchPipelines(itemText.selectedItem);
     }
     if (!this.state.serviceAccountsFail) {
       this.fetchServiceAccounts(itemText.selectedItem);
@@ -244,20 +233,25 @@ class WebhookCreatePage extends Component {
       />
   }
 
-  displayPipelineDropDown = (pipelineItems) => {
+  displayPipelineDropDown = () => {
     if (!this.isDisabled()) {
-      if (!this.state.apiPipelines) {
-        return <DropdownSkeleton />
+      if (this.props.isFetchingPipelines) {
+        return <DropdownSkeleton />;
       }
     }
-    return <Dropdown
-      id="pipeline"
-      label="select pipeline"
-      items={pipelineItems}
-      disabled={this.isDisabled()}
-      onChange={this.handleChangePipeline}
-    />
-  }
+    const pipelineItems = this.props.pipelines
+      .filter(pipeline => pipeline.metadata.namespace === this.state.namespace)
+      .map(pipeline => pipeline.metadata.name);
+    return (
+      <Dropdown
+        id="pipeline"
+        label="select pipeline"
+        items={pipelineItems}
+        disabled={this.isDisabled()}
+        onChange={this.handleChangePipeline}
+      />
+    );
+  };
 
   displaySecretDropDown = (secretItems) => {
     if (!this.state.apiSecrets) {
@@ -401,7 +395,6 @@ class WebhookCreatePage extends Component {
 
   render() {
 
-    const pipelineItems = [];
     const secretItems = [];
     const saItems = [];
 
@@ -412,11 +405,6 @@ class WebhookCreatePage extends Component {
     }
 
     if (this.props.namespaces) {
-      if (this.state.apiPipelines) {
-        this.state.apiPipelines.items.map(function (pipelineResource, index) {
-          pipelineItems[index] = pipelineResource.metadata['name'];
-        });
-      }
       if (this.state.apiServiceAccounts) {
         this.state.apiServiceAccounts.items.map(function (saResource, index) {
           saItems[index] = saResource.metadata['name'];
@@ -558,7 +546,7 @@ class WebhookCreatePage extends Component {
               </div>
               <div className="entry-field">
                 <div className="createDropDown">
-                  {this.displayPipelineDropDown(pipelineItems)}
+                  {this.displayPipelineDropDown()}
                 </div>
               </div>
             </div>
