@@ -22,20 +22,26 @@ import 'jest-dom/extend-expect'
 
 const namespaces = ["default", "istio-system", "namespace3"];
 
-const pipelinesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "simple-helm-pipeline",
-      }
+const pipelines = [
+  {
+    metadata: {
+      name: "pipeline0",
+      namespace: "default",
     },
-    {
-      "metadata": {
-         "name": "simple-helm-pipeline-insecure",
-      }
+  },
+  {
+    metadata: {
+      name: "simple-pipeline",
+      namespace: "default",
     },
-  ]
-}
+  },
+  {
+    metadata: {
+      name: "simple-helm-pipeline-insecure",
+      namespace: "istio-system",
+    }
+  }
+];
 
 const secretsResponseMock = [
   {
@@ -76,13 +82,14 @@ afterEach(() => {
 describe('create secret', () => {
 
   it('modal should be shown when create secret button clicked, subsequent create button should be disabled', async () => {
-    jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
+        pipelines={pipelines}
+        fetchPipelines={() => {}}
         setShowNotificationOnTable={() => {}}
       />
     );
@@ -95,15 +102,16 @@ describe('create secret', () => {
     expect(document.getElementsByClassName('create-modal').item(0).getElementsByClassName('bx--btn--primary').item(0).getAttributeNames()).toContain('disabled')
 
   });
-  
+
   it('cancel button should hide modal', async () => {
-    jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
+        pipelines={pipelines}
+        fetchPipelines={() => {}}
         setShowNotificationOnTable={() => {}}
       />
     );

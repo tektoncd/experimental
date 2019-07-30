@@ -22,20 +22,26 @@ import 'jest-dom/extend-expect'
 
 const namespaces = ["default", "istio-system", "namespace3"];
 
-const pipelinesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "simple-helm-pipeline",
-      }
+const pipelines = [
+  {
+    metadata: {
+      name: "pipeline0",
+      namespace: "default",
     },
-    {
-      "metadata": {
-        "name": "simple-helm-pipeline-insecure",
-      }
+  },
+  {
+    metadata: {
+      name: "simple-pipeline",
+      namespace: "default",
     },
-  ]
-}
+  },
+  {
+    metadata: {
+      name: "simple-helm-pipeline-insecure",
+      namespace: "istio-system",
+    }
+  }
+];
 
 const secretsResponseMock = [
   {
@@ -76,13 +82,14 @@ afterEach(() => {
 describe('create secret', () => {
 
   it('create button enabled only when name and token complete', async () => {
-    jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
+        pipelines={pipelines}
+        fetchPipelines={() => {}}
         setShowNotificationOnTable={() => {}}
       />
     );
@@ -108,13 +115,14 @@ describe('create secret', () => {
   });
 
   it('should be able toggle visibility of token', async () => {
-    jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
     jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
+        pipelines={pipelines}
+        fetchPipelines={() => {}}
         setShowNotificationOnTable={() => {}}
       />
     );

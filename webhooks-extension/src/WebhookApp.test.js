@@ -95,21 +95,6 @@ const fakeRowSelection = [
   ]}
 ]
 
-const pipelinesResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "simple-helm-pipeline",
-      }
-    },
-    {
-      "metadata": {
-        "name": "simple-helm-pipeline-insecure",
-      }
-    },
-  ]
-}
-
 const secretsResponseMock = [
   {
     "name": "ghe",
@@ -147,8 +132,24 @@ const webhooks = [
 const selectors = {
   getSelectedNamespace: jest.fn(() => "default"),
   getNamespaces: jest.fn(() => ["default", "namespace2", "namespace3"]),
+  getPipelines: jest.fn(() => [
+    {
+      metadata: {
+        name: "pipeline0",
+        namespace: "default"
+      }
+    },
+    {
+      metadata: {
+        name: "simple-pipeline",
+        namespace: "default"
+      }
+    }
+  ]),
   isFetchingNamespaces: jest.fn(() => false),
-}
+  isFetchingPipelines: jest.fn(() => false),
+  getPipelinesErrorMessage: jest.fn(() => null),
+};
 
 it('change in components after last webhook deleted', async () => {
   let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
@@ -180,7 +181,6 @@ it('change in components after last webhook deleted', async () => {
   expect(deleteWebhooksMock).toHaveBeenCalled();
 
   getWebhooksMock.mockImplementation(() => Promise.resolve([]));
-  jest.spyOn(API, 'getPipelines').mockImplementation(() => Promise.resolve(pipelinesResponseMock));
   jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
   jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
 
