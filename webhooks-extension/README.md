@@ -13,20 +13,20 @@ In addition to Tekton/Knative Eventing glue, it includes an extension to the Tek
 
 - Install [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) and the [Tekton Dashboard](https://github.com/tektoncd/dashboard)
 
-- Install Istio - for a quickstart install, for example of version 1.1.8 run `./scripts/install_istio.sh 1.1.8` _or_ follow https://knative.dev/docs/install/installing-istio/ for a more customised install _(Istio version 1.1.8 is recommended)_
+- Install Istio - for a quickstart install, for example of version 1.1.7 run `./scripts/install_istio.sh 1.1.7` _or_ follow https://knative.dev/docs/install/installing-istio/ for a more customised install _(Istio version 1.1.7 is recommended) - note that this script requires Helm to be installed_
 
-- Install Knative Eventing, Eventing Sources & Serving - for a quickstart install, for example of version 0.6.0 run `./scripts/install_knative.sh v0.6.0`, for more detailed instructions see the [Knative docs](https://knative.dev/docs/install/index.html) _(Knative version 0.6.0 is recommended)_
+- Install Knative Eventing, Eventing Sources & Serving - for a quickstart install, for example of version 0.6.0 run `./scripts/install_knative.sh v0.6.0`, for more detailed instructions see the [Knative docs](https://knative.dev/docs/install/index.html) _(Knative version 0.6.0 is strongly recommended)_
 
 *If running on Docker for Desktop*
 
-- Knative requires a Kubernetes cluster running version v.1.11 or greater. Currently this requires the edge version of Docker for Desktop. Your cluster must also be supplied with sufficient resources _(6 CPUs, 10GiB Memory & 2.5GiB swap is known good)_.
+- Knative requires a Kubernetes cluster running version v.1.11 or greater. Currently this requires the edge version of Docker for Desktop. Your cluster must also be supplied with sufficient resources _(6 CPUs, 10GiB Memory & 2.5GiB swap is a known good configuration)_.
 
 
 ## Install Quickstart
 
 ### Domain setup for Knative Serving
 
-Set your own domain and selectors following the [configuring Knative Serving docs](https://github.com/knative/serving/blob/master/install/CONFIG.md) which outline setting up routes in the `config-domain` ConfigMap in the `knative-serving` namespace
+Set your own domain and selectors following the [configuring Knative Serving docs](https://github.com/knative/serving/blob/master/install/CONFIG.md) which outlines setting up routes in the `config-domain` ConfigMap in the `knative-serving` namespace
 
 On Docker Desktop, you can retrieve your IP and patch it to the ConfigMap by running:
 
@@ -118,7 +118,79 @@ PipelineRun params and resources made available:
 `kubectl delete -f config/release/gcr-tekton-webhooks-extension.yaml`
 
 
-## Want to get involved
+## Install on OpenShift
+
+Assuming you've installed knative and Istio already, configure your scc:
+
+```
+oc adm policy add-scc-to-user anyuid -z build-controller -n knative-build
+oc adm policy add-scc-to-user anyuid -z controller -n knative-serving
+oc adm policy add-scc-to-user anyuid -z autoscaler -n knative-serving
+oc adm policy add-cluster-role-to-user cluster-admin -z build-controller -n knative-build
+oc adm policy add-cluster-role-to-user cluster-admin -z controller -n knative-serving
+```
+
+Tip: if you plan to use `buildah` in your Pipelines, you will need to set an additional permission - for example with:
+
+`oc adm policy add-scc-to-user privileged -z tekton-pipelines -n tekton-pipelines`
+
+Install the extension:
+
+`git clone https://github.com/tektoncd/experimental.git && kubectl apply -f experimental/webhooks-extension/config/release/gcr-tekton-webhooks-extension.yaml`
+
+Check you can access the Webhooks Extension through the Dashboard UI that you should already have a Route for, for example at http://tekton-dashboard.${openshift_master_default_subdomain}/#/extensions/webhooks-extension.
+
+Enable wildcard routes on your cluster:
+
+```
+oc scale -n default dc/router --replicas=0
+oc set env -n default dc/router ROUTER_ALLOW_WILDCARD_ROUTES=true
+oc scale -n default dc/router --replicas=1
+```
+
+Add a Route:
+
+```
+oc expose service istio-ingressgateway \
+  -n istio-system \
+  --name="webhooks-route" \
+  --wildcard-policy="Subdomain" \
+  --port="http2" \
+  --hostname=wildcard.tekton-pipelines.${openshift_master_default_subdomain}
+```
+
+`$openshift_master_default_subdomain` in this example is `mycluster.foo.com`. This gives you the following Route:
+
+```
+NAME                                    HOST/PORT                                                         PATH      SERVICES               PORT      TERMINATION          WILDCARD
+webhooks-route                          wildcard.tekton-pipelines.mycluster.foo.com                       istio-ingressgateway             http2                          Subdomain
+```
+
+Configure your ConfigMap `config-domain` in the `knative-serving` namespace: a working set up can be achieved with:
+
+```
+kubectl patch configmap config-domain --namespace knative-serving --type='json' \
+  --patch '[{"op": "add", "path": "/data/'"${openshift_master_default_subdomain}"'", "value": ""}]'
+```
+
+You can now proceed to create webhooks using the Webhooks Extension UI. Remember that your source code repository must be able to reach your cluster, or your webhooks will never be received (mentioning "Service Timeout" errors.
+
+This has been tested with the following scc (from `oc get scc`):
+
+```
+NAME               PRIV      CAPS      SELINUX     RUNASUSER          FSGROUP     SUPGROUP    PRIORITY   READONLYROOTFS   VOLUMES
+anyuid             false     []        MustRunAs   RunAsAny           RunAsAny    RunAsAny    10         false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+hostaccess         false     []        MustRunAs   MustRunAsRange     MustRunAs   RunAsAny    <none>     false            [configMap downwardAPI emptyDir hostPath persistentVolumeClaim projected secret]
+hostmount-anyuid   false     []        MustRunAs   RunAsAny           RunAsAny    RunAsAny    <none>     false            [configMap downwardAPI emptyDir hostPath nfs persistentVolumeClaim projected secret]
+hostnetwork        false     []        MustRunAs   MustRunAsRange     MustRunAs   MustRunAs   <none>     false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+node-exporter      false     []        RunAsAny    RunAsAny           RunAsAny    RunAsAny    <none>     false            [*]
+nonroot            false     []        MustRunAs   MustRunAsNonRoot   RunAsAny    RunAsAny    <none>     false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+privileged         true      [*]       RunAsAny    RunAsAny           RunAsAny    RunAsAny    <none>     false            [*]
+restricted         false     []        MustRunAs   MustRunAsRange     MustRunAs   RunAsAny    <none>     false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+```
+
+
+## Want to get involved?
 
 Visit the [Tekton Community](https://github.com/tektoncd/community) project for an overview of our processes.
 
