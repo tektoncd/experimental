@@ -87,6 +87,45 @@ afterEach(() => {
  });
 
 //-----------------------------------//
+describe('input validation', () => {
+  it('wrong character typed', async () => {
+    jest.spyOn(API, "getSecrets").mockImplementation(() => Promise.resolve(secretsResponseMock));
+    jest.spyOn(API, "getServiceAccounts").mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
+    const { getByTestId } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        pipelines={pipelines}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
+    await waitForElement(() => getByTestId("display-name-entry"));
+    fireEvent.change(getByTestId("display-name-entry"), {
+      target: { value: "secret[]-" }
+    });
+    expect(getByTestId("display-name-entry").getAttribute('data-invalid')).toBeTruthy();
+  });
+
+  it('left input blank', async () => {
+    jest.spyOn(API, "getSecrets").mockImplementation(() => Promise.resolve(secretsResponseMock));
+    jest.spyOn(API, "getServiceAccounts").mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
+    const { getByTestId } = renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        pipelines={pipelines}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
+    await waitForElement(() => getByTestId("display-name-entry"));
+    fireEvent.change(getByTestId("docker-reg-entry"), {
+      target: { value: "  " }
+    });
+    expect(getByTestId("docker-reg-entry").getAttribute('data-invalid')).toBeTruthy();
+  });
+})
+
+//-----------------------------------//
 describe('drop downs should be disabled while no namespace selected', () => {
   it('pipelines dropdown should be disabled', async () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
