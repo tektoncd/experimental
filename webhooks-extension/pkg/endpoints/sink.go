@@ -270,7 +270,6 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 
 	taskTemplateName := webhook.PullTask
 	taskNs := webhook.Namespace
-	saName := webhook.ServiceAccount
 	accessTokenRef := webhook.AccessTokenRef
 	OnSuccessComment := webhook.OnSuccessComment
 	OnFailureComment := webhook.OnFailureComment
@@ -280,6 +279,7 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 	generatedTaskRunName := fmt.Sprintf("%s-%s", webhook.Name, startTime)
 	pipelineRunName := pipelinerun.GetName()
 
+	saName := os.Getenv("SERVICEACCOUNT")
 	if saName == "" {
 		saName = "default"
 	}
@@ -476,6 +476,7 @@ func defineTaskRun(taskRunName, namespace, saName, repoURL string, branch string
 
 		Spec: v1alpha1.TaskRunSpec{
 			TaskRef:        &v1alpha1.TaskRef{Name: task.Name},
+			ServiceAccount: saName,
 			Timeout:        &metav1.Duration{Duration: 1 * time.Hour},
 			Inputs:  v1alpha1.TaskRunInputs{
 				Resources:      resourceBinding,

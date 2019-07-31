@@ -146,6 +146,8 @@ spec:
         env:
         - name: INSTALLED_NAMESPACE
           value: tekton-pipelines
+        - name: SERVICEACCOUNT
+          value: tekton-webhooks-extension
       serviceAccountName: tekton-webhooks-extension
 ---
 # -- Monitor pipelinerun status and update the pull request -- #
