@@ -12,6 +12,41 @@ import Infomation from "@carbon/icons-react/lib/information/16";
 
 import './WebhookCreate.scss';
 
+function validateInputs(value, id) {
+
+  const trimmed = value.trim();
+
+  if (trimmed === "") {
+    return false;
+  }
+
+  if (id === "name" || id === "newSecretName") {
+    if (trimmed.length > 253) {
+      return false;
+    }
+
+    if (/[^-.a-z1-9]/.test(trimmed)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function invalidFieldsLocator(fields, name, value) {
+  const newInvalidFields = fields;
+  const idIndex = newInvalidFields.indexOf(name);
+  if (validateInputs(value, name)) {
+    if (idIndex !== -1) {
+      newInvalidFields.splice(idIndex, 1);
+    }
+  } else if (idIndex === -1) {
+    newInvalidFields.push(name);
+  }
+
+  return newInvalidFields;
+}
+
 const CustomTooltip = props => (
   <TooltipIcon {...props} >
     <Infomation />
@@ -59,7 +94,9 @@ class WebhookCreatePage extends Component {
       // toggle access token 'password' or 'text'
       pwType: 'password',
       visibleCSS: 'token-visible',
-      invisibleCSS: 'token-invisible'
+      invisibleCSS: 'token-invisible',
+      //array storing invalid inputs
+      invalidFields: []
     };
   }
 
@@ -129,10 +166,13 @@ class WebhookCreatePage extends Component {
   }
 
   handleChange = (event) => {
-    const target = event.target;
+    const {target} = event;
     const value = target.value;
     const name = target.name;
-    this.setState({[name]: value});
+    this.setState(prevState => {
+      const newInvalidFields = invalidFieldsLocator(prevState.invalidFields, name, value);
+      return { [name]: value, invalidFields: newInvalidFields };
+    });
   }
 
   handleChangeNamespace = (itemText) => {
@@ -165,30 +205,58 @@ class WebhookCreatePage extends Component {
 
   handleSubmit = (e) => {
     e.preventDefault();
-    
-    const requestBody = {
-      name: this.state.name,
-      gitrepositoryurl: this.state.repository,
-      accesstoken: this.state.gitsecret,
-      pipeline: this.state.pipeline,
-      namespace: this.state.namespace,
-      serviceaccount: this.state.serviceAccount,
-      dockerregistry: this.state.dockerRegistry
-    };
 
-    createWebhook(requestBody).then(() => {
-      this.props.setShowNotificationOnTable(true);
-      this.returnToTable();
-    }).catch(error => {
-       error.response.text().then((text) => {
-        this.setState({
-          notificationMessage: "Failed to create webhook, error returned was : " + text,
-          notificationStatus: 'error',
-          notificationStatusMsgShort: 'Error:',
-          showNotification: true,
+    let invalidFields = [];
+
+    const {
+      gitsecret,
+      dockerRegistry,
+      repository,
+      name,
+      namespace,
+      pipeline,
+      serviceAccount
+    } = this.state;
+
+    if (!validateInputs(name, "name")) {
+      invalidFields.push("name");
+    }
+
+    if (!validateInputs(dockerRegistry, "dockerRegistry")) {
+      invalidFields.push("name");
+    }
+
+    if (!validateInputs(repository, "repository")) {
+      invalidFields.push("repository");
+    }
+
+    if (invalidFields.length === 0) {
+      const requestBody = {
+        name,
+        gitrepositoryurl: repository,
+        accesstoken: gitsecret,
+        pipeline,
+        namespace,
+        serviceaccount: serviceAccount,
+        dockerregistry: dockerRegistry
+      };
+
+      createWebhook(requestBody).then(() => {
+        this.props.setShowNotificationOnTable(true);
+        this.returnToTable();
+      }).catch(error => {
+         error.response.text().then((text) => {
+          this.setState({
+            notificationMessage: 'Failed to create webhook, error returned was : ' + text,
+            notificationStatus: 'error',
+            notificationStatusMsgShort: 'Error:',
+            showNotification: true
+          });
         });
       });
-    });
+    } else {
+      this.setState({ invalidFields });
+    }
   }
 
 
@@ -375,7 +443,10 @@ class WebhookCreatePage extends Component {
       const target = event.target;
       const value = target.value;
       const name = target.name;
-      this.setState({ [name]: value });
+      this.setState(prevState => {
+        const newInvalidFields = invalidFieldsLocator(prevState.invalidFields, name, value);
+        return { [name]: value, invalidFields: newInvalidFields };
+      });
     }
   }
 
@@ -397,6 +468,7 @@ class WebhookCreatePage extends Component {
 
     const secretItems = [];
     const saItems = [];
+    const { invalidFields } = this.state;
 
     if (this.state.apiSecrets) {
       this.state.apiSecrets.map(function (secretResource, index) {
@@ -471,6 +543,8 @@ class WebhookCreatePage extends Component {
                     hideLabel
                     labelText="Display Name"
                     data-testid="display-name-entry"
+                    invalid={invalidFields.indexOf('name') > -1}
+                    invalidText="Must be less than 563 characters, contain only lowercase alphanumeric character, . or - ."
                   />
                 </div>
               </div>
@@ -494,6 +568,8 @@ class WebhookCreatePage extends Component {
                     hideLabel
                     labelText="Repository"
                     data-testid="git-url-entry"
+                    invalid={invalidFields.indexOf('repository') > -1}
+                    invalidText="Required."
                   />
                 </div>
               </div>
@@ -583,6 +659,8 @@ class WebhookCreatePage extends Component {
                     hideLabel
                     labelText="Docker Registry"
                     data-testid="docker-reg-entry"
+                    invalid={invalidFields.indexOf('dockerRegistry') > -1}
+                    invalidText="Required."
                   />
                 </div>
               </div>
@@ -682,6 +760,8 @@ class WebhookCreatePage extends Component {
                       onChange={this.handleModalText}
                       hideLabel
                       labelText="Access Token"
+                      invalid={invalidFields.indexOf('newTokenValue') > -1}
+                      invalidText="Required."
                     />
                     <ViewFilled id="token-visible-svg" className={this.state.visibleCSS} onClick={this.togglePasswordVisibility} />
                     <ViewOffFilled id="token-invisible-svg" className={this.state.invisibleCSS} onClick={this.togglePasswordVisibility} />
