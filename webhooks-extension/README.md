@@ -8,6 +8,8 @@ This initial implementation utilises Knative Eventing but there is discussion an
 
 In addition to Tekton/Knative Eventing glue, it includes an extension to the Tekton Dashboard.
 
+See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide for more on what this extension does, and how to use it. 
+
 
 ## Prerequisites
 
