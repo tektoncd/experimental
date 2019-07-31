@@ -301,9 +301,9 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 	// Unique names are required so timestamp them.
 	pullRequestResourceName := fmt.Sprintf("%s-pull-request-%s", webhook.Name, startTime)
 
-	task, err := r.getTaskImpl(taskTemplateName, taskNs)
+	task, err := r.getTaskImpl(taskTemplateName, installNs)
 	if err != nil {
-		logging.Log.Errorf("could not find the task template %s in namespace %s.", taskTemplateName, taskNs)
+		logging.Log.Errorf("could not find the task template %s in namespace %s.", taskTemplateName, installNs)
 		return
 	}
 	logging.Log.Debugf("Found the task template %s OK.", taskTemplateName)
@@ -312,8 +312,8 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 
 	paramsForPullRequestResource := []v1alpha1.Param{{Name: "url", Value: buildInformation.PULLURL}}
 	secretParamsForPullRequestResource := []v1alpha1.SecretParam{{FieldName: "githubToken", SecretKey: "accessToken", SecretName: accessTokenRef}}
-	pipelinePullRequestResource := definePipelineResource(pullRequestResourceName, taskNs, paramsForPullRequestResource, secretParamsForPullRequestResource, "pullRequest")
-	createdPipelinePullRequestResource, err := r.TektonClient.TektonV1alpha1().PipelineResources(taskNs).Create(pipelinePullRequestResource)
+	pipelinePullRequestResource := definePipelineResource(pullRequestResourceName, installNs, paramsForPullRequestResource, secretParamsForPullRequestResource, "pullRequest")
+	createdPipelinePullRequestResource, err := r.TektonClient.TektonV1alpha1().PipelineResources(installNs).Create(pipelinePullRequestResource)
 	if err != nil {
 		logging.Log.Errorf("error creating pipeline image resource to be used in the pipeline: %s.", err.Error())
 		return
@@ -326,15 +326,16 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 
 	params := []v1alpha1.Param{{Name: "commentsuccess", Value: OnSuccessComment},
 		{Name: "commentfailure", Value: OnFailureComment},
-		{Name: "pipelinerun", Value: pipelineRunName }}
+		{Name: "pipelinerun", Value: pipelineRunName },
+		{Name: "pipelinerunnamespace", Value: taskNs }}
 
 	// TaskRun yml defines the references to the above named resources.
-	taskRunData, err := defineTaskRun(generatedTaskRunName, taskNs, saName, buildInformation.REPOURL, buildInformation.BRANCH,
+	taskRunData, err := defineTaskRun(generatedTaskRunName, installNs, saName, buildInformation.REPOURL, buildInformation.BRANCH,
 		task, pipelinerun, resources, params)
 
-	logging.Log.Infof("Creating a new TaskRun named %s in the namespace %s using the service account %s.", pipelineRunName, taskNs, saName)
+	logging.Log.Infof("Creating a new TaskRun named %s in the namespace %s using the service account %s.", pipelineRunName, installNs, saName)
 
-	taskRun, err := r.TektonClient.TektonV1alpha1().TaskRuns(taskNs).Create(taskRunData)
+	taskRun, err := r.TektonClient.TektonV1alpha1().TaskRuns(installNs).Create(taskRunData)
 	if err != nil {
 		logging.Log.Errorf("error creating the TaskRun: %s", err.Error())
 		return
@@ -459,14 +460,18 @@ func defineTaskRun(taskRunName, namespace, saName, repoURL string, branch string
 				gitRepoLabel:   gitRepo,
 				gitBranchLabel: branch,
 			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "tekton.dev/v1alpha1",
-					Kind: "PipelineRun",
-					Name: pipelineRunRef.GetName(),
-					UID:  pipelineRunRef.GetUID(),
-				},
-			},
+//  The following lines cause an issue with the persistent volume claim in the Docker for Desktop
+//  The task created in the installed namespace must be garbage collected until the issue is fixed.
+//  This issue is related to https://github.com/tektoncd/pipeline/issues/1076
+//
+//			OwnerReferences: []metav1.OwnerReference{
+//				{
+//					APIVersion: "tekton.dev/v1alpha1",
+//					Kind: "PipelineRun",
+//					Name: pipelineRunRef.GetName(),
+//					UID:  pipelineRunRef.GetUID(),
+//				},
+//			},
 		},
 
 		Spec: v1alpha1.TaskRunSpec{

@@ -12,8 +12,11 @@ spec:
       - name: pipelinerun
         description: The name of the pipelinerun to be monitored
         default: default pipelinerun
+      - name: pipelinerunnamespace
+        description: The namespace of the pipelinerun to be monitored
+        default: default namespace
       - name: commentsuccess
-        description: The text of the sccess comment
+        description: The text of the success comment
         default: default success at task
       - name: commentfailure
         description: The text of the failure comment
@@ -33,9 +36,7 @@ spec:
       - name: COMMENT_FAILURE
         value: ${inputs.params.commentfailure}
       - name: NAMESPACE
-        valueFrom:
-          fieldRef:
-            fieldPath: metadata.namespace
+        value: ${inputs.params.pipelinerunnamespace}
     command: ["/bin/bash"]
     args:
     - -ce
@@ -55,6 +56,10 @@ spec:
               comment = "$COMMENT_SUCCESS"
               break
           if output["status"]["conditions"][0]["status"] == u'False' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+              for y in output["status"]["taskRuns"]:
+                  if output["status"]["taskRuns"][y]["status"]["conditions"][0]["status"] == u'False' and \
+                  output["status"]["taskRuns"][y]["status"]["conditions"][0]["type"] == u'Succeeded': 
+                      comment = comment + ": " + output["status"]["taskRuns"][y]["status"]["conditions"][0]["message"]
               break
       with open("/workspace/pull-request/pr.json", 'r') as pr_file:
           data = json.load(pr_file)

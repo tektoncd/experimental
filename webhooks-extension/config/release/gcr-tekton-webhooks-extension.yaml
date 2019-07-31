@@ -205,6 +205,10 @@ spec:
               comment = "$COMMENT_SUCCESS"
               break
           if output["status"]["conditions"][0]["status"] == u'False' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+              for y in output["status"]["taskRuns"]:
+                  if output["status"]["taskRuns"][y]["status"]["conditions"][0]["status"] == u'False' and \
+                  output["status"]["taskRuns"][y]["status"]["conditions"][0]["type"] == u'Succeeded': 
+                      comment = comment + ": " + output["status"]["taskRuns"][y]["status"]["conditions"][0]["message"]
               break
       with open("/workspace/pull-request/pr.json", 'r') as pr_file:
           data = json.load(pr_file)
