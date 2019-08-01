@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { withRouter } from 'react-router-dom';
 
 import { Button, TextInput, Dropdown, Form, Tooltip, DropdownSkeleton, Modal, InlineNotification, TooltipIcon } from 'carbon-components-react';
-import { getSecrets, getServiceAccounts, createWebhook, createSecret, deleteSecret } from '../../api/index';
+import { getSecrets, createWebhook, createSecret, deleteSecret } from '../../api/index';
 
 import AddAlt20 from '@carbon/icons-react/lib/add--alt/20';
 import SubtractAlt20 from '@carbon/icons-react/lib/subtract--alt/20';
@@ -78,7 +78,6 @@ class WebhookCreatePage extends Component {
       dockerRegistry: '',
       // fetched data from api calls
       apiSecrets: '',
-      apiServiceAccounts: '',
       // whether or not to show secret modals
       showDeleteDialog: false,
       showCreateDialog: false,
@@ -113,9 +112,17 @@ class WebhookCreatePage extends Component {
       });
       this.props.setshowLastWebhookDeletedNotification(false);
     }
-    if(this.props.getPipelinesErrorMessage){
+    if(this.props.pipelinesErrorMessage){
       this.setState({
-        notificationMessage: this.props.getPipelinesErrorMessage,
+        notificationMessage: this.props.pipelinesErrorMessage,
+        notificationStatus: 'error',
+        notificationStatusMsgShort: 'Error:',
+        showNotification: true
+      });
+    }
+    if(this.props.serviceAccountsErrorMessage){
+      this.setState({
+        notificationMessage: this.props.serviceAccountsErrorMessage,
         notificationStatus: 'error',
         notificationStatusMsgShort: 'Error:',
         showNotification: true
@@ -147,24 +154,6 @@ class WebhookCreatePage extends Component {
     }
   }
 
-  async fetchServiceAccounts(namespace) {
-    let sa;
-    try {
-      sa = await getServiceAccounts(namespace);
-      this.setState({apiServiceAccounts: sa})
-    } catch (error) {
-        error.response.text().then((text) => {
-          this.setState({
-            serviceAccountsFail: true,
-            notificationMessage: "Failed to get service accounts, error returned was : " + text,
-            notificationStatus: 'error',
-            notificationStatusMsgShort: 'Error:',
-            showNotification: true,
-          });
-        });
-    }
-  }
-
   handleChange = (event) => {
     const {target} = event;
     const value = target.value;
@@ -178,8 +167,6 @@ class WebhookCreatePage extends Component {
   handleChangeNamespace = (itemText) => {
     this.setState({
       namespace: itemText.selectedItem,
-      apiPipelines: '',
-      apiServiceAccounts: '',
       pipeline: '',
       serviceAccount: '',
     });
@@ -187,7 +174,7 @@ class WebhookCreatePage extends Component {
       this.props.fetchPipelines(itemText.selectedItem);
     }
     if (!this.state.serviceAccountsFail) {
-      this.fetchServiceAccounts(itemText.selectedItem);
+      this.props.fetchServiceAccounts(itemText.selectedItem);
     }
   }
 
@@ -312,6 +299,7 @@ class WebhookCreatePage extends Component {
       .map(pipeline => pipeline.metadata.name);
     return (
       <Dropdown
+        data-testid="pipelinesDropdown"
         id="pipeline"
         label="select pipeline"
         items={pipelineItems}
@@ -334,15 +322,19 @@ class WebhookCreatePage extends Component {
       selectedItem={this.state.gitsecret}
     />
   }
-  
-  displayServiceAccountDropDown = (saItems) => {
+
+  displayServiceAccountDropDown = () => {
     if (!this.isDisabled()) {
-      if (!this.state.apiServiceAccounts) {
+      if (this.props.isFetchingServiceAccounts) {
         return <DropdownSkeleton />
       }
     }
+    const saItems = this.props.serviceAccounts
+      .filter(sa => sa.metadata.namespace === this.state.namespace)
+      .map(sa => sa.metadata.name);
     return <Dropdown
       id="serviceAccounts"
+      data-testid="serviceAccounts"
       label="select service account"
       items={saItems}
       disabled={this.isDisabled()}
@@ -467,7 +459,6 @@ class WebhookCreatePage extends Component {
   render() {
 
     const secretItems = [];
-    const saItems = [];
     const { invalidFields } = this.state;
 
     if (this.state.apiSecrets) {
@@ -477,11 +468,6 @@ class WebhookCreatePage extends Component {
     }
 
     if (this.props.namespaces) {
-      if (this.state.apiServiceAccounts) {
-        this.state.apiServiceAccounts.items.map(function (saResource, index) {
-          saItems[index] = saResource.metadata['name'];
-        });
-      }
       if (this.state.createSecretDisabled) {
         if (this.state.newSecretName && this.state.newTokenValue) {
           this.setState({
@@ -636,7 +622,7 @@ class WebhookCreatePage extends Component {
               </div>
               <div className="entry-field">
                 <div className="createDropDown">
-                  {this.displayServiceAccountDropDown(saItems)}
+                  {this.displayServiceAccountDropDown()}
                 </div>
               </div>
             </div>

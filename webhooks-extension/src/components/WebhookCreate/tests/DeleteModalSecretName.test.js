@@ -53,20 +53,20 @@ const secretsResponseMock = [
   }
 ]
 
-const serviceAccountsResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      },
-    },
-    {
-      "metadata": {
-        "name": "testserviceaccount",
-      },
+const serviceAccounts = [
+  {
+    metadata: {
+      name: "default",
+      namespace: "default"
     }
-  ]
-}
+  },
+  {
+    metadata: {
+      name: "testserviceaccount",
+      namespace: "istio-system",
+    },
+  }
+];
 
 beforeEach(() => {
   jest.restoreAllMocks
@@ -83,15 +83,15 @@ describe('delete modal secret name', () => {
 
   it('modal should be shown to confirm deletion and include selected secret name', async () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
         pipelines={pipelines}
-        setShowNotificationOnTable={() => {}}
         fetchPipelines={() => {}}
-        isFetchingPipelines={false}
+        serviceAccounts={serviceAccounts}
+        fetchServiceAccounts={() => {}}
+        setShowNotificationOnTable={() => {}}
       />
     );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));

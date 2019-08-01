@@ -104,21 +104,6 @@ const secretsResponseMock = [
   }
 ]
 
-const serviceAccountsResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      },
-    },
-    {
-      "metadata": {
-        "name": "testserviceaccount",
-      },
-    }
-  ]
-}
-
 const webhooks = [
   {
     id: '0|namespace',
@@ -149,6 +134,22 @@ const selectors = {
   isFetchingNamespaces: jest.fn(() => false),
   isFetchingPipelines: jest.fn(() => false),
   getPipelinesErrorMessage: jest.fn(() => null),
+  getServiceAccountsErrorMessage: jest.fn(() => null),
+  isFetchingServiceAccounts: jest.fn(() => false),
+  getServiceAccounts: jest.fn(() => [
+    {
+      metadata: {
+        name: "default",
+        namespace: "default"
+      }
+    },
+    {
+      metadata: {
+        name: "second-sa",
+        namespace: "default",
+      },
+    }
+  ])
 };
 
 it('change in components after last webhook deleted', async () => {
@@ -182,7 +183,6 @@ it('change in components after last webhook deleted', async () => {
 
   getWebhooksMock.mockImplementation(() => Promise.resolve([]));
   jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-  jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
 
   await waitForElement(() => getByText('Last webhook deleted successfully.'));
   expect(queryByTestId('table-container')).toBeNull();
