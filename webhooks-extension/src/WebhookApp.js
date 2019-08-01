@@ -28,13 +28,17 @@ class WebhooksApp extends Component {
   render() {
     const {
       fetchPipelines,
-      getPipelinesErrorMessage,
+      fetchServiceAccounts,
+      pipelinesErrorMessage,
+      serviceAccountsErrorMessage,
       isFetchingNamespaces,
       isFetchingPipelines,
+      isFetchingServiceAccounts,
       match,
       namespace,
       namespaces,
-      pipelines
+      pipelines,
+      serviceAccounts
     } = this.props;
 
     return (
@@ -60,10 +64,14 @@ class WebhooksApp extends Component {
               {...props}
               namespaces={namespaces}
               pipelines={pipelines}
+              serviceAccounts={serviceAccounts}
               isFetchingNamespaces={isFetchingNamespaces}
               isFetchingPipelines={isFetchingPipelines}
-              getPipelinesErrorMessage={getPipelinesErrorMessage}
+              isFetchingServiceAccounts={isFetchingServiceAccounts}
+              pipelinesErrorMessage={pipelinesErrorMessage}
               fetchPipelines={fetchPipelines}
+              serviceAccountsErrorMessage={serviceAccountsErrorMessage}
+              fetchServiceAccounts={fetchServiceAccounts}
               setShowNotificationOnTable={this.setShowNotificationOnTable}
               setshowLastWebhookDeletedNotification={
                 this.setshowLastWebhookDeletedNotification
@@ -86,13 +94,18 @@ function mapStateToProps(state, props) {
     pipelines: props.selectors.getPipelines(state),
     isFetchingNamespaces: props.selectors.isFetchingNamespaces(state),
     isFetchingPipelines: props.selectors.isFetchingPipelines(state),
-    getPipelinesErrorMessage: props.selectors.getPipelinesErrorMessage(state),
+    pipelinesErrorMessage: props.selectors.getPipelinesErrorMessage(state),
+    serviceAccountsErrorMessage: props.selectors.getServiceAccountsErrorMessage(state),
+    isFetchingServiceAccounts: props.selectors.isFetchingServiceAccounts(state),
+    serviceAccounts: props.selectors.getServiceAccounts(state)
   };
 }
 
 const mapDispatchToProps = (dispatch, props) => ({
   fetchPipelines: namespace =>
-    dispatch(props.actions.fetchPipelines({ namespace }))
+    dispatch(props.actions.fetchPipelines({ namespace })),
+  fetchServiceAccounts: namespace =>
+    dispatch(props.actions.fetchServiceAccounts({ namespace }))
 });
 
 export default connect(
