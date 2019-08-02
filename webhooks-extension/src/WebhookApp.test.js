@@ -63,7 +63,7 @@ function fakeDeleteWebhooksSuccess() {
   };
 }
 
-const fakeRowSelection = [
+const fakeRowsSelection = [
   {
     "id":"mywebhook|default",
     "isSelected":true,
@@ -92,6 +92,64 @@ const fakeRowSelection = [
         "header":"namespace"
       }
     }
+  ]},
+  {
+    "id":"mywebhook2|default",
+    "isSelected":true,
+    "isExpanded":false,
+    "cells":[
+      {
+        "id":"mywebhook2|default:name","value":"mywebhook2","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+        {
+          "header":"name"
+        }
+      },
+      {
+        "id":"mywebhook2|default:repository","value":"https://github.com/foo/bar","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+        {
+          "header":"repository"
+        }
+      },
+      {
+        "id":"mywebhook2|default:pipeline","value":"simple-helm-pipeline-insecure","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+        {
+          "header":"pipeline"
+        }
+      },
+      {"id":"mywebhook2|default:namespace","value":"default","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+      {
+        "header":"namespace"
+      }
+    }
+  ]},
+  {
+    "id":"mywebhook3|default",
+    "isSelected":true,
+    "isExpanded":false,
+    "cells":[
+      {
+        "id":"mywebhook3|default:name","value":"mywebhook3","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+        {
+          "header":"name"
+        }
+      },
+      {
+        "id":"mywebhook3|default:repository","value":"https://github.com/foo/bar","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+        {
+          "header":"repository"
+        }
+      },
+      {
+        "id":"mywebhook3|default:pipeline","value":"simple-helm-pipeline-insecure","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+        {
+          "header":"pipeline"
+        }
+      },
+      {"id":"mywebhook3|default:namespace","value":"default","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
+      {
+        "header":"namespace"
+      }
+    }
   ]}
 ]
 
@@ -109,6 +167,20 @@ const webhooks = [
     id: '0|namespace',
     name: 'first test webhook',
     gitrepositoryurl: 'repo1',
+    pipeline: 'pipeline1',
+    namespace: 'default'
+  },
+  {
+    id: '1|namespace',
+    name: 'second test webhook',
+    gitrepositoryurl: 'repo2',
+    pipeline: 'pipeline1',
+    namespace: 'default'
+  },
+  {
+    id: '2|namespace',
+    name: 'third test webhook',
+    gitrepositoryurl: 'repo3',
     pipeline: 'pipeline1',
     namespace: 'default'
   }
@@ -152,39 +224,53 @@ const selectors = {
   ])
 };
 
-it('change in components after last webhook deleted', async () => {
-  let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
-  let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
+describe("change in components after last webhook(s) deleted & shows notification", () => {
+  const test = async (webhooks, fakeRowsSelected) => {
+    let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
+    let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowsSelected);
+    let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
 
-  const { getByText, queryByTestId } = renderWithRouter(
-    <Provider store={store}>
-      <WebhookApp match={{}} selectors={selectors}/>
-    </Provider>);
+    const { getByText, queryByTestId } = renderWithRouter(
+      <Provider store={store}>
+        <WebhookApp match={{}} selectors={selectors}/>
+      </Provider>);
 
 
-  await waitForElement(() => getByText('first test webhook'));
-  expect(queryByTestId('table-container')).not.toBeNull();
-  expect(queryByTestId('webhook-create')).toBeNull();
+    await waitForElement(() => getByText('first test webhook'));
+    expect(queryByTestId('table-container')).not.toBeNull();
+    expect(queryByTestId('webhook-create')).toBeNull();
 
-  const foundDeleteButton = document.getElementById('delete-btn');
-  await waitForElement(() => foundDeleteButton);
+    const foundDeleteButton = document.getElementById('delete-btn');
+    await waitForElement(() => foundDeleteButton);
 
-  fireEvent.click(foundDeleteButton);
+    fireEvent.click(foundDeleteButton);
 
-  const foundDeleteButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--danger').item(0);
-  await waitForElement(() => foundDeleteButtonOnModal);
+    const foundDeleteButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--danger').item(0);
+    await waitForElement(() => foundDeleteButtonOnModal);
 
-  fireEvent.click(foundDeleteButtonOnModal);
+    fireEvent.click(foundDeleteButtonOnModal);
 
-  expect(getWebhooksMock).toHaveBeenCalled();
-  expect(getRowsMock).toHaveBeenCalled();
-  expect(deleteWebhooksMock).toHaveBeenCalled();
+    expect(getWebhooksMock).toHaveBeenCalled();
+    expect(getRowsMock).toHaveBeenCalled();
+    expect(deleteWebhooksMock).toHaveBeenCalled();
 
-  getWebhooksMock.mockImplementation(() => Promise.resolve([]));
-  jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
+    getWebhooksMock.mockImplementation(() => Promise.resolve([]));
+    jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
 
-  await waitForElement(() => getByText('Last webhook deleted successfully.'));
-  expect(queryByTestId('table-container')).toBeNull();
-  expect(queryByTestId('webhook-create')).not.toBeNull();
+    await waitForElement(() => getByText('Last webhook(s) deleted successfully.'));
+    expect(queryByTestId('table-container')).toBeNull();
+    expect(queryByTestId('webhook-create')).not.toBeNull();
+  }
+
+  it('# of webhooks: 1', () => {
+    test([webhooks[0]], [fakeRowsSelection[0]]);
+  });
+
+  it('# of webhooks: 2', () => {
+    test(webhooks.slice(0,2), fakeRowsSelection.slice(0,2));
+  });
+
+  it('# of webhooks: 3', () => {
+    test(webhooks, fakeRowsSelection);
+  });
 });
