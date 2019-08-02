@@ -105,7 +105,7 @@ class WebhookCreatePage extends Component {
     this.fetchSecrets();
     if(this.props.showLastWebhookDeletedNotification){
       this.setState({
-        notificationMessage: "Last webhook deleted successfully.",
+        notificationMessage: "Last webhook(s) deleted successfully.",
         notificationStatus: 'success',
         notificationStatusMsgShort: 'Success:',
         showNotification: true
