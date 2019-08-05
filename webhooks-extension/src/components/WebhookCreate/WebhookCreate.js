@@ -136,6 +136,24 @@ class WebhookCreatePage extends Component {
     }
   }
 
+  componentDidUpdate() {
+    if (this.props.namespaces) {
+      if (this.state.createSecretDisabled) {
+        if (this.state.newSecretName && this.state.newTokenValue) {
+          this.setState({
+            createSecretDisabled: false
+          })
+        }
+      } else {
+        if (!this.state.newSecretName || !this.state.newTokenValue) {
+          this.setState({
+            createSecretDisabled: true
+          })
+        }
+      }
+    }
+  }
+
   async fetchSecrets() {
     let s;
     try {
@@ -465,22 +483,6 @@ class WebhookCreatePage extends Component {
       this.state.apiSecrets.map(function (secretResource, index) {
         secretItems[index] = secretResource['name'];
       });
-    }
-
-    if (this.props.namespaces) {
-      if (this.state.createSecretDisabled) {
-        if (this.state.newSecretName && this.state.newTokenValue) {
-          this.setState({
-            createSecretDisabled: false
-          })
-        }
-      } else {
-        if (!this.state.newSecretName || !this.state.newTokenValue) {
-          this.setState({
-            createSecretDisabled: true
-          })
-        }
-      }
     }
 
     return (
