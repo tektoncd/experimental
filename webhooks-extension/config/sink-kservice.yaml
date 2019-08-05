@@ -25,3 +25,4 @@ spec:
           value: "tekton-pipelines"
         - name: SERVICEACCOUNT
           value: tekton-webhooks-extension
+      serviceAccountName: tekton-webhooks-extension

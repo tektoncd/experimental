@@ -132,7 +132,7 @@ export class WebhookDisplayTable extends Component {
 
     Promise.all(deletePromises).then( () => {
       this.fetchWebhooksForTable();
-      if(this.state.webhooks.length - 1 === 0){
+      if(this.state.webhooks.length - rowsToUse.length === 0){
         this.props.setshowLastWebhookDeletedNotification(true);
       }
       else {

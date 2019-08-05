@@ -53,26 +53,26 @@ const secretsResponseMock = [
   }
 ]
 
-const serviceAccountsResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      },
-    },
-    {
-      "metadata": {
-        "name": "testserviceaccount",
-      },
+const serviceAccounts = [
+  {
+    metadata: {
+      name: "default",
+      namespace: "default"
     }
-  ]
-}
+  },
+  {
+    metadata: {
+      name: "testserviceaccount",
+      namespace: "istio-system",
+    },
+  }
+];
 
 beforeEach(() => {
   jest.restoreAllMocks
   jest.resetModules()
  });
- 
+
 afterEach(() => {
   jest.clearAllMocks()
   cleanup()
@@ -84,7 +84,6 @@ describe('create secret', () => {
 
   it('notification shown when error occurs creating secret', async () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     jest.spyOn(API, 'createSecret').mockImplementation((request) => {
       const expectRequest = { name: 'new-secret-foo', accesstoken: '1234567890bar' };
       expect(request).toStrictEqual(expectRequest);
@@ -101,9 +100,10 @@ describe('create secret', () => {
         match={{}}
         namespaces={namespaces}
         pipelines={pipelines}
-        setShowNotificationOnTable={() => {}}
         fetchPipelines={() => {}}
-        isFetchingPipelines={false}
+        serviceAccounts={serviceAccounts}
+        fetchServiceAccounts={() => {}}
+        setShowNotificationOnTable={() => {}}
       />
     );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));

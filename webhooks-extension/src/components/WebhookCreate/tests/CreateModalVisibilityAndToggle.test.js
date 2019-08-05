@@ -52,26 +52,26 @@ const secretsResponseMock = [
   }
 ]
 
-const serviceAccountsResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-        },
-      },
-      {
-        "metadata": {
-          "name": "testserviceaccount",
-        },
+const serviceAccounts = [
+  {
+    metadata: {
+      name: "default",
+      namespace: "default"
     }
-  ]
-}
+  },
+  {
+    metadata: {
+      name: "testserviceaccount",
+      namespace: "istio-system",
+    },
+  }
+];
 
 beforeEach(() => {
   jest.restoreAllMocks
   jest.resetModules()
  });
- 
+
 afterEach(() => {
   jest.clearAllMocks()
   cleanup()
@@ -83,13 +83,14 @@ describe('create secret', () => {
 
   it('create button enabled only when name and token complete', async () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
         pipelines={pipelines}
         fetchPipelines={() => {}}
+        serviceAccounts={serviceAccounts}
+        fetchServiceAccounts={() => {}}
         setShowNotificationOnTable={() => {}}
       />
     );
@@ -116,13 +117,14 @@ describe('create secret', () => {
 
   it('should be able toggle visibility of token', async () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
         pipelines={pipelines}
         fetchPipelines={() => {}}
+        serviceAccounts={serviceAccounts}
+        fetchServiceAccounts={() => {}}
         setShowNotificationOnTable={() => {}}
       />
     );

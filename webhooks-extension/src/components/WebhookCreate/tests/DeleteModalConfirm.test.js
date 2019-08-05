@@ -61,26 +61,26 @@ const secretsDeletedMock = [
 
 const deleteSecretSuccessMock = {}
 
-const serviceAccountsResponseMock = {
-  "items": [
-    {
-      "metadata": {
-        "name": "default",
-      },
-    },
-    {
-      "metadata": {
-        "name": "testserviceaccount",
-      },
+const serviceAccounts = [
+  {
+    metadata: {
+      name: "default",
+      namespace: "default"
     }
-  ]
-}
+  },
+  {
+    metadata: {
+      name: "testserviceaccount",
+      namespace: "istio-system",
+    },
+  }
+];
 
 beforeEach(() => {
   jest.restoreAllMocks
   jest.resetModules()
  });
- 
+
 afterEach(() => {
   jest.clearAllMocks()
   cleanup()
@@ -90,16 +90,16 @@ afterEach(() => {
 describe('confirm deletion success', () => {
   it('delete button should hide modal, remove secret from listing and reset dropdown', async () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    jest.spyOn(API, 'getServiceAccounts').mockImplementation(() => Promise.resolve(serviceAccountsResponseMock));
     jest.spyOn(API, 'deleteSecret').mockImplementation(() => Promise.resolve(deleteSecretSuccessMock));
     const { getByText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
         pipelines={pipelines}
-        setShowNotificationOnTable={() => {}}
         fetchPipelines={() => {}}
-        isFetchingPipelines={false}
+        serviceAccounts={serviceAccounts}
+        fetchServiceAccounts={() => {}}
+        setShowNotificationOnTable={() => {}}
       />
     );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
