@@ -76,15 +76,18 @@ func NewResource() (Resource, error) {
 
 // Webhook stores the webhook information
 type webhook struct {
-	Name             string `json:"name"`
-	Namespace        string `json:"namespace"`
-	ServiceAccount   string `json:"serviceaccount,omitempty"`
-	GitRepositoryURL string `json:"gitrepositoryurl"`
-	AccessTokenRef   string `json:"accesstoken"`
-	Pipeline         string `json:"pipeline"`
-	DockerRegistry   string `json:"dockerregistry,omitempty"`
-	HelmSecret       string `json:"helmsecret,omitempty"`
-	ReleaseName      string `json:"releasename,omitempty"`
+	Name               string `json:"name"`
+	Namespace          string `json:"namespace"`
+	ServiceAccount     string `json:"serviceaccount,omitempty"`
+	GitRepositoryURL   string `json:"gitrepositoryurl"`
+	AccessTokenRef     string `json:"accesstoken"`
+	Pipeline           string `json:"pipeline"`
+	DockerRegistry     string `json:"dockerregistry,omitempty"`
+	HelmSecret         string `json:"helmsecret,omitempty"`
+	ReleaseName        string `json:"releasename,omitempty"`
+	PullTask           string `json:"pulltask,omitempty"`
+	OnSuccessComment   string `json:"onsuccesscomment,omitempty"`
+	OnFailureComment   string `json:"onfailurecomment,omitempty"`
 }
 
 // ConfigMapName ... the name of the ConfigMap to create
