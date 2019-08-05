@@ -146,4 +146,76 @@ spec:
         env:
         - name: INSTALLED_NAMESPACE
           value: tekton-pipelines
+        - name: SERVICEACCOUNT
+          value: tekton-webhooks-extension
       serviceAccountName: tekton-webhooks-extension
+---
+# -- Monitor pipelinerun status and update the pull request -- #
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: monitor-result-task
+spec:
+  inputs:
+    resources:
+      - name: pull-request
+        type: pullRequest
+    params:
+      - name: pipelinerun
+        description: The name of the pipelinerun to be monitored
+        default: default pipelinerun
+      - name: commentsuccess
+        description: The text of the success comment
+        default: Pipeline Succeeded
+      - name: commentfailure
+        description: The text of the failure comment
+        default: Pipeline Failed
+  outputs:
+    resources:
+      - name: pull-request
+        type: pullRequest
+  steps:
+  - name: check
+    image: maiwj/kubernetes-python-client
+    env:
+      - name: PIPELINERUN
+        value: ${inputs.params.pipelinerun}
+      - name: COMMENT_SUCCESS
+        value: ${inputs.params.commentsuccess}
+      - name: COMMENT_FAILURE
+        value: ${inputs.params.commentfailure}
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+    command: ["/bin/bash"]
+    args:
+    - -ce
+    - |
+      set -e
+      cat <<EOF | python
+      import time, os, json
+      from kubernetes import client, config
+      config.load_incluster_config()
+      api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
+      comment = "$COMMENT_FAILURE"
+      i = range(100)
+      for x in i:
+          time.sleep( 10 )
+          output = api_instance.get_namespaced_custom_object("tekton.dev", "v1alpha1", "$NAMESPACE", "pipelineruns", "$PIPELINERUN")
+          if output["status"]["conditions"][0]["status"] == u'True' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+              comment = "$COMMENT_SUCCESS"
+              break
+          if output["status"]["conditions"][0]["status"] == u'False' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+              for y in output["status"]["taskRuns"]:
+                  if output["status"]["taskRuns"][y]["status"]["conditions"][0]["status"] == u'False' and \
+                  output["status"]["taskRuns"][y]["status"]["conditions"][0]["type"] == u'Succeeded': 
+                      comment = comment + ": " + output["status"]["taskRuns"][y]["status"]["conditions"][0]["message"]
+              break
+      with open("/workspace/pull-request/pr.json", 'r') as pr_file:
+          data = json.load(pr_file)
+          data['Comments'].append(dict(text=comment))
+      os.rename("/workspace/pull-request/pr.json", "/workspace/pull-request/pr.json.backup")
+      with open("/workspace/pull-request/pr.json", 'w') as pr_file:
+          json.dump(data, pr_file)
+      EOF
