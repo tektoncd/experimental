@@ -71,6 +71,7 @@ spec:
       labels:
         app: webhooks-extension
     spec:
+      serviceAccountName: tekton-webhooks-extension
       containers:
         - name: webhooks-extension
           image: "github.com/tektoncd/experimental/webhooks-extension/cmd/extension"
