@@ -6,8 +6,6 @@ import { getSecrets, createWebhook, createSecret, deleteSecret } from '../../api
 
 import AddAlt20 from '@carbon/icons-react/lib/add--alt/20';
 import SubtractAlt20 from '@carbon/icons-react/lib/subtract--alt/20';
-import ViewFilled from '@carbon/icons-react/lib/view--filled/20';
-import ViewOffFilled from '@carbon/icons-react/lib/view--off--filled/20';
 import Infomation from "@carbon/icons-react/lib/information/16";
 
 import './WebhookCreate.scss';
@@ -90,10 +88,6 @@ class WebhookCreatePage extends Component {
       // create secret vars
       newSecretName: '',
       newTokenValue: '',
-      // toggle access token 'password' or 'text'
-      pwType: 'password',
-      visibleCSS: 'token-visible',
-      invisibleCSS: 'token-invisible',
       //array storing invalid inputs
       invalidFields: []
     };
@@ -470,14 +464,6 @@ class WebhookCreatePage extends Component {
     }
   }
 
-  togglePasswordVisibility = () => {
-    this.setState({
-      pwType: this.state.pwType === 'password' ? 'text' : 'password',
-      visibleCSS: this.state.visibleCSS === 'token-visible' ? 'token-invisible' : 'token-visible',
-      invisibleCSS: this.state.invisibleCSS === 'token-invisible' ? 'token-visible' : 'token-invisible',
-    });
-  };
-
   handleNotificationClose = () => {
     this.setState({
       showNotification: false
@@ -752,11 +738,10 @@ class WebhookCreatePage extends Component {
                 </div>
                 <div className="modal-row-entry-field">
                   <div className="token">
-                    <TextInput
+                    <TextInput.PasswordInput
                       id="tokenValue"
                       placeholder="Enter access token here"
                       name="newTokenValue"
-                      type={this.state.pwType}
                       value={this.state.newTokenValue}
                       onChange={this.handleModalText}
                       hideLabel
@@ -764,8 +749,6 @@ class WebhookCreatePage extends Component {
                       invalid={invalidFields.indexOf('newTokenValue') > -1}
                       invalidText="Required."
                     />
-                    <ViewFilled id="token-visible-svg" className={this.state.visibleCSS} onClick={this.togglePasswordVisibility} />
-                    <ViewOffFilled id="token-invisible-svg" className={this.state.invisibleCSS} onClick={this.togglePasswordVisibility} />
                   </div>
                 </div>
               </div>
