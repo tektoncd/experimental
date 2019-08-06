@@ -117,7 +117,7 @@ describe('create secret', () => {
 
   it('should be able toggle visibility of token', async () => {
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsResponseMock));
-    const { getByText } = renderWithRouter(
+    const { getByText, getByLabelText } = renderWithRouter(
       <WebhookCreate
         match={{}}
         namespaces={namespaces}
@@ -131,19 +131,18 @@ describe('create secret', () => {
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)));
     fireEvent.click(await waitForElement(() => getByText(/istio-system/i)));
 
-    expect(document.getElementById('tokenValue').getAttribute('type')).toBe('password')
-    expect(document.getElementById('token-visible-svg').getAttribute('class')).toContain('token-visible')
-    expect(document.getElementById('token-invisible-svg').getAttribute('class')).toContain('token-invisible')
+    const tokenInput = document.getElementById('tokenValue');
 
-    fireEvent.click(document.getElementById('token-visible-svg'))
+    expect(tokenInput.getAttribute('type')).toBe('password')
 
-    expect(document.getElementById('token-visible-svg').getAttribute('class')).toContain('token-invisible')
-    expect(document.getElementById('token-invisible-svg').getAttribute('class')).toContain('token-visible')
+    fireEvent.click(getByLabelText('Show password'));
 
-    fireEvent.click(document.getElementById('token-visible-svg'))
+    expect(tokenInput.getAttribute('type')).toBe('text')
 
-    expect(document.getElementById('token-visible-svg').getAttribute('class')).toContain('token-visible')
-    expect(document.getElementById('token-invisible-svg').getAttribute('class')).toContain('token-invisible')
+    fireEvent.click(getByLabelText('Hide password'));
+
+    expect(tokenInput.getAttribute('type')).toBe('password')
+
 
   });
 
