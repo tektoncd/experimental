@@ -110,6 +110,7 @@ class WebhookCreatePage extends Component {
         notificationStatusMsgShort: 'Success:',
         showNotification: true
       });
+      this.scrollToNotification();
       this.props.setshowLastWebhookDeletedNotification(false);
     }
     if(this.props.pipelinesErrorMessage){
@@ -119,6 +120,7 @@ class WebhookCreatePage extends Component {
         notificationStatusMsgShort: 'Error:',
         showNotification: true
       });
+      this.scrollToNotification();
     }
     if(this.props.serviceAccountsErrorMessage){
       this.setState({
@@ -127,6 +129,7 @@ class WebhookCreatePage extends Component {
         notificationStatusMsgShort: 'Error:',
         showNotification: true
       });
+      this.scrollToNotification();
     }
     if (this.isDisabled()) {
       document.getElementById("pipeline").firstElementChild.tabIndex = -1;
@@ -168,6 +171,7 @@ class WebhookCreatePage extends Component {
             notificationStatusMsgShort: 'Error:',
             showNotification: true,
           });
+          this.scrollToNotification();
         });
     }
   }
@@ -257,6 +261,7 @@ class WebhookCreatePage extends Component {
             notificationStatusMsgShort: 'Error:',
             showNotification: true
           });
+          this.scrollToNotification();
         });
       });
     } else {
@@ -374,6 +379,7 @@ class WebhookCreatePage extends Component {
         notificationStatus: "error",
         notificationStatusMsgShort: "Error:"
       })
+      this.scrollToNotification();
     }
   }
 
@@ -400,6 +406,7 @@ class WebhookCreatePage extends Component {
         notificationStatus: "success",
         notificationStatusMsgShort: "Secret deleted."
       });
+      this.scrollToNotification();
     }).catch(error => {
       error.response.text().then((text) => {
         this.toggleDeleteDialog();
@@ -409,6 +416,7 @@ class WebhookCreatePage extends Component {
           notificationStatusMsgShort: 'Error:',
           showNotification: true,
         });
+        this.scrollToNotification();
       });
     }).finally(() => {
       this.fetchSecrets();
@@ -431,6 +439,7 @@ class WebhookCreatePage extends Component {
         notificationStatus: "success",
         notificationStatusMsgShort: "Secret created."
       });
+      this.scrollToNotification();
     }).catch(error => {
       error.response.text().then((text) => {
         this.toggleCreateDialog()
@@ -442,6 +451,7 @@ class WebhookCreatePage extends Component {
           notificationStatusMsgShort: 'Error:',
           showNotification: true,
         });
+        this.scrollToNotification();
       });
     }).finally(() => {
       this.fetchSecrets();
@@ -474,6 +484,10 @@ class WebhookCreatePage extends Component {
     });
   }
 
+  scrollToNotification = () => {
+    window.scrollTo(0,0);
+  }
+
   render() {
 
     const secretItems = [];
@@ -499,7 +513,6 @@ class WebhookCreatePage extends Component {
             >
             </InlineNotification>
           )}
-          {this.state.showNotification && window.scrollTo(0,0)}
         </div>
 
         <div className="create-container">
