@@ -24,8 +24,8 @@ export function getSelectedRows(selectedRows) {
 
 export function getAPIRoot() {
   const { href, hash } = window.location;
-  let newHash = hash.replace('#/extensions','v1/extensions')
-  let baseURL = href.replace(hash, newHash);
+  let realHash = 'v1/extensions/webhooks-extension';
+  let baseURL = href.replace(hash, realHash);
   if (baseURL.endsWith('/')) {
     baseURL = baseURL.slice(0, -1);
   }
