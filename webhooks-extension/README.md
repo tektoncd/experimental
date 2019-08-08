@@ -41,9 +41,42 @@ kubectl patch configmap config-domain --namespace knative-serving --type='json' 
 
 ### Install the Webhooks Extension 
 
-The Tekton Webhooks Extension has hosted images located at `gcr.io/tekton-nightly/extension:latest` and `gcr.io/tekton-nightly/extension:latest`, to install the latest extension and sink using these images:
+### Installing the latest release
 
-`kubectl apply -f config/release/gcr-tekton-webhooks-extension.yaml`
+1. Run the
+   [`kubectl apply`](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#apply)
+   command to install the [Tekton Webhooks Extension](https://github.com/tektoncd/experimental/webhooks-extension)
+   and its dependencies:
+    
+  ```bash
+  kubectl apply --filename https://github.com/tektoncd/dashboard/releases/download/v0.1.0/webhooks-extension_release.yaml
+  ```
+
+   _(Previous versions will be available at `previous/$VERSION_NUMBER`, e.g.
+   https://storage.googleapis.com/tekton-releases/previous/v0.1.0/webhooks-extension_release.yaml.)_
+
+1. Run the
+   [`kubectl get`](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#get)
+   command to monitor the Tekton Dashboard Webhooks Extension component until all of the
+   components show a `STATUS` of `Running`:
+
+   ```bash
+   kubectl get pods --namespace tekton-pipelines
+   ```
+
+   Tip: Instead of running the `kubectl get` command multiple times, you can
+   append the `--watch` flag to view the component's status updates in real
+   time. Use CTRL + C to exit watch mode.
+
+You are now ready to use the Tekton Dashboard Webhooks Extension - see our [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
+
+## Nightly builds
+
+The Tekton Webhooks Extension has a hosted image of the latest builds located at `gcr.io/tekton-nightly/extension:latest` and `gcr.io/tekton-nightly/extension:latest`, to install the latest extension and sink using these images:
+
+```bash
+kubectl apply -f config/release/gcr-tekton-webhooks-extension.yaml
+```
 
 ### Access the Extension through the Dashboard UI 
 
