@@ -139,7 +139,7 @@ describe('drop downs should be disabled while no namespace selected', () => {
       />
     );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
-    expect(document.getElementById("pipeline").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true)
+    expect(document.getElementById("pipeline").className.includes("disabled")).toBe(true)
 
   });
   it('service accounts dropdown should be disabled', async () => {
@@ -154,7 +154,7 @@ describe('drop downs should be disabled while no namespace selected', () => {
       />
     );
     fireEvent.click(await waitForElement(() => getByText(/select namespace/i)))
-    expect(document.getElementById("serviceAccounts").getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true)
+    expect(document.getElementById("serviceAccounts").className.includes("disabled")).toBe(true)
 
     });
 })
@@ -198,7 +198,7 @@ describe('drop downs should be enabled when a namespace is selected', () => {
     const dropdowns = queryAllByRole('listbox')
     for(let dropdown of dropdowns){
       if(dropdown.getAttribute('id') === "pipeline"){
-        await wait(() => expect(dropdown.getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true))
+        await wait(() => expect(dropdown.className.includes("disabled")).toBe(true))
         expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(1);
       }
     }
@@ -262,7 +262,7 @@ describe('drop downs should be enabled when a namespace is selected', () => {
     const dropdowns = queryAllByRole('listbox')
     for(let dropdown of dropdowns){
       if(dropdown.getAttribute('id') === "serviceAccounts"){
-        await wait(() => expect(dropdown.getElementsByClassName("bx--list-box__field").item(0).hasAttribute("disabled")).toBe(true))
+        await wait(() => expect(dropdown.className.includes("disabled")).toBe(true))
         expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(1);
       }
     }
