@@ -119,6 +119,10 @@
 
 .modal-delete {
 
+  .bx--modal-header__heading{
+    font-weight: bold;
+  }
+
   .checkbox-div {
     margin-top: 0.25rem;
   }
@@ -133,7 +137,6 @@
   }
 
   .modal-legend {
-    font-weight: bold;
     line-height: 3rem;
   }
 
@@ -152,22 +155,20 @@
     align-items: center;
   }
 
-  %primary-secondary-shared {
-    display: inline;
-    text-align: center;
-    padding: 0px;
-    font-weight: bold;
+  ul {
+    list-style: disc;
+    padding: 5px 0 0 30px;
+    li {
+      font-weight: bold;
+      font-size: 1.25rem;
+      margin-bottom: 5px;
+    }
   }
 
-  .bx--btn.bx--btn--danger {
-    @extend %primary-secondary-shared;
-    background-color: green;
-    border-color: green;
-  }
-  
-  .bx--btn.bx--btn--secondary {
-    @extend %primary-secondary-shared;
-    background-color: red;
+  .bx--modal-footer {
+    button {
+      font-size: 1.25rem;
+    }
   }
 
 }

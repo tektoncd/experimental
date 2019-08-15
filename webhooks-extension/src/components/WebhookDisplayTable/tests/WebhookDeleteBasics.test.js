@@ -80,5 +80,5 @@ it('should hide the delete modal on cancel click', async () => {
   await waitForElement(() => foundCancelButtonOnModal);
 
   fireEvent.click(foundCancelButtonOnModal) // We click the cancel button on the modal
-  await waitForElement(() => getByText('Delete Associated PipelineRuns')) == false; // Delete dialog's now gone
+  await waitForElement(() => getByText('Delete Associated PipelineRuns?')) == false; // Delete dialog's now gone
 });

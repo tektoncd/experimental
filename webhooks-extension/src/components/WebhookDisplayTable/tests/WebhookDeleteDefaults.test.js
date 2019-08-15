@@ -64,7 +64,7 @@ it('should reset checkbox being checked on delete modal display', async () => {
   await waitForElement(() => foundDeleteButton);
   fireEvent.click(foundDeleteButton);
 
-  await waitForElement(() => getByText('Delete Associated PipelineRuns'));
+  await waitForElement(() => getByText('Delete Associated PipelineRuns?'));
 
   const checkbox = document.getElementById('pipelinerun-checkbox');
 
@@ -78,7 +78,7 @@ it('should reset checkbox being checked on delete modal display', async () => {
   await waitForElement(() => foundCancelButtonOnModal);
   fireEvent.click(foundCancelButtonOnModal);
 
-  await waitForElement(() => getByText('Delete Associated PipelineRuns')) == false;
+  await waitForElement(() => getByText('Delete Associated PipelineRuns?')) == false;
   fireEvent.click(foundDeleteButton);
   
   await waitForElement(() => foundCancelButtonOnModal);

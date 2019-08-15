@@ -307,18 +307,21 @@ export class WebhookDisplayTable extends Component {
                 id='webhook-delete-modal'
                 modalLabel=''
                 modalHeading="Please confirm you want to delete the following webhook(s):"
-                primaryButtonText="Confirm"
+                primaryButtonText="Delete"
                 secondaryButtonText="Cancel"
                 danger={true}
                 onRequestSubmit={this.handleDeleteWebhook}
                 onSecondarySubmit={this.showDeleteDialogHandlerInvisible}
                 onRequestClose={this.showDeleteDialogHandlerInvisible}
               >
-                {this.state.userSelectedRows.map(row => (
-                  <div key={row.id}>{row.id.substring(0, row.id.lastIndexOf('|'))}</div>
-                ))}
+                <ul>
+                  {this.state.userSelectedRows.map(row => {
+                    const { id } = row;
+                    return <li key={id}>{id.substring(0, id.lastIndexOf('|'))}</li>;
+                  })}
+                </ul>
                 <fieldset>
-                  <legend className="modal-legend"><b>Delete Associated PipelineRuns</b></legend>
+                  <legend className="modal-legend"><b>Delete Associated PipelineRuns?</b></legend>
                   <div className="checkbox-div">
                     <Checkbox
                       id="pipelinerun-checkbox"
