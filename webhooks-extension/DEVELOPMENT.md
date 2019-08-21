@@ -66,7 +66,11 @@ When curling through the dashboard, use the same endpoints; for example, assumin
 curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:9097/webhooks
 ```
 
-Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/eventing/samples/github-source/) to properly create the `accesstoken` secret. This is the secret that is used to create GitHub webhooks.
+Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/eventing/samples/github-source/) to properly create the `accesstoken` secret. This is the secret that is used to create GitHub webhooks.  
+
+#### Limitations
+
+The webhooks API is expecting only https url. The webhook is using Knative github event source to setup the webhook in the github. It requires the access token. The `SSH authentication (Git)` is not supported by the webhooks extension.  The users should use the `Basic authentication (Git)` with the secret containing the access token.  For details, refer to [Authentication](https://github.com/tektoncd/pipeline/blob/master/docs/auth.md).
 
 ## Architecture information
 
