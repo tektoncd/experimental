@@ -68,6 +68,11 @@ curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:9
 
 Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/eventing/samples/github-source/) to properly create the `accesstoken` secret. This is the secret that is used to create GitHub webhooks.
 
+#### Limitations
+
+The webhooks API is expecting only https url. The webhook is using Knative github event source to setup the webhook in the github. It requires the access token. The ssh auth doesn't work for the webhook.
+
 ## Architecture information
 
 Each webhook that the user creates will store its configuration information in a config map in the install namespace. This information is used by the sink to create `PipelineRuns` for webhook events.
+
