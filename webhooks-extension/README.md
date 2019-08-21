@@ -49,7 +49,7 @@ kubectl patch configmap config-domain --namespace knative-serving --type='json' 
    and its dependencies:
     
   ```bash
-  kubectl apply --filename https://github.com/tektoncd/dashboard/releases/download/v0.1.0/webhooks-extension_release.yaml
+  kubectl apply --filename https://github.com/tektoncd/dashboard/releases/download/v0.1.1/webhooks-extension_release.yaml
   ```
 
    _(Previous versions will be available at `previous/$VERSION_NUMBER`, e.g.

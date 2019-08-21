@@ -36,5 +36,5 @@ spec:
       npm ci
       
       npm run build_ko
-      
+      ls cmd/extension/kodata
       dep ensure -v
