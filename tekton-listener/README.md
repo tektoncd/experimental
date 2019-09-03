@@ -54,7 +54,7 @@ The `EventBinding` CRD provides a new high-level means of managing all of the re
 
 An example EventBinding:
 
-```
+```yaml
 apiVersion: tektonexperimental.dev/v1alpha1
 kind: EventBinding
 metadata:
