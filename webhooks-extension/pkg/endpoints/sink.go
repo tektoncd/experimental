@@ -261,7 +261,13 @@ func getDashboardURL(r Resource, installNs string) string {
 	}
 
 	toReturn := "http://localhost:9097/"
-	services, err := r.K8sClient.CoreV1().Services(installNs).List(metav1.ListOptions{LabelSelector: "app=tekton-dashboard"})
+
+	labelLookup := "app=tekton-dashboard"
+	if "openshift" == os.Getenv("PLATFORM") {
+		labelLookup = "app=tekton-dashboard-internal"
+	}
+
+	services, err := r.K8sClient.CoreV1().Services(installNs).List(metav1.ListOptions{LabelSelector: labelLookup})
 	if err != nil {
 		logging.Log.Errorf("could not find the dashboard's service: %s", err.Error())
 		return toReturn

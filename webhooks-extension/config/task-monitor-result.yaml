@@ -96,7 +96,7 @@ spec:
               pr = pr.strip()
               namespace = namespace.strip()
               pipeline = pipeline.strip()
-              link = pipelineRunURLPrefix + "/#namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
+              link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
               print("Checking pipelinerun " + pr + " in namespace " + namespace)
               output = api_instance.get_namespaced_custom_object("tekton.dev", "v1alpha1", namespace, "pipelineruns", pr)
               if output["status"]["conditions"][0]["status"] == u'True' and output["status"]["conditions"][0]["type"] == u'Succeeded':
@@ -125,7 +125,7 @@ spec:
           namespace = namespace.strip()
           pipeline = pipeline.strip()
           print("Still Running - pipelinerun " + pr + " in namespace " + namespace)
-          link = pipelineRunURLPrefix + "/#namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
+          link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
           runsIncomplete.append("[**??????**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
       results = runsPassed + runsFailed + runsIncomplete
       comment = ("## Tekton Status Report \n\n"
