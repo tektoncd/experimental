@@ -3,6 +3,7 @@ apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
   name: monitor-result-task
+  namespace: tekton-pipelines
 spec:
   inputs:
     resources:
@@ -33,7 +34,7 @@ spec:
         type: pullRequest
   steps:
   - name: check
-    image: maiwj/kubernetes-python-client
+    image: maiwj/kubernetes-python-client:latest
     env:
       - name: PIPELINERUNS
         value: ${inputs.params.pipelineruns}
