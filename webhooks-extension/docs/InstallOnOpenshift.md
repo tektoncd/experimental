@@ -60,7 +60,7 @@ Assuming you've completed the [prereq installation and setup](./InstallPrereqs.m
 5. Install the webhooks extension:
 
       - Install the [release build](./InstallReleaseBuild.md)
-      - Install the [nightly build](./InstallNightly.md)
+      - Install the [nightly build](./InstallNightlyBuild.md)
 
 6. Check you can access the Webhooks Extension through the Dashboard UI that you should already have a Route for, for example at http://tekton-dashboard.${openshift_master_default_subdomain}/#/extensions/webhooks-extension.
 
