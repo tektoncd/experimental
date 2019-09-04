@@ -32,7 +32,11 @@ const {
 } = DataTable;
 
 const ALL_NAMESPACES = "*";
+var displayTimeoutWarningNotification = false;
+
 export class WebhookDisplayTable extends Component {
+
+
   state = {
     showTable: true,
     showDeleteDialog: false,
@@ -119,12 +123,11 @@ export class WebhookDisplayTable extends Component {
       let namespace = id.substring(id.indexOf('|') + 1, id.lastIndexOf('|'));
       let repository = id.substring(id.lastIndexOf('|') + 1, id.length);
       let response = deleteWebhooks(theName, namespace, repository, deleteRuns);
-      // Potentially needs to change or be configurable based on how many webhooks there are
-      let deletionTimeoutInMs = 500;
+      let deletionTimeoutInMs = 5000;
       let theTimeout = new Promise((resolve, reject) => {
         setTimeout(function () {
-          //reject("Timed out: check the webhook(s) existed and both the dashboard and extension pods are healthy.")
-          reject("Check the webhook(s) existed and both the dashboard and extension pods are healthy.")
+          reject("Warning - timed out waiting to delete webhooks and potentially PipelineRuns: manually check that the resources you expect have been deleted successfully.")
+          displayTimeoutWarningNotification = true;
         }, deletionTimeoutInMs);
       })
       let deleteWithinTimePromise = Promise.race([response, theTimeout]);
@@ -146,14 +149,25 @@ export class WebhookDisplayTable extends Component {
         });
       }
      }).catch( () => {
+      this.fetchWebhooksForTable();
+      let notificationStatusToSet = '';
+      let notificationMessageToSet = '';
+      let notificationFullMessage = '';
+
+      if (displayTimeoutWarningNotification) {
+        notificationStatusToSet = 'warning'
+        notificationMessageToSet = 'Warning - timed out waiting to delete webhooks and potentially PipelineRuns: manually check the resources were deleted.';
+      } else {
+        notificationStatusToSet = 'error'
+        notificationMessageToSet =  'An error occurred deleting webhook(s).';
+        notificationFullMessage = 'Check the webhook(s) existed and both the dashboard and extension pods are healthy.';
+      }
       this.setState({
         showNotificationOnTable: true,
         showDeleteDialog: false,
-        notificationStatus: 'error',
-        notificationStatusMsgShort: 'An error occurred deleting webhook(s).',
-        notificationMessage: 'Check the webhook(s) existed and both the dashboard and extension pods are healthy.',
-        /* Todo use the actual error message here and include correct mocking in tests, 
-        This is the only realistic case for now and just seeing a "502 bad gateway" for example isn't useful */
+        notificationStatus: notificationStatusToSet,
+        notificationStatusMsgShort: notificationMessageToSet,
+        notificationMessage: notificationFullMessage,
       });
     });
   }
