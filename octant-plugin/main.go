@@ -1,6 +1,8 @@
 package main // import "github.com/tektoncd/experimental/octant-plugin"
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +14,7 @@ import (
 	"github.com/vmware/octant/pkg/plugin/service"
 	"github.com/vmware/octant/pkg/store"
 	"github.com/vmware/octant/pkg/view/component"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis/duck"
 )
@@ -33,14 +36,61 @@ func main() {
 			SupportsPrinterConfig: []schema.GroupVersionKind{taskRunGVK, taskGVK, pipelineRunGVK, pipelineGVK},
 			SupportsPrinterItems:  []schema.GroupVersionKind{taskRunGVK, taskGVK, pipelineRunGVK, pipelineGVK},
 			SupportsTab:           []schema.GroupVersionKind{pipelineGVK},
+			ActionNames:           []string{"taskrun", "pipelinerun"},
 		},
 		service.WithPrinter(handlePrint),
 		service.WithTabPrinter(handleTabPrint),
+		service.WithActionHandler(func(request *service.ActionRequest) error {
+			switch request.Payload["action"] {
+			case "taskrun":
+				tn := request.Payload["task"].(string)
+				return fmt.Errorf("got request to run task %q: %+v", tn, request.Payload)
+			case "pipelinerun":
+				pn := request.Payload["pipeline"].(string)
+				return fmt.Errorf("got request to run pipeline %q: %+v", pn, request.Payload)
+			default:
+				return fmt.Errorf("unknown action %q", request.Payload["action"])
+			}
+		}),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	p.Serve()
+}
+
+func toUnstructured(i interface{}) (*unstructured.Unstructured, error) {
+	b, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+	var u unstructured.Unstructured
+	if err := json.NewDecoder(bytes.NewReader(b)).Decode(&u); err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func resources(ctx context.Context, client service.Dashboard, t v1alpha1.PipelineResourceType) ([]v1alpha1.PipelineResource, error) {
+	ul, err := client.List(ctx, store.Key{
+		APIVersion: "tekton.dev/v1alpha1",
+		Kind:       "PipelineResource",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var prs []v1alpha1.PipelineResource
+	for _, u := range ul.Items {
+		var pr v1alpha1.PipelineResource
+		if err := duck.FromUnstructured(&u, &pr); err != nil {
+			return nil, err
+		}
+		if pr.Spec.Type == t {
+			prs = append(prs, pr)
+		}
+	}
+	return prs, nil
 }
 
 // handlePrint is called when Octant wants to print an object.
@@ -120,54 +170,87 @@ func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
 			return plugin.PrintResponse{}, nil
 		}
 		resp := plugin.PrintResponse{}
+
+		runCard := component.NewCard("Run This Task")
+		runCard.SetBody(component.NewText("Specify inputs to run this Task"))
+		a := component.Action{
+			Name:  "Run Task",
+			Title: "Run Task",
+			Form: component.Form{
+				Fields: []component.FormField{
+					component.NewFormFieldHidden("action", "taskrun"),
+					component.NewFormFieldHidden("task", t.Name),
+				},
+			},
+		}
+
+		var iomd string
 		if t.Spec.Inputs != nil {
 			if len(t.Spec.Inputs.Resources) != 0 {
-				var md string
+				iomd += "Input Resources\n\n"
 				for _, r := range t.Spec.Inputs.Resources {
-					md += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+					iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+
+					prs, err := resources(request.Context(), request.DashboardClient, r.Type)
+					if err != nil {
+						return plugin.PrintResponse{}, nil
+					}
+					cs := []component.InputChoice{{Label: "<select one>"}}
+					for _, pr := range prs {
+						cs = append(cs, component.InputChoice{
+							Label: pr.Name,
+							Value: pr.Name,
+						})
+					}
+					a.Form.Fields = append(a.Form.Fields, component.NewFormFieldSelect(r.Name, "resource."+r.Name, cs, false))
 				}
-				card := component.NewCard("Input Resources")
-				card.SetBody(component.NewMarkdownText(md))
-				resp.Items = append(resp.Items, component.FlexLayoutItem{
-					Width: component.WidthFull,
-					View:  card,
-				})
+				iomd += "\n"
 			}
 			if len(t.Spec.Inputs.Params) != 0 {
-				var md string
+				iomd += "Input Parameters\n\n"
 				for _, r := range t.Spec.Inputs.Params {
-					md += fmt.Sprintf("* `%s` (%s)", r.Name, r.Type)
+					iomd += fmt.Sprintf("* `%s` (%s)", r.Name, r.Type)
 					if r.Default != nil {
 						switch r.Default.Type {
 						case v1alpha1.ParamTypeString:
-							md += fmt.Sprintf(" (default: _%s_)", r.Default.StringVal)
+							iomd += fmt.Sprintf(" (default: _%s_)", r.Default.StringVal)
+							a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, r.Default.StringVal)) // TODO: support array-type params
 						case v1alpha1.ParamTypeArray:
 							b, _ := json.Marshal(r.Default.ArrayVal)
-							md += fmt.Sprintf(" (default: _%s_)", string(b))
+							iomd += fmt.Sprintf(" (default: _%s_)", string(b))
 						}
+					} else if r.Type == v1alpha1.ParamTypeString {
+						a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, "")) // TODO: support array-type params
 					}
-					md += "\n"
+					if r.Description != "" {
+						iomd += ": " + r.Description
+					}
+					iomd += "\n"
 				}
-				card := component.NewCard("Input Params")
-				card.SetBody(component.NewMarkdownText(md))
-				resp.Items = append(resp.Items, component.FlexLayoutItem{
-					Width: component.WidthFull,
-					View:  card,
-				})
+				iomd += "\n"
 			}
 		}
 		if t.Spec.Outputs != nil {
-			var md string
+			iomd += "Output Resources\n\n"
 			for _, r := range t.Spec.Outputs.Resources {
-				md += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+				iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
 			}
-			card := component.NewCard("Output Resources")
-			card.SetBody(component.NewMarkdownText(md))
+			iomd += "\n"
+		}
+
+		if iomd != "" {
+			ioCard := component.NewCard("Inputs and Outputs")
+			ioCard.SetBody(component.NewMarkdownText(iomd))
 			resp.Items = append(resp.Items, component.FlexLayoutItem{
 				Width: component.WidthFull,
-				View:  card,
+				View:  ioCard,
 			})
 		}
+		runCard.AddAction(a)
+		resp.Items = append(resp.Items, component.FlexLayoutItem{
+			Width: component.WidthFull,
+			View:  runCard,
+		})
 		return resp, nil
 	case pipelineGVK:
 		var p v1alpha1.Pipeline
@@ -175,39 +258,61 @@ func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
 			return plugin.PrintResponse{}, nil
 		}
 		resp := plugin.PrintResponse{}
+
+		runCard := component.NewCard("Run This Pipeline")
+		runCard.SetBody(component.NewText("Specify inputs to run this Pipeline"))
+		a := component.Action{
+			Name:  "Run Pipeline",
+			Title: "Run Pipeline",
+			Form: component.Form{
+				Fields: []component.FormField{
+					component.NewFormFieldHidden("action", "pipelinerun"),
+					component.NewFormFieldHidden("pipeline", p.Name),
+				},
+			},
+		}
+
+		var iomd string
 		if len(p.Spec.Params) != 0 {
-			var md string
+			iomd += "Input Parameters\n\n"
 			for _, r := range p.Spec.Params {
-				md += fmt.Sprintf("* `%s` (%s)", r.Name, r.Type)
+				iomd += fmt.Sprintf("* `%s` (%s)", r.Name, r.Type)
 				if r.Default != nil {
 					switch r.Default.Type {
 					case v1alpha1.ParamTypeString:
-						md += fmt.Sprintf(" (default: _%s_)", r.Default.StringVal)
+						iomd += fmt.Sprintf(" (default: _%s_)", r.Default.StringVal)
+						a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, r.Default.StringVal)) // TODO: support array-type params
 					case v1alpha1.ParamTypeArray:
 						b, _ := json.Marshal(r.Default.ArrayVal)
-						md += fmt.Sprintf(" (default: _%s_)", string(b))
+						iomd += fmt.Sprintf(" (default: _%s_)", string(b))
 					}
+				} else if r.Type == v1alpha1.ParamTypeString {
+					a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, "")) // TODO: support array-type params
 				}
-				md += "\n"
+				if r.Description != "" {
+					iomd += ": " + r.Description
+				}
+				iomd += "\n"
 			}
-			card := component.NewCard("Input Params")
-			card.SetBody(component.NewMarkdownText(md))
-			resp.Items = append(resp.Items, component.FlexLayoutItem{
-				Width: component.WidthFull,
-				View:  card,
-			})
 		}
 		if len(p.Spec.Resources) != 0 {
-			var md string
+			iomd += "Input Resources\n\n"
 			for _, r := range p.Spec.Resources {
-				md += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+				iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+
+				prs, err := resources(request.Context(), request.DashboardClient, r.Type)
+				if err != nil {
+					return plugin.PrintResponse{}, nil
+				}
+				cs := []component.InputChoice{{Label: "<select one>"}}
+				for _, pr := range prs {
+					cs = append(cs, component.InputChoice{
+						Label: pr.Name,
+						Value: pr.Name,
+					})
+				}
+				a.Form.Fields = append(a.Form.Fields, component.NewFormFieldSelect(r.Name, "resource."+r.Name, cs, false))
 			}
-			card := component.NewCard("Input Resources")
-			card.SetBody(component.NewMarkdownText(md))
-			resp.Items = append(resp.Items, component.FlexLayoutItem{
-				Width: component.WidthFull,
-				View:  card,
-			})
 		}
 		if len(p.Spec.Tasks) != 0 {
 			var md string
@@ -222,6 +327,20 @@ func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
 				View:  card,
 			})
 		}
+
+		if iomd != "" {
+			ioCard := component.NewCard("Inputs and Outputs")
+			ioCard.SetBody(component.NewMarkdownText(iomd))
+			resp.Items = append(resp.Items, component.FlexLayoutItem{
+				Width: component.WidthFull,
+				View:  ioCard,
+			})
+		}
+		runCard.AddAction(a)
+		resp.Items = append(resp.Items, component.FlexLayoutItem{
+			Width: component.WidthFull,
+			View:  runCard,
+		})
 		return resp, nil
 	default:
 		return plugin.PrintResponse{}, errors.Errorf("unsupported object %q", request.Object.GetObjectKind().GroupVersionKind())
