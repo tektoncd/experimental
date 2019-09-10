@@ -82,7 +82,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.COMMITID = webhookData.HeadCommit.ID
 		buildInformation.REPONAME = webhookData.Repository.Name
 		buildInformation.TIMESTAMP = timestamp
-		buildInformation.BRANCH = extractBranchFromRef(webhookData.Ref)
+		buildInformation.BRANCH = extractBranchFromPushEventRef(webhookData.Ref)
 
 		createPipelineRunsFromWebhookData(buildInformation, r)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
@@ -101,9 +101,9 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.SHORTID = webhookData.PullRequest.Head.Sha[0:7]
 		buildInformation.COMMITID = webhookData.PullRequest.Head.Sha
 		buildInformation.REPONAME = webhookData.Repository.Name
-		buildInformation.PULLURL = strings.Replace(webhookData.PullRequest.URL, "api/v3/repos/", "", 1)
+		buildInformation.PULLURL = webhookData.PullRequest.HTMLURL
 		buildInformation.TIMESTAMP = timestamp
-		buildInformation.BRANCH = extractBranchFromRef(webhookData.PullRequest.Head.Ref)
+		buildInformation.BRANCH = webhookData.PullRequest.Head.Ref
 
 		pipelineruns := createPipelineRunsFromWebhookData(buildInformation, r)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
@@ -115,7 +115,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 	}
 }
 
-func extractBranchFromRef(ref string) string {
+func extractBranchFromPushEventRef(ref string) string {
 	// ref typically resembles "refs/heads/branchhere", so extract "branchhere" from this string
 	if ref != "" {
 		if strings.Count(ref, "/") == 2 {
