@@ -141,6 +141,10 @@ func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
 			resp.Status = append(resp.Status, component.SummarySection{Header: "Task", Content: component.NewLink("Task Name", s, ref)})
 
 		}
+
+		saref := "../../../config-and-storage/service-accounts/" + tr.Spec.ServiceAccount
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", tr.Spec.ServiceAccount, saref)})
+
 		if !tr.Status.StartTime.Time.IsZero() {
 			d := tr.Status.StartTime.Time.Sub(tr.CreationTimestamp.Time)
 			resp.Status = append(resp.Status, component.SummarySection{Header: "Queued", Content: component.NewText(d.String())})
@@ -162,9 +166,11 @@ func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
 
 		resp := plugin.PrintResponse{}
 
-		s := pr.Spec.PipelineRef.Name
 		ref := "../../pipelines.tekton.dev/" + pr.Spec.PipelineRef.Name
-		resp.Status = append(resp.Status, component.SummarySection{Header: "Pipeline", Content: component.NewLink("Pipeline Name", s, ref)})
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Pipeline", Content: component.NewLink("Pipeline Name", pr.Spec.PipelineRef.Name, ref)})
+
+		saref := "../../../config-and-storage/service-accounts/" + pr.Spec.ServiceAccount
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", pr.Spec.ServiceAccount, saref)})
 
 		if !pr.Status.StartTime.Time.IsZero() {
 			d := pr.Status.StartTime.Time.Sub(pr.CreationTimestamp.Time)
