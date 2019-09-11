@@ -17,7 +17,6 @@ limitations under the License.
 package main // import "github.com/tektoncd/experimental/octant-plugin"
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,7 +29,6 @@ import (
 	"github.com/vmware/octant/pkg/plugin/service"
 	"github.com/vmware/octant/pkg/store"
 	"github.com/vmware/octant/pkg/view/component"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis/duck"
 )
@@ -75,18 +73,56 @@ func main() {
 	p.Serve()
 }
 
-func toUnstructured(i interface{}) (*unstructured.Unstructured, error) {
-	b, err := json.Marshal(i)
+// handlePrint is called when Octant wants to print information about an
+// object.
+func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
+	key, err := store.KeyFromObject(request.Object)
 	if err != nil {
-		return nil, err
+		return plugin.PrintResponse{}, err
 	}
-	var u unstructured.Unstructured
-	if err := json.NewDecoder(bytes.NewReader(b)).Decode(&u); err != nil {
-		return nil, err
+	u, err := request.DashboardClient.Get(request.Context(), key)
+	if err != nil {
+		return plugin.PrintResponse{}, err
 	}
-	return &u, nil
+
+	switch request.Object.GetObjectKind().GroupVersionKind() {
+	case taskRunGVK:
+		var tr v1alpha1.TaskRun
+		if err := duck.FromUnstructured(u, &tr); err != nil {
+			return plugin.PrintResponse{}, nil
+		}
+		return printTaskRun(&tr), nil
+
+	case pipelineRunGVK:
+		var pr v1alpha1.PipelineRun
+		if err := duck.FromUnstructured(u, &pr); err != nil {
+			return plugin.PrintResponse{}, nil
+		}
+		return printPipelineRun(&pr), nil
+
+	case taskGVK:
+		var t v1alpha1.Task
+		if err := duck.FromUnstructured(u, &t); err != nil {
+			return plugin.PrintResponse{}, nil
+		}
+		return printTask(request.Context(), &t, request.DashboardClient)
+
+	case pipelineGVK:
+		var p v1alpha1.Pipeline
+		if err := duck.FromUnstructured(u, &p); err != nil {
+			return plugin.PrintResponse{}, nil
+		}
+		return printPipeline(request.Context(), &p, request.DashboardClient)
+
+	default:
+		return plugin.PrintResponse{}, errors.Errorf("unsupported object %q", request.Object.GetObjectKind().GroupVersionKind())
+	}
 }
 
+// resources returns a list of PipelineResources of the given type.
+//
+// It's used to populate dropdowns to select input resources when running Tasks
+// or Pipelines.
 func resources(ctx context.Context, client service.Dashboard, t v1alpha1.PipelineResourceType) ([]v1alpha1.PipelineResource, error) {
 	ul, err := client.List(ctx, store.Key{
 		APIVersion: "tekton.dev/v1alpha1",
@@ -109,195 +145,105 @@ func resources(ctx context.Context, client service.Dashboard, t v1alpha1.Pipelin
 	return prs, nil
 }
 
-// handlePrint is called when Octant wants to print an object.
-func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
-	key, err := store.KeyFromObject(request.Object)
-	if err != nil {
-		return plugin.PrintResponse{}, err
+func printTaskRun(tr *v1alpha1.TaskRun) plugin.PrintResponse {
+	resp := plugin.PrintResponse{}
+	if tr.Status.PodName != "" {
+		// TODO: this 404s for timed-out or cancelled TaskRuns, since we delete the Pod...
+		s := tr.Status.PodName
+		ref := "../../../workloads/pods/" + tr.Status.PodName
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Pod", Content: component.NewLink("Pod Name", s, ref)})
 	}
-	u, err := request.DashboardClient.Get(request.Context(), key)
-	if err != nil {
-		return plugin.PrintResponse{}, err
+	if tr.Spec.TaskRef != nil {
+		s := tr.Spec.TaskRef.Name
+		ref := "../../tasks.tekton.dev/" + tr.Spec.TaskRef.Name
+		// TODO: handle ClusterTask
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Task", Content: component.NewLink("Task Name", s, ref)})
+
 	}
 
-	switch request.Object.GetObjectKind().GroupVersionKind() {
-	case taskRunGVK:
-		var tr v1alpha1.TaskRun
-		if err := duck.FromUnstructured(u, &tr); err != nil {
-			return plugin.PrintResponse{}, nil
-		}
+	saref := "../../../config-and-storage/service-accounts/" + tr.Spec.ServiceAccount
+	resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", tr.Spec.ServiceAccount, saref)})
 
-		resp := plugin.PrintResponse{}
-		if tr.Status.PodName != "" {
-			// TODO: this 404s for timed-out or cancelled TaskRuns, since we delete the Pod...
-			s := tr.Status.PodName
-			ref := "../../../workloads/pods/" + tr.Status.PodName
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Pod", Content: component.NewLink("Pod Name", s, ref)})
-		}
-		if tr.Spec.TaskRef != nil {
-			s := tr.Spec.TaskRef.Name
-			ref := "../../tasks.tekton.dev/" + tr.Spec.TaskRef.Name
-			// TODO: handle ClusterTask
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Task", Content: component.NewLink("Task Name", s, ref)})
+	if !tr.Status.StartTime.Time.IsZero() {
+		d := tr.Status.StartTime.Time.Sub(tr.CreationTimestamp.Time)
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Queued", Content: component.NewText(d.String())})
+	}
+	if tr.IsDone() {
+		d := tr.Status.CompletionTime.Time.Sub(tr.Status.StartTime.Time)
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Duration", Content: component.NewText(d.String())})
+	}
+	if tr.Spec.Timeout != nil {
+		d := tr.Spec.Timeout.Duration
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Timeout", Content: component.NewText(d.String())})
+	}
+	return resp
+}
 
-		}
+func printPipelineRun(pr *v1alpha1.PipelineRun) plugin.PrintResponse {
+	resp := plugin.PrintResponse{}
 
-		saref := "../../../config-and-storage/service-accounts/" + tr.Spec.ServiceAccount
-		resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", tr.Spec.ServiceAccount, saref)})
+	ref := "../../pipelines.tekton.dev/" + pr.Spec.PipelineRef.Name
+	resp.Status = append(resp.Status, component.SummarySection{Header: "Pipeline", Content: component.NewLink("Pipeline Name", pr.Spec.PipelineRef.Name, ref)})
 
-		if !tr.Status.StartTime.Time.IsZero() {
-			d := tr.Status.StartTime.Time.Sub(tr.CreationTimestamp.Time)
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Queued", Content: component.NewText(d.String())})
-		}
-		if tr.IsDone() {
-			d := tr.Status.CompletionTime.Time.Sub(tr.Status.StartTime.Time)
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Duration", Content: component.NewText(d.String())})
-		}
-		if tr.Spec.Timeout != nil {
-			d := tr.Spec.Timeout.Duration
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Timeout", Content: component.NewText(d.String())})
-		}
-		return resp, nil
-	case pipelineRunGVK:
-		var pr v1alpha1.PipelineRun
-		if err := duck.FromUnstructured(u, &pr); err != nil {
-			return plugin.PrintResponse{}, nil
-		}
+	saref := "../../../config-and-storage/service-accounts/" + pr.Spec.ServiceAccount
+	resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", pr.Spec.ServiceAccount, saref)})
 
-		resp := plugin.PrintResponse{}
+	if !pr.Status.StartTime.Time.IsZero() {
+		d := pr.Status.StartTime.Time.Sub(pr.CreationTimestamp.Time)
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Queued", Content: component.NewText(d.String())})
+	}
+	if pr.IsDone() {
+		d := pr.Status.CompletionTime.Time.Sub(pr.Status.StartTime.Time)
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Duration", Content: component.NewText(d.String())})
+	}
+	if pr.Spec.Timeout != nil {
+		d := pr.Spec.Timeout.Duration
+		resp.Status = append(resp.Status, component.SummarySection{Header: "Timeout", Content: component.NewText(d.String())})
+	}
+	return resp
+}
 
-		ref := "../../pipelines.tekton.dev/" + pr.Spec.PipelineRef.Name
-		resp.Status = append(resp.Status, component.SummarySection{Header: "Pipeline", Content: component.NewLink("Pipeline Name", pr.Spec.PipelineRef.Name, ref)})
+func printTask(ctx context.Context, t *v1alpha1.Task, client service.Dashboard) (plugin.PrintResponse, error) {
+	resp := plugin.PrintResponse{}
 
-		saref := "../../../config-and-storage/service-accounts/" + pr.Spec.ServiceAccount
-		resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", pr.Spec.ServiceAccount, saref)})
-
-		if !pr.Status.StartTime.Time.IsZero() {
-			d := pr.Status.StartTime.Time.Sub(pr.CreationTimestamp.Time)
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Queued", Content: component.NewText(d.String())})
-		}
-		if pr.IsDone() {
-			d := pr.Status.CompletionTime.Time.Sub(pr.Status.StartTime.Time)
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Duration", Content: component.NewText(d.String())})
-		}
-		if pr.Spec.Timeout != nil {
-			d := pr.Spec.Timeout.Duration
-			resp.Status = append(resp.Status, component.SummarySection{Header: "Timeout", Content: component.NewText(d.String())})
-		}
-		return resp, nil
-
-	case taskGVK:
-		var t v1alpha1.Task
-		if err := duck.FromUnstructured(u, &t); err != nil {
-			return plugin.PrintResponse{}, nil
-		}
-		resp := plugin.PrintResponse{}
-
-		runCard := component.NewCard("Run This Task")
-		runCard.SetBody(component.NewText("Specify inputs to run this Task"))
-		a := component.Action{
-			Name:  "Run Task",
-			Title: "Run Task",
-			Form: component.Form{
-				Fields: []component.FormField{
-					component.NewFormFieldHidden("action", "taskrun"),
-					component.NewFormFieldHidden("task", t.Name),
-				},
+	runCard := component.NewCard("Run This Task")
+	runCard.SetBody(component.NewText("Specify inputs to run this Task"))
+	a := component.Action{
+		Name:  "Run Task",
+		Title: "Run Task",
+		Form: component.Form{
+			Fields: []component.FormField{
+				component.NewFormFieldHidden("action", "taskrun"),
+				component.NewFormFieldHidden("task", t.Name),
 			},
-		}
+		},
+	}
 
-		var iomd string
-		if t.Spec.Inputs != nil {
-			if len(t.Spec.Inputs.Resources) != 0 {
-				iomd += "Input Resources\n\n"
-				for _, r := range t.Spec.Inputs.Resources {
-					iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
-
-					prs, err := resources(request.Context(), request.DashboardClient, r.Type)
-					if err != nil {
-						return plugin.PrintResponse{}, nil
-					}
-					cs := []component.InputChoice{{Label: "<select one>"}}
-					for _, pr := range prs {
-						cs = append(cs, component.InputChoice{
-							Label: pr.Name,
-							Value: pr.Name,
-						})
-					}
-					a.Form.Fields = append(a.Form.Fields, component.NewFormFieldSelect(r.Name, "resource."+r.Name, cs, false))
-				}
-				iomd += "\n"
-			}
-			if len(t.Spec.Inputs.Params) != 0 {
-				iomd += "Input Parameters\n\n"
-				for _, r := range t.Spec.Inputs.Params {
-					iomd += fmt.Sprintf("* `%s` (%s)", r.Name, r.Type)
-					if r.Default != nil {
-						switch r.Default.Type {
-						case v1alpha1.ParamTypeString:
-							iomd += fmt.Sprintf(" (default: _%s_)", r.Default.StringVal)
-							a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, r.Default.StringVal)) // TODO: support array-type params
-						case v1alpha1.ParamTypeArray:
-							b, _ := json.Marshal(r.Default.ArrayVal)
-							iomd += fmt.Sprintf(" (default: _%s_)", string(b))
-						}
-					} else if r.Type == v1alpha1.ParamTypeString {
-						a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, "")) // TODO: support array-type params
-					}
-					if r.Description != "" {
-						iomd += ": " + r.Description
-					}
-					iomd += "\n"
-				}
-				iomd += "\n"
-			}
-		}
-		if t.Spec.Outputs != nil {
-			iomd += "Output Resources\n\n"
-			for _, r := range t.Spec.Outputs.Resources {
+	var iomd string
+	if t.Spec.Inputs != nil {
+		if len(t.Spec.Inputs.Resources) != 0 {
+			iomd += "Input Resources\n\n"
+			for _, r := range t.Spec.Inputs.Resources {
 				iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+
+				prs, err := resources(ctx, client, r.Type)
+				if err != nil {
+					return plugin.PrintResponse{}, nil
+				}
+				cs := []component.InputChoice{{Label: "<select one>"}}
+				for _, pr := range prs {
+					cs = append(cs, component.InputChoice{
+						Label: pr.Name,
+						Value: pr.Name,
+					})
+				}
+				a.Form.Fields = append(a.Form.Fields, component.NewFormFieldSelect(r.Name, "resource."+r.Name, cs, false))
 			}
 			iomd += "\n"
 		}
-
-		if iomd != "" {
-			ioCard := component.NewCard("Inputs and Outputs")
-			ioCard.SetBody(component.NewMarkdownText(iomd))
-			resp.Items = append(resp.Items, component.FlexLayoutItem{
-				Width: component.WidthFull,
-				View:  ioCard,
-			})
-		}
-		runCard.AddAction(a)
-		resp.Items = append(resp.Items, component.FlexLayoutItem{
-			Width: component.WidthFull,
-			View:  runCard,
-		})
-		return resp, nil
-	case pipelineGVK:
-		var p v1alpha1.Pipeline
-		if err := duck.FromUnstructured(u, &p); err != nil {
-			return plugin.PrintResponse{}, nil
-		}
-		resp := plugin.PrintResponse{}
-
-		runCard := component.NewCard("Run This Pipeline")
-		runCard.SetBody(component.NewText("Specify inputs to run this Pipeline"))
-		a := component.Action{
-			Name:  "Run Pipeline",
-			Title: "Run Pipeline",
-			Form: component.Form{
-				Fields: []component.FormField{
-					component.NewFormFieldHidden("action", "pipelinerun"),
-					component.NewFormFieldHidden("pipeline", p.Name),
-				},
-			},
-		}
-
-		var iomd string
-		if len(p.Spec.Params) != 0 {
+		if len(t.Spec.Inputs.Params) != 0 {
 			iomd += "Input Parameters\n\n"
-			for _, r := range p.Spec.Params {
+			for _, r := range t.Spec.Inputs.Params {
 				iomd += fmt.Sprintf("* `%s` (%s)", r.Name, r.Type)
 				if r.Default != nil {
 					switch r.Default.Type {
@@ -316,57 +262,119 @@ func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
 				}
 				iomd += "\n"
 			}
+			iomd += "\n"
 		}
-		if len(p.Spec.Resources) != 0 {
-			iomd += "Input Resources\n\n"
-			for _, r := range p.Spec.Resources {
-				iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+	}
+	if t.Spec.Outputs != nil {
+		iomd += "Output Resources\n\n"
+		for _, r := range t.Spec.Outputs.Resources {
+			iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+		}
+		iomd += "\n"
+	}
 
-				prs, err := resources(request.Context(), request.DashboardClient, r.Type)
-				if err != nil {
-					return plugin.PrintResponse{}, nil
-				}
-				cs := []component.InputChoice{{Label: "<select one>"}}
-				for _, pr := range prs {
-					cs = append(cs, component.InputChoice{
-						Label: pr.Name,
-						Value: pr.Name,
-					})
-				}
-				a.Form.Fields = append(a.Form.Fields, component.NewFormFieldSelect(r.Name, "resource."+r.Name, cs, false))
-			}
-		}
-		if len(p.Spec.Tasks) != 0 {
-			var md string
-			for _, t := range p.Spec.Tasks {
-				ref := "/#/content/overview/namespace/default/custom-resources/tasks.tekton.dev/" + t.TaskRef.Name // TODO: handle ClusterTask
-				md += fmt.Sprintf("* [`%s`](%s)\n", t.Name, ref)
-			}
-			card := component.NewCard("Tasks")
-			card.SetBody(component.NewMarkdownText(md))
-			resp.Items = append(resp.Items, component.FlexLayoutItem{
-				Width: component.WidthFull,
-				View:  card,
-			})
-		}
-
-		if iomd != "" {
-			ioCard := component.NewCard("Inputs and Outputs")
-			ioCard.SetBody(component.NewMarkdownText(iomd))
-			resp.Items = append(resp.Items, component.FlexLayoutItem{
-				Width: component.WidthFull,
-				View:  ioCard,
-			})
-		}
-		runCard.AddAction(a)
+	if iomd != "" {
+		ioCard := component.NewCard("Inputs and Outputs")
+		ioCard.SetBody(component.NewMarkdownText(iomd))
 		resp.Items = append(resp.Items, component.FlexLayoutItem{
 			Width: component.WidthFull,
-			View:  runCard,
+			View:  ioCard,
 		})
-		return resp, nil
-	default:
-		return plugin.PrintResponse{}, errors.Errorf("unsupported object %q", request.Object.GetObjectKind().GroupVersionKind())
 	}
+	runCard.AddAction(a)
+	resp.Items = append(resp.Items, component.FlexLayoutItem{
+		Width: component.WidthFull,
+		View:  runCard,
+	})
+	return resp, nil
+}
+
+func printPipeline(ctx context.Context, p *v1alpha1.Pipeline, client service.Dashboard) (plugin.PrintResponse, error) {
+	resp := plugin.PrintResponse{}
+
+	runCard := component.NewCard("Run This Pipeline")
+	runCard.SetBody(component.NewText("Specify inputs to run this Pipeline"))
+	a := component.Action{
+		Name:  "Run Pipeline",
+		Title: "Run Pipeline",
+		Form: component.Form{
+			Fields: []component.FormField{
+				component.NewFormFieldHidden("action", "pipelinerun"),
+				component.NewFormFieldHidden("pipeline", p.Name),
+			},
+		},
+	}
+
+	var iomd string
+	if len(p.Spec.Params) != 0 {
+		iomd += "Input Parameters\n\n"
+		for _, r := range p.Spec.Params {
+			iomd += fmt.Sprintf("* `%s` (%s)", r.Name, r.Type)
+			if r.Default != nil {
+				switch r.Default.Type {
+				case v1alpha1.ParamTypeString:
+					iomd += fmt.Sprintf(" (default: _%s_)", r.Default.StringVal)
+					a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, r.Default.StringVal)) // TODO: support array-type params
+				case v1alpha1.ParamTypeArray:
+					b, _ := json.Marshal(r.Default.ArrayVal)
+					iomd += fmt.Sprintf(" (default: _%s_)", string(b))
+				}
+			} else if r.Type == v1alpha1.ParamTypeString {
+				a.Form.Fields = append(a.Form.Fields, component.NewFormFieldText(r.Name, "param."+r.Name, "")) // TODO: support array-type params
+			}
+			if r.Description != "" {
+				iomd += ": " + r.Description
+			}
+			iomd += "\n"
+		}
+	}
+	if len(p.Spec.Resources) != 0 {
+		iomd += "Input Resources\n\n"
+		for _, r := range p.Spec.Resources {
+			iomd += fmt.Sprintf("* `%s` (%s)\n", r.Name, r.Type)
+
+			prs, err := resources(ctx, client, r.Type)
+			if err != nil {
+				return plugin.PrintResponse{}, nil
+			}
+			cs := []component.InputChoice{{Label: "<select one>"}}
+			for _, pr := range prs {
+				cs = append(cs, component.InputChoice{
+					Label: pr.Name,
+					Value: pr.Name,
+				})
+			}
+			a.Form.Fields = append(a.Form.Fields, component.NewFormFieldSelect(r.Name, "resource."+r.Name, cs, false))
+		}
+	}
+	if len(p.Spec.Tasks) != 0 {
+		var md string
+		for _, t := range p.Spec.Tasks {
+			ref := "/#/content/overview/namespace/default/custom-resources/tasks.tekton.dev/" + t.TaskRef.Name // TODO: handle ClusterTask
+			md += fmt.Sprintf("* [`%s`](%s)\n", t.Name, ref)
+		}
+		card := component.NewCard("Tasks")
+		card.SetBody(component.NewMarkdownText(md))
+		resp.Items = append(resp.Items, component.FlexLayoutItem{
+			Width: component.WidthFull,
+			View:  card,
+		})
+	}
+
+	if iomd != "" {
+		ioCard := component.NewCard("Inputs and Outputs")
+		ioCard.SetBody(component.NewMarkdownText(iomd))
+		resp.Items = append(resp.Items, component.FlexLayoutItem{
+			Width: component.WidthFull,
+			View:  ioCard,
+		})
+	}
+	runCard.AddAction(a)
+	resp.Items = append(resp.Items, component.FlexLayoutItem{
+		Width: component.WidthFull,
+		View:  runCard,
+	})
+	return resp, nil
 }
 
 // handleTabPrint is called when Octant wants to print a tab of content.
