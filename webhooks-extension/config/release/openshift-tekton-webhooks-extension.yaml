@@ -379,18 +379,18 @@ spec:
                  "Status | Pipeline | PipelineRun | Namespace\n"
                  ":----- | :------- | :--------------- | :--------\n"
                  ) + "\n".join(results)
+      handle = open("/workspace/pull-request/comments/newcomment.json", 'w')
+      handle.write(comment)
+      handle.close()
       if not "$URL".startswith("http"):
         detailsURL = "http://" + "$URL" + "/#/pipelineruns"
       else:
         detailsURL = "$URL" + "/#/pipelineruns"
       print("Set details url to: " + detailsURL)
-      with open("/workspace/pull-request/pr.json", 'r') as pr_file:
-          data = json.load(pr_file)
-          data['Comments'].append(dict(text=comment))
-          data['Statuses'].append(dict(code=gitPRcode, description=gitPRdescription, id=gitPRcontext, url=detailsURL))
-      os.rename("/workspace/pull-request/pr.json", "/workspace/pull-request/pr.json.backup")
-      with open("/workspace/pull-request/pr.json", 'w') as pr_file:
-          json.dump(data, pr_file)
+      status = json.dumps(dict(code=gitPRcode, description=gitPRdescription, id=gitPRcontext, url=detailsURL))
+      handle = open("/workspace/pull-request/status/newstatus.json", 'w')
+      handle.write(status)
+      handle.close()
       EOF
 ---
 
