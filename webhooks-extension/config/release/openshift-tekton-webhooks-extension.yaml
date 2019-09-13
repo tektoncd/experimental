@@ -260,20 +260,25 @@ spec:
       - name: pipelineruns
         description: The name of the pipelineruns (and their namespace) to be monitored in format pipelinerun1:namespace1, pipelinerun2:namespace2
         default: default pipelinerun
+        type: string
       - name: commentsuccess
         description: The text of the success comment
         default: "Success"
+        type: string
       - name: commentfailure
         description: The text of the failure comment
         default: "Failed"
+        type: string
       - name: dashboard-url
         description: The URL to the pipelineruns page of the dashboard
         default: "http://localhost:9097/"
+        type: string
       # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
       # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
       # the github status URL to set the status into pending and use this secret to during that request.  
       - name: secret
         description: The secret containing the access token to access github
+        type: string
       # Up to here
   outputs:
     resources:
