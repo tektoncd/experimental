@@ -98,3 +98,10 @@ spec:
             value: DOCKER_REPO
           - name: WEB_RESOURCES_DIR
             value: web
+          # Set this at install time after creating a certificate, e.g. with openssl and the provided convenience script.
+          # A secret will be created and this name should be provided here.
+          # This secret name will then be picked up by the Go code that is responsible for 
+          # creating the EventListener, Ingress and webhooks.
+          # The Ingress will be created with the tls secret name value set to this variable's value.
+          - name: TRIGGERS_PROTOTYPE_INGRESS_CERTIFICATE_SECRET_NAME
+            value: ""

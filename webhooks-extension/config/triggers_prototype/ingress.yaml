@@ -1,0 +1,65 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: ingress-task
+  namespace: tekton-pipelines
+spec:
+  inputs:
+    params:
+    - name: Mode
+      description: Whether to create or delete an Ingress
+      default: "create"
+      type: string
+    - name: CertificateSecretName
+      # Generate upfront so we don't need to reference outdated openssl images, potentially leading to license/export regulation complications
+      description: The secret name for the Ingress certificate - must be generated upfront
+      default: "mycertificatesecret"
+      type: string
+    - name: ExternalUrl 
+      description: The external access URL
+      default: "listener.replaceme.nip.io"
+      type: string
+    - name: EventListenerName 
+      description: The EventListener name
+      default: "listener"
+      type: string
+    - name: EventListenerPort
+      description: The EventListener port
+      default: "8082"
+      type: string
+  steps:
+  - name: create-or-delete-ingress
+    image: lachlanevenson/k8s-kubectl:latest
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      if [ $(inputs.params.Mode) = "create" ] ; then
+        echo "Creating the Ingress"
+        cat <<EOF | kubectl apply -f -
+        apiVersion: extensions/v1beta1
+        kind: Ingress
+        metadata:
+          name: $(inputs.params.EventListenerName)
+        spec:
+          tls:
+          - hosts:
+            - $(inputs.params.ExternalUrl)
+            secretName: $(inputs.params.CertificateSecretName)
+          rules:
+          - host: $(inputs.params.ExternalUrl)
+            http:
+              paths:
+              - backend:
+                  serviceName: $(inputs.params.EventListenerName)
+                  servicePort: $(inputs.params.EventListenerPort)
+      EOF
+      fi
+           
+      if [ $(inputs.params.Mode) = "delete" ] ; then
+        echo "Deleting Ingress"
+        kubectl delete ingress $(inputs.params.EventListenerName)
+        echo "Keeping certificate around, manual clean up required if you're sure about deleting it"
+      fi
