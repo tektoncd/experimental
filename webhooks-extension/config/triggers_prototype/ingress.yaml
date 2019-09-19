@@ -1,0 +1,109 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: ingress-task
+  namespace: tekton-pipelines
+spec:
+  inputs:
+    params:
+    - name: Mode
+      description: Whether to create or delete Ingress
+    - name: CreateCertificate
+      description: Whether to create a certificate
+      default: "true"
+    - name: CertificateKeyPassphrase
+      description: The phrase that protects private key
+      default: "phrase1"
+    - name: CertificateSecretName
+      description: The secret name for the Ingress certificate
+      default: "secret1"
+    - name: ExternalUrl 
+      description: The external access URL
+      default: "https://$(inputs.params.EventListenerName).replaceme.nip.io"
+    - name: EventListenerName 
+      description: The EventListener name
+      default: "listener"
+    - name: Namespace
+      description: "The namespace to use for where the secret will be created/deleted"
+      default: "tekton-pipelines"
+  steps:
+  - name: generate-certificate
+    image: frapsoft/openssl
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      cat <<EOF | sh
+      #!/bin/sh
+      if [ $(inputs.params.CreateCertificate) = "false" ] ; then
+        exit 0
+      fi
+      mkdir /var/tmp/work/ingress
+      openssl genrsa -des3 -out /var/tmp/work/ingress/key.pem -passout pass:$(inputs.params.CertificateKeyPassphrase) 2048
+      openssl req -x509 -new -nodes -key /var/tmp/work/ingress/key.pem -sha256 -days 1825 -out /var/tmp/work/ingress/certificate.pem -passin pass:$(inputs.params.CertificateKeyPassphrase) -subj /CN=$(inputs.params.ExternalUrl)
+      openssl rsa -in /var/tmp/work/ingress/key.pem -out /var/tmp/work/ingress/key.pem -passin pass:$(inputs.params.CertificateKeyPassphrase)
+      EOF
+    volumeMounts:
+    - name: work
+      mountPath: /var/tmp/work
+  - name: create-certificate-secret
+    image: lachlanevenson/k8s-kubectl:latest
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      cat <<EOF | sh
+      #!/bin/sh
+      if [ $(inputs.params.CreateCertificate) = "false" ] ; then
+        exit 0
+      fi
+      echo "Creating secret"
+      kubectl create secret tls $(inputs.params.CertificateSecretName) --cert=/var/tmp/work/ingress/certificate.pem --key=/var/tmp/work/ingress/key.pem
+      EOF
+    volumeMounts:
+    - name: work
+      mountPath: /var/tmp/work
+  - name: create-or-delete-ingress
+    image: lachlanevenson/k8s-kubectl:latest
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      echo "Handling Ingress"
+      if [ $(inputs.params.Mode) = "create" ] ; then
+        echo "Creating Ingress"
+        cat <<EOF | kubectl apply -f -
+        apiVersion: extensions/v1beta1
+        kind: Ingress
+        metadata:
+          name: $(inputs.params.EventListenerName)
+          namespace: $(inputs.params.Namespace)
+        spec:
+          tls:
+          - hosts:
+            - $(inputs.params.ExternalUrl)
+            secretName: $(inputs.params.CertificateSecretName)
+          rules:
+          - host: $(inputs.params.ExternalUrl)
+            http:
+              paths:
+              - backend:
+                  serviceName: $(inputs.params.EventListenerName)
+                  servicePort: 8082
+      EOF
+      fi
+           
+      if [ $(inputs.params.Mode) = "delete" ] ; then
+        echo "Deleting Ingress"
+        kubectl delete ingress -n $(inputs.params.Namespace)
+        echo "Keeping certificate around, manual clean up required if you're sure about deleting it"
+      fi
+  volumes:
+  - name: work
+    emptyDir: {}

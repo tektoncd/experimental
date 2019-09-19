@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  generateName: ingress-run-
+spec:
+  taskRef:
+    name: ingress-task
+  inputs:
+    params:
+    - name: Mode
+      value: "create"
+    - name: CreateCertificate
+      value: "true"
+    - name: CertificateKeyPassphrase
+      value: pass1
+    - name: CertificateSecretName
+      value: secret1
+    - name: ExternalUrl
+      value: listener.replaceme.nip.io
+    - name: Namespace
+      value: "tekton-pipelines"
+  timeout: 30s
+  serviceAccount: default
