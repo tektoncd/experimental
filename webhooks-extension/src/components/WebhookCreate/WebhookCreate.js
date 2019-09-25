@@ -539,7 +539,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="git-tooltip">
-                <CustomTooltip tooltipText="The URL of the git repository to create the webhook on."/>
+                <CustomTooltip tooltipText="The URL of the git repository which you want to trigger a pipeline."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Repository URL</div>
@@ -563,8 +563,8 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-              <div className="help-icon" id="namespace-tooltip">
-                <CustomTooltip tooltipText="The namespace to operate in."/>
+              <div className="help-icon" id="secret-tooltip">
+                <CustomTooltip tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Access Token</div>
@@ -587,8 +587,8 @@ class WebhookCreatePage extends Component {
             </div>
             
             <div className="row">
-              <div className="help-icon" id="pipeline-tooltip">
-                <CustomTooltip tooltipText="The pipeline from the selected namespace to run when the webhook is triggered."/>
+              <div className="help-icon" id="namespace-tooltip">
+                <CustomTooltip tooltipText="The namespace to operate in."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Namespace</div>
@@ -601,8 +601,8 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-              <div className="help-icon" id="secret-tooltip">
-                <CustomTooltip tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository."/>
+              <div className="help-icon" id="pipeline-tooltip">
+                <CustomTooltip tooltipText="The pipeline from the selected namespace to run when the webhook is triggered."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Pipeline</div>

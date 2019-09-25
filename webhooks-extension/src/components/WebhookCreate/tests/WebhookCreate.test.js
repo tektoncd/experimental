@@ -481,7 +481,7 @@ describe('tooltips', () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('git-tooltip'));
     fireEvent.focus(document.getElementById('git-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0));
-    await waitForElement(() => getByLabelText(/The URL of the git repository to create the webhook on./i));
+    await waitForElement(() => getByLabelText(/The URL of the git repository which you want to trigger a pipeline./i));
   });
   it('hover on pipeline tooltip', async () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
