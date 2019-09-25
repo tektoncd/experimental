@@ -2,8 +2,13 @@
 <br/>
 
 - Only GitHub webhooks are currently supported.
+- Webhooks in GitHub are sometimes left behind after deletion (details further below).
 - Only `push` and `pull_request` events are currently supported, these are the events defined on the webhook.
 - A limited number of pipelines will currently work with this implementation.
+
+## Webhook Not Deleted
+
+Due to a bug in the knative codebase, the deletion of the webhook does not alway occur in GitHub.  All artefacts required for the webhook to run a pipeline are successfully removed from the cluster but the webhook in GitHub may need to be manually deleted.  Until the webhook is manually deleted, it will attempt to send event details to a non-existent service.  This problem will cease to exist once [issue 247](https://github.com/tektoncd/experimental/issues/247) is addressed and the webhooks extension moves away from its dependency on knative.
 
 ## Pipeline Limitations
 
