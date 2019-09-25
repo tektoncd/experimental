@@ -37,7 +37,7 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
     _On other Kubernetes environments:_
 
     ```bash
-    curl -L https://github.com/tektoncd/dashboard/releases/latest/download/openshift-webhooks-extension.yaml \
+    curl -L https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml \
     | sed 's/tekton-pipelines/TARGET_NAMESPACE/' \
     | kubectl apply --filename -
     ```  
