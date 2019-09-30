@@ -114,7 +114,12 @@ function install_tekton() {
       exit 1
   fi
   version="$1"
-  kubectl apply --filename https://storage.googleapis.com/tekton-releases/previous/${version}/release.yaml
+  latest_version=$(curl -s https://api.github.com/repos/tektoncd/pipeline/releases | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | head -n 1)
+  if [[ ${latest_version} = ?${version} ]];then
+    kubectl apply --filename https://storage.googleapis.com/tekton-releases/latest/release.yaml
+  else
+    kubectl apply --filename https://github.com/knative/eventing/releases/download/${version}/release.yaml
+  fi
   # Wait until all the pods come up
   wait_for_ready_pods tekton-pipelines 180 20
 }
