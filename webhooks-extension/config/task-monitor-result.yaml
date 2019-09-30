@@ -42,19 +42,19 @@ spec:
     image: maiwj/kubernetes-python-client:latest
     env:
       - name: PIPELINERUNS
-        value: ${inputs.params.pipelineruns}
+        value: $(inputs.params.pipelineruns)
       - name: COMMENT_SUCCESS
-        value: ${inputs.params.commentsuccess}
+        value: $(inputs.params.commentsuccess)
       - name: COMMENT_FAILURE
-        value: ${inputs.params.commentfailure}
+        value: $(inputs.params.commentfailure)
       - name: URL
-        value: ${inputs.params.dashboard-url}
+        value: $(inputs.params.dashboard-url)
       # This can be deleted after any fix to the above mentioned pending status change
       - name: GITHUBTOKEN
         valueFrom:
           secretKeyRef:
             key: accessToken
-            name: ${inputs.params.secret}
+            name: $(inputs.params.secret)
       # Up to here
     command: ["/bin/bash"]
     args:
