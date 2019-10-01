@@ -71,6 +71,7 @@ echo 'created docker-push'
 
 ## Install pipelines. This first test uses our simplest pipeline: docker build/tag/push, kubectl apply -f config 
 git clone https://github.com/pipeline-hotel/example-pipelines.git
+kubectl apply -f example-pipelines/config/deployment-condition.yaml -n ${DASHBOARD_INSTALL_NS}
 kubectl apply -f example-pipelines/config/build-task.yaml -n ${DASHBOARD_INSTALL_NS}
 kubectl apply -f example-pipelines/config/deploy-task.yaml -n ${DASHBOARD_INSTALL_NS}
 kubectl apply -f example-pipelines/config/pipeline.yaml -n ${DASHBOARD_INSTALL_NS}

@@ -17,16 +17,18 @@ import (
 	json "encoding/json"
 	"errors"
 	"fmt"
-	restful "github.com/emicklei/go-restful"
-	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
-	v1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	gh "gopkg.in/go-playground/webhooks.v3/github"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	restful "github.com/emicklei/go-restful"
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
+	v1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	gh "gopkg.in/go-playground/webhooks.v3/github"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const gitServerLabel = "gitServer"
@@ -65,6 +67,18 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 
 	timestamp := getDateTimeAsString()
 
+	eventHeaders, err := json.Marshal(request.Request.Header)
+	if err != nil {
+		logging.Log.Errorf("Error marshalling event headers", err)
+		return
+	}
+
+	eventPayload, err := ioutil.ReadAll(request.Request.Body)
+	if err != nil {
+		logging.Log.Errorf("Error marshalling event payload", err)
+		return
+	}
+
 	if gitHubEventTypeString == "ping" {
 		response.WriteHeader(http.StatusNoContent)
 	} else if gitHubEventTypeString == "push" {
@@ -84,7 +98,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.TIMESTAMP = timestamp
 		buildInformation.BRANCH = extractBranchFromPushEventRef(webhookData.Ref)
 
-		createPipelineRunsFromWebhookData(buildInformation, r)
+		createPipelineRunsFromWebhookData(buildInformation, r, eventHeaders, eventPayload)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
 
 	} else if gitHubEventTypeString == "pull_request" {
@@ -105,7 +119,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.TIMESTAMP = timestamp
 		buildInformation.BRANCH = webhookData.PullRequest.Head.Ref
 
-		pipelineruns := createPipelineRunsFromWebhookData(buildInformation, r)
+		pipelineruns := createPipelineRunsFromWebhookData(buildInformation, r, eventHeaders, eventPayload)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
 		createTaskRunFromWebhookData(buildInformation, r, pipelineruns)
 		logging.Log.Debugf("created monitoring task for pipelinerun from build information for repository %s commitId %s.", buildInformation.REPOURL,
@@ -130,7 +144,7 @@ func extractBranchFromPushEventRef(ref string) string {
 }
 
 // This is the main flow that handles building and deploying: given everything we need to kick off a build, do so
-func createPipelineRunsFromWebhookData(buildInformation BuildInformation, r Resource) (result []*v1alpha1.PipelineRun) {
+func createPipelineRunsFromWebhookData(buildInformation BuildInformation, r Resource, eventHeaders, eventPayload []byte) (result []*v1alpha1.PipelineRun) {
 	logging.Log.Debugf("In createPipelineRunFromWebhookData, build information: %s.", buildInformation)
 
 	// TODO: Use the dashboard endpoint to create the PipelineRun
@@ -223,15 +237,17 @@ func createPipelineRunsFromWebhookData(buildInformation BuildInformation, r Reso
 		}
 
 		repositoryName := strings.ToLower(buildInformation.REPONAME)
-		params := []v1alpha1.Param{{Name: "image-tag", Value: imageTag},
+
+		params := []v1alpha1.Param{
+			{Name: "image-tag", Value: imageTag},
 			{Name: "image-name", Value: imageName},
 			{Name: "release-name", Value: releaseName},
 			{Name: "repository-name", Value: repositoryName},
-			{Name: "target-namespace", Value: pipelineNs}}
-
-		// PipelineRun yml defines the references to the above named resources.
-		pipelineRunData, err := definePipelineRun(pipelineRunNamePrefix, pipelineNs, saName, buildInformation.REPOURL, buildInformation.BRANCH,
-			pipeline, resources, params)
+			{Name: "target-namespace", Value: pipelineNs},
+			{Name: "event-payload", Value: string(eventPayload)},
+			{Name: "event-headers", Value: string(eventHeaders)},
+			{Name: "branch", Value: buildInformation.BRANCH},
+		}
 
 		if dockerRegistry != "" {
 			params = append(params, v1alpha1.Param{Name: "docker-registry", Value: dockerRegistry})
@@ -240,6 +256,10 @@ func createPipelineRunsFromWebhookData(buildInformation BuildInformation, r Reso
 		if helmSecret != "" {
 			params = append(params, v1alpha1.Param{Name: "helm-secret", Value: helmSecret})
 		}
+
+		// PipelineRun yml defines the references to the above named resources.
+		pipelineRunData, err := definePipelineRun(pipelineRunNamePrefix, pipelineNs, saName, buildInformation.REPOURL, buildInformation.BRANCH,
+			pipeline, resources, params)
 
 		logging.Log.Infof("Creating a new PipelineRun named %s in the namespace %s using the service account %s.", pipelineRunNamePrefix, pipelineNs, saName)
 
