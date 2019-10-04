@@ -1,0 +1,13 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: simple-pipeline-binding
+spec:
+  params:
+  - name: gitrevision
+    value: $(event.head_commit.id)
+  - name: gitrepositoryurl
+    value: $(event.repository.url)
+  - name: docker-tag
+    value: $(event.repository.name):$(event.head_commit.id)
+    

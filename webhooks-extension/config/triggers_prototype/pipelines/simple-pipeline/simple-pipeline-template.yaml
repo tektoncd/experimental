@@ -1,0 +1,53 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+# This requires the simple pipeline task from the pipeline hotel to be installed first
+# and the simple pipeline
+# tested on Tekton 0.7 only
+metadata:
+  name: simple-pipeline-template
+spec:
+  params:
+  - name: gitrevision
+    description: The git revision
+    default: master
+  - name: gitrepositoryurl
+    description: The git repository url
+  - name: service-account
+    default: tekton-webhooks-extension
+    description: The service account to use
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: git-source-$(uid)
+    spec:
+      type: git
+      params:
+      - name: revision
+        value: $(params.gitrevision)
+      - name: url
+        value: $(params.gitrepositoryurl)
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: docker-image-$(uid)
+    spec:
+      type: image
+      params:
+      - name: url
+        value: $(params.docker-registry)/$(params.docker-tag)
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineRun
+    metadata:
+      generateName: simple-pipeline-run-
+    spec:
+      serviceAccount: $(params.service-account)
+      pipelineRef:
+        name: simple-pipeline
+      resources:
+      - name: git-source
+        resourceRef:
+          name: git-source-$(uid)
+      - name: docker-image
+        resourceRef: 
+          name: docker-image-$(uid)
