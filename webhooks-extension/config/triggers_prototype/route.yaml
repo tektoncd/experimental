@@ -1,0 +1,54 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: route-task
+  namespace: tekton-pipelines
+spec:
+  inputs:
+    params:
+    - name: Mode
+      description: Whether to create or delete a Route
+      default: "create"
+      type: string
+    - name: ExternalUrl 
+      description: The external access URL
+      default: "listener.replaceme.nip.io"
+      type: string
+    - name: EventListenerName 
+      description: The EventListener name
+      default: "listener"
+      type: string
+    - name: EventListenerPort
+      description: The EventListener port
+      default: "8082"
+      type: string
+  steps:
+  - name: create-or-delete-route
+    image: lachlanevenson/k8s-kubectl:latest
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      if [ $(inputs.params.Mode) = "create" ] ; then
+        echo "Creating the Route"
+        cat <<EOF | kubectl apply -f --validate=false -
+        apiVersion: route.openshift.io/v1
+        kind: Route
+        metadata:
+          name: $(inputs.params.EventListenerName)
+        spec:
+          to:
+            kind: Service
+            name: $(inputs.params.EventListenerName)
+          tls:
+            termination: Reencrypt
+            insecureEdgeTerminationPolicy: Redirect
+      EOF
+      fi
+                
+      if [ $(inputs.params.Mode) = "delete" ] ; then
+        echo "Deleting Route"
+        kubectl delete route $(inputs.params.EventListenerName)
+      fi
