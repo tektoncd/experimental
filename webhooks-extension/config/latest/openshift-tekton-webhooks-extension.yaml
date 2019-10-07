@@ -12,6 +12,14 @@ metadata:
   name: tekton-webhooks-extension-minimal
   namespace: tekton-pipelines
 rules:
+- apiGroups: 
+  - route.openshift.io
+  resources: 
+  - routes
+  verbs:
+  - get
+  - create
+  - delete
 - apiGroups:
   - security.openshift.io
   resources:

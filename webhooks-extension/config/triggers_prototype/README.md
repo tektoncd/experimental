@@ -17,6 +17,19 @@ You can create or delete an Ingress using the provided Task, TaskRun, and certif
 4. Apply the TaskRun definition:
 `kubectl create -f config/triggers_prototype/test/ingress-run.yaml`
 
+## Routes
+
+You can create or delete a Route on OpenShift using the provided Task and TaskRun.
+
+1. Apply the Task definition:
+`kubectl apply -f config/triggers_prototype/route.yaml`
+2. Modify the example TaskRun definition, replacing the parameters accordingly:
+
+  - To create a Route, set `Mode` to `create`. To delete a Route, set this to `delete`
+
+3. Apply the TaskRun definition:
+`kubectl create -f config/triggers_prototype/test/route-run.yaml`
+
 ## Using Docker Desktop
 
 In order for the EventListener service to be reachable over Ingress, you should install your own LoadBalancer - for example with:
