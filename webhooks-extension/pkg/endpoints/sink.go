@@ -67,15 +67,14 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 
 	timestamp := getDateTimeAsString()
 
-	eventHeaders, err := json.Marshal(request.Request.Header)
+	requestBodyBytes, err := ioutil.ReadAll(request.Request.Body)
 	if err != nil {
-		logging.Log.Errorf("Error marshalling event headers", err)
+		logging.Log.Errorf("Error reading request body: %s.", err.Error())
 		return
 	}
-
-	eventPayload, err := ioutil.ReadAll(request.Request.Body)
+	requestHeaderBytes, err := json.Marshal(request.Request.Header)
 	if err != nil {
-		logging.Log.Errorf("Error marshalling event payload", err)
+		logging.Log.Errorf("Error reading request headers: %s.", err.Error())
 		return
 	}
 
@@ -86,8 +85,8 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 
 		webhookData := gh.PushPayload{}
 
-		if err := request.ReadEntity(&webhookData); err != nil {
-			logging.Log.Errorf("error decoding webhook data: %s.", err.Error())
+		if err := json.Unmarshal(requestBodyBytes, &webhookData); err != nil {
+			logging.Log.Errorf("Error decoding webhook data: %s.", err.Error())
 			return
 		}
 
@@ -98,7 +97,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.TIMESTAMP = timestamp
 		buildInformation.BRANCH = extractBranchFromPushEventRef(webhookData.Ref)
 
-		createPipelineRunsFromWebhookData(buildInformation, r, eventHeaders, eventPayload)
+		r.createPipelineRunsFromWebhookData(buildInformation, requestBodyBytes, requestHeaderBytes)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
 
 	} else if gitHubEventTypeString == "pull_request" {
@@ -106,8 +105,8 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 
 		webhookData := gh.PullRequestPayload{}
 
-		if err := request.ReadEntity(&webhookData); err != nil {
-			logging.Log.Errorf("error decoding webhook data: %s.", err.Error())
+		if err := json.Unmarshal(requestBodyBytes, &webhookData); err != nil {
+			logging.Log.Errorf("Error decoding webhook data: %s.", err.Error())
 			return
 		}
 
@@ -119,7 +118,7 @@ func (r Resource) handleWebhook(request *restful.Request, response *restful.Resp
 		buildInformation.TIMESTAMP = timestamp
 		buildInformation.BRANCH = webhookData.PullRequest.Head.Ref
 
-		pipelineruns := createPipelineRunsFromWebhookData(buildInformation, r, eventHeaders, eventPayload)
+		pipelineruns := r.createPipelineRunsFromWebhookData(buildInformation, requestBodyBytes, requestHeaderBytes)
 		logging.Log.Debugf("Build information for repository %s:%s: %s.", buildInformation.REPOURL, buildInformation.SHORTID, buildInformation)
 		createTaskRunFromWebhookData(buildInformation, r, pipelineruns)
 		logging.Log.Debugf("created monitoring task for pipelinerun from build information for repository %s commitId %s.", buildInformation.REPOURL,
@@ -144,7 +143,7 @@ func extractBranchFromPushEventRef(ref string) string {
 }
 
 // This is the main flow that handles building and deploying: given everything we need to kick off a build, do so
-func createPipelineRunsFromWebhookData(buildInformation BuildInformation, r Resource, eventHeaders, eventPayload []byte) (result []*v1alpha1.PipelineRun) {
+func (r Resource) createPipelineRunsFromWebhookData(buildInformation BuildInformation, eventPayload, eventHeaders []byte) (result []*v1alpha1.PipelineRun) {
 	logging.Log.Debugf("In createPipelineRunFromWebhookData, build information: %s.", buildInformation)
 
 	// TODO: Use the dashboard endpoint to create the PipelineRun
