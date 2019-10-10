@@ -226,7 +226,7 @@ class WebhookCreatePage extends Component {
     }
 
     if (!validateInputs(dockerRegistry, "dockerRegistry")) {
-      invalidFields.push("name");
+      invalidFields.push("dockerRegistry");
     }
 
     if (!validateInputs(repository, "repository")) {
@@ -510,6 +510,9 @@ class WebhookCreatePage extends Component {
               <div className="sectionDescription">
                 These settings are used for creating the webhook.
               </div>
+              <div className="sectionDescription">
+                Click <a target="_blank" rel="noopener noreferrer" href="https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md#creating-a-new-webhook">here</a> for more information.
+              </div>
             </div>
 
             <div className="row">
@@ -539,7 +542,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="git-tooltip">
-                <CustomTooltip tooltipText="The URL of the git repository which you want to trigger a pipeline."/>
+                <CustomTooltip tooltipText="The URL of the GitHub repository to create a webhook on for the specified Pipeline."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Repository URL</div>
@@ -564,7 +567,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="secret-tooltip">
-                <CustomTooltip tooltipText="The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository."/>
+                <CustomTooltip tooltipText="The Kubernetes secret holding access information for the GitHub repository. The credential must have sufficient privileges to create webhooks in the repository."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Access Token</div>
@@ -585,10 +588,10 @@ class WebhookCreatePage extends Component {
                 These settings select and configure the pipeline to execute when the webhook triggers.
               </div>
             </div>
-            
+
             <div className="row">
               <div className="help-icon" id="namespace-tooltip">
-                <CustomTooltip tooltipText="The namespace to operate in."/>
+                <CustomTooltip tooltipText="The namespace where your Pipelines are stored & PipelineRuns will be created by this webhook."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Namespace</div>
@@ -602,7 +605,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="pipeline-tooltip">
-                <CustomTooltip tooltipText="The pipeline from the selected namespace to run when the webhook is triggered."/>
+                <CustomTooltip tooltipText="The Pipeline to be triggered by the webhook."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Pipeline</div>
@@ -616,7 +619,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="serviceaccount-tooltip">
-                <CustomTooltip tooltipText="The service account under which to run the pipeline run. The service account needs to be patched with secrets to access both git and docker."/>
+                <CustomTooltip tooltipText="The service account under which to run the PipelineRun. Should be patched with secrets to access both git and docker."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Service Account</div>
@@ -630,7 +633,7 @@ class WebhookCreatePage extends Component {
 
             <div className="row">
               <div className="help-icon" id="docker-tooltip">
-                <CustomTooltip tooltipText="The docker registry to push images to."/>
+                <CustomTooltip tooltipText="The docker registry to push images to. Click above for more information on accepted formats."/>
               </div>
               <div className="item-label">
                 <div className="createLabel">Docker Registry</div>
@@ -730,7 +733,7 @@ class WebhookCreatePage extends Component {
               <div className="modal-row">
                 <div className="modal-row-help-icon">
                   <Tooltip direction="bottom" triggerText="">
-                    <p>The access token.</p>
+                    <p>{"You can generate it via: GitHub > Settings > Developer settings > Personal access tokens > Generate. Read doc for more information."}</p>
                   </Tooltip>
                 </div>
                 <div className="modal-row-item-label">

@@ -66,6 +66,9 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	}
 
 	dockerRegDefault := r.Defaults.DockerRegistry
+	// remove prefixes if any
+	webhook.DockerRegistry = strings.TrimPrefix(webhook.DockerRegistry, "https://")
+	webhook.DockerRegistry = strings.TrimPrefix(webhook.DockerRegistry, "http://")
 	if webhook.DockerRegistry == "" && dockerRegDefault != "" {
 		webhook.DockerRegistry = dockerRegDefault
 	}
