@@ -13,8 +13,7 @@
 
 **Docker Desktop Only:**
 
-- Currently only runs Kubernetes v1.11 in it's **edge** version.
-
+- Known to work with Kubernetes v1.11 and Kubernetes v1.14 (intermediate versions should work too, we just haven't tested it)
 
 ## Install prereqs
 
@@ -29,7 +28,7 @@
        - Clone this repository: `git clone https://github.com/tektoncd/experimental.git`
        - Run the Istio installation script: `./scripts/install_istio.sh <version>` 
          
-         **Note:** requires [Helm](https://helm.sh/docs/using_helm/#installing-helm) 2.x to be installed and recommend using Istio 1.1.7 as `<version>`
+         **Note:** requires [Helm](https://helm.sh/docs/using_helm/#installing-helm) 2.x to be installed and Istio 1.1.7 as `<version>` is a known working configuration
    
    - **For a custom quickstart install:**
  
@@ -48,7 +47,7 @@
        - Clone this repository: `git clone https://github.com/tektoncd/experimental.git`
        - Run the Knative installation script: `./scripts/install_knative.sh <version>` 
          
-         **Note:** recommend use of `v0.6.0` as `<version>`
+         **Note:** only Knative `v0.6.0` is known to work and tested: you should specify this as `<version>`
 
    - **For official Knative install steps:**
    
@@ -63,7 +62,7 @@ After installing the prereqs, set your own domain and selectors following the [c
 
 **Example using the cluster master node's DNS name**
 
-  Patch the ConfigMap, set the dns_name environment variable substituting CLUSTER_MASTER_NODE_DNS_NAME with the relevant DNS name:
+  Patch the ConfigMap, set the dns_name environment variable substituting `CLUSTER_MASTER_NODE_DNS_NAME` with the relevant DNS name:
 
     export dns_name=CLUSTER_MASTER_NODE_DNS_NAME
 
