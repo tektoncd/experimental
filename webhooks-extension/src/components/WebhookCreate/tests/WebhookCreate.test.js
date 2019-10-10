@@ -481,36 +481,36 @@ describe('tooltips', () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('git-tooltip'));
     fireEvent.focus(document.getElementById('git-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0));
-    await waitForElement(() => getByLabelText(/The URL of the git repository which you want to trigger a pipeline./i));
+    await waitForElement(() => getByLabelText(/The URL of the GitHub repository to create a webhook on for the specified Pipeline./i));
   });
   it('hover on pipeline tooltip', async () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('pipeline-tooltip'))
     fireEvent.focus(document.getElementById('pipeline-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByLabelText(/The pipeline from the selected namespace to run when the webhook is triggered./i))
+    await waitForElement(() => getByLabelText(/The Pipeline to be triggered by the webhook./i))
   });
   it('hover on namespace tooltip', async () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('namespace-tooltip'))
     fireEvent.focus(document.getElementById('namespace-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByLabelText(/The namespace to operate in./i))
+    await waitForElement(() => getByLabelText(/The namespace where your Pipelines are stored & PipelineRuns will be created by this webhook./i))
   });
   it('hover on secrets tooltip', async () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('secret-tooltip'))
     fireEvent.focus(document.getElementById('secret-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByLabelText(/The kubernetes secret holding access information for the git repository. The credential must have sufficient privileges to create webhooks in the repository./i))
+    await waitForElement(() => getByLabelText(/The Kubernetes secret holding access information for the GitHub repository. The credential must have sufficient privileges to create webhooks in the repository./i))
   });
   it('hover on service account tooltip', async () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('serviceaccount-tooltip'))
     fireEvent.focus(document.getElementById('serviceaccount-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByLabelText(/The service account under which to run the pipeline run./i))
+    await waitForElement(() => getByLabelText(/The service account under which to run the PipelineRun. Should be patched with secrets to access both git and docker./i))
   });
   it('hover on docker registry tooltip', async () => {
     const { getByLabelText } = renderWithRouter(<WebhookCreate match={{}} pipelines={pipelines} serviceAccounts={serviceAccounts} setShowNotificationOnTable={() => {}} />);
     await waitForElement(() => document.getElementById('docker-tooltip'))
     fireEvent.focus(document.getElementById('docker-tooltip').getElementsByClassName('bx--tooltip__trigger').item(0))
-    await waitForElement(() => getByLabelText(/The docker registry to push images to./i))
+    await waitForElement(() => getByLabelText(/The docker registry to push images to. Click above for more information on accepted formats./i))
   });
 })

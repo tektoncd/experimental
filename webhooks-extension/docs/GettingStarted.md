@@ -80,7 +80,7 @@ The URL of the Git repository in which the webhook should be created. For exampl
 
 ### Access Token
 
-A GitHub access token that will be used to create the webhook. You may have created an access token in the section  'Create credentials: Git' above. If you chose to have one access token for both checking out code and creating webhooks then you can reuse its value here. 
+A GitHub access token that will be used to create the webhook. You may have created an access token in the section  'Create credentials: Git' above. If you chose to have one access token for both checking out code and creating webhooks then you can reuse its value here. Click [here](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line) to learn how to generate an access token.
 
 1. If you did not do so earlier, create an access token via GitHub as described [above](#create-credentials-git) ensuring that the token has `admin:repo_hook` permissions. 
 2. Access tokens for webhooks are stored differently to credentials for Tekton Pipelines. You must store an access token via the 'Access Token' menu even if you created an access token-based Git secret earlier. 
@@ -100,6 +100,16 @@ This field specifies the service account that will be used by the PipelineRun. I
 ### Docker Registry
 
 Finally, select the Docker registry that any built images should be pushed to. This is the Docker registry that the 'Docker' credentials earlier are associated with. 
+Accepted Formats:
+- http://index.docker.io/foo
+- index.docker.io/foo
+- foo
+- https://index.docker.io/foo
+- http://my.registry/foo
+- https://my.registry/foo
+- http://my.registry
+- https://my.registry
+- my.registry/foo
 
 ## Putting it all together: test it's working
 
