@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tekton-webhooks-extension-validator
+  namespace: tekton-pipelines
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tekton-webhooks-extension-validator
+  template:
+    metadata:
+      labels:
+        app: tekton-webhooks-extension-validator
+    spec:
+      containers:
+        - name: validate
+          image: adamroberts/github-validate-task:latest
+          env:
+            - name: INSTALLED_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
