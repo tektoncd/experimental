@@ -9,7 +9,7 @@ spec:
   template:
     spec:
       containers:
-      - image: "github.com/tektoncd/experimental/webhooks-extension/cmd/sink"
+      - image: github.com/tektoncd/experimental/webhooks-extension/cmd/sink
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

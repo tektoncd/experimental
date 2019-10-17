@@ -25,13 +25,13 @@ The Tekton Webhooks Extension has a hosted image of the latest builds located at
       _On Red Hat OpenShift:_
 
       ```bash
-      oc apply -f config/release/openshift-tekton-webhooks-extension.yaml
+      oc apply -f config/latest/openshift-tekton-webhooks-extension.yaml
       ```
 
       _On other Kubernetes environments:_
 
       ```bash
-      kubectl apply -f config/release/gcr-tekton-webhooks-extension.yaml
+      kubectl apply -f config/latest/gcr-tekton-webhooks-extension.yaml
       ```  
 <br/>
 <br/>
