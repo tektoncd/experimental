@@ -4,6 +4,9 @@ metadata:
   name: ingress-task
   namespace: tekton-pipelines
 spec:
+  volumes:
+  - name: work
+    emptyDir: {}
   inputs:
     params:
     - name: Mode
@@ -28,6 +31,77 @@ spec:
       default: "8082"
       type: string
   steps:
+  - name: generate-certificate
+    image: jordi/openssl
+    volumeMounts:
+    - name: work
+      mountPath: /var/tmp/work
+    command:
+    - /bin/bash
+    args:
+    - -ce
+    - |
+      set -e
+      if [ $(inputs.params.Mode) = "delete" ] ; then
+        exit 0
+      fi
+      mkdir /var/tmp/work/ingress
+      csr=/var/tmp/work/ingress/tls.csr
+      key=/var/tmp/work/ingress/tls.key
+      cn=$(inputs.params.ExternalUrl)
+      openssl genrsa -out $key 2048
+      openssl req -new -sha256 -key $key -out $csr -subj "/C=US/ST=NC/O=IBM Inc./CN=$cn" \
+          -reqexts SAN \
+          -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:$cn,DNS:$cn"))
+      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /var/tmp/work/ingress/selftls.key -out /var/tmp/work/ingress/selftls.crt -subj "/CN=$cn"
+  - name: create-secret
+    #image: roffe/kubectl
+    image: lachlanevenson/k8s-kubectl:latest
+    volumeMounts:
+    - name: work
+      mountPath: /var/tmp/work
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set +e
+      if [ $(inputs.params.Mode) = "delete" ] ; then
+        exit 0
+      fi
+      csr=/var/tmp/work/ingress/tls.csr
+      crt=/var/tmp/work/ingress/tls.crt
+      key=/var/tmp/work/ingress/tls.key
+      (cat <<EOF
+      apiVersion: certificates.k8s.io/v1beta1
+      kind: CertificateSigningRequest
+      metadata:
+        name: $(inputs.params.ExternalUrl)
+      spec:
+        groups:
+        - system:authenticated
+        request: $(cat $csr | base64 | tr -d '\n')
+        usages:
+        - digital signature
+        - key encipherment
+        - server auth
+      EOF
+      ) | kubectl create -f - 2>output.txt
+      cat output.txt
+      var=$(grep "error" output.txt)
+      if [[ !  -z  "$var"  ]]
+      then
+       kubectl create secret tls $(inputs.params.CertificateSecretName)  --key /var/tmp/work/ingress/selftls.key --cert /var/tmp/work/ingress/selftls.crt
+      else
+       kubectl certificate approve $(inputs.params.ExternalUrl)
+       kubectl get csr $(inputs.params.ExternalUrl) -o jsonpath='{.status.certificate}' | base64 --decode > $crt
+       kubectl create secret tls $(inputs.params.CertificateSecretName)  --key $key --cert $crt 2>output.txt 
+       var=$(grep "error" output.txt)
+       if [[ !  -z  "$var"  ]]
+       then
+        kubectl create secret tls $(inputs.params.CertificateSecretName)  --key /var/tmp/work/ingress/selftls.key --cert /var/tmp/work/ingress/selftls.crt
+       fi 
+      fi
   - name: create-or-delete-ingress
     image: lachlanevenson/k8s-kubectl:latest
     command:
