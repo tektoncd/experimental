@@ -157,14 +157,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b8dc716812a3652b5f80648fe3830d10179ef127bae152704cfd5ef43c828738"
+  digest = "1:e1521973f4c4e40b9963f601a7e9de8f1eb8023ea8aa73e209c0bce2f2ef5ffd"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
     "apis/duck/v1alpha1",
-    "apis/duck/v1beta1",
-    "configmap",
     "kmp",
   ]
   pruneopts = "UT"
@@ -227,7 +225,7 @@
   revision = "dbdb5c2805ee17751e30b4888fbd6791770a4b7f"
 
 [[projects]]
-  digest = "1:c1d4d03290ca71b76462cd02b6e1293cd857dc2ba9182ef56d2178c650041021"
+  digest = "1:cc5ac2ab9805196a1adccf86b8cc13cc93366941c5419971454b3e748e6d12e8"
   name = "github.com/tektoncd/pipeline"
   packages = [
     "pkg/apis/config",
@@ -239,13 +237,10 @@
     "pkg/client/clientset/versioned/typed/pipeline/v1alpha1",
     "pkg/client/clientset/versioned/typed/pipeline/v1alpha1/fake",
     "pkg/list",
-    "pkg/merge",
     "pkg/names",
-    "pkg/templating",
   ]
   pruneopts = "UT"
-  revision = "ef4611b7cf0c0b0f0b1876a1652f283fc63f181b"
-  version = "v0.5.2"
+  revision = "8871979dfc08fb65ae544c6ad2de83f8bab617b0"
 
 [[projects]]
   digest = "1:a5158647b553c61877aa9ae74f4015000294e47981e6b8b07525edcbb0747c81"
@@ -680,6 +675,22 @@
   revision = "6b3d3b2d5666c5912bab8b7bf26bf50f75a8f887"
 
 [[projects]]
+  branch = "master"
+  digest = "1:83353bfb5fafed2c02c9b38b1ac27e822f299040a567b96223ce2e49cd1f3fb3"
+  name = "knative.dev/pkg"
+  packages = [
+    "apis",
+    "apis/duck",
+    "apis/duck/v1",
+    "apis/duck/v1beta1",
+    "apis/v1alpha1",
+    "configmap",
+    "kmp",
+  ]
+  pruneopts = "UT"
+  revision = "b5a8deb92e5c8aa8ff8fb231b75ce5b6795f82ab"
+
+[[projects]]
   digest = "1:84a8609383bec11b71d52dd813f33f1d16614b91966940bdc2aa79bea864fa25"
   name = "sigs.k8s.io/controller-runtime"
   packages = ["pkg/runtime/scheme"]
@@ -692,6 +703,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/emicklei/go-restful",
+    "github.com/google/go-cmp/cmp",
     "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned",
     "github.com/knative/eventing-sources/pkg/client/clientset/versioned/fake",
