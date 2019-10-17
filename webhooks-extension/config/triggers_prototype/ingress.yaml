@@ -32,7 +32,7 @@ spec:
       type: string
   steps:
   - name: generate-certificate
-    image: jordi/openssl
+    image: cfssl/cfssl
     volumeMounts:
     - name: work
       mountPath: /var/tmp/work
@@ -49,13 +49,42 @@ spec:
       csr=/var/tmp/work/ingress/tls.csr
       key=/var/tmp/work/ingress/tls.key
       cn=$(inputs.params.ExternalUrl)
-      openssl genrsa -out $key 2048
-      openssl req -new -sha256 -key $key -out $csr -subj "/C=US/ST=NC/O=IBM Inc./CN=$cn" \
-          -reqexts SAN \
-          -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:$cn,DNS:$cn"))
-      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /var/tmp/work/ingress/selftls.key -out /var/tmp/work/ingress/selftls.crt -subj "/CN=$cn"
+      cat <<EOF | cfssl genkey - | cfssljson -bare server
+      {
+        "hosts": [
+          "$cn"
+        ],
+        "CN": "$cn",
+        "key": {
+          "algo": "ecdsa",
+          "size": 256
+        }
+      }
+      EOF
+      mv server.csr $csr
+      mv server-key.pem $key
+      cat <<EOF | cfssl genkey -initca - | cfssljson -bare self
+      {
+          "hosts": [
+              "$cn"
+          ],
+          "key": {
+              "algo": "rsa",
+              "size": 2048
+          },
+          "names": [
+              {
+                  "C":  "US",
+                  "O":  "Tekton",
+                  "OU": "WWW",
+                  "ST": "NC"
+              }
+          ]
+      }
+      EOF
+      mv self.pem /var/tmp/work/ingress/selftls.crt
+      mv self-key.pem /var/tmp/work/ingress/selftls.key
   - name: create-secret
-    #image: roffe/kubectl
     image: lachlanevenson/k8s-kubectl:latest
     volumeMounts:
     - name: work
