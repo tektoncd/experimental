@@ -76,17 +76,17 @@ function node_test() {
     echo "LATEST HASH: $hash"
 
     yaml=$(grep -i "tekton-dashboard-bundle-location:" config/extension-service.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
-    yaml2=$(grep -i "tekton-dashboard-bundle-location:" config/release/gcr-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
-    yaml3=$(grep -i "tekton-dashboard-bundle-location:" config/release/openshift-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
+    yaml2=$(grep -i "tekton-dashboard-bundle-location:" config/latest/gcr-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
+    yaml3=$(grep -i "tekton-dashboard-bundle-location:" config/latest/openshift-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
     echo "YAML HASH in config/extension-service.yaml: $yaml"
-    echo "YAML HASH config/release/gcr-tekton-webhooks-extension.yaml: $yaml2"
-    echo "YAML HASH config/release/openshift-tekton-webhooks-extension.yaml: $yaml3"
+    echo "YAML HASH config/latest/gcr-tekton-webhooks-extension.yaml: $yaml2"
+    echo "YAML HASH config/latest/openshift-tekton-webhooks-extension.yaml: $yaml3"
 
 
     if [[ $hash != $yaml ]] || [[ $hash != $yaml2 ]] || [[ $hash != $yaml3 ]]; then
       echo "######## FAIL/ERROR ########"
       echo "--------------------------------------------------------------------------"
-      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: check values in config/extension-service.yaml, config/release/gcr-tekton-webhooks-extension.yaml and config/release/openshift-tekton-webhooks-extension.yaml"
+      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: check values in config/extension-service.yaml, config/latest/gcr-tekton-webhooks-extension.yaml and config/latest/openshift-tekton-webhooks-extension.yaml"
       echo "--------------------------------------------------------------------------"
       failed=1
     fi

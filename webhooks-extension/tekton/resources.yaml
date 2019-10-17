@@ -6,21 +6,21 @@ spec:
   type: git
   params:
   - name: url
-    value: https://github.com/tektoncd/experimental # REPLACE with your own fork
+    value: https://github.com/tektoncd/experimental 
   - name: revision
-    value:  vX.Y.Z-invalid-tags-boouuhhh # REPLACE with your own commit 
+    value: INSERT_COMMIT_ID_TO_PUBLISH_HERE
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: PipelineResource
 metadata:
-  name: tekton-bucket
+  name: tekton-webhook-bucket
 spec:
   type: storage
   params:
    - name: type
      value: gcs
    - name: location
-     value: gs://tekton-releases # REPLACE with your own bucket
+     value: gs://tekton-releases/webhooks-extension # Append a /test-issue-nnn dir while developing. This needs to be created manually first.  
    - name: dir
      value: "y"
 ---

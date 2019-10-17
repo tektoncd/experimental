@@ -13,7 +13,7 @@ To uninstall to webhooks extension:
 2. Use the `kubectl delete` command to delete the webhooks extension
 
     ```bash
-    kubectl delete -f config/release/gcr-tekton-webhooks-extension.yaml
+    kubectl delete -f config/latest/gcr-tekton-webhooks-extension.yaml
     ```
 <br/>
 
