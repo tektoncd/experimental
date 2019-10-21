@@ -333,6 +333,7 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 	taskTemplateName := webhooksForRepo[0].PullTask
 	onSuccessComment := webhooksForRepo[0].OnSuccessComment
 	onFailureComment := webhooksForRepo[0].OnFailureComment
+	onTimeoutComment := webhooksForRepo[0].OnTimeoutComment
 	accessTokenRef := webhooksForRepo[0].AccessTokenRef
 
 	// Assumes you've already applied the yml: so the task definition must exist upfront.
@@ -360,6 +361,10 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 
 	if onFailureComment == "" {
 		onFailureComment = "Failed"
+	}
+
+	if onTimeoutComment == "" {
+		onTimeoutComment = "Unknown"
 	}
 
 	logging.Log.Debugf("Build information: %+v.", buildInformation)
@@ -392,6 +397,7 @@ func createTaskRunFromWebhookData(buildInformation BuildInformation, r Resource,
 
 	params := []v1alpha1.Param{{Name: "commentsuccess", Value: onSuccessComment},
 		{Name: "commentfailure", Value: onFailureComment},
+		{Name: "commenttimeout", Value: onTimeoutComment},
 		{Name: "pipelineruns", Value: taskPipelineRunsParam},
 		{Name: "dashboard-url", Value: getDashboardURL(r, installNs)},
 		{Name: "secret", Value: accessTokenRef}}

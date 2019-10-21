@@ -88,6 +88,7 @@ type webhook struct {
 	PullTask         string `json:"pulltask,omitempty"`
 	OnSuccessComment string `json:"onsuccesscomment,omitempty"`
 	OnFailureComment string `json:"onfailurecomment,omitempty"`
+	OnTimeoutComment string `json:"ontimeoutcomment,omitempty"`
 	GithubSource     string `json:"githubsource,omitempty"`
 }
 

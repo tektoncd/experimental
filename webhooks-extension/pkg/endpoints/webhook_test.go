@@ -67,6 +67,7 @@ func TestGitHubSource(t *testing.T) {
 			PullTask:         "pulltask1",
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
+			OnTimeoutComment: "ontimeoutcomment1",
 			// The GithubSource name here is important as it needs to match the name that is generated.
 			// The integer needs to match the order in which it was created (or more correctly where it is
 			// in the map created in shared-test-funcs.go)
@@ -98,6 +99,7 @@ func TestGitHubSource(t *testing.T) {
 			PullTask:         "pulltask3",
 			OnSuccessComment: "onsuccesscomment3",
 			OnFailureComment: "onfailurecomment3",
+			OnTimeoutComment: "ontimeoutcomment3",
 			// The GithubSource name here is important as it needs to match the name that is generated.
 			// The integer needs to match the order in which it was created (or more correctly where it is
 			// in the map created in shared-test-funcs.go)
@@ -366,6 +368,7 @@ func TestDeleteByNameKeepRuns(t *testing.T) {
 		PullTask:         "pulltask1",
 		OnSuccessComment: "onsuccesscomment1",
 		OnFailureComment: "onfailurecomment1",
+		OnTimeoutComment: "ontimeoutcomment1",
 		// The GithubSource name here is important as it needs to match the name that is generated.
 		// The integer needs to match the order in which it was created (or more correctly where it is
 		// in the map created in shared-test-funcs.go)
@@ -503,6 +506,7 @@ func TestDeleteByNameDeleteRuns(t *testing.T) {
 		PullTask:         "pulltask1",
 		OnSuccessComment: "onsuccesscomment1",
 		OnFailureComment: "onfailurecomment1",
+		OnTimeoutComment: "ontimeoutcomment1",
 	}
 
 	resp := createWebhook(theWebhook, r)
