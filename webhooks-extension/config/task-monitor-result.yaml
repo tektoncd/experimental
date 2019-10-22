@@ -150,3 +150,10 @@ spec:
       handle.write(status)
       handle.close()
       EOF
+  - name: copy
+    image: busybox
+    command: ["cp"]
+    args:
+    - -r
+    - /workspace/pull-request
+    - /workspace/output

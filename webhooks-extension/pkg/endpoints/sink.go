@@ -31,13 +31,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const gitServerLabel = "gitServer"
-const gitOrgLabel = "gitOrg"
-const gitRepoLabel = "gitRepo"
-const gitBranchLabel = "gitBranch"
-const githubEventParameter = "Ce-Github-Event"
+const (
+	gitServerLabel       = "gitServer"
+	gitOrgLabel          = "gitOrg"
+	gitRepoLabel         = "gitRepo"
+	gitBranchLabel       = "gitBranch"
+	githubEventParameter = "Ce-Github-Event"
+)
 
-// BuildInformation - information required to build a particular commit from a Git repository.
+// BuildInformation is information required to build a particular commit from a git repository.
 type BuildInformation struct {
 	BRANCH         string
 	REPOURL        string
