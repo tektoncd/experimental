@@ -14,12 +14,13 @@ limitations under the License.
 package endpoints
 
 import (
+	"os"
+
 	eventsrcclientset "github.com/knative/eventing-sources/pkg/client/clientset/versioned"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	tektoncdclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	k8sclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"os"
 )
 
 // Resource stores all types here that are reused throughout files
@@ -94,7 +95,6 @@ type webhook struct {
 // ConfigMapName ... the name of the ConfigMap to create
 const ConfigMapName = "githubwebhook"
 
-//
 type EnvDefaults struct {
 	Namespace      string `json:"namespace"`
 	DockerRegistry string `json:"dockerregistry"`
