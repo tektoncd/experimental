@@ -100,7 +100,7 @@ spec:
             value: /var/run/ko
           # Set this at install time after creating a certificate, e.g. with openssl and the provided convenience script.
           # A secret will be created and this name should be provided here.
-          # This secret name will then be picked up by the Go code that is responsible for 
+          # This secret name will then be picked up by the Go code that is responsible for
           # creating the EventListener, Ingress and webhooks.
           # The Ingress will be created with the tls secret name value set to this variable's value.
           - name: TRIGGERS_PROTOTYPE_INGRESS_CERTIFICATE_SECRET_NAME
@@ -119,7 +119,7 @@ metadata:
   annotations:
     tekton-dashboard-display-name: Webhooks
     tekton-dashboard-endpoints: "webhooks.web"
-    tekton-dashboard-bundle-location: "web/extension.a1be58d0.js"
+    tekton-dashboard-bundle-location: "web/extension.305e4e36.js"
 spec:
   type: NodePort
   ports:
@@ -187,7 +187,7 @@ spec:
         type: string
       # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
       # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
-      # the github status URL to set the status into pending and use this secret to during that request.  
+      # the github status URL to set the status into pending and use this secret to during that request.
       - name: secret
         description: The secret containing the access token to access github
         type: string
