@@ -26,13 +26,13 @@
    - **For a quickstart Istio install:**
  
        - Clone this repository: `git clone https://github.com/tektoncd/experimental.git`
-       - Run the Istio installation script: `./scripts/install_istio.sh <version>` 
-         
-         **Note:** requires [Helm](https://helm.sh/docs/using_helm/#installing-helm) 2.x to be installed and Istio 1.1.7 as `<version>` is a known working configuration
-   
+       - Run the Istio installation script: `./scripts/install_istio.sh <version>`
+
+         **Note:** requires [Helm](https://helm.sh/docs/using_helm/#installing-helm) 2.x to be installed and Istio `<version>` from 1.1.7 to 1.1.16 are known working configurations.
+
    - **For a custom quickstart install:**
- 
-       - Install as per instructions in the knative docs [https://knative.dev/docs/install/installing-istio/](https://knative.dev/docs/install/installing-istio/) _(Istio version 1.1.7 is recommended)_
+
+       - Install as per instructions in the knative docs [https://knative.dev/docs/install/installing-istio/](https://knative.dev/docs/install/installing-istio/) _(Istio version 1.1.16 is recommended)_
 
    - **For official Istio install steps:**
 
