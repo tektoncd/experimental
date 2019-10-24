@@ -318,7 +318,7 @@ class WebhookCreatePage extends Component {
       <Dropdown
         data-testid="pipelinesDropdown"
         id="pipeline"
-        label="select pipeline"
+        label={pipelineItems.length === 0 ? "no pipelines found" : "select pipeline"}
         items={pipelineItems}
         disabled={this.isDisabled()}
         onChange={this.handleChangePipeline}
@@ -352,7 +352,7 @@ class WebhookCreatePage extends Component {
     return <Dropdown
       id="serviceAccounts"
       data-testid="serviceAccounts"
-      label="select service account"
+      label={saItems.length === 0 ? "no service accounts found" : "select service account"}
       items={saItems}
       disabled={this.isDisabled()}
       onChange={this.handleChangeServiceAcct}
@@ -678,14 +678,14 @@ class WebhookCreatePage extends Component {
             <Modal open={this.state.showDeleteDialog}
               id="delete-modal"
               modalLabel=""
-              modalHeading="Please confirm you want to delete the following secret:" 
+              modalHeading="Please confirm you want to delete the following secret:"
               primaryButtonText="Confirm"
               secondaryButtonText="Cancel"
               danger={false}
               onSecondarySubmit={() => this.toggleDeleteDialog()}
               onRequestSubmit={() => this.deleteAccessTokenSecret()}
               onRequestClose={() => this.toggleDeleteDialog()}>
-              
+
               <div className="secret-to-delete">{this.state.gitsecret}</div>
             </Modal>
           </div>
@@ -694,7 +694,7 @@ class WebhookCreatePage extends Component {
             <Modal open={this.state.showCreateDialog}
               id="create-modal"
               modalLabel=""
-              modalHeading="" 
+              modalHeading=""
               primaryButtonText="Create"
               primaryButtonDisabled={this.state.createSecretDisabled}
               secondaryButtonText="Cancel"

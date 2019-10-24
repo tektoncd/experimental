@@ -5,6 +5,8 @@ import { connect } from 'react-redux';
 import { WebhookCreate } from './components/WebhookCreate';
 import { WebhookDisplayTable } from './components/WebhookDisplayTable';
 
+const ALL_NAMESPACES = '*';
+
 class WebhooksApp extends Component {
 
   constructor(props) {
@@ -91,13 +93,13 @@ function mapStateToProps(state, props) {
   return {
     namespace: props.selectors.getSelectedNamespace(state),
     namespaces: props.selectors.getNamespaces(state),
-    pipelines: props.selectors.getPipelines(state),
+    pipelines: props.selectors.getPipelines(state, { namespace: ALL_NAMESPACES }),
     isFetchingNamespaces: props.selectors.isFetchingNamespaces(state),
     isFetchingPipelines: props.selectors.isFetchingPipelines(state),
     pipelinesErrorMessage: props.selectors.getPipelinesErrorMessage(state),
     serviceAccountsErrorMessage: props.selectors.getServiceAccountsErrorMessage(state),
     isFetchingServiceAccounts: props.selectors.isFetchingServiceAccounts(state),
-    serviceAccounts: props.selectors.getServiceAccounts(state)
+    serviceAccounts: props.selectors.getServiceAccounts(state, { namespace: ALL_NAMESPACES })
   };
 }
 
