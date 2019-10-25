@@ -30,6 +30,7 @@ class WebhooksApp extends Component {
   render() {
     const {
       fetchPipelines,
+      fetchPipelineRuns,
       fetchServiceAccounts,
       pipelinesErrorMessage,
       serviceAccountsErrorMessage,
@@ -56,6 +57,7 @@ class WebhooksApp extends Component {
               setshowLastWebhookDeletedNotification={
                 this.setshowLastWebhookDeletedNotification
               }
+              fetchPipelineRuns={fetchPipelineRuns}
             />
           )}
         />
@@ -107,7 +109,9 @@ const mapDispatchToProps = (dispatch, props) => ({
   fetchPipelines: namespace =>
     dispatch(props.actions.fetchPipelines({ namespace })),
   fetchServiceAccounts: namespace =>
-    dispatch(props.actions.fetchServiceAccounts({ namespace }))
+    dispatch(props.actions.fetchServiceAccounts({ namespace })),
+  fetchPipelineRuns: (namespace, filters) =>
+    dispatch(props.actions.fetchPipelineRuns({namespace, filters}))
 });
 
 export default connect(

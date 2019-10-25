@@ -115,6 +115,11 @@
     max-width: 100%;
   }
 
+  .clickableNameURL {
+     cursor: pointer;
+     color: #0062ff;
+     text-decoration: underline;
+  }
 }
 
 .modal-delete {

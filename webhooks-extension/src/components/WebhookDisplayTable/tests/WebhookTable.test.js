@@ -12,7 +12,7 @@ limitations under the License.
 */
 
 import React from 'react';
-import { waitForElement, } from 'react-testing-library';
+import { waitForElement, fireEvent } from 'react-testing-library';
 import { WebhookDisplayTable } from '../WebhookDisplayTable'
 import * as API from '../../../../src/api/index';
 import { renderWithRouter } from '../../../test/utils/test'
@@ -84,5 +84,16 @@ describe('with webhooks', () => {
     jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve(webhooks));
     const { getByText } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="default"/>);
     await waitForElement(() => getByText("No webhooks created under namespace 'default', click 'Add Webhook' button to add a new one."));
+  });
+
+  it('display branch modal when table row clicked', async () => {
+    jest.spyOn(API, 'getWebhooks').mockImplementation(() => Promise.resolve(webhooks));
+    const { getByText } = renderWithRouter(<WebhookDisplayTable fetchPipelineRuns={jest.fn(() => Promise.resolve([]))} match={{}} selectedNamespace="*"/>);
+
+    await waitForElement(() => getByText(/first-test-webhook/i));
+
+    fireEvent.click(getByText(/first-test-webhook/i));
+    expect(getByText("Latest PipelineRuns By Branch:")).not.toBeNull();
+
   });
 });

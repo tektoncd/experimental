@@ -1,3 +1,16 @@
+/*
+Copyright 2019 The Tekton Authors
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 import React, { Component } from 'react';
 import './WebhookDisplayTable.scss';
 import Delete from '@carbon/icons-react/lib/delete/16';
@@ -5,7 +18,8 @@ import AddAlt16 from '@carbon/icons-react/lib/add--alt/16';
 import { Modal, Checkbox } from 'carbon-components-react';
 import { getWebhooks, deleteWebhooks, getSelectedRows } from '../../api';
 
-import { Link, Redirect } from 'react-router-dom'; 
+import { Link, Redirect } from 'react-router-dom';
+import { WebhookBranches } from '../WebhookBranches';
 
 import {
   Button,
@@ -48,6 +62,7 @@ export class WebhookDisplayTable extends Component {
     notificationMessage: "",
     notificationStatus: 'success',
     notificationStatusMsgShort: 'Webhook created successfully.',
+    selectedWebhook: null
   };
 
   formatCellContent(id, value) {
@@ -175,7 +190,19 @@ export class WebhookDisplayTable extends Component {
   togglePipelineRunClicked = () => {
 		this.setState({
       checked: !this.state.checked
-		});	
+		});
+  }
+
+  viewBranches = value => {
+    this.setState({
+      selectedWebhook: value
+    })
+  }
+
+  closeBranches = () => {
+    this.setState({
+      selectedWebhook: null
+    })
   }
 
   render() {
@@ -186,7 +213,7 @@ export class WebhookDisplayTable extends Component {
           <Redirect to={this.props.match.url + "/create"} />
         )
       } else {
-        const { selectedNamespace } = this.props;
+        const { selectedNamespace, fetchPipelineRuns } = this.props;
         // There are webhooks so display table
         const headers = [
           {
@@ -297,8 +324,29 @@ export class WebhookDisplayTable extends Component {
                             {rows.map(row => (
                               <TableRow {...getRowProps({ row })} key={row.id}>
                                 <TableSelectRow {...getSelectionProps({ row })} />
-                                {row.cells.map(cell => (
-                                  <TableCell key={cell.id}>{this.formatCellContent(cell.id, cell.value)}</TableCell>
+                                {row.cells.map((cell, index) => (
+                                  <TableCell
+                                    onClick={
+                                      index === 0
+                                        ? () => {
+                                            this.viewBranches({
+                                              name: row.cells[0].value,
+                                              url: row.cells[1].value,
+                                              namespace: selectedNamespace === ALL_NAMESPACES ? row.cells[3].value : selectedNamespace,
+                                              pipeline: row.cells[2].value
+                                            });
+                                          }
+                                        : null
+                                    }
+                                    className={
+                                      index === 0
+                                        ? "clickableNameURL"
+                                        : null
+                                    }
+                                    key={cell.id}
+                                  >
+                                    {this.formatCellContent(cell.id, cell.value)}
+                                  </TableCell>
                                 ))}
                               </TableRow>
                             ))}
@@ -348,6 +396,7 @@ export class WebhookDisplayTable extends Component {
                 </fieldset>
               </Modal>
             </div>
+            {this.state.selectedWebhook && <WebhookBranches fetchPipelineRuns={fetchPipelineRuns} webhook={this.state.selectedWebhook} close={this.closeBranches}/>}
           </div>
         );
       }
