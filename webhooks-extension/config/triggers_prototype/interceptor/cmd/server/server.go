@@ -88,11 +88,6 @@ func main() {
 		log.Printf("[%s] Clone URL coming in as JSON: %s", foundTriggerName, cloneURL)
 
 		id := github.DeliveryID(request)
-		if err != nil {
-			log.Printf("[%s] Error handling GitHub Event with delivery ID %s: %s", foundTriggerName, id, err.Error())
-			http.Error(writer, fmt.Sprint(err), http.StatusInternalServerError)
-			return
-		}
 
 		log.Printf("[%s] Handling GitHub Event with delivery ID: %s", foundTriggerName, id)
 
@@ -107,7 +102,7 @@ func main() {
 					log.Printf("[%s] Validation PASS (repository URL, secret payload, event type checked)", foundTriggerName)
 				} else {
 					log.Printf("[%s] Validation FAIL (event type does not match, got %s but wanted %s)", foundTriggerName, foundEvent, wantedEvent)
-					http.Error(writer, fmt.Sprint(err), http.StatusExpectationFailed)
+					http.Error(writer, fmt.Sprint("event type mismatch"), http.StatusExpectationFailed)
 					return
 				}
 			} else { // No wanted GitHub event type provided, but the repository URL matches so all is well
@@ -130,7 +125,7 @@ func main() {
 				sanitizeGitInput(cloneURL),
 				sanitizeGitInput(wantedRepoURL))
 
-			http.Error(writer, fmt.Sprint(err), http.StatusExpectationFailed)
+			http.Error(writer, fmt.Sprint("respository URL mismatch"), http.StatusExpectationFailed)
 			return
 		}
 	})
