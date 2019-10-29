@@ -113,7 +113,7 @@ describe('confirm deletion errors', () => {
     expect(document.getElementById('delete-modal').getAttribute('class')).toContain('is-visible');
 
     jest.spyOn(API, 'deleteSecret').mockImplementation(() => Promise.reject(deleteSecretFailMock));
-    fireEvent.click(document.getElementById('delete-modal').getElementsByClassName('bx--btn--primary').item(0));
+    fireEvent.click(document.getElementById('delete-modal').getElementsByClassName('bx--btn--danger').item(0));
     await waitForElement(() => getByText(/Mock Error Deleting Secret/i));
   });
 
