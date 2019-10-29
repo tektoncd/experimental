@@ -147,61 +147,51 @@
   .bx--modal-content > * {
     font-size: 1.1rem;
   }
-  
+
   .bx--modal.is-visible {
     background-color: rgba(255,255,255,0.82);
   }
-  
+
   .bx--modal-container {
     border: 1px solid black;
     background-color: white;
   }
-  
-  %primary-secondary-shared {
-    display: inline;
-    text-align: center;
-    padding: 0px;
-    font-weight: bold;
-  }
 
   .bx--btn.bx--btn--primary {
-    @extend %primary-secondary-shared;
     background-color: green;
-  }
-  
-  .bx--btn.bx--btn--secondary {
-    @extend %primary-secondary-shared;
-    background-color: red;
+    padding-left: 10;
+    font-weight: bold;
   }
 
   .bx--btn.bx--btn--primary.bx--btn--disabled {
     background-color: lightgrey;
-    font-weight: bold;
-    float: right;
     color: white;
   }
 
-  .modal-btn {
-    padding-left: 15% !important;
-    padding-right: 15% !important;
-  }
-  
   .modal-row {
     display: flex;
     align-items: center;
     padding: 1%;
   }
-  
+
   .modal-row-help-icon {
     width: 8%;
   }
-  
+
   .modal-row-item-label {
     width: 30%;
   }
-  
+
   .modal-row-entry-field {
     width: 60%;
+  }
+
+  .secret-to-delete{
+    
+    font-weight: bold;
+    display: list-item;
+    list-style-type: disc;
+    list-style-position: inside;
   }
 
 }

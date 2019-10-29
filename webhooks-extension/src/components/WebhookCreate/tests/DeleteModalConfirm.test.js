@@ -112,7 +112,7 @@ describe('confirm deletion success', () => {
     expect(document.getElementById('delete-modal').getAttribute('class')).toContain('is-visible');
 
     jest.spyOn(API, 'getSecrets').mockImplementation(() => Promise.resolve(secretsDeletedMock));
-    fireEvent.click(document.getElementById('delete-modal').getElementsByClassName('bx--btn--primary').item(0));
+    fireEvent.click(document.getElementById('delete-modal').getElementsByClassName('bx--btn--danger').item(0));
 
     await waitForElement(() => getByText(/Secret deleted./));
     expect(document.getElementById('delete-modal').getAttribute('class')).not.toContain('is-visible');

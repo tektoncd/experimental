@@ -679,9 +679,9 @@ class WebhookCreatePage extends Component {
               id="delete-modal"
               modalLabel=""
               modalHeading="Please confirm you want to delete the following secret:"
-              primaryButtonText="Confirm"
+              primaryButtonText="Delete"
               secondaryButtonText="Cancel"
-              danger={false}
+              danger={true}
               onSecondarySubmit={() => this.toggleDeleteDialog()}
               onRequestSubmit={() => this.deleteAccessTokenSecret()}
               onRequestClose={() => this.toggleDeleteDialog()}>
