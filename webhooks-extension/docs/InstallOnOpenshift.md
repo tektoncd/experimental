@@ -1,8 +1,65 @@
-# Install on Red Hat OpenShift
+# Installing on Red Hat OpenShift
+
+There are two procedures for installing the Tekton Dashboard and Webhooks Extension on OpenShift. The recommended approach is to use the operators provided as part of OpenShift 4.2 - but a couple of command-line based steps are currently required. Also note that this uses a (as of the 24th of October) unreleased version of the Serverless Operator (version 1.1.0). If it's in the operator catalog by the time you're using OpenShift 4.2, go ahead and skip the step involving cloning it from source.
+
+## Install on Red Hat OpenShift 4.2
+
+1. Install the ServiceMesh 1.0.1 operator
+2. Configure the ServiceMesh using the example configuration files in the provided `example-openshift-configuration` folder:
+
+```
+oc new-project istio-system
+oc apply -f example-openshift-configuration/maistra.yaml
+oc apply -f example-openshift-configuration/member-roll.yaml
+```   
+
+3. Install the Tekton Pipelines operator into a namespace other than where you will install the Tekton Dashboard and Webhooks Extension (e.g. a namespace called `kabanero`)
+4. Install the Knative Eventing 0.8 operator
+5. Install the Knative Eventing Contrib GitHubSource CRD:
+
+`oc apply -f https://github.com/knative/eventing-contrib/releases/download/v0.8.0/github.yaml`
+
+6. Install the Serverless 1.1.0 Operator
+
+7. Install the Knative Serving object:
+
+`oc apply -f example-openshift-configuration/Serving.yaml`
+
+8. Install the Tekton Dashboard into a namespace other than `openshift-pipelines`, for example: `kabanero`:
+
+```
+curl -L https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard.yaml \
+  | sed 's/namespace: tekton-pipelines/namespace: kabanero/' \
+  | sed 's/value: tekton-pipelines/value: kabanero/' \
+  | oc apply --validate=false --filename -
+```
+
+```
+curl -L https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-webhooks-extension.yaml \
+  | sed 's/namespace: tekton-pipelines/namespace: kabanero/' \
+  | sed 's/default: tekton-pipelines/default: kabanero/' \
+  | oc apply --filename -
+```
+
+### Pushing to the OpenShift registry using webhooks
+
+Let's assume you wish to create a webhook such that created PipelineRuns will use the provided service account `tekton-webhooks-extension`.
+
+Run the following command first:
+
+`oc adm policy add-role-to-user edit -z tekton-webhooks-extension`
+
+You should specify the following registry location if your namespace is `kabanero`:
+
+`image-registry.openshift-image-registry.svc:5000/kabanero`
+
+If using a self-signed certificate for the internal RedHat Docker registry, you will need to use a `buildah` task that skips self-signed certificate verifications too, for example by using the Tekton catalog's `buildah` task and setting TLS_VERIFY to default to `false`
+
+## Install on Red Hat OpenShift 3.11
 
 Assuming you've completed the [prereq installation and setup](./InstallPrereqs.md),
 
-1. Configure your scc:
+1. Configure your `scc`:
 
       ```
       oc adm policy add-scc-to-user anyuid -z build-controller -n knative-build
