@@ -4,7 +4,7 @@
 
 The [Tekton Dashboard](https://github.com/tektoncd/dashboard) is a general purpose, web-based UI for [Tekton Pipelines](https://github.com/tektoncd/pipeline). The Dashboard [Webhooks Extension](https://github.com/tektoncd/experimental/tree/master/webhooks-extension) allows users to set up GitHub webhooks that will trigger Tekton PipelineRuns and associated TaskRuns. This extension is intended to support Continuous Integration and Continuous Delivery (CI/CD) workflows. Git-driven workflow and automation is a common pattern that we expect most of our readers will be comfortable and familiar with.
 
-This article aims to help you get webhooks up and running with Tekton. We talk about 'GitHub webhooks' in this article because as of August 2019, that is what the webhooks extension currently supports. Support for GitLab is on our roadmap but not yet implemented.
+This article aims to help you get webhooks up and running with Tekton. We talk about 'GitHub webhooks' in this article because as of October 2019, that is what the webhooks extension currently supports. Support for GitLab is on our roadmap but not yet implemented. 
 
 ## Installation
 
@@ -110,6 +110,7 @@ Accepted Formats:
 - http://my.registry
 - https://my.registry
 - my.registry/foo
+- image-registry.openshift-image-registry.svc:5000/**existing namespace here** (for OpenShift 4.2)
 
 ## Putting it all together: test it's working
 
@@ -125,7 +126,7 @@ Once a webhook is set up, a `git push` or creation of a pull request to the moni
 
 - Finally the 'sink' and '(webhook) Name' pods will be shut down by [Knative](https://knative.dev/docs/).
 
-You can use `kubectl logs [pod-name] --all-containers` to check the output of each pod in turn, and of course the Tekton dashboard for the pods managed by a PipelineRun. In the case of any problems, check that all of the above steps were correctly performed:
+You can use `kubectl logs [pod-name] --all-containers` to check the output of each pod in turn, and of course the Tekton Dashboard for the pods managed by a PipelineRun. In the case of any problems, check that all of the above steps were correctly performed:
 - Create a service account and RoleBinding for the PipelineRuns to use
 - Create the correct Git and Docker credentials and patch the right service account
 - Ensure that your GitHub can route correctly to the webhooks-extension-sink: use `kubectl get kservice` to check its value, and the GitHub web pages to see that the webhook was correctly created, and that it successfully delivered its result to the [kservice](https://github.com/knative/serving/blob/master/docs/spec/overview.md#service).

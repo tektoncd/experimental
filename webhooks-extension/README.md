@@ -11,7 +11,7 @@ See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/w
 ### Install Prereqs
 
 [Install and Configure Prereqs](./docs/InstallPrereqs.md)  
-[Additional Configuration for Red Hat Openshift](./docs/InstallOnOpenshift.md)  
+[Additional Configuration for installing and using Red Hat Openshift](./docs/InstallOnOpenshift.md)  
 
 ### Install Webhook Extension
 
