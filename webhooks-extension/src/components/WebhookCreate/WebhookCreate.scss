@@ -157,10 +157,15 @@
     background-color: white;
   }
 
+  .modal-btn {
+     padding-left: 15% !important;
+     padding-right: 15% !important;
+   }
+
   .bx--btn.bx--btn--primary {
     background-color: green;
-    padding-left: 10;
     font-weight: bold;
+    float: right;
   }
 
   .bx--btn.bx--btn--primary.bx--btn--disabled {
