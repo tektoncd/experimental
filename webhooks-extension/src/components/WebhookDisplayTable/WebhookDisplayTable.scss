@@ -11,7 +11,11 @@
   font-size: 1.25rem;
 }
 .table-container {
-  
+
+  table, .bx--data-table {
+    border-collapse: unset;
+  }
+
   .header {
     display: flex;
     align-items: center;
