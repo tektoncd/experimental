@@ -68,7 +68,8 @@ spec:
       cd /workspace/go/src/github.com/tektoncd/experimental/webhooks-extension
 
       # Publish images and create release.yaml
-      rm /workspace/output/bucket/latest/*.yaml
+      mkdir -p /workspace/output/bucket/latest
+      rm -f /workspace/output/bucket/latest/*.yaml
       ko resolve --preserve-import-paths -f /workspace/go/src/github.com/tektoncd/experimental/webhooks-extension/config/ > /workspace/output/bucket/latest/tekton-webhooks-extension-release.yaml
       ko resolve --preserve-import-paths -f /workspace/go/src/github.com/tektoncd/experimental/webhooks-extension/config/openshift/openshift-tekton-webhooks-extension-release.yaml > /workspace/output/bucket/latest/openshift-tekton-webhooks-extension-release.yaml
 
