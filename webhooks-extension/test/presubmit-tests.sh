@@ -29,7 +29,7 @@ export TEST_FOLDER=$(pwd)
 source $(dirname $0)/../../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
 function get_node() {
-    echo "Script is running as $(whoami) on $(hostname) and directory structure is $(find .)"
+    echo "Script is running as $(whoami) on $(hostname)"
     # It's Stretch and https://github.com/tektoncd/dashboard/blob/master/package.json
     # denotes the Node.js and npm versions
     apt-get update
@@ -78,20 +78,20 @@ function node_test() {
     yaml=$(grep -i "tekton-dashboard-bundle-location:" config/extension-service.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
     yaml2=$(grep -i "tekton-dashboard-bundle-location:" config/latest/gcr-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
     yaml3=$(grep -i "tekton-dashboard-bundle-location:" config/latest/openshift-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
+    yaml4=$(grep -i "tekton-dashboard-bundle-location:" config/openshift/openshift-tekton-webhooks-extension-release.yaml  | cut -f 2 -d ':' | cut -f 2 -d '.')
     echo "YAML HASH in config/extension-service.yaml: $yaml"
     echo "YAML HASH config/latest/gcr-tekton-webhooks-extension.yaml: $yaml2"
     echo "YAML HASH config/latest/openshift-tekton-webhooks-extension.yaml: $yaml3"
+    echo "YAML HASH config/openshift/openshift-tekton-webhooks-extension-release.yaml: $yaml4"
 
-
-    if [[ $hash != $yaml ]] || [[ $hash != $yaml2 ]] || [[ $hash != $yaml3 ]]; then
+    if [[ $hash != $yaml ]] || [[ $hash != $yaml2 ]] || [[ $hash != $yaml3 ]] || [[ $hash != $yaml4 ]]; then
       echo "######## FAIL/ERROR ########"
       echo "--------------------------------------------------------------------------"
-      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: check values in config/extension-service.yaml, config/latest/gcr-tekton-webhooks-extension.yaml and config/latest/openshift-tekton-webhooks-extension.yaml"
+      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: check values in config/extension-service.yaml, config/latest/gcr-tekton-webhooks-extension.yaml config/latest/openshift-tekton-webhooks-extension.yaml and config/openshift/openshift-tekton-webhooks-extension-release.yaml"
       echo "--------------------------------------------------------------------------"
       failed=1
     fi
     
-    echo ""
     return ${failed}
 }
 
