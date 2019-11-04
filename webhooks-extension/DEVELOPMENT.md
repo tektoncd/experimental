@@ -30,9 +30,8 @@ To run a specific test:
 
 ## API Definitions
 
-- [Extension API definitions](cmd/extension/README.md)
+- [Extension API definitions](docs/DevelopmentAPIs.md)
   - The extension API endpoints can be accessed through the dashboard.
-- [Sink API definitions](cmd/sink/README.md)
 
 ### Example creating a webhook
 
@@ -66,8 +65,6 @@ When curling through the dashboard, use the same endpoints; for example, assumin
 curl -d "${data}" -H "Content-Type: application/json" -X POST http://localhost:9097/webhooks
 ```
 
-Reference the [Knative eventing GitHub source sample](https://knative.dev/docs/eventing/samples/github-source/) to properly create the `accesstoken` secret. This is the secret that is used to create GitHub webhooks.
-
 ## Architecture information
 
-Each webhook that the user creates will store its configuration information in a config map in the install namespace. This information is used by the sink to create `PipelineRuns` for webhook events.
+See [Architecture Information](docs/Architecture.md).

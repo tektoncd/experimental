@@ -55,6 +55,51 @@ roleRef:
   kind: ClusterRole
   name: tekton-webhooks-extension-minimal
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: tekton-webhooks-extension
+  name: tekton-webhooks-extension-eventlistener
+  namespace: tekton-pipelines
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tekton-triggers-minimal
+rules:
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks
+  - taskruns
+  - eventlisteners
+  - triggerbindings
+  - triggertemplates
+  verbs:
+  - get
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelineruns
+  - pipelineresources
+  - taskruns
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-webhooks-extension-eventlistener-minimal
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-minimal
+subjects:
+- kind: ServiceAccount
+  name: tekton-webhooks-extension-eventlistener
+  namespace: tekton-pipelines
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -98,10 +143,10 @@ spec:
             value: DOCKER_REPO
           - name: WEB_RESOURCES_DIR
             value: web
-          # Set this at install time after creating a certificate, e.g. with openssl and the provided convenience script.
-          # A secret will be created and this name should be provided here.
-          # This secret name will then be picked up by the Go code that is responsible for 
-          # creating the EventListener, Ingress and webhooks.
-          # The Ingress will be created with the tls secret name value set to this variable's value.
-          - name: TRIGGERS_PROTOTYPE_INGRESS_CERTIFICATE_SECRET_NAME
-            value: ""
+          # If this endpoint's protocol is https, ssl verification will be enabled on the github webhook
+          - name: WEBHOOK_CALLBACK_URL
+            value: "http://listener.IPADDRESS.nip.io"
+          - name: SERVICE_ACCOUNT
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.serviceAccountName

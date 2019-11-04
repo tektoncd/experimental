@@ -26,16 +26,24 @@
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.12.6"
+  version = "kubernetes-1.12.9"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.12.6"
+  version = "kubernetes-1.12.9"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.12.6"
+  version = "kubernetes-1.12.9"
+
+[[override]]
+  name = "github.com/tektoncd/triggers"
+  branch = "master"
 
 [prune]
   go-tests = true
   unused-packages = true
+
+
+
+

@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
-  name: monitor-result-task
+  name: monitor-task
   namespace: tekton-pipelines
 spec:
   inputs:
@@ -81,7 +81,6 @@ spec:
       resp = requests.post(statusurl, json.dumps(pendingData), headers = {'Content-Type': 'application/json', 'Authorization': "Bearer $GITHUBTOKEN"})
       print(resp)
       # End of code to replace
-
       if not "$URL".startswith("http"):
         pipelineRunURLPrefix = "http://" + "$URL"
       else:
@@ -145,10 +144,10 @@ spec:
       else:
         detailsURL = "$URL" + "/#/pipelineruns"
       print("Set details url to: " + detailsURL)
-      status = json.dumps(dict(code=gitPRcode, description=gitPRdescription, id=gitPRcontext, url=detailsURL))
+      status = json.dumps(dict(ID=gitPRcontext,Code=gitPRcode,Description=gitPRdescription,URL=detailsURL))
       if not os.path.exists("/workspace/output/pull-request/status"):
         os.makedirs("/workspace/output/pull-request/status")
-      handle = open("/workspace/output/pull-request/status/newstatus.json", 'w')
+      handle = open("/workspace/output/pull-request/status/Tekton.json", 'w')
       handle.write(status)
       handle.close()
       if not os.path.exists("/workspace/output/pull-request/labels"):
@@ -156,6 +155,91 @@ spec:
       if not os.path.exists("/workspace/output/pull-request/"):
         os.makedirs("/workspace/output/pull-request/")
       shutil.copyfile("/workspace/pull-request/base.json","/workspace/output/pull-request/base.json") 
-      shutil.copyfile("/workspace/pull-request/base.json","/workspace/output/pull-request/head.json") 
+      shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json") 
       EOF
 ---
+
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: monitor-task-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: pullrequesturl
+    value: $(body.pull_request.html_url)
+---
+
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: monitor-task-template
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: pullrequesturl
+    description: The pull request url
+    type: string
+  - name: gitsecretname
+    description: The git secret name
+    default: github-secrets
+    type: string
+  - name: gitsecretkeyname
+    description: The git secret key name
+    default: token
+    type: string
+  - name: commentsuccess
+    description: The text of the success comment
+    default: "Success"
+    type: string
+  - name: commentfailure
+    description: The text of the failure comment
+    default: "Failed"
+    type: string
+  - name: dashboardurl
+    description: The URL to the pipelineruns page of the dashboard
+    default: "http://localhost:9097/"
+    type: string
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: pull-request-$(uid)
+      namespace: tekton-pipelines
+    spec:
+      type: pullRequest
+      params:
+        - name: url
+          value: $(params.pullrequesturl)
+      secrets:
+        - fieldName: githubToken
+          secretName: $(params.gitsecretname)
+          secretKey: $(params.gitsecretkeyname)
+  - apiVersion: tekton.dev/v1alpha1
+    kind: TaskRun
+    metadata:
+      generateName: monitor-taskrun-
+      namespace: tekton-pipelines
+    spec:
+    
+      taskRef:
+        name: monitor-task
+      inputs:
+        params:
+        - name: commentsuccess
+          value: $(params.commentsuccess)
+        - name: commentfailure
+          value: $(params.commentfailure)
+        - name: dashboard-url
+          value: $(params.dashboardurl)
+        - name: secret
+          value: $(params.gitsecretname)
+        resources:
+        - name: pull-request
+          resourceRef:
+            name: pull-request-$(uid)
+      outputs:
+        resources:
+        - name: pull-request
+          resourceRef:
+            name: pull-request-$(uid)

@@ -86,6 +86,9 @@ rules:
   - pipelineruns
   - pipelineresources
   - eventlisteners
+  - triggerbindings
+  - triggertemplates
+  - conditions
   verbs:
   - get
   - list
@@ -160,7 +163,6 @@ subjects:
 - kind: ServiceAccount
   name: tekton-webhooks-extension
   namespace: tekton-pipelines
----
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -246,7 +248,7 @@ spec:
               fieldPath: spec.serviceAccountName
         - name: PLATFORM
           value: "openshift"
-        image: github.com/tektoncd/experimental/webhooks-extension/cmd/extension
+        image: "github.com/tektoncd/experimental/webhooks-extension/cmd/extension"
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -636,7 +638,6 @@ spec:
                   fieldPath: metadata.namespace
       serviceAccountName: tekton-webhooks-extension
 ---
-
 apiVersion: v1
 kind: Service
 metadata:

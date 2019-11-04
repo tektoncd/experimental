@@ -90,7 +90,7 @@ describe('create secret', () => {
         pipelines={pipelines}
         fetchPipelines={() => {}}
         serviceAccounts={serviceAccounts}
-        fetchServiceAccounts={() => {}}
+        fetchServiceAccounts={() => { }}
         setShowNotificationOnTable={() => {}}
       />
     );

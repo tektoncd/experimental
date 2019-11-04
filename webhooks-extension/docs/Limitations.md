@@ -4,11 +4,9 @@
 - Only GitHub webhooks are currently supported.
 - Webhooks in GitHub are sometimes left behind after deletion (details further below).
 - Only `push` and `pull_request` events are currently supported, these are the events defined on the webhook.
-- A limited number of pipelines will currently work with this implementation.
-
-## Webhook not deleted
-
-Due to a bug in the Knative codebase, the deletion of the webhook does not alway occur in GitHub.  All artifacts required for the webhook to run a pipeline are successfully removed from the cluster but, the webhook in GitHub may need to be manually deleted.  Until the webhook is manually deleted, it will attempt to send event details to a non-existent service.  This problem will cease to exist once [issue 247](https://github.com/tektoncd/experimental/issues/247) is addressed and the webhooks extension moves away from its dependency on Knative.
+- The trigger template needs to be available in the install namespace with the name `<pipeline-name>-template` (details further below).
+- The two trigger bindings need to available in the install namespace with the names `<pipeline-name>-push-binding` and `<pipeline-name>-pullrequest-binding` (details further below).
+- Limited configurable parameters are added to the trigger in the eventlistener through the UI, statics could be added in your trigger binding (details further below).
 
 ## Deleted webhooks can still be rendered until a refresh occurs
 
@@ -22,55 +20,34 @@ Due to a bug in *our* codebase, a scenario exists whereby deleted webhooks can a
 
 An error is displayed mentioning that problems occurred deleting webhooks (the ones named - and -), but `mywebhook` has actually been deleted. It is only until you refresh the page that this webhook will no longer be displayed.
 
-## Pipeline limitations
+## Tekton Triggers Information
 
-The Webhooks Extension component does not currently work with all Tekton Pipelines, it very specifically creates the following when the webhook is triggered:
+#### Trigger Template & Trigger Bindings
 
-#### Git PipelineResource
+As the UI does not currently offer the ability to select a trigger template or trigger binding, the current backend code expects to find trigger template and binding with fixed names prefixed with the pipeline name.
 
-A PipelineResource of type `git` is created with:
+- `<pipeline-name>-template`
+- `<pipeline-name>-push-binding`
+- `<pipeline-name>-pullrequest-binding`
 
-  - `revision` set to the short commit ID from the webhook payload.
-  - `url` set to the repository URL from the webhook payload.
+The reason for requesting two bindings is due to the event payload being different.  The bindings would need to pull different keys from the event payload to run a pipeline for both pull requests and push events.
 
-#### Image PipelineResource
+#### Event Listener Parameters
 
-A PipelineResource of type `image` is created with:
+When a webhook is created through the dashboard UI, a number of parameters are made available to the trigger template through the event listener.  The parameters added to the trigger in the event listener are:
 
-  - `url` set to `${REGISTRY}/${REPOSITORY-NAME}:${SHORT-COMMITID}` where, `REGISTRY` is the value set when creating the webhook, other values are taken from the webhook payload.
-
-#### PipelineRuns Parameters/Resources
-
-For a PipelineRun for your chosen Pipeline, in the namespace specified when your webhook was created, the values assigned to parameters on the PipelineRun are taken from values provided when configuring the webhook or from the webhook payload itself.
-
-It is important to note the names of the parameters and resources, should you wish to use the extension with your own Pipelines and make use of these values.
-
-PipelineRun parameters and resources made available:
+It is important to note the names of the parameters, should you wish to use the extension with your own trigger templates and make use of these values.
 
 ```
 params:
-- name: image-tag
-  description: The short commit ID
-- name: image-name
-  description: Image name formatted as: <REGISTRY>/<REPOSITORY-NAME>
-- name: repository-name
-  description: Repository name formatted as: <REPOSITORY-NAME>
 - name: release-name
-  description: Repository name formatted as: <REPOSITORY-NAME>
+  description: The git repository name
 - name: target-namespace
-  description: The PipelineRun target namespace
-- name: event-payload
-  description: The JSON event payload/body
-- name: event-headers
-  description: The JSON headers
-- name: branch
-  description: The repository branch
-
-resources:
-- name: docker-image
-  description: The Name of the ImageResource
-- name: git-source
-  description: The Name of the GitResource
+  description: A namespace, generally referenced in metadata sections to define the namespace in which to create a resource
+- name: service-account
+  description: A service account name, generally referenced to ensure PipelineRuns are executed under a specific service account
+- name: docker-registry
+  description: A docker registry, generally referenced where systems push images to a configured registry 
 ```
 
-In particular, the `event-headers` and `event-payload` parameters can be especially useful when creating `Conditions` for `Pipelines`. For example, [this](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/pipeline.yaml) `Pipeline` uses [this](https://github.com/pipeline-hotel/example-pipelines/blob/master/config/deployment-condition.yaml) `Condition` to skip `Tasks` if the event type is a `pull_request`.
+The event headers and event-payload parameters can be especially useful when creating `Conditions` for `Pipelines`. For example, [this](https://github.com/pipeline-hotel/example-pipelines/blob/master/triggers-resources/config/simple-pipeline/simple-pipeline.yaml) `Pipeline` uses [this](https://github.com/pipeline-hotel/example-pipelines/blob/master/triggers-resources/config/simple-pipeline/deployment-condition.yaml) `Condition` to skip `Tasks` if the event type is a `pull_request`.  You can see how the relevant property is passed from the event via the bindings files [here](https://github.com/pipeline-hotel/example-pipelines/blob/master/triggers-resources/config/simple-pipeline/simple-pipeline-push-binding.yaml) for push events and [here](https://github.com/pipeline-hotel/example-pipelines/blob/master/triggers-resources/config/simple-pipeline/simple-pipeline-pullrequest-binding.yaml) for pull requests.

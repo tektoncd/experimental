@@ -2,14 +2,11 @@
 
 ##### Version specs
 # These defaults are known compatible versions
-export KNATIVE_VERSION="v0.6.0"
 export TEKTON_VERSION="0.7.0"
-# Use "latest" or specify exact version/release: https://github.com/istio/istio/releases
-export ISTIO_VERSION="1.1.16"
-# Side car injection gets stuck in "Container Creating" state when disabled
-export ISTIO_SIDECAR_INJECTION="true"
-# To prevent Git Hub rate limiting when pulling latest Istio
-export GITHUB_TOKEN=''
+export TEKTON_TRIGGERS_VERSION="0.1.0"
+
+# To prevent Git Hub rate limiting when pulling images\
+export GITHUB_TOKEN=
 
 ##### Dashboard specs
 export DASHBOARD_INSTALL_NS="tekton-pipelines"
@@ -22,3 +19,7 @@ export GITHUB_URL="https://github.ibm.com"
 
 # This is the repo you want to set up a webhook for. See github.com/mnuttall/simple for a public copy of this repo. 
 export GITHUB_REPO="https://github.ibm.com/MNUTTALL/simple" 
+
+# This is your IP address if using docker-desktop.  This will be substituted into the value of the WEBHOOK_CALLBACK_URL
+# in the deployment yaml.
+export IPADDRESS=1.2.3.4

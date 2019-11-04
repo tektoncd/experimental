@@ -14,20 +14,19 @@ limitations under the License.
 package endpoints
 
 import (
-	"os"
-
-	eventsrcclientset "github.com/knative/eventing-sources/pkg/client/clientset/versioned"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	tektoncdclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	triggersclientset "github.com/tektoncd/triggers/pkg/client/clientset/versioned"
 	k8sclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"os"
 )
 
 // Resource stores all types here that are reused throughout files
 type Resource struct {
-	EventSrcClient eventsrcclientset.Interface
 	TektonClient   tektoncdclientset.Interface
 	K8sClient      k8sclientset.Interface
+	TriggersClient triggersclientset.Interface
 	Defaults       EnvDefaults
 }
 
@@ -37,13 +36,6 @@ func NewResource() (Resource, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		logging.Log.Errorf("error getting in cluster config: %s.", err.Error())
-		return Resource{}, err
-	}
-
-	// Setup event source client
-	eventSrcClient, err := eventsrcclientset.NewForConfig(config)
-	if err != nil {
-		logging.Log.Errorf("error building event source client: %s.", err.Error())
 		return Resource{}, err
 	}
 
@@ -61,15 +53,22 @@ func NewResource() (Resource, error) {
 		return Resource{}, err
 	}
 
+	triggersClient, err := triggersclientset.NewForConfig(config)
+	if err != nil {
+		logging.Log.Errorf("error building triggers clientset: %s.", err.Error())
+		return Resource{}, err
+	}
+
 	defaults := EnvDefaults{
 		Namespace:      os.Getenv("INSTALLED_NAMESPACE"),
 		DockerRegistry: os.Getenv("DOCKER_REGISTRY_LOCATION"),
+		CallbackURL:    os.Getenv("WEBHOOK_CALLBACK_URL"),
 	}
 
 	r := Resource{
 		K8sClient:      k8sClient,
 		TektonClient:   tektonClient,
-		EventSrcClient: eventSrcClient,
+		TriggersClient: triggersClient,
 		Defaults:       defaults,
 	}
 	return r, nil
@@ -89,7 +88,6 @@ type webhook struct {
 	PullTask         string `json:"pulltask,omitempty"`
 	OnSuccessComment string `json:"onsuccesscomment,omitempty"`
 	OnFailureComment string `json:"onfailurecomment,omitempty"`
-	GithubSource     string `json:"githubsource,omitempty"`
 }
 
 // ConfigMapName ... the name of the ConfigMap to create
@@ -98,4 +96,5 @@ const ConfigMapName = "githubwebhook"
 type EnvDefaults struct {
 	Namespace      string `json:"namespace"`
 	DockerRegistry string `json:"dockerregistry"`
+	CallbackURL    string `json:"endpointurl"`
 }

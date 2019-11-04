@@ -10,22 +10,17 @@ spec:
       description: Whether to create or delete an Ingress
       default: "create"
       type: string
-    - name: CertificateSecretName
-      # Generate upfront so we don't need to reference outdated openssl images, potentially leading to license/export regulation complications
-      description: The secret name for the Ingress certificate - must be generated upfront
-      default: "mycertificatesecret"
-      type: string
-    - name: ExternalUrl 
+    - name: CallbackURL 
       description: The external access URL
       default: "listener.replaceme.nip.io"
       type: string
-    - name: EventListenerName 
-      description: The EventListener name
+    - name: EventListenerServiceName 
+      description: The EventListener Service name
       default: "listener"
       type: string
     - name: EventListenerPort
       description: The EventListener port
-      default: "8082"
+      default: "8080"
       type: string
   steps:
   - name: create-or-delete-ingress
@@ -42,24 +37,19 @@ spec:
         apiVersion: extensions/v1beta1
         kind: Ingress
         metadata:
-          name: $(inputs.params.EventListenerName)
+          name: $(inputs.params.EventListenerServiceName)
         spec:
-          tls:
-          - hosts:
-            - $(inputs.params.ExternalUrl)
-            secretName: $(inputs.params.CertificateSecretName)
           rules:
-          - host: $(inputs.params.ExternalUrl)
+          - host: $(inputs.params.CallbackURL)
             http:
               paths:
               - backend:
-                  serviceName: $(inputs.params.EventListenerName)
+                  serviceName: $(inputs.params.EventListenerServiceName)
                   servicePort: $(inputs.params.EventListenerPort)
       EOF
       fi
            
       if [ $(inputs.params.Mode) = "delete" ] ; then
         echo "Deleting Ingress"
-        kubectl delete ingress $(inputs.params.EventListenerName)
-        echo "Keeping certificate around, manual clean up required if you're sure about deleting it"
+        kubectl delete ingress $(inputs.params.EventListenerServiceName)
       fi

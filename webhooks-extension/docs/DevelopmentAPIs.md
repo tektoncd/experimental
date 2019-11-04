@@ -1,5 +1,7 @@
 # Extension
 
+The following APIs are advised to only be used in a development environment and not in production.
+
 ## API Definitions
 
 ### GET endpoints

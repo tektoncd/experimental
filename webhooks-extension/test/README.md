@@ -16,11 +16,11 @@ You must install these tools:
 - dep: For managing external Go dependencies. - Please Install dep v0.5.0 or greater.
 - ko: For development. ko version v0.1 or higher is required for pipeline to work correctly.
 - kubectl: For interacting with your kube cluster
-- helm: Templating is used to install Istio according to [Knative docs](https://knative.dev/docs/install/installing-istio/)
 - [Node.js & npm](https://nodejs.org/): For building and running the frontend locally. _Node.js 10.x is strongly recommended_
+- jq: Used in the setup_webhook_simple_test.sh script.
 
 ## Dependency Versioning
-The installation script installs the latest version of Istio and known compatible versions of Knative as per values in the version section of [config.sh](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/config.sh). Knative Serving 0.6 has made considerable changes to the service definition so levels below this are not supported.
+The installation script installs versions of Tekton and Tekton Triggers as per values in the version section of [config.sh](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/config.sh).
 
 ## Install Dependencies/Prereqs
 - Update `config.sh` as necessary
@@ -35,13 +35,14 @@ The installation script installs the latest version of Istio and known compatibl
 
 # Testing 
 ## Test with a webhook
-_Note: Your git provider must be able to reach the address of this extension's sink. The sink is deployed with a Knative service, so you may need to configure Knative serving. We recommend [setting up a custom domain](https://knative.dev/v0.3-docs/serving/using-a-custom-domain/) with the extension `.nip.io`. The `install_prereqs.sh` script patches the workstation IP is patched into the knative serving config-map (config-domain) as mentioned in the previous link._
+_Note: Your git provider must be able to reach the address of this extension's ingress/route as specified in the extension-deployment.yaml as environment variable WEBHOOK_CALLBACK_URL.
 
-Webhooks are outbound HTTP requests from (in this case Git Hub) to your Kubernetes environment. If you are behind a firewall, it's unlikely that github.com will be able to reach you. The two most common testing scenarios are: 
+Webhooks are outbound HTTP requests from (in this case GitHub) to your Kubernetes environment. If you are behind a firewall, it's unlikely that github.com will be able to reach you. The two most common testing scenarios are: 
+
 - An in-house Git Hub Enterprise to your Docker Desktop
 - github.com to your internet-facing kubernetes cluster in a commercial public cloud environment
 
-The checked-in defaults current reflect the first of these two options. To test with a webhook you need to do some setup work. 
+The checked-in defaults currently reflect the first of these two options. To test with a webhook you need to do some setup work. 
 
 ### Credentials 
 Edit `credentials.sh` from 
@@ -79,40 +80,44 @@ Now you're ready to go:
 For example, 
 ```
 kubectl get pods -w
-NAME                                                          READY   STATUS            RESTARTS   AGE
-knative-demo-test-1557836364-build-simple-fgzjr-pod-e47e4d    0/4     Completed         0          15m
-knative-demo-test-1557836364-deploy-simple-vpjst-pod-dcd3e2   0/4     Completed         0          14m
-knative-demo-test-qqdkd-rq9w6-deployment-5f999f6f87-mlcpd     0/3     PodInitializing   0          7s
-tekton-dashboard-fdc9ff8cc-4f4w2                              1/1     Running           0          23h
-webhooks-extension-5b849f7d78-flbb7                           1/1     Running           0          23h
-knative-demo-test-qqdkd-rq9w6-deployment-5f999f6f87-mlcpd     2/3     Running           0          12s
-knative-demo-test-qqdkd-rq9w6-deployment-5f999f6f87-mlcpd     3/3     Running           0          13s
-webhooks-extension-sink-zx6pm-deployment-756759c79c-x9vqn     0/3     Pending           0          0s
-webhooks-extension-sink-zx6pm-deployment-756759c79c-x9vqn     0/3     Pending           0          0s
-webhooks-extension-sink-zx6pm-deployment-756759c79c-x9vqn     0/3     Init:0/1          0          0s
-webhooks-extension-sink-zx6pm-deployment-756759c79c-x9vqn     0/3     PodInitializing   0          2s
-webhooks-extension-sink-zx6pm-deployment-756759c79c-x9vqn     1/3     Running           0          8s
-webhooks-extension-sink-zx6pm-deployment-756759c79c-x9vqn     2/3     Running           0          8s
-webhooks-extension-sink-zx6pm-deployment-756759c79c-x9vqn     3/3     Running           0          13s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    0/4     Pending           0          0s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    0/4     Pending           0          0s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    0/4     Pending           0          8s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    0/4     Init:0/2          0          8s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    0/4     Init:1/2          0          10s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    0/4     PodInitializing   0          11s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    3/4     Running           0          18s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    2/4     Running           0          37s
-knative-demo-test-1557837318-build-simple-h72pb-pod-8b6aed    0/4     Completed         0          47s
-knative-demo-test-1557837318-deploy-simple-tvk7v-pod-64fb78   0/4     Pending           0          0s
-knative-demo-test-1557837318-deploy-simple-tvk7v-pod-64fb78   0/4     Pending           0          0s
-knative-demo-test-1557837318-deploy-simple-tvk7v-pod-64fb78   0/4     Init:0/2          0          0s
-knative-demo-test-1557837318-deploy-simple-tvk7v-pod-64fb78   0/4     Init:1/2          0          3s
-knative-demo-test-1557837318-deploy-simple-tvk7v-pod-64fb78   0/4     PodInitializing   0          4s
-myapp-566f7f7fd-6szzf                                         0/1     Pending           0          0s
-myapp-566f7f7fd-6szzf                                         0/1     Pending           0          0s
-myapp-566f7f7fd-6szzf                                         0/1     ContainerCreating 0          0s
-knative-demo-test-1557837318-deploy-simple-tvk7v-pod-64fb78   1/4     Running           0          10s
-knative-demo-test-1557837318-deploy-simple-tvk7v-pod-64fb78   0/4     Completed         0          11s
-myapp-566f7f7fd-6szzf                                         1/1     Running           0          3s
+
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       Pending   0         0s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       Pending   0         0s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       Pending   0         8s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       Init:0/3   0         8s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       Init:1/3   0         9s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       Init:2/3   0         11s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       PodInitializing   0         12s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   5/5       Running   0         18s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   5/5       Running   0         18s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   4/5       Running   0         20s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   3/5       Running   0         21s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   2/5       Running   0         45s
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   1/5       Running   0         2m
+simple-pipeline-run-v7xf8-build-simple-crtjq-pod-14cfbf   0/5       Completed   0         2m
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   0/1       Pending   0         0s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   0/1       Pending   0         0s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   0/1       Init:0/2   0         0s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   0/1       Init:1/2   0         2s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   0/1       PodInitializing   0         3s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   1/1       Running   0         6s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   1/1       Running   0         6s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-deployment--mt8ld-pod-03efde   0/1       Completed   0         8s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   0/3       Pending   0         0s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   0/3       Pending   0         0s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   0/3       Init:0/2   0         0s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   0/3       Init:1/2   0         3s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   0/3       PodInitializing   0         4s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   2/3       ErrImagePull   0         21s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   2/3       ImagePullBackOff   0         23s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   3/3       Running   0         37s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   3/3       Running   0         37s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   1/3       Running   0         40s
+myapp-86d96bd579-skzk8   0/1       Pending   0         0s
+myapp-86d96bd579-skzk8   0/1       Pending   0         0s
+myapp-86d96bd579-skzk8   0/1       ContainerCreating   0         0s
+simple-pipeline-run-v7xf8-deploy-simple-74w6n-pod-407fd1   0/3       Completed   0         42s
+myapp-86d96bd579-skzk8   1/1       Running   0         3s
+
 ```
 The running `myapp` is the built and deployed code from `GITHUB_REPO`

@@ -22,7 +22,7 @@ If you have not installed into the tekton-pipelines namespace, you would need to
 
 ## Overriding The Status Message
 
-To change the "Success" and "Failed" status messages shown in the 'Tekton Status' comment added to the pull request, you can use the REST endpoint for creating your webhooks, rather than the UI.  Note however that the REST endpoints are only advised to be used in development, see [here](../DEVELOPMENT.md).
+To change the "Success" and "Failed" status messages shown in the 'Tekton Status' comment added to the pull request, you can use the REST endpoint for creating your webhooks, rather than the UI.  Note however that the REST endpoints are only advised to be used in development, see [here](./DevelopmentAPIs.md).
 
 The body you POST to the REST endpoint has two properties, `onsuccesscomment` and `onfailurecomment` that define the value used in the Status column.  For example, creating the webhook using the JSON body:
 
