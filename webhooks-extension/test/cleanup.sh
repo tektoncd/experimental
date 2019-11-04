@@ -11,9 +11,13 @@ if [ $DASHBOARD_INSTALL_NS != "default" ]; then
 else
   kubectl delete deployment tekton-dashboard -n ${DASHBOARD_INSTALL_NS}
   kubectl delete deployment webhooks-extension -n ${DASHBOARD_INSTALL_NS}
-  kubectl delete githubsource knative-demo-test -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete deployment tekton-webhooks-extension-validator -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete service webhooks-extension -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete service tekton-webhooks-extension-validator -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete task webhook-task -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete task ingress-task -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete task monitor-task -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete task route-task -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete triggertemplate monitor-task-template -n ${DASHBOARD_INSTALL_NS}
+  kubectl delete triggerbinding monitor-task-binding -n ${DASHBOARD_INSTALL_NS}
 fi
-kubectl delete ns tekton-pipelines
-kubectl delete ns knative-eventing
-kubectl delete ns knative-serving
-kubectl delete ns istio-system

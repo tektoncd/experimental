@@ -14,19 +14,19 @@ limitations under the License.
 package endpoints
 
 import (
-	"io"
-	"net/http"
-
 	"errors"
 	"fmt"
 	restful "github.com/emicklei/go-restful"
-	githubsource "github.com/knative/eventing-sources/pkg/apis/sources/v1alpha1"
-	eventsrcclient "github.com/knative/eventing-sources/pkg/client/clientset/versioned/fake"
 	"github.com/mitchellh/mapstructure"
+	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	fakeclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
+	faketriggerclientset "github.com/tektoncd/triggers/pkg/client/clientset/versioned/fake"
+	"io"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	fakek8sclientset "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
+	"knative.dev/pkg/apis"
+	"net/http"
 )
 
 func dummyK8sClientset() *fakek8sclientset.Clientset {
@@ -35,72 +35,57 @@ func dummyK8sClientset() *fakek8sclientset.Clientset {
 }
 
 func dummyClientset() *fakeclientset.Clientset {
-	result := fakeclientset.NewSimpleClientset()
-	return result
-}
+	resultClient := fakeclientset.NewSimpleClientset()
 
-func dummyEventSrcClient() *eventsrcclient.Clientset {
-	resultClient := eventsrcclient.NewSimpleClientset()
-	sources := map[string]githubsource.GitHubSource{}
-
-	// Need to intercept the githubsource creation as "GeneratedName" does not generate a name in the fake clients and
-	// we cannot therefore obtain the githubsource with a get call.  Here we store the githubsource into a map and set
-	// the name of the githubsource to tekton-int, where int is the index in the map.
-	resultClient.Fake.PrependReactor("create", "githubsources", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	// Need to intercept the taskrun creation as "GeneratedName" does not generate a name in the fake clients and
+	// we cannot therefore obtain the taskrun with a get call.  Here we store the taskrun into a map and set
+	// the name of the taskrun to tekton-int, where int is the index in the map.
+	taskruns := map[string]pipelinesv1alpha1.TaskRun{}
+	resultClient.Fake.PrependReactor("create", "taskruns", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		// get the runtime.Object
 		obj := action.(k8stesting.CreateAction).GetObject()
 		// convert to unstructured map[string]interface{}
 		unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 		if err != nil {
-			newErr := fmt.Errorf("ERROR : Problem with githubsource creation in shared-test-funcs.go")
+			newErr := fmt.Errorf("ERROR : Problem with taskrun creation in shared-test-funcs.go")
 			return false, nil, newErr
 		}
-		// convert to GitHubSource
-		var result githubsource.GitHubSource
+		// convert to TaskRun
+		var result pipelinesv1alpha1.TaskRun
 		mapstructure.Decode(unstructuredObj, &result)
 		// store to end of map
-		index := len(sources) + 1
+		index := len(taskruns) + 1
 		result.Name = fmt.Sprintf("tekton-%d", index)
-		sources[result.Name] = result
+		// HARD CODING TO SUCCESSFUL TASKRUN
+		condition := &apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: "True",
+		}
+		result.Status.SetCondition(condition)
+		taskruns[result.Name] = result
 
 		//In case debug needed, you might want to uncomment this
-		//fmt.Printf("Sources: %+v", sources)
-		return true, &result, nil
-	})
-
-	// Need to intercept calls to delete githubsource, so that we can return the githubsource from the map we created
-	// in the above code.
-	resultClient.Fake.PrependReactor("delete", "githubsources", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		srcName := action.(k8stesting.DeleteAction).GetName()
-		delete(sources, srcName)
-		result := sources[srcName]
-
+		//fmt.Printf("taskruns: %+v", taskruns)
 		return true, &result, nil
 	})
 
 	// Need to intercept calls to get githubsource, so that we can return the githubsource from the map we created
 	// in the above code.
-	resultClient.Fake.PrependReactor("get", "githubsources", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	resultClient.Fake.PrependReactor("get", "taskruns", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		srcName := action.(k8stesting.GetAction).GetName()
-		if ghs, found := sources[srcName]; found {
-			return true, &ghs, nil
+		if tr, found := taskruns[srcName]; found {
+			return true, &tr, nil
 		}
 
-		return true, &githubsource.GitHubSource{}, errors.New("githubsource not found")
-	})
-
-	// Need to intercept calls to list githubsource, so that we can list the githubsources from the map we created
-	// in the above code.
-	resultClient.Fake.PrependReactor("list", "githubsources", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		sourceArray := []githubsource.GitHubSource{}
-		for _, source := range sources {
-			sourceArray = append(sourceArray, source)
-		}
-		list := githubsource.GitHubSourceList{Items: sourceArray}
-		return true, &list, nil
+		return true, &pipelinesv1alpha1.TaskRun{}, errors.New("taskrun not found")
 	})
 
 	return resultClient
+}
+
+func dummyTriggersClientset() *faketriggerclientset.Clientset {
+	result := faketriggerclientset.NewSimpleClientset()
+	return result
 }
 
 func dummyHTTPRequest(method string, url string, body io.Reader) *http.Request {
@@ -135,7 +120,7 @@ func updateResourceDefaults(r *Resource, newDefaults EnvDefaults) *Resource {
 	newResource := Resource{
 		K8sClient:      r.K8sClient,
 		TektonClient:   r.TektonClient,
-		EventSrcClient: r.EventSrcClient,
+		TriggersClient: r.TriggersClient,
 		Defaults:       newDefaults,
 	}
 	return &newResource
@@ -145,7 +130,7 @@ func dummyResource() *Resource {
 	resource := Resource{
 		K8sClient:      dummyK8sClientset(),
 		TektonClient:   dummyClientset(),
-		EventSrcClient: dummyEventSrcClient(),
+		TriggersClient: dummyTriggersClientset(),
 		Defaults:       dummyDefaults(),
 	}
 

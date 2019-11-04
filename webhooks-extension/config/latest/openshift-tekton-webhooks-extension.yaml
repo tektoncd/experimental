@@ -13,14 +13,6 @@ metadata:
   namespace: tekton-pipelines
 rules:
 - apiGroups:
-  - route.openshift.io
-  resources:
-  - routes
-  verbs:
-  - get
-  - create
-  - delete
-- apiGroups:
   - security.openshift.io
   resources:
   - securitycontextconstraints
@@ -93,6 +85,7 @@ rules:
   - pipelines
   - pipelineruns
   - pipelineresources
+  - eventlisteners
   verbs:
   - get
   - list
@@ -131,17 +124,29 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - sources.eventing.knative.dev
+  - extensions
   resources:
-  - githubsources
+  - ingresses
+  - ingresses/status
+  verbs:
+  - delete
+  - create
+  - patch
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  -  routes
   verbs:
   - get
   - list
   - create
-  - update
   - delete
+  - update
   - patch
-  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -154,6 +159,52 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: tekton-webhooks-extension
+  namespace: tekton-pipelines
+---
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: tekton-webhooks-extension
+  name: tekton-webhooks-extension-eventlistener
+  namespace: tekton-pipelines
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tekton-triggers-minimal
+rules:
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks
+  - taskruns
+  - eventlisteners
+  - triggerbindings
+  - triggertemplates
+  verbs:
+  - get
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelineruns
+  - pipelineresources
+  - taskruns
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-webhooks-extension-eventlistener-minimal
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-minimal
+subjects:
+- kind: ServiceAccount
+  name: tekton-webhooks-extension-eventlistener
   namespace: tekton-pipelines
 ---
 apiVersion: apps/v1
@@ -185,13 +236,16 @@ spec:
           value: DOCKER_REPO
         - name: WEB_RESOURCES_DIR
           value: web
-        # Set this at install time after creating a certificate, e.g. with openssl and the provided convenience script.
-        # A secret will be created and this name should be provided here.
-        # This secret name will then be picked up by the Go code that is responsible for
-        # creating the EventListener, Ingress and webhooks.
-        # The Ingress will be created with the tls secret name value set to this variable's value.
-        - name: TRIGGERS_PROTOTYPE_INGRESS_CERTIFICATE_SECRET_NAME
-          value: ""
+        # If this endpoint's protocol is https, ssl verification will be enabled on the github webhook
+        # openshift_master_default_subdomain usually of the format 'apps.host.company.com'
+        - name: WEBHOOK_CALLBACK_URL
+          value: http://el-tekton-webhooks-eventlistener-tekton-pipelines.{openshift_master_default_subdomain}"
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: PLATFORM
+          value: "openshift"
         image: "gcr.io/tekton-nightly/extension:latest"
         imagePullPolicy: Always
         livenessProbe:
@@ -212,7 +266,7 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    tekton-dashboard-bundle-location: web/extension.98990769.js
+    tekton-dashboard-bundle-location: web/extension.ab223fd2.js
     tekton-dashboard-display-name: Webhooks
     tekton-dashboard-endpoints: webhooks.web
   labels:
@@ -229,42 +283,11 @@ spec:
   type: NodePort
 
 ---
-apiVersion: serving.knative.dev/v1alpha1
-kind: Service
-metadata:
-  labels:
-    app: webhooks-extension-sink
-  name: webhooks-extension-sink
-  namespace: tekton-pipelines
-spec:
-  template:
-    spec:
-      containers:
-      - env:
-        - name: INSTALLED_NAMESPACE
-          value: tekton-pipelines
-        - name: SERVICEACCOUNT
-          value: tekton-webhooks-extension
-        - name: PLATFORM
-          value: openshift
-        image: "gcr.io/tekton-nightly/sink:latest"
-        imagePullPolicy: Always
-        livenessProbe:
-          httpGet:
-            path: /liveness
-        ports:
-        - containerPort: 8080
-        readinessProbe:
-          httpGet:
-            path: /readiness
-      serviceAccountName: tekton-webhooks-extension
-
----
 # Monitor the pipelinerun status and update the pull request
 apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
-  name: monitor-result-task
+  name: monitor-task
   namespace: tekton-pipelines
 spec:
   inputs:
@@ -272,10 +295,6 @@ spec:
       - name: pull-request
         type: pullRequest
     params:
-      - name: pipelineruns
-        description: The name of the pipelineruns (and their namespace) to be monitored in format pipelinerun1:namespace1, pipelinerun2:namespace2
-        default: default pipelinerun
-        type: string
       - name: commentsuccess
         description: The text of the success comment
         default: "Success"
@@ -303,8 +322,10 @@ spec:
   - name: check
     image: maiwj/kubernetes-python-client:latest
     env:
-      - name: PIPELINERUNS
-        value: $(inputs.params.pipelineruns)
+      - name: EVENTID
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.labels['tekton.dev/triggers-eventid']
       - name: COMMENT_SUCCESS
         value: $(inputs.params.commentsuccess)
       - name: COMMENT_FAILURE
@@ -324,7 +345,7 @@ spec:
     - |
       set -e
       cat <<EOF | python
-      import time, os, json, requests, pprint
+      import time, os, json, requests, pprint, shutil
       from kubernetes import client, config
       config.load_incluster_config()
       api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
@@ -349,7 +370,7 @@ spec:
         pipelineRunURLPrefix = "http://" + "$URL"
       else:
         pipelineRunURLPrefix = "$URL"
-      runsToCheck = "$PIPELINERUNS".split(",")
+      labelToCheck = "tekton.dev/triggers-eventid=$EVENTID"
       runsPassed = []
       runsFailed = []
       runsIncomplete = []
@@ -357,24 +378,31 @@ spec:
       i = range(180)
       for x in i:
           time.sleep( 10 )
-          if len(runsToCheck) > 0:
-            for entry in runsToCheck:
-              pr, namespace, pipeline = entry.split(":")
-              pr = pr.strip()
-              namespace = namespace.strip()
-              pipeline = pipeline.strip()
+          runsPassed = []
+          runsFailed = []
+          runsIncomplete = []
+          failed = 0
+          api_response = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)
+          if len(api_response["items"]) > 0:
+            for entry in api_response["items"]:
+              pr = entry["metadata"]["name"]
+              namespace = entry["metadata"]["namespace"]
+              pipeline = entry["spec"]["pipelineRef"]["name"]
               link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
               print("Checking pipelinerun " + pr + " in namespace " + namespace)
-              output = api_instance.get_namespaced_custom_object("tekton.dev", "v1alpha1", namespace, "pipelineruns", pr)
-              if output["status"]["conditions"][0]["status"] == u'True' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+              if entry["status"]["conditions"][0]["status"] == u'True' and entry["status"]["conditions"][0]["type"] == u'Succeeded':
                 print("Success - pipelinerun " + pr + " in namespace " + namespace)
-                runsToCheck.remove(entry)
                 runsPassed.append("[**$COMMENT_SUCCESS**](" + link + ") | " + pipeline + " | " +  pr + " | " + namespace)
-              if output["status"]["conditions"][0]["status"] == u'False' and output["status"]["conditions"][0]["type"] == u'Succeeded':
+                continue
+              if entry["status"]["conditions"][0]["status"] == u'False' and entry["status"]["conditions"][0]["type"] == u'Succeeded':
                 failed =+ 1
                 print("Failed - pipelinerun " + pr + " in namespace " + namespace)
-                runsToCheck.remove(entry)
                 runsFailed.append("[**$COMMENT_FAILURE**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
+                continue
+              link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
+              runsIncomplete.append("[**??????**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
+            if len(runsIncomplete) == 0:
+              break
           else:
             break
       gitPRdescription = "All pipelines succeeded!"
@@ -382,24 +410,18 @@ spec:
       if failed > 0:
         gitPRdescription = str(failed) + " pipeline(s) failed!"
         gitPRcode = "failure"
-      if len(runsToCheck) > 0:
+      if len(runsIncomplete) > 0:
         print("Some pipelineruns had not completed when the monitor reached its timeout")
         gitPRdescription = "timed out monitoring pipeline runs"
         gitPRcode = "error"
-        for entry in runsToCheck:
-          pr, namespace, pipeline = entry.split(":")
-          pr = pr.strip()
-          namespace = namespace.strip()
-          pipeline = pipeline.strip()
-          print("Still Running - pipelinerun " + pr + " in namespace " + namespace)
-          link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
-          runsIncomplete.append("[**??????**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
       results = runsPassed + runsFailed + runsIncomplete
       comment = ("## Tekton Status Report \n\n"
                  "Status | Pipeline | PipelineRun | Namespace\n"
                  ":----- | :------- | :--------------- | :--------\n"
                  ) + "\n".join(results)
-      handle = open("/workspace/pull-request/comments/newcomment.json", 'w')
+      if not os.path.exists("/workspace/output/pull-request/comments"):
+        os.makedirs("/workspace/output/pull-request/comments")
+      handle = open("/workspace/output/pull-request/comments/newcomment.json", 'w')
       handle.write(comment)
       handle.close()
       if not "$URL".startswith("http"):
@@ -407,10 +429,268 @@ spec:
       else:
         detailsURL = "$URL" + "/#/pipelineruns"
       print("Set details url to: " + detailsURL)
-      status = json.dumps(dict(code=gitPRcode, description=gitPRdescription, id=gitPRcontext, url=detailsURL))
-      handle = open("/workspace/pull-request/status/newstatus.json", 'w')
+      status = json.dumps(dict(ID=gitPRcontext,Code=gitPRcode,Description=gitPRdescription,URL=detailsURL))
+      if not os.path.exists("/workspace/output/pull-request/status"):
+        os.makedirs("/workspace/output/pull-request/status")
+      handle = open("/workspace/output/pull-request/status/Tekton.json", 'w')
       handle.write(status)
       handle.close()
+      if not os.path.exists("/workspace/output/pull-request/labels"):
+        os.makedirs("/workspace/output/pull-request/labels")
+      if not os.path.exists("/workspace/output/pull-request/"):
+        os.makedirs("/workspace/output/pull-request/")
+      shutil.copyfile("/workspace/pull-request/base.json","/workspace/output/pull-request/base.json") 
+      shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json") 
       EOF
+---
 
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: monitor-task-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: pullrequesturl
+    value: $(body.pull_request.html_url)
+---
 
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: monitor-task-template
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: pullrequesturl
+    description: The pull request url
+    type: string
+  - name: gitsecretname
+    description: The git secret name
+    default: github-secrets
+    type: string
+  - name: gitsecretkeyname
+    description: The git secret key name
+    default: token
+    type: string
+  - name: commentsuccess
+    description: The text of the success comment
+    default: "Success"
+    type: string
+  - name: commentfailure
+    description: The text of the failure comment
+    default: "Failed"
+    type: string
+  - name: dashboardurl
+    description: The URL to the pipelineruns page of the dashboard
+    default: "http://localhost:9097/"
+    type: string
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: pull-request-$(uid)
+      namespace: tekton-pipelines
+    spec:
+      type: pullRequest
+      params:
+        - name: url
+          value: $(params.pullrequesturl)
+      secrets:
+        - fieldName: githubToken
+          secretName: $(params.gitsecretname)
+          secretKey: $(params.gitsecretkeyname)
+  - apiVersion: tekton.dev/v1alpha1
+    kind: TaskRun
+    metadata:
+      generateName: monitor-taskrun-
+      namespace: tekton-pipelines
+    spec:
+      serviceAccount: tekton-webhooks-extension
+      taskRef:
+        name: monitor-task
+      inputs:
+        params:
+        - name: commentsuccess
+          value: $(params.commentsuccess)
+        - name: commentfailure
+          value: $(params.commentfailure)
+        - name: dashboard-url
+          value: $(params.dashboardurl)
+        - name: secret
+          value: $(params.gitsecretname)
+        resources:
+        - name: pull-request
+          resourceRef:
+            name: pull-request-$(uid)
+      outputs:
+        resources:
+        - name: pull-request
+          resourceRef:
+            name: pull-request-$(uid)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: webhook-task
+  namespace: tekton-pipelines
+spec:
+  inputs:
+    params:
+    - name: Mode
+      description: Whether or not to create or delete the webhook
+      default: "create"
+    - name: CallbackURL
+      description: Use the Ingress external URL that's infront of the EventListener ensure you specify the relevant protocol
+      default: "https://replacemeip.nip.io"
+    - name: GitHubRepoURL
+      description: The GitHub repository URL (used for creating and deleting the webhook)
+      default: "https://some.github.com/owner/repository"
+    - name: GitHubSecretName
+      description: The secret name for GitHub (used for creating and deleting the webhook)
+      default: "githubsecret"
+    - name: GitHubAccessTokenKey
+      description: The key name in the secret for the access token (used for creating and deleting the webhook)
+      default: "accessToken"
+    - name: GitHubUserNameKey
+      description: The key name in the secret for the user name (used for creating and deleting the webhook)
+      type: string
+    - name: GitHubSecretStringKey
+      description: The key name for the GitHub secret string (used for creating and deleting the webhook)
+      default: "secretToken"
+    - name: GitHubServerUrl
+      description: The URL of the GitHub server (used for creating and deleting the webhook)
+      default: "github.com"
+  steps:  
+  - name: create-or-delete-webhook
+    image: curlimages/curl:latest
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      subscriptionMode="subscribe"
+      if [ $(inputs.params.Mode) != "create" ] ; then
+        subscriptionMode="unsubscribe"
+      fi
+      if [ $(inputs.params.GitHubServerUrl) = "github.com" -o $(inputs.params.GitHubServerUrl) = "http://github.com" -o $(inputs.params.GitHubServerUrl) = "https://github.com" ] ; then
+        echo "Assuming GitHub.com and not GitHub Enterprise"
+        if [ -z $(inputs.params.GitHubUserNameKey) ] ; then
+          echo "No GitHub username key found so assuming this is an access token"
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "token:$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "https://api.github.com/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/push.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee push.log
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "token:$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "https://api.github.com/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/pull_request.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee pull.log
+        else          
+          echo "GitHub username key found so assuming this is a username and password"
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "$(cat /var/secret/$(inputs.params.GitHubUserNameKey)):$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "https://api.github.com/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/push.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee push.log
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "$(cat /var/secret/$(inputs.params.GitHubUserNameKey)):$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "https://api.github.com/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/pull_request.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee pull.log
+        fi
+      else
+        echo "Assuming GitHub Enterprise"
+        if [ -z $(inputs.params.GitHubUserNameKey) ] ; then
+          echo "No GitHub Enterprise username key found so assuming this is an access token"
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "token:$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "$(inputs.params.GitHubServerUrl)/api/v3/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/push.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee push.log
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "token:$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "$(inputs.params.GitHubServerUrl)/api/v3/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/pull_request.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee pull.log
+          else 
+          echo "GitHub Enterprise username key found $(inputs.params.GitHubUserNameKey) so assuming this is a username and password"
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "$(cat /var/secret/$(inputs.params.GitHubUserNameKey)):$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "$(inputs.params.GitHubServerUrl)/api/v3/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/push.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee push.log
+          curl -w "\n\nRETURN_CODE=%{http_code}\n\n" -u "$(cat /var/secret/$(inputs.params.GitHubUserNameKey)):$(cat /var/secret/$(inputs.params.GitHubAccessTokenKey))" -i "$(inputs.params.GitHubServerUrl)/api/v3/hub" -F "hub.mode=$subscriptionMode" -F "hub.topic=$(inputs.params.GitHubRepoURL)/events/pull_request.json" -F "hub.callback=$(inputs.params.CallbackURL)" -F "hub.secret=$(cat /var/secret/$(inputs.params.GitHubSecretStringKey))" | tee pull.log
+        fi
+      fi
+      PUSH_RETURN_CODE=$(grep "RETURN_CODE" push.log | cut -f 2 -d "=" )
+      PULL_RETURN_CODE=$(grep "RETURN_CODE" pull.log | cut -f 2 -d "=" )
+      if [ $PUSH_RETURN_CODE -ne 204 -o $PULL_RETURN_CODE -ne 204 ] ; then
+        exit 1
+      fi
+    volumeMounts:
+    - name: github-secret
+      mountPath: /var/secret
+  volumes:
+    - name: github-secret
+      secret:
+        secretName: $(inputs.params.GitHubSecretName)
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tekton-webhooks-extension-validator
+  namespace: tekton-pipelines
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tekton-webhooks-extension-validator
+  template:
+    metadata:
+      labels:
+        app: tekton-webhooks-extension-validator
+    spec:
+      containers:
+        - name: validate
+          image: "gcr.io/tekton-nightly/webhooks-interceptor:latest"
+          env:
+            - name: INSTALLED_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      serviceAccountName: tekton-webhooks-extension
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: tekton-webhooks-extension-validator
+  namespace: tekton-pipelines
+spec:
+  type: ClusterIP
+  selector:
+    app: tekton-webhooks-extension-validator
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: route-task
+  namespace: tekton-pipelines
+spec:
+  inputs:
+    params:
+    - name: Mode
+      description: Whether to create or delete a Route
+      default: "create"
+      type: string
+    - name: EventListenerServiceName 
+      description: The EventListener service name
+      default: "listener"
+      type: string
+  steps:
+  - name: create-or-delete-route
+    image: lachlanevenson/k8s-kubectl:latest
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      if [ $(inputs.params.Mode) = "create" ] ; then
+        echo "Creating the Route"
+        cat <<EOF | kubectl apply --validate=false -f -
+        apiVersion: route.openshift.io/v1
+        kind: Route
+        metadata:
+          name: $(inputs.params.EventListenerServiceName)
+        spec:
+          to:
+            kind: Service
+            name: $(inputs.params.EventListenerServiceName)
+      EOF
+      fi
+                
+      if [ $(inputs.params.Mode) = "delete" ] ; then
+        echo "Deleting Route"
+        kubectl delete route $(inputs.params.EventListenerServiceName)
+      fi

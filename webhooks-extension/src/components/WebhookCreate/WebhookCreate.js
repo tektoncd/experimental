@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 import { withRouter } from 'react-router-dom';
 
-import { Button, TextInput, Dropdown, Form, Tooltip, DropdownSkeleton, Modal, InlineNotification, TooltipIcon } from 'carbon-components-react';
+import { Button, TextInput, Dropdown, Form, Tooltip, DropdownSkeleton, Modal, InlineNotification, InlineLoading, TooltipIcon } from 'carbon-components-react';
 import { getSecrets, createWebhook, createSecret, deleteSecret } from '../../api/index';
 
 import AddAlt20 from '@carbon/icons-react/lib/add--alt/20';
 import SubtractAlt20 from '@carbon/icons-react/lib/subtract--alt/20';
 import Infomation from "@carbon/icons-react/lib/information/16";
+
 
 import './WebhookCreate.scss';
 
@@ -89,7 +90,9 @@ class WebhookCreatePage extends Component {
       newSecretName: '',
       newTokenValue: '',
       //array storing invalid inputs
-      invalidFields: []
+      invalidFields: [],
+      creatingWebhook: false,
+      overlayClassName: 'overlay-disabled'
     };
   }
 
@@ -243,7 +246,12 @@ class WebhookCreatePage extends Component {
         serviceaccount: serviceAccount,
         dockerregistry: dockerRegistry
       };
-
+      this.setState({
+        creatingWebhook: true,
+        overlayClassName: 'overlay-enabled',
+        showNotification: false
+      })
+      this.scrollToNotification();
       createWebhook(requestBody).then(() => {
         this.props.setShowNotificationOnTable(true);
         this.returnToTable();
@@ -253,7 +261,9 @@ class WebhookCreatePage extends Component {
             notificationMessage: 'Failed to create webhook, error returned was : ' + text,
             notificationStatus: 'error',
             notificationStatusMsgShort: 'Error:',
-            showNotification: true
+            showNotification: true,
+            creatingWebhook: false,
+            overlayClassName: 'overlay-disabled'
           });
           this.scrollToNotification();
         });
@@ -499,8 +509,23 @@ class WebhookCreatePage extends Component {
             >
             </InlineNotification>
           )}
+          {this.state.creatingWebhook && !this.state.showNotification && (
+            <InlineNotification
+              kind='info'
+              subtitle={<InlineLoading
+                status='active'
+                iconDescription='Webhook under creation indicator'
+                description='Webhook under creation, please do not navigate away from this page...'
+                successDelay={300}>
+              </InlineLoading>}
+              title=''
+              lowContrast
+            >
+            </InlineNotification>
+          )}
         </div>
 
+        <div className={this.state.overlayClassName} ></div>
         <div className="create-container">
           <Form onSubmit={this.handleSubmit}>
             <div className="title">Create Webhook</div>
@@ -572,16 +597,16 @@ class WebhookCreatePage extends Component {
               <div className="item-label">
                 <div className="createLabel">Access Token</div>
               </div>
-              <div className="del-sec-btn"><SubtractAlt20 id="delete-secret-button" onClick={() => { this.toggleDeleteDialog() }}/></div>
+              <div className="del-sec-btn"><SubtractAlt20 id="delete-secret-button" onClick={() => { this.toggleDeleteDialog() }} /></div>
               <div className="git-access-drop-down-div">
                 <div className="createDropDown">
                   {this.displaySecretDropDown(secretItems)}
                 </div>
               </div>
-              <div className="add-sec-btn"><AddAlt20 id="create-secret-button" onClick={() => { this.toggleCreateDialog() }}/></div>
+              <div className="add-sec-btn"><AddAlt20 id="create-secret-button" onClick={() => { this.toggleCreateDialog() }} /></div>
             </div>
 
-            <div className="row"/>
+            <div className="row" />
             <div className="row" id="sectionTitle">
               <u>Target Pipeline Settings</u>
               <div className="sectionDescription">
@@ -657,13 +682,13 @@ class WebhookCreatePage extends Component {
             </div>
 
             <div className="row">
-            <div className="help-icon"></div>
+              <div className="help-icon"></div>
               <div className="item-label"></div>
               <div className="entry-field"></div>
             </div>
 
             <div className="row">
-            <div className="help-icon"></div>
+              <div className="help-icon"></div>
               <div className="item-label"></div>
               <div className="entry-field">
                 <Button data-testid="cancel-button" id="cancel" onClick={() => { this.returnToTable() }}>Cancel</Button>
@@ -758,7 +783,7 @@ class WebhookCreatePage extends Component {
             </Modal>
           </div>
         </div>
-      </div>
+        </div>
     );
   }
 }

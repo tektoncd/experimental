@@ -6,6 +6,15 @@
   }
 }
 
+.overlay-enabled {
+  background-color: rgba(255, 255, 255, 0.55);
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index:10;
+  cursor: not-allowed;
+}
+
 .create-container {
   padding-top: 3rem;
   background-color: white;

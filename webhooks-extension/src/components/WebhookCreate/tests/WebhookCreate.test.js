@@ -462,9 +462,17 @@ describe('create button', () => {
     fireEvent.click(await waitForElement(() => getByText(/select service account/i)));
     fireEvent.click(await waitForElement(() => getByText(/testServiceAccount/i)));
 
+    expect(document.getElementsByClassName('overlay-disabled').length).toBe(1);
+    expect(document.getElementsByClassName('overlay-enabled').length).toBe(0);
+    //check notification not present
     expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(0);
     await wait(() => expect(getByTestId('create-button')).toBeEnabled());
     fireEvent.click(document.getElementById('submit'));
+    expect(document.getElementsByClassName('overlay-disabled').length).toBe(0);
+    expect(document.getElementsByClassName('overlay-enabled').length).toBe(1);
+    //check notification is now present
+    expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(1);
+    expect(document.getElementsByClassName('notification').item(0).getElementsByClassName("bx--inline-loading__text")[0].innerHTML).toBe("Webhook&nbsp;under&nbsp;creation, please do not navigate away from this page...");
 
   })
 })

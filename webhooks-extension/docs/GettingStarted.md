@@ -8,7 +8,7 @@ This article aims to help you get webhooks up and running with Tekton. We talk a
 
 ## Installation
 
-See the [webhooks extension readme](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/README.md) for information on how to install Tekton Pipelines, the Tekton Dashboard and the webhooks extension.
+See the [webhooks extension readme](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/README.md) for information on how to install Tekton Pipelines, Tekton Triggers, the Tekton Dashboard and the webhooks extension. 
 
 ## What are webhooks?
 
@@ -25,11 +25,11 @@ The webhooks extension helps you to create a relationship between a Git reposito
 - A commit is merged into a branch, and
 - A Pull Request is created or modified
 
-See ['Notes On Using The Webhooks Extension'](https://github.com/tektoncd/experimental/tree/master/webhooks-extension#notes-on-using-the-webhooks-extension) for more details on how a webhook payload is turned into a `PipelineRun` and the necessary set of accompanying `PipelineResources`.
+See the ['architecture'](./Architecture.md) docs for more details on how a webhook payload is turned into a `PipelineRun` and the necessary set of accompanying `PipelineResources`. 
 
 ## Setting up a webhook from scratch
 
-Several steps must be completed in order to set up a working webhook. Pipeline definitions must be imported, and credentials set up to permit those pipelines to function. Credentials are typically required for GitHub, to create webhooks and clone repositories, and for a Docker image registry to push images to.
+Several steps must be completed in order to set up a working webhook. Pipeline definitions must be imported along with TriggerBindings and TriggerTemplates.  Additionally credentials need to be set up to permit those pipelines to function. Credentials are typically required for GitHub, to create webhooks and clone repositories, and for a Docker image registry to push images to. 
 
 Tekton PipelineRuns gain access to Git and Docker registry credentials via their associated service account.
 - Git credentials must be stored in a secret with an annotation, `tekton.dev/git-0: [url to Git repository]`
@@ -57,7 +57,9 @@ Credentials are normally required to push images to a Docker registry. Some Dock
 
 ### Import pipeline definitions
 
-A Tekton Pipeline is composed of one or more Tasks. We expect that most users will store their Pipeline and Task definitions in Git. You may wish to `git clone` and `kubectl apply` these definitions manually, or more likely, as part of an automated installation and setup. For your convenience, the dashboard provides a menu option, 'Import Tekton resources'.
+A Tekton Pipeline is composed of one or more Tasks. We expect that most users will store their Pipeline, Task, TriggerTemplate and TriggerBinding definitions in Git. You may wish to `git clone` and `kubectl apply` these definitions manually, or more likely, as part of an automated installation and setup. Note that TriggerTemplate and TriggerBindings **must** be installed in the same namespace as the product was installed, whilst Tasks and Pipelines need to be in the namespace you want your pipeline to run.
+
+For your convenience, the dashboard provides a menu option, 'Import Tekton resources'. 
 
 ![Import pipeline definitions](./images/importPipelines.png?raw=true "Importing pipeline definitions")
 
@@ -91,7 +93,7 @@ Select the Kubernetes namespace in which the triggered Pipeline should run.
 
 ### Pipeline
 
-Select the Pipeline in the target Namespace from which a PipelineRun (and accompanying PipelineResources) will be created, as described in the section 'What does the Tekton Dashboard's Webhooks Extension do?', above.
+Select the Pipeline in the target Namespace from which a PipelineRun (and accompanying PipelineResources) will be created, as described in the section 'What does the Tekton Dashboard's Webhooks Extension do?', above. Note that you need to have related Tekton Trigger resources installed in the install namespace (rather than the target namespace), these resources being; a triggertemplate called `<pipeline-name>-template` and two triggerbindings `<pipeline-name>-push-binding` and `<pipeline-name>-pullrequest-binding`.
 
 ### Service Account
 
@@ -114,22 +116,21 @@ Accepted Formats:
 
 ## Putting it all together: test it's working
 
-Once a webhook is set up, a `git push` or creation of a pull request to the monitored repository should trigger the creation of the correct PipelineRun. This PipelineRun will show up in the Tekton dashboard as usual. As of August 2019, a successful webhook will trigger pods to be creted as follows:
+Once a webhook is set up, a `git push` or creation of a pull request to the monitored repository should trigger the creation of the correct PipelineRun. This PipelineRun will show up in the Tekton dashboard as usual. A successful webhook will trigger pods to be created as follows:
 
-- Firstly, webhook receipt will drive a pod whose name will be of the format `tekton-xwxm5-rp6s6-gldvf-deployment-6674f7fdbb-pdgmw` created.
+- Firstly, webhook receipt will drive the eventlistener pod whose name will be of the format `el-tekton-webhooks-eventlistener-xxxxx-xxxxx`. 
 
-- Next this pod will trigger the webhooks extension 'sink': a pod of the form `webhooks-extension-sink-dqxkm-deployment-5f64979c5b-8dk4k` will execute.
+- Next this pod will trigger the webhooks extension 'interceptor': a pod with a name of the form `tekton-webhooks-extension-validator-xxxxx-xxxxx`. 
 
-- The 'sink' will then create the expected PipelineRun. The PipelineRun will spawn pods for each of its Tasks, so for example we might see a pod `buildah-hook-1565009498-build-simple-6qc72-pod-1f0a5e` created to run the `build-simple` Task.
+- The 'interceptor' validates the webhook and triggers the the creation of the expected PipelineRun(s). The PipelineRun(s) will spawn pods for each of its Tasks, so for example we might see a pod `buildah-hook-xxxxxxxxxx-build-simple-xxxxx-pod-xxxxxx` created to run the `build-simple` Task.
 
-- If the webhook's event type is a pull request, an additional pod will be seen for the monitoring task. This pod will monitor the PipelineRun and update the pull request with status.  The default monitoring task pod will be named similar to `pr-monitor-15657005244rsz8-pod-f5b42a`. For more on monitoring see [here](Monitoring.md)
+- If the webhook's event type is a pull request, an additional pod will be seen for the monitoring task. This pod will monitor the PipelineRun and update the pull request with status.  The default monitoring task pod will be named similar to `monitor-taskrun-xxxxx-pod-xxxxxx`. For more on monitoring see [here](Monitoring.md)
 
-- Finally the 'sink' and '(webhook) Name' pods will be shut down by [Knative](https://knative.dev/docs/).
+You can use `kubectl logs [pod-name] --all-containers` to check the output of each pod in turn, and of course the Tekton dashboard for the pods managed by a PipelineRun. In the case of any problems, check that all of the below steps were correctly performed:
 
-You can use `kubectl logs [pod-name] --all-containers` to check the output of each pod in turn, and of course the Tekton Dashboard for the pods managed by a PipelineRun. In the case of any problems, check that all of the above steps were correctly performed:
 - Create a service account and RoleBinding for the PipelineRuns to use
 - Create the correct Git and Docker credentials and patch the right service account
-- Ensure that your GitHub can route correctly to the webhooks-extension-sink: use `kubectl get kservice` to check its value, and the GitHub web pages to see that the webhook was correctly created, and that it successfully delivered its result to the [kservice](https://github.com/knative/serving/blob/master/docs/spec/overview.md#service).
+- Ensure that your GitHub can route correctly to the ingress/route exposing the eventlistener: use `kubectl get ingress` (or `kubectl get route el-tekton-webhooks-eventlistener` on openshift) to check its value, and the GitHub web pages to see that the webhook was correctly created, and that it successfully delivered its payload.
 
 ## Troubleshooting
 

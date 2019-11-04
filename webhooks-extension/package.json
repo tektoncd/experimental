@@ -12,12 +12,14 @@
     "test": "./test-it.sh"
   },
   "dependencies": {
+    "fetch-mock": "7.3.3",
     "@carbon/icons-react": "^10.3.0",
+    "node-fetch": "^2.6.0",
     "stream": "0.0.2",
     "styled-components": "^4.3.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.4.4",
+    "@babel/core": "7.4.5",
     "@babel/plugin-proposal-class-properties": "^7.4.4",
     "@babel/plugin-proposal-object-rest-spread": "^7.4.4",
     "@babel/plugin-proposal-optional-chaining": "^7.2.0",
@@ -41,10 +43,9 @@
     "eslint-plugin-import": "^2.17.2",
     "eslint-plugin-jest": "^22.5.1",
     "eslint-plugin-jsx-a11y": "^6.2.1",
-    "eslint-plugin-react": "^7.13.0",
+    "eslint-plugin-react": "^7.16.0",
     "eslint-plugin-react-hooks": "^1.6.0",
     "eslint-watch": "^5.1.2",
-    "fetch-mock": "^7.3.3",
     "jest": "^24.7.1",
     "jest-dom": "^3.4.0",
     "jest-resolve": "^24.7.1",

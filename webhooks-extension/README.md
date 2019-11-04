@@ -11,11 +11,14 @@ See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/w
 ### Install Prereqs
 
 [Install and Configure Prereqs](./docs/InstallPrereqs.md)  
-[Additional Configuration for installing and using Red Hat Openshift](./docs/InstallOnOpenshift.md)  
 
 ### Install Webhook Extension
 
-[Installing Official Release (stable)](./docs/InstallReleaseBuild.md)  
+To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.
+The link below does not contain all the information needed at this time - this message can be removed after the 0.3 release occurs.  
+
+~~[Installing Official Release (stable)](./docs/InstallReleaseBuild.md)~~  
+
 [Installing Development Build (nightly)](./docs/InstallNightlyBuild.md)  
 
 ### Usage Guides
@@ -23,7 +26,12 @@ See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/w
 [Getting Started](./docs/GettingStarted.md)  
 [Multiple Pipelines](./docs/MultiplePipelines.md)  
 [Pull Request Status Updates](./docs/Monitoring.md)  
+[Additional Notes If Using Red Hat OpenShift](./docs/NotesOnOpenShiftInstallations.md)  
 [Limitations](./docs/Limitations.md)  
+
+### Architecture Guide
+
+[Architecture](./docs/Architecture.md)
 
 ### Uninstall
 

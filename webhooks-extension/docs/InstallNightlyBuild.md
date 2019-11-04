@@ -2,7 +2,9 @@
 <br/>
 <br/>
 
-The Tekton Webhooks Extension has a hosted image of the latest builds located at gcr.io/tekton-nightly/extension
+The Tekton Webhooks Extension has a hosted image of the latest builds located at gcr.io/tekton-nightly/extension.  
+
+Note: If you want to install into an alternative namespace you would need to modify all namespace entries in the applied yaml files.
 <br/>
 <br/>
 
@@ -19,6 +21,20 @@ The Tekton Webhooks Extension has a hosted image of the latest builds located at
       ```bash
       cd webhooks-extension
       ```
+
+  3. Set the WEBHOOK_CALLBACK_URL in the relevant yaml file
+
+      _On Red Hat OpenShift:_
+
+      - Open config/latest/openshift-development/openshift-tekton-webhooks-extension.yaml.
+      - Find WEBHOOK_CALLBACK_URL.
+      - Edit the value - this should simply be a case of replacing {openshift_master_default_subdomain} with your actual value.
+
+      _On other Kubernetes environments:_
+
+      - Open config/latest/gcr-tekton-webhooks-extension.yaml.
+      - Find WEBHOOK_CALLBACK_URL.
+      - Edit the value - this could simply be a case of replacing IPADDRESS with your actual value.  
 
   3. Apply the yaml
 

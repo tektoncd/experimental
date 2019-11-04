@@ -1,111 +1,5 @@
 #!/bin/bash
 
-# Knative does not bundle Istio as of 0.6
-# Installation instructions: https://knative.dev/docs/install/installing-istio/
-function install_istio() {
-  # Get specific version
-  if [[ ${ISTIO_VERSION} == "latest" ]];then
-    # This requires authentication if you reach the unauthenticated API limit
-    export ISTIO_VERSION="$(get_latest_release "istio/istio")"
-  fi
-  echo "Istio version: ${ISTIO_VERSION}"
-
-  rm -rf istio-*
-  # Install on Minikube or Docker Desktop
-  # This expects ${ISTIO_VERSION} to be set
-  curl -L https://git.io/getLatestIstio | sh -
-  cd istio-*
-  for file in install/kubernetes/helm/istio-init/files/crd*yaml;do 
-    kubectl apply -f $file
-  done
-  # Creates `istio-system` namespace
-  kubectl apply -f install/kubernetes/namespace.yaml
-  if [[ $ISTIO_SIDECAR_INJECTION ==  "false" ]];then
-    helm template --namespace=istio-system \
-    --set global.proxy.autoInject=disabled \
-    --set global.omitSidecarInjectorConfigMap=true \
-    --set global.disablePolicyChecks=true \
-    --set prometheus.enabled=false \
-    `# Disable mixer prometheus adapter to remove istio default metrics.` \
-    --set mixer.adapters.prometheus.enabled=false \
-    `# Disable mixer policy check, since in our template we set no policy.` \
-    --set global.disablePolicyChecks=true \
-    `# Set gateway pods to 1 to sidestep eventual consistency / readiness problems.` \
-    --set gateways.istio-ingressgateway.autoscaleMin=1 \
-    --set gateways.istio-ingressgateway.autoscaleMax=1 \
-    `# Set pilot trace sampling to 100%` \
-    --set pilot.traceSampling=100 \
-    install/kubernetes/helm/istio \
-    > ./istio-lean.yaml
-    kubectl apply -f istio-lean.yaml
-  else
-    # A template with sidecar injection enabled.
-    helm template --namespace=istio-system \
-    --set sidecarInjectorWebhook.enabled=true \
-    --set sidecarInjectorWebhook.enableNamespacesByDefault=true \
-    --set global.proxy.autoInject=disabled \
-    --set global.disablePolicyChecks=true \
-    --set prometheus.enabled=false \
-    `# Disable mixer prometheus adapter to remove istio default metrics.` \
-    --set mixer.adapters.prometheus.enabled=false \
-    `# Disable mixer policy check, since in our template we set no policy.` \
-    --set global.disablePolicyChecks=true \
-    `# Set gateway pods to 1 to sidestep eventual consistency / readiness problems.` \
-    --set gateways.istio-ingressgateway.autoscaleMin=1 \
-    --set gateways.istio-ingressgateway.autoscaleMax=1 \
-    --set gateways.istio-ingressgateway.resources.requests.cpu=500m \
-    --set gateways.istio-ingressgateway.resources.requests.memory=256Mi \
-    `# More pilot replicas for better scale` \
-    --set pilot.autoscaleMin=2 \
-    `# Set pilot trace sampling to 100%` \
-    --set pilot.traceSampling=100 \
-    install/kubernetes/helm/istio \
-    > ./istio.yaml
-    kubectl apply -f istio.yaml
-  fi
-  # Wait until all the pods come up
-  wait_for_ready_pods istio-system 300 30
-  kubectl label namespace ${DASHBOARD_INSTALL_NS} istio-injection=enabled
-}
-
-function install_knative_serving() {
-  if [ -z "$1" ]; then
-      echo "Usage ERROR for function: install_knative_serving [version]"
-      echo "Missing [version]"
-      exit 1
-  fi
-  version="$1"
-  curl -L https://github.com/knative/serving/releases/download/${version}/serving.yaml \
-  | kubectl apply --filename -
-  # Wait until all the pods come up
-  wait_for_ready_pods knative-serving 180 20
-}
-
-function install_knative_eventing() {
-  if [ -z "$1" ]; then
-      echo "Usage ERROR for function: install_knative_eventing [version]"
-      echo "Missing [version]"
-      exit 1
-  fi
-  version="$1"
-  kubectl apply --filename https://github.com/knative/eventing/releases/download/${version}/release.yaml
-  # Wait until all the pods come up
-  wait_for_ready_pods knative-eventing 180 20
-}
-
-# Note that eventing-sources.yaml was renamed from release.yaml in the v0.5.0 release, so this won't work for earlier releases as-is. 
-function install_knative_eventing_sources() {
-  if [ -z "$1" ]; then
-      echo "Usage ERROR for function: install_knative_eventing_sources [version]"
-      echo "Missing [version]"
-      exit 1
-  fi
-  version="$1"
-  kubectl apply --filename https://github.com/knative/eventing-sources/releases/download/${version}/eventing-sources.yaml
-  # Wait until all the pods come up
-  wait_for_ready_pods knative-sources 180 20
-}
-
 # Install Tekton (instructions here: https://github.com/tektoncd/pipeline/blob/master/docs/install.md#adding-the-tekton-pipelines)
 function install_tekton() {
   if [ -z "$1" ]; then
@@ -118,7 +12,25 @@ function install_tekton() {
   if [[ ${latest_version} = ?${version} ]];then
     kubectl apply --filename https://storage.googleapis.com/tekton-releases/latest/release.yaml
   else
-    kubectl apply --filename https://github.com/knative/eventing/releases/download/${version}/release.yaml
+    kubectl apply --filename https://storage.googleapis.com/tekton-releases/previous/v${version}/release.yaml
+  fi
+  # Wait until all the pods come up
+  wait_for_ready_pods tekton-pipelines 180 20
+}
+
+# Install Tekton Triggers (instructions here: https://github.com/tektoncd/triggers/blob/master/docs/install.md)
+function install_tekton_triggers() {
+  if [ -z "$1" ]; then
+      echo "Usage ERROR for function: install_tekton_triggers [version]"
+      echo "Missing [version]"
+      exit 1
+  fi
+  version="$1"
+  latest_version=$(curl -s https://api.github.com/repos/tektoncd/triggers/releases | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | head -n 1)
+  if [[ ${latest_version} = ?${version} ]];then
+    kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+  else
+    kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/previous/v${version}/release.yaml
   fi
   # Wait until all the pods come up
   wait_for_ready_pods tekton-pipelines 180 20
@@ -178,6 +90,10 @@ function install_webhooks_extension() {
     echo "Missing [namespace]"
     exit 1
   fi 
+
+  sed -i .previous -e "s/IPADDRESS/$IPADDRESS/g" config/extension-deployment.yaml
+  rm config/extension-deployment.yaml.previous
+  
   namespace=$1
   docker login
   npm ci
@@ -187,6 +103,12 @@ function install_webhooks_extension() {
   timeout 60 "ko apply -f config -n $namespace"
   popd
   wait_for_ready_pods $namespace 60 10
+}
+
+function install_nginx() {
+  echo "Installing Nginx"
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud-generic.yaml
 }
 
 # Wait until all pods in a namespace are Running or Complete

@@ -115,8 +115,15 @@ it('should display a success message on a good delete', async () => {
   const foundDeleteButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--danger').item(0);
   await waitForElement(() => foundDeleteButtonOnModal);
 
+  expect(document.getElementsByClassName('bx--inline-loading__text').length).toBe(0);
+  
   fireEvent.click(foundDeleteButtonOnModal);
   
+  //check notification present
+  expect(document.getElementsByClassName('bx--inline-loading__text').length).toBe(1);
+  expect(document.getElementsByClassName('bx--inline-loading__text')[0].innerHTML).toBe("Webhook(s)&nbsp;under&nbsp;deletion, please do not navigate away from this page...");
+
+
   expect(getWebhooksMock).toHaveBeenCalled();
   expect(getRowsMock).toHaveBeenCalled();
   expect(deleteWebhooksMock).toHaveBeenCalled();

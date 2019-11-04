@@ -11,14 +11,31 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
 
     _On Red Hat OpenShift:_
 
+    Use the following command, replacing `YOUR_SUBDOMAIN_VALUE` with your configured openshift master default subdomain.  
+
     ```bash
-    oc apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/openshift-webhooks-extension.yaml
+    curl -L https://github.com/tektoncd/dashboard/releases/latest/download/openshift-tekton-webhooks-extension-release.yaml \
+    | sed -e 's/{openshift_master_default_subdomain}/YOUR_SUBDOMAIN_VALUE/g' \
+    | oc apply --filename -
     ```
+
+    Example:
+    ```bash
+    curl -L https://github.com/tektoncd/dashboard/releases/latest/download/openshift-tekton-webhooks-extension-release.yaml \
+    | sed -e 's/{openshift_master_default_subdomain}/apps.myhost.mycompany.net/g' \
+    | oc apply -f -
+    ```
+
 
     _On other Kubernetes environments:_
 
+    Use the following command, replacing `YOUR_IP_ADDRESS` with your docker-desktop system's IP address.  Note that in
+    production you should clone the repository and update the WEBHOOK_CALLBACK_URL setting to avoid using nip.io for host resolution.
+
     ```bash
-    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml
+    curl -L https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml \
+    | sed -e 's/IPADDRESS/YOUR_IP_ADDRESS/g' \
+    | kubectl apply -f - 
     ```  
 <br/>
 
@@ -28,36 +45,43 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
 
     _On Red Hat OpenShift:_
     
+    Use the following command, replacing `YOUR_SUBDOMAIN_VALUE` with your configured openshift master default subdomain.  
+
     ```bash
-    curl -L https://github.com/tektoncd/dashboard/releases/latest/download/openshift-webhooks-extension.yaml \
-    | sed 's/tekton-pipelines/TARGET_NAMESPACE/' \
-    | oc apply --filename -
+    curl -L https://github.com/tektoncd/dashboard/releases/latest/download/openshift-tekton-webhooks-extension-release.yaml \
+    | sed 's/tekton-pipelines/TARGET_NAMESPACE/g' \
+    | sed -e 's/{openshift_master_default_subdomain}/YOUR_SUBDOMAIN_VALUE/g' \
+    | oc apply -f -
     ```
 
     _On other Kubernetes environments:_
 
+    Use the following command, replacing `YOUR_IP_ADDRESS` with your docker-desktop system's IP address.  Note that in
+    production you should clone the repository and update the WEBHOOK_CALLBACK_URL setting to avoid using nip.io for host resolution.
+
     ```bash
     curl -L https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml \
-    | sed 's/tekton-pipelines/TARGET_NAMESPACE/' \
-    | kubectl apply --filename -
+    | sed 's/tekton-pipelines/TARGET_NAMESPACE/g' \
+    | sed -e 's/IPADDRESS/YOUR_IP_ADDRESS/g' \
+    | kubectl apply -f -
     ```  
 <br/>
 
   * **To install a specific version:**
 
-    You need to use a URL that specifies the version you want to install, for example, for version 0.2.0:
+    If looking to install an official release of v0.2.1 or earlier, please navigate to the docs for that release by selecting the branch name matching the version you want to install in the dropdown at the top of this page.  Different prereqs and actions are required for installations of v0.2.1 and earlier.  
+    
+    In general, once you have taken all the prereq actions for the release level you want to install, you need to use a similar URL as in the previous commands, but that specifies the version you want to install for example, for version 0.2.0:
 
     _On Red Hat OpenShift:_
 
-    ```bash
-    oc apply --filename https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/openshift-webhooks-extension.yaml
-    ```
+    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/openshift-webhooks-extension.yaml`
+
+    Note: As of v0.2.1 the filename became openshift-tekton-webhooks-extension-release.yaml
 
     _On other Kubernetes environments:_
 
-    ```bash
-    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/webhooks-extension_release.yaml
-    ```
+    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/webhooks-extension_release.yaml`
 
 <br/>
 <br/>

@@ -30,11 +30,36 @@ kubectl apply -f dashboard-service.yaml -n ${DASHBOARD_INSTALL_NS}
 kubectl delete secret docker-push -n ${DASHBOARD_INSTALL_NS}
 kubectl delete secret github-repo-access-secret -n ${DASHBOARD_INSTALL_NS}
 kubectl delete secret github-secret -n ${DASHBOARD_INSTALL_NS}
-kubectl delete githubsource knative-demo-test -n ${DASHBOARD_INSTALL_NS}
 kubectl delete task build-push -n ${DASHBOARD_INSTALL_NS}
 kubectl delete task deploy-simple-kubectl-task -n ${DASHBOARD_INSTALL_NS}
+kubectl delete condition deployment-condition -n ${DASHBOARD_INSTALL_NS}
 kubectl delete pipeline simple-pipeline -n ${DASHBOARD_INSTALL_NS}
-kubectl delete pipelineruns --all -n ${DASHBOARD_INSTALL_NS} 
+kubectl delete triggertemplate simple-pipeline-template -n ${DASHBOARD_INSTALL_NS}
+kubectl delete triggerbinding simple-pipeline-push-binding -n ${DASHBOARD_INSTALL_NS}
+kubectl delete triggerbinding simple-pipeline-pullrequest-binding -n ${DASHBOARD_INSTALL_NS}
+kubectl delete pipelineruns --all -n ${DASHBOARD_INSTALL_NS}
+kubectl delete eventlisteners --all -n ${DASHBOARD_INSTALL_NS}
+kubectl delete ingress --all -n ${DASHBOARD_INSTALL_NS}
+kubectl delete configmap githubwebhook -n ${DASHBOARD_INSTALL_NS}
+
+secret_count=$(curl -X GET http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/serviceaccounts/tekton-dashboard | jq '.secrets' | jq length)
+i=0
+while [ $i -lt $secret_count ]
+do
+  secret=$(curl -X GET http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/serviceaccounts/tekton-dashboard | jq '.secrets['${i}'].name' )
+  if [ $secret == "\"github-repo-access-secret\"" ] ; then
+    post_data='[{"op":"remove","path":"serviceaccount/secrets/'${i}'"}]'
+    curl -X PATCH --header Content-Type:application/json-patch+json -d "$post_data" http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/serviceaccounts/tekton-dashboard
+    continue
+  fi
+  if [ $secret == "\"docker-push\"" ] ; then
+    post_data='[{"op":"remove","path":"serviceaccount/secrets/'${i}'"}]'
+    curl -X PATCH --header Content-Type:application/json-patch+json -d "$post_data" http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/serviceaccounts/tekton-dashboard
+    continue
+  fi
+  let "i++"
+done
+
 rm -rf example-pipelines
 
 # github-secret is used to created webhooks
@@ -45,45 +70,39 @@ kubectl create secret generic github-secret \
   --namespace $DASHBOARD_INSTALL_NS
 
 # github-repo-access-secret is used to check code out of github
-# TODO: This ought to work with just an accesstoken but currently we only have it working for user/pass with pass=token
-post_data='{
-  "name": "github-repo-access-secret",
-  "type": "userpass",
-  "username": "'"${GITHUB_USERNAME}"'",
-  "password": "'"${GITHUB_TOKEN}"'",
-  "url": {"tekton.dev/git-0": "'"${GITHUB_URL}"'"},
-  "serviceaccount": "tekton-dashboard"
-}'
-curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credentials
+USER=$(echo -n ${GITHUB_USERNAME} | base64 )
+PASS=$(echo -n ${GITHUB_TOKEN} | base64)
+post_data='{"apiVersion":"v1","data":{"password":"'"${PASS}"'","username":"'"${USER}"'"},"kind":"Secret","metadata":{"annotations":{"tekton.dev/git-0":"'"${GITHUB_URL}"'"},"labels":{"serviceAccount":"tekton-dashboard"},"name":"github-repo-access-secret","namespace":""},"type":"kubernetes.io/basic-auth"}'
+curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/secrets/
 echo 'created github-repo-access-secret'
 
+post_data='[{"op":"add","path":"serviceaccount/secrets/-","value":{"name":"github-repo-access-secret"}}]'
+curl -X PATCH --header Content-Type:application/json-patch+json -d "$post_data" http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/serviceaccounts/tekton-dashboard
+
+
 ## docker-push secret used to push images to dockerhub
-post_data='{
-  "name": "docker-push",
-  "type": "userpass",
-  "username": "'"${DOCKERHUB_USERNAME}"'",
-  "password": "'"${DOCKERHUB_PASSWORD}"'",
-  "url": {"tekton.dev/docker-0": "https://index.docker.io/v1/"},
-  "serviceaccount": "tekton-dashboard"
-}'
-curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/namespaces/${DASHBOARD_INSTALL_NS}/credentials
+DOCKERUSER=$(echo -n ${DOCKERHUB_USERNAME} | base64 )
+DOCKERPASS=$(echo -n ${DOCKERHUB_PASSWORD} | base64)
+post_data='{"apiVersion":"v1","data":{"password":"'"${DOCKERPASS}"'","username":"'"${DOCKERUSER}"'"},"kind":"Secret","metadata":{"annotations":{"tekton.dev/docker-0":"https://index.docker.io/v1/"},"labels":{"serviceAccount":"tekton-dashboard"},"name":"docker-push","namespace":""},"type":"kubernetes.io/basic-auth"}'
+curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/secrets/
 echo 'created docker-push'
+
+post_data='[{"op":"add","path":"serviceaccount/secrets/-","value":{"name":"docker-push"}}]'
+curl -X PATCH --header Content-Type:application/json-patch+json -d "$post_data" http://localhost:31001/proxy/api/v1/namespaces/${DASHBOARD_INSTALL_NS}/serviceaccounts/tekton-dashboard
 
 ## Install pipelines. This first test uses our simplest pipeline: docker build/tag/push, kubectl apply -f config 
 git clone https://github.com/pipeline-hotel/example-pipelines.git
-kubectl apply -f example-pipelines/config/deployment-condition.yaml -n ${DASHBOARD_INSTALL_NS}
-kubectl apply -f example-pipelines/config/build-task.yaml -n ${DASHBOARD_INSTALL_NS}
-kubectl apply -f example-pipelines/config/deploy-task.yaml -n ${DASHBOARD_INSTALL_NS}
-kubectl apply -f example-pipelines/config/pipeline.yaml -n ${DASHBOARD_INSTALL_NS}
+kubectl apply -f example-pipelines/triggers-resources/config/simple-pipeline -n ${DASHBOARD_INSTALL_NS}
 
 ## Set up webhook
 post_data='{
-  "name": "knative-demo-test",
+  "name": "demo-test",
   "gitrepositoryurl": "'"${GITHUB_REPO}"'",
   "accesstoken": "github-secret",
   "pipeline": "simple-pipeline",
   "dockerregistry": "'"${DOCKERHUB_USERNAME}"'",
-  "namespace": "'"${DASHBOARD_INSTALL_NS}"'"
+  "namespace": "'"${DASHBOARD_INSTALL_NS}"'",
+  "serviceaccount": "tekton-dashboard"
 }'
 curl -X POST --header Content-Type:application/json -d "$post_data" http://localhost:31001/v1/extensions/webhooks-extension/webhooks
 
