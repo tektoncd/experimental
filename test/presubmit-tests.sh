@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2018 The Tekton Authors
+# Copyright 2019 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,12 +23,7 @@
 
 source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
-IS_TEKTONCD_LISTENER_ONLY=0
-IS_WEBHOOKS_EXTENSION_ONLY=0
-
 CHANGED_FILES="$(list_changed_files)"
-pr_only_contains "tekton-listener" && IS_TEKTONCD_LISTENER_ONLY=1
-pr_only_contains "webhooks-extension" && IS_WEBHOOKS_EXTENSION_ONLY=1
 
 function run() {
     folder=$1
@@ -40,15 +35,4 @@ function run() {
     return $exited
 }
 
-if (( IS_TEKTONCD_LISTENER_ONLY )); then
-    header "Only tekton-listener"
-    run tekton-listener $@ || exit 1
-elif (( IS_WEBHOOKS_EXTENSION_ONLY)); then
-    header "Only webhookS-extension"
-    run webhooks-extension $@ || exit 1
-else
-    header "All the tests"
-    run tekton-listener $@ || exited=1
-    run webhooks-extension $@ || exited=1
-    exit $exited
-fi
+run webhooks-extension $@ || exit 1
