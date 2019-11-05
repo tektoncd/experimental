@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2018 The Tekton Authors
+# Copyright 2019 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 set -e
 source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
-for p in webhooks-extension tekton-listener; do
+for p in webhooks-extension; do
     header "Publish image for ${p}"
     pushd $(dirname $0)/../${p} > /dev/null
     set +e
