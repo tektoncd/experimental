@@ -1,6 +1,6 @@
 # Installing on Red Hat OpenShift
 
-There are two procedures for installing the Tekton Dashboard and Webhooks Extension on OpenShift. The recommended approach is to use the operators provided as part of OpenShift 4.2 - but a couple of command-line based steps are currently required. Also note that this uses a (as of the 24th of October) unreleased version of the Serverless Operator (version 1.1.0). If it's in the operator catalog by the time you're using OpenShift 4.2, go ahead and skip the step involving cloning it from source.
+There are two procedures for installing the Tekton Dashboard and Webhooks Extension on OpenShift. The recommended approach is to use the operators provided as part of OpenShift 4.2 - but a couple of command-line based steps are currently required. A known good configuration is provided below and success has been reported with Knative 0.9 too.
 
 ## Install on Red Hat OpenShift 4.2
 
@@ -40,6 +40,8 @@ curl -L https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift
   | sed 's/default: tekton-pipelines/default: kabanero/' \
   | oc apply --filename -
 ```
+
+Note that an issue has been observed accessing the Tekton Dashboard route when you have a configured ServiceMeshMemberRoll. See the troubleshooting section under our Getting Started guide for more information.
 
 ### Pushing to the OpenShift registry using webhooks
 
