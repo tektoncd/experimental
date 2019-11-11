@@ -18,6 +18,10 @@ spec:
         description: The text of the failure comment
         default: "Failed"
         type: string
+      - name: commenttimeout
+        description: The text of the timeout comment
+        default: "Unknown"
+        type: string
       - name: dashboard-url
         description: The URL to the pipelineruns page of the dashboard
         default: "http://localhost:9097/"
@@ -45,6 +49,8 @@ spec:
         value: $(inputs.params.commentsuccess)
       - name: COMMENT_FAILURE
         value: $(inputs.params.commentfailure)
+      - name: COMMENT_TIMEOUT
+        value: $(inputs.params.commenttimeout)
       - name: URL
         value: $(inputs.params.dashboard-url)
       # This can be deleted after any fix to the above mentioned pending status change
@@ -115,7 +121,7 @@ spec:
                 runsFailed.append("[**$COMMENT_FAILURE**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
                 continue
               link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
-              runsIncomplete.append("[**??????**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
+              runsIncomplete.append("[**$COMMENT_TIMEOUT**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
             if len(runsIncomplete) == 0:
               break
           else:
@@ -196,6 +202,10 @@ spec:
     description: The text of the failure comment
     default: "Failed"
     type: string
+  - name: commenttimeout
+    description: The text of the timeout comment
+    default: "Unknown"
+    type: string
   - name: dashboardurl
     description: The URL to the pipelineruns page of the dashboard
     default: "http://localhost:9097/"
@@ -230,6 +240,8 @@ spec:
           value: $(params.commentsuccess)
         - name: commentfailure
           value: $(params.commentfailure)
+        - name: commenttimeout
+          value: $(params.commenttimeout)
         - name: dashboard-url
           value: $(params.dashboardurl)
         - name: secret
