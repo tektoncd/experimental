@@ -18,7 +18,7 @@ If the webhook is triggered due to a pull request being created (or updated with
 
 ![Error status on pull request](./images/errorStatus.png?raw=true "Error status shown on a GitHub pull request")
 
-5.  A comment is added to the pull request showing the result of the PipelineRun. The reported status operates as a hyperlink to the specific PipelineRun in the Tekton Dashboard, allowing you to quickly navigate to any relevant log files.  Note that `??????` as a status denotes that the PipelineRun had not completed before the monitor Task reached its maximum polling duration (30 mins).  
+5.  A comment is added to the pull request showing the result of the PipelineRun. The reported status operates as a hyperlink to the specific PipelineRun in the Tekton Dashboard, allowing you to quickly navigate to any relevant log files.  Note that `Unknown` as a status denotes that the PipelineRun had not completed before the monitor Task reached its maximum polling duration (30 mins).  
 
 ![PipelineRun status reporting](./images/comment.png?raw=true "PipelineRun status report as comment on GitHub pull request")
 

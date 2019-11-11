@@ -116,6 +116,7 @@ func TestGetParams(t *testing.T) {
 			PullTask:         "pulltask1",
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
+			OnTimeoutComment: "ontimeoutcomment1",
 		},
 		{
 			Name:             "name2",
@@ -126,6 +127,7 @@ func TestGetParams(t *testing.T) {
 			DockerRegistry:   "registry2",
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
+			OnTimeoutComment: "ontimeoutcomment2",
 		},
 		{
 			Name:             "name3",
@@ -168,6 +170,7 @@ func TestCreateEventListener(t *testing.T) {
 			PullTask:         "pulltask1",
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
+			OnTimeoutComment: "ontimeoutcomment1",
 		},
 		{
 			Name:             "name2",
@@ -178,6 +181,7 @@ func TestCreateEventListener(t *testing.T) {
 			DockerRegistry:   "registry2",
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
+			OnTimeoutComment: "ontimeoutcomment2",
 		},
 		{
 			Name:             "name3",
@@ -238,6 +242,7 @@ func TestUpdateEventListenerTriggerListing(t *testing.T) {
 			PullTask:         "pulltask1",
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
+			OnTimeoutComment: "ontimeoutcomment1",
 		},
 		{
 			Name:             "name2",
@@ -248,6 +253,7 @@ func TestUpdateEventListenerTriggerListing(t *testing.T) {
 			DockerRegistry:   "registry2",
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
+			OnTimeoutComment: "ontimeoutcomment2",
 		},
 		{
 			Name:             "name3",
@@ -323,6 +329,7 @@ func TestDeleteFromEventListener(t *testing.T) {
 			PullTask:         "pulltask1",
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
+			OnTimeoutComment: "ontimeoutcomment1",
 		},
 		{
 			Name:             "name2",
@@ -333,6 +340,7 @@ func TestDeleteFromEventListener(t *testing.T) {
 			DockerRegistry:   "registry2",
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
+			OnTimeoutComment: "ontimeoutcomment2",
 		},
 	}
 
@@ -412,6 +420,7 @@ func TestCreateAndDeleteWebhook(t *testing.T) {
 			ReleaseName:      "releasename1",
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
+			OnTimeoutComment: "ontimeoutcomment1",
 		},
 		{
 			Name:             "name2",
@@ -422,6 +431,7 @@ func TestCreateAndDeleteWebhook(t *testing.T) {
 			DockerRegistry:   "registry2",
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
+			OnTimeoutComment: "ontimeoutcomment2",
 		},
 		{
 			Name:             "name3",
@@ -575,6 +585,11 @@ func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedM
 		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentfailure", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnFailureComment}})
 	} else {
 		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentfailure", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Failed"}})
+	}
+	if hook.OnTimeoutComment != "" {
+		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnTimeoutComment}})
+	} else {
+		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Unknown"}})
 	}
 	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.AccessTokenRef}})
 	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretkeyname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}})
