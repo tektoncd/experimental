@@ -24,7 +24,7 @@ function validateInputs(value, id) {
       return false;
     }
 
-    if (/[^-.a-z0-9]/.test(trimmed)) {
+    if (!/[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/.test(trimmed)) {
       return false;
     }
   }
@@ -133,24 +133,6 @@ class WebhookCreatePage extends Component {
       document.getElementById(
         "serviceAccounts"
       ).firstElementChild.tabIndex = -1;
-    }
-  }
-
-  componentDidUpdate() {
-    if (this.props.namespaces) {
-      if (this.state.createSecretDisabled) {
-        if (this.state.newSecretName && this.state.newTokenValue) {
-          this.setState({
-            createSecretDisabled: false
-          })
-        }
-      } else {
-        if (!this.state.newSecretName || !this.state.newTokenValue) {
-          this.setState({
-            createSecretDisabled: true
-          })
-        }
-      }
     }
   }
 
@@ -295,6 +277,15 @@ class WebhookCreatePage extends Component {
     }
     return false
   }
+
+  isCreateSecretButtonDisabled = () => {
+    return (
+      !this.state.newSecretName ||
+      !this.state.newTokenValue ||
+      this.state.invalidFields.indexOf('newSecretName') > -1 ||
+      this.state.invalidFields.indexOf('newTokenValue') > -1
+    )
+  };
 
   createButtonIDForCSS = () => {
     if (this.isFormIncomplete()) {
@@ -721,7 +712,7 @@ class WebhookCreatePage extends Component {
               modalLabel=""
               modalHeading=""
               primaryButtonText="Create"
-              primaryButtonDisabled={this.state.createSecretDisabled}
+              primaryButtonDisabled={this.isCreateSecretButtonDisabled()}
               secondaryButtonText="Cancel"
               danger={false}
               onSecondarySubmit={() => this.toggleCreateDialog()}
@@ -750,6 +741,11 @@ class WebhookCreatePage extends Component {
                       onChange={this.handleModalText}
                       hideLabel
                       labelText="Secret Name"
+                      invalid={invalidFields.indexOf('newSecretName') > -1}
+                      invalidText={this.state.newSecretName === ''
+                        ? "Required"
+                        : "Must not start or end with - and be less than 253 characters, contain only lowercase alphanumeric characters or -"
+                      }
                     />
                   </div>
                 </div>
