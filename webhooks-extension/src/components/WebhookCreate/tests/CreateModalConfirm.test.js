@@ -116,5 +116,26 @@ describe('create secret', () => {
     expect(document.getElementsByClassName('notification').item(0).childElementCount).toBe(1);
     expect(document.getElementById('git').getElementsByClassName('bx--list-box__label').item(0).textContent).toBe("new-secret-foo")
   });
-  
+
+  it('Create Secret validates all empty inputs', async () => {
+    renderWithRouter(
+      <WebhookCreate
+        match={{}}
+        namespaces={namespaces}
+        pipelines={pipelines}
+        fetchPipelines={() => {}}
+        serviceAccounts={serviceAccounts}
+        fetchServiceAccounts={() => {}}
+        setShowNotificationOnTable={() => {}}
+      />
+    );
+
+    fireEvent.click(await waitForElement(() => document.getElementById('create-secret-button')));
+
+    const name = document.getElementById('secretName')
+    fireEvent.change(name, { target: { value: 'T' } });
+
+    expect(name.getAttribute('data-invalid')).toBeTruthy();
+  });
+
 })
