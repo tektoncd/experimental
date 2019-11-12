@@ -79,7 +79,6 @@ func (r Resource) createEventListener(webhook webhook, namespace, monitorTrigger
 			Triggers:           triggers,
 		},
 	}
-
 	return r.TriggersClient.TektonV1alpha1().EventListeners(namespace).Create(&eventListener)
 }
 
@@ -168,10 +167,13 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 	if saName == "" {
 		saName = "default"
 	}
-	_, _, repo, err := getGitValues(webhook.GitRepositoryURL)
+	server, org, repo, err := getGitValues(webhook.GitRepositoryURL)
 	if err != nil {
 		logging.Log.Errorf("error returned from getGitValues: %s", err)
 	}
+	server = strings.TrimPrefix(server, "https://")
+	server = strings.TrimPrefix(server, "http://")
+
 	releaseName := ""
 	if requestedReleaseName != "" {
 		logging.Log.Infof("Release name based on input: %s", requestedReleaseName)
@@ -182,15 +184,18 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 	}
 
 	hookParams := []pipelinesv1alpha1.Param{
-		{Name: "release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: releaseName}},
-		{Name: "target-namespace", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.Namespace}},
-		{Name: "service-account", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.ServiceAccount}}}
+		{Name: "webhooks-tekton-release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: releaseName}},
+		{Name: "webhooks-tekton-target-namespace", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.Namespace}},
+		{Name: "webhooks-tekton-service-account", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.ServiceAccount}},
+		{Name: "webhooks-tekton-git-server", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: server}},
+		{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}},
+		{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}}}
 
 	if webhook.DockerRegistry != "" {
-		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.DockerRegistry}})
+		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.DockerRegistry}})
 	}
 	if webhook.HelmSecret != "" {
-		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "helm-secret", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.HelmSecret}})
+		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-helm-secret", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.HelmSecret}})
 	}
 
 	onSuccessComment := webhook.OnSuccessComment

@@ -29,7 +29,7 @@ const pipelineRuns = [
   {
     metadata: {
       labels: {
-        gitBranch: "master"
+        "webhooks.tekton.dev/gitBranch": "master"
       }
     },
     status: {
@@ -44,7 +44,7 @@ const pipelineRuns = [
   {
     metadata: {
       labels: {
-        gitBranch: "branch1"
+        "webhooks.tekton.dev/gitBranch": "branch1"
       }
     },
     status: {

@@ -53,9 +53,9 @@ export class WebhookBranches extends Component {
       .fetchPipelineRuns(
         namespace,
         [
-          `gitOrg=${org}`,
-          `gitServer=${server}`,
-          `gitRepo=${repo}`,
+          `webhooks.tekton.dev/gitOrg=${org}`,
+          `webhooks.tekton.dev/gitServer=${server}`,
+          `webhooks.tekton.dev/gitRepo=${repo}`,
           `tekton.dev/pipeline=${pipeline}`
         ]
       )
@@ -77,17 +77,17 @@ export class WebhookBranches extends Component {
           )
           .reduce((result, pipelineRun) => {
             if (
-              branches.indexOf(pipelineRun.metadata.labels.gitBranch) === -1
+              pipelineRun.metadata.labels["webhooks.tekton.dev/gitBranch"] != undefined && branches.indexOf(pipelineRun.metadata.labels["webhooks.tekton.dev/gitBranch"]) === -1
             ) {
-              branches.push(pipelineRun.metadata.labels.gitBranch);
+              branches.push(pipelineRun.metadata.labels["webhooks.tekton.dev/gitBranch"]);
               const time = new Date(
                 pipelineRun.status.conditions[
                   pipelineRun.status.conditions.length - 1
                 ].lastTransitionTime
               );
               result.push({
-                id: `${pipelineRun.metadata.labels.gitBranch}-branch`,
-                branch: pipelineRun.metadata.labels.gitBranch,
+                id: `${pipelineRun.metadata.labels["webhooks.tekton.dev/gitBranch"]}-branch`,
+                branch: pipelineRun.metadata.labels["webhooks.tekton.dev/gitBranch"],
                 time: `${time.toLocaleDateString()} - ${time.toLocaleTimeString()}`,
                 status:
                   pipelineRun.status.conditions[
@@ -225,9 +225,8 @@ export class WebhookBranches extends Component {
         />
         {rows.length === 0 && !loading && (
           <div className="noBranches">
-            <p>
-              Unable to identify any PipelineRuns initiated by this webhook.
-            </p>
+            <p>Unable to identify any PipelineRuns initiated by this webhook.</p>
+            <a href="github.com/tektoncd/experimental/webhooks-extension/docs/Labels.md">Click here for help.</a>
           </div>
         )}
       </Modal>
