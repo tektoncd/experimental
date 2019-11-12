@@ -24,6 +24,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/api/extensions/v1beta1"
 	"net/http"
 	"os"
 	"strconv"
@@ -435,9 +437,9 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		}
 		_, varexists := os.LookupEnv("PLATFORM")
 		if !varexists {
-			ingressTaskRun, err := r.createIngressTaskRun("create", installNs)
+			err = r.createDeleteIngress("create", installNs)
 			if err != nil {
-				msg := fmt.Sprintf("error creating webhook due to error creating taskrun to create ingress. Error was: %s", err)
+				msg := fmt.Sprintf("error creating webhook due to error creating ingress. Error was: %s", err)
 				logging.Log.Errorf("%s", msg)
 				logging.Log.Debugf("Deleting eventlistener as failed creating Ingress")
 				err2 := r.TriggersClient.TektonV1alpha1().EventListeners(installNs).Delete(eventListenerName, &metav1.DeleteOptions{})
@@ -446,14 +448,6 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 					RespondError(response, errors.New(updatedMsg), http.StatusInternalServerError)
 					return
 				}
-				RespondError(response, errors.New(msg), http.StatusInternalServerError)
-				return
-			}
-
-			ingressTaskRunResult, err := r.checkTaskRunSucceeds(ingressTaskRun, installNs)
-			if !ingressTaskRunResult && err != nil {
-				msg := fmt.Sprintf("error creating webhook due to error in taskrun to create ingress. Error was: %s", err)
-				logging.Log.Errorf("%s", msg)
 				RespondError(response, errors.New(msg), http.StatusInternalServerError)
 				return
 			} else {
@@ -526,40 +520,57 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	response.WriteHeader(http.StatusCreated)
 }
 
-func (r Resource) createIngressTaskRun(mode, installNS string) (*pipelinesv1alpha1.TaskRun, error) {
-	// Unlike webhook creation, the ingress does not need a protocol specified
-	callback := strings.TrimPrefix(r.Defaults.CallbackURL, "http://")
-	callback = strings.TrimPrefix(callback, "https://")
+func (r Resource) createDeleteIngress(mode, installNS string) error {
+	if mode == "create" {
+		// Unlike webhook creation, the ingress does not need a protocol specified
+		callback := strings.TrimPrefix(r.Defaults.CallbackURL, "http://")
+		callback = strings.TrimPrefix(callback, "https://")
 
-	params := []pipelinesv1alpha1.Param{
-		{Name: "Mode", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: mode}},
-		{Name: "CallbackURL", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: callback}},
-		{Name: "EventListenerServiceName", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "el-" + eventListenerName}},
-		{Name: "EventListenerPort", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "8080"}}}
-
-	ingressTaskRun := pipelinesv1alpha1.TaskRun{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: mode + "-ingress-",
-			Namespace:    installNS,
-		},
-		Spec: pipelinesv1alpha1.TaskRunSpec{
-			Inputs: pipelinesv1alpha1.TaskRunInputs{
-				Params: params,
+		ingress := &v1beta1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "el-" + eventListenerName,
+				Namespace: installNS,
 			},
-			ServiceAccount: os.Getenv("SERVICE_ACCOUNT"),
-			TaskRef: &pipelinesv1alpha1.TaskRef{
-				Name: "ingress-task",
+			Spec: v1beta1.IngressSpec{
+				Rules: []v1beta1.IngressRule{
+					{
+						Host: callback,
+						IngressRuleValue: v1beta1.IngressRuleValue{
+							HTTP: &v1beta1.HTTPIngressRuleValue{
+								Paths: []v1beta1.HTTPIngressPath{
+									{
+										Backend: v1beta1.IngressBackend{
+											ServiceName: "el-" + eventListenerName, 
+											ServicePort: intstr.IntOrString{
+												Type: intstr.Int,
+												IntVal: 8080,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
-		},
+		}
+		ingress, err := r.K8sClient.ExtensionsV1beta1().Ingresses(installNS).Create(ingress)
+		if err != nil {
+			return err
+		}
+		logging.Log.Debug("Ingress has been created")
+		return nil
+	} else if mode == "delete" {
+		err := r.K8sClient.ExtensionsV1beta1().Ingresses(installNS).Delete("el-" + eventListenerName, &metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+		logging.Log.Debug("Ingress has been deleted")
+		return nil
+	} else {
+		logging.Log.Debug("Wrong mode")
+		return errors.New("Wrong mode for createDeleteIngress") 
 	}
-
-	tr, err := r.TektonClient.TektonV1alpha1().TaskRuns(installNS).Create(&ingressTaskRun)
-	if err != nil {
-		return &pipelinesv1alpha1.TaskRun{}, err
-	}
-	logging.Log.Debugf("Ingress being created under taskrun %s", tr.GetName())
-
-	return tr, nil
 }
 
 func (r Resource) createRouteTaskRun(mode, installNS string) (*pipelinesv1alpha1.TaskRun, error) {
@@ -822,17 +833,12 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerName, r
 
 		_, varExists := os.LookupEnv("PLATFORM")
 		if !varExists {
-			deleteIngressTaskRun, err := r.createIngressTaskRun("delete", installNS)
+			err = r.createDeleteIngress("delete", installNS)
 			if err != nil {
-				logging.Log.Errorf("error creating ingress deletion taskrun: %s", err)
-				return err
-			}
-			deleted, err := r.checkTaskRunSucceeds(deleteIngressTaskRun, installNS)
-			if !deleted && err != nil {
-				logging.Log.Errorf("error during ingress deletion taskrun: %s", err)
+				logging.Log.Errorf("error deleting ingress: %s", err)
 				return err
 			} else {
-				logging.Log.Debug("Ingress deletion taskrun succeeded")
+				logging.Log.Debug("Ingress deleted")
 				return nil
 			}
 		} else {
