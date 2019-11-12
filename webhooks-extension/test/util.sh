@@ -38,71 +38,103 @@ function install_tekton_triggers() {
 
 # Install Dashboard (https://github.com/tektoncd/dashboard)
 #
-# As of May 2nd this is a bit fraught since dashboard does not yet have images pushed to gcr.io
-# 
-# So: look to see if $GOPATH/src/github.com/tektoncd/dashboard exists
-# If it doesn't : check that the user is ok for us to clone and ko apply it
-# If it does: check that the user is ok for us to cd into and ko apply it
+# An option to clone dashboard is provided.
+# Installation process is either:
+# kubectl applying current release via github uri
+# kubectl applying gcr nightly build yaml
+# kubectl applying curled nightly build
+# ko apply development version
 
-function install_dashboard() { 
-  if [ -z "$1" ]; then
-        echo "Usage ERROR for function: install_dashboard [namespace]"
-        echo "Missing [namespace]"
-        exit 1
+function install_dashboard() {
+  if [ -z "$1" ] || [ -z "$2" ]; then
+      echo "Usage ERROR for function: install_webhooks_extension [namespace] [version] <sleepTime>"
+      [ -z "$1" ] && echo "Missing [namespace]"
+      [ -z "$2" ] && echo "Missing [version]"
+      exit 1
   fi
-  namespace="$1"
-  check GOPATH
-  check KO_DOCKER_REPO docker.io/your_docker_id
 
-  dashboard_dir=$GOPATH/src/github.com/tektoncd/dashboard 
-  if [ -d $dashboard_dir ]; then 
-    echo "Dashboard source detected at $dashboard_dir"
-    read -p "Do you wish to ko apply the current source? " -n 1 -r apply
+  version=$2
+  # Current Release
+  if [[ $version == "1" ]]; then
+    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/dashboard-latest-release.yaml
   else
-    echo "Dashboard source not detected in $dashboard_dir"
-    read -p "Do you wish to git clone and ko apply the master version? " -n 1 -r cloneAndApply
+    # Check if user has dashboard source cloned
+    dashboard_dir=$GOPATH/src/github.com/tektoncd/dashboard
+    if [ -d $dashboard_dir ]; then
+      # Notify and depending on [version] we will ko apply or kubectl apply gcr yaml
+      echo -e "\n\nDashboard source detected at $dashboard_dir"
+    else
+      echo -e "\n\nDashboard source not detected in $dashboard_dir"
+      if [[ $version != "3" ]]; then
+        read -p "Do you wish to git clone and ko apply the master version? " -n 1 -r cloneAndApply
+      fi
+      if [[ $cloneAndApply =~ ^[Yy]$ ]] || [[ $version == "3" ]]; then
+        pushd $GOPATH/src/github.com/tektoncd/
+        git clone https://github.com/tektoncd/dashboard.git
+        popd
+      else
+        # User does not want to clone repo therefore if user chooses to use the
+        # nightly build then the only way to get it is by curling it
+        echo -e "\nCurling and applying nightly build...."
+        curl -L https://github.com/tektoncd/dashboard/releases/download/v0/gcr-tekton-dashboard.yaml | kubectl apply -f -
+      fi
+    fi
+
+    # At this point the dashboard has been cloned and the only thing left to do
+    # is ko apply or kubectl apply gcr yaml
+    if [[ $version == "3" ]]; then
+      pushd $GOPATH/src/github.com/tektoncd/dashboard
+      docker login
+      npm ci
+      npm run build_ko
+      dep ensure -v
+      timeout 60 "ko apply -f config -n $namespace"
+      popd
+    elif [[ $cloneAndApply =~ ^[Yy]$ ]] || [[ -d $dashboard_dir ]]; then
+      pushd $GOPATH/src/github.com/tektoncd/dashboard
+      kubectl apply -f config/release/gcr-tekton-dashboard.yaml
+      popd
+    fi
   fi
-  if [[ $cloneAndApply =~ ^[Yy]$ ]]; then
-    pushd $GOPATH/src/github.com/tektoncd/
-    git clone https://github.com/tektoncd/dashboard.git
+}
+
+# Install webhooks extension (https://github.com/tektoncd/experimental/tree/master/webhooks-extension)
+#
+# Installation process is either:
+# kubectl applying gcr current releaseyaml
+# kubectl applying gcr nightly build yaml
+# ko apply development version
+function install_webhooks_extension() {
+  if [ -z "$1" ] || [ -z "$2" ]; then
+      echo "Usage ERROR for function: install_webhooks_extension [namespace] [version] <sleepTime>"
+      [ -z "$1" ] && echo "Missing [namespace]"
+      [ -z "$2" ] && echo "Missing [version]"
+      exit 1
+  fi
+
+  version=$2
+
+  # Current Release
+  if [[ $version == "1" ]]; then
+    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml
+  # Nightly Build
+  elif [[ $version == "2" ]]; then
+    pushd $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension
+    kubectl apply -f config/latest/gcr-tekton-webhooks-extension.yaml
     popd
-    apply="y"
-  fi
-  if [[ $apply =~ ^[Yy]$ ]]; then
-    pushd $GOPATH/src/github.com/tektoncd/dashboard
+  # Development Version
+  else
+    pushd $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension
+    sed -i .previous -e "s/IPADDRESS/$IPADDRESS/g" config/extension-deployment.yaml
+    rm config/extension-deployment.yaml.previous
+    namespace=$1
     docker login
-    npm install
+    npm ci
     npm run build_ko
     dep ensure -v
     timeout 60 "ko apply -f config -n $namespace"
     popd
   fi
-}
-
-# Install https://github.com/tektoncd/experimental/tree/master/webhooks-extension
-function install_webhooks_extension() { 
-  check GOPATH
-  check KO_DOCKER_REPO 'export KO_DOCKER_REPO=docker.io/your_docker_id'
-
-  pushd $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension
-  if [ -z "$1" ]; then
-    echo "Usage ERROR for function: install_webhooks_extension [target-namespace]"
-    echo "Missing [namespace]"
-    exit 1
-  fi 
-
-  sed -i .previous -e "s/IPADDRESS/$IPADDRESS/g" config/extension-deployment.yaml
-  rm config/extension-deployment.yaml.previous
-  
-  namespace=$1
-  docker login
-  npm ci
-  npm rebuild node-sass
-  npm run build_ko
-  dep ensure -v
-  timeout 60 "ko apply -f config -n $namespace"
-  popd
-  wait_for_ready_pods $namespace 60 10
 }
 
 function install_nginx() {

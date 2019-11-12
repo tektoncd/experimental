@@ -554,7 +554,7 @@ spec:
       description: Whether to create or delete an Ingress
       default: "create"
       type: string
-     - name: CallbackURL 
+    - name: CallbackURL
       description: The external access URL
       default: "listener.replaceme.nip.io"
       type: string
