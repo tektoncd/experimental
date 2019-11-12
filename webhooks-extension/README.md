@@ -4,7 +4,7 @@
 
 The Webhooks Extension for Tekton allows users to set up GitHub webhooks that will trigger Tekton `PipelineRuns` and associated `TaskRuns`.  This is possible via an extension to the Tekton Dashboard and via REST endpoints.
 
-See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide for more on what this extension does, and how to use it. 
+See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide for more on what this extension does, and how to use it.
 
   ![Create webhook page in dashboard](./docs/images/createWebhook.png?raw=true "Create webhook page in dashboard")
 
@@ -19,7 +19,10 @@ The link below does not contain all the information needed at this time - this m
 
 ~~[Installing Official Release (stable)](./docs/InstallReleaseBuild.md)~~  
 
-[Installing Development Build (nightly)](./docs/InstallNightlyBuild.md)  
+[Installing Development Build (nightly)](./docs/InstallNightlyBuild.md)
+
+As a convenience, the **/test/install_dashboard_and_extension.sh** script can be
+used to install a specified version of the dashboard and the webhook extension.  
 
 ### Usage Guides
 
