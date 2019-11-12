@@ -255,12 +255,12 @@
   revision = "6d48de8ce56462930f9dcab00029d86a9fa59b3f"
 
 [[projects]]
-  digest = "1:46aea6ffe39c3d95c13640c2515236ed3c5cdffc3c78c6c0ed4edec2caf7a0dc"
+  digest = "1:5a68167017eaa32aa408397806b9d69815244238ed774439a8863ef4bc329eeb"
   name = "github.com/tidwall/gjson"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c5e72cdf74dff23857243dd662c465b810891c21"
-  version = "v1.3.2"
+  revision = "c34bf81952c067718854115564f8e55978be5e1d"
+  version = "v1.3.4"
 
 [[projects]]
   digest = "1:8453ddbed197809ee8ca28b06bd04e127bec9912deb4ba451fea7a1eca578328"
@@ -398,14 +398,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7b5ce208ea2ca1f96322e6a5b616839fe49ea798648a013039f300475a1aadfc"
+  digest = "1:a0e46a43516d3f5ff0ba3636488b8a8df632b2986da49823cd8340c070c1a125"
   name = "golang.org/x/xerrors"
   packages = [
     ".",
     "internal",
   ]
   pruneopts = "UT"
-  revision = "a985d3407aa71f30cf86696ee0a2f409709f22e1"
+  revision = "1b5146add8981d58be77b16229c0ff0f8bebd8c1"
 
 [[projects]]
   digest = "1:e0a1881f9e0564bebdeac98c75e59f07acdde6ed3a5396e0e613eaad31194866"
@@ -708,11 +708,11 @@
   name = "k8s.io/kube-openapi"
   packages = ["pkg/util/proto"]
   pruneopts = "UT"
-  revision = "0270cf2f1c1d995d34b36019a6f65d58e6e33ad4"
+  revision = "30be4d16710ac61bce31eb28a01054596fe6a9f1"
 
 [[projects]]
   branch = "master"
-  digest = "1:e54cc05310fe584480fdf69d3548160f40c8ca4bd08f148282238f7b0172b250"
+  digest = "1:156f51e433a73aa3b879bfdb54add97e544278b854a51095d280cddf06aa6d0a"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -720,12 +720,11 @@
     "apis/duck/v1",
     "apis/duck/v1alpha1",
     "apis/duck/v1beta1",
-    "apis/v1alpha1",
     "configmap",
     "kmp",
   ]
   pruneopts = "UT"
-  revision = "9c320664c8c479daae224db1f8b5579235bbe567"
+  revision = "6335100d292c9ff09161c5c11714ffb8cc4c730a"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -743,6 +742,7 @@
     "github.com/tektoncd/triggers/pkg/client/clientset/versioned/fake",
     "go.uber.org/zap",
     "k8s.io/api/core/v1",
+    "k8s.io/api/extensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
