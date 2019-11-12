@@ -550,19 +550,30 @@ func createDashboardService(name, labelValue string) *corev1.Service {
 }
 
 func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedMonitorParams []pipelinesv1alpha1.Param) {
+	url := strings.TrimPrefix(hook.GitRepositoryURL, "https://")
+	url = strings.TrimPrefix(url, "http://")
+
+	server := url[0:strings.Index(url, "/")]
+	org := strings.TrimPrefix(url, server+"/")
+	org = org[0:strings.Index(org, "/")]
+	repo := url[strings.LastIndex(url, "/")+1:]
+
 	expectedHookParams = []pipelinesv1alpha1.Param{}
 	if hook.ReleaseName != "" {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.ReleaseName}})
+		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.ReleaseName}})
 	} else {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.GitRepositoryURL[strings.LastIndex(hook.GitRepositoryURL, "/")+1:]}})
+		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.GitRepositoryURL[strings.LastIndex(hook.GitRepositoryURL, "/")+1:]}})
 	}
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "target-namespace", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.Namespace}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "service-account", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.ServiceAccount}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-target-namespace", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.Namespace}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-service-account", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.ServiceAccount}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-server", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: server}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}})
 	if hook.DockerRegistry != "" {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.DockerRegistry}})
+		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.DockerRegistry}})
 	}
 	if hook.HelmSecret != "" {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "helm-secret", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.HelmSecret}})
+		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-helm-secret", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.HelmSecret}})
 	}
 
 	expectedMonitorParams = []pipelinesv1alpha1.Param{}

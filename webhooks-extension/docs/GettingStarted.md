@@ -95,6 +95,8 @@ Select the Kubernetes namespace in which the triggered Pipeline should run.
 
 Select the Pipeline in the target Namespace from which a PipelineRun (and accompanying PipelineResources) will be created, as described in the section 'What does the Tekton Dashboard's Webhooks Extension do?', above. Note that you need to have related Tekton Trigger resources installed in the install namespace (rather than the target namespace), these resources being; a triggertemplate called `<pipeline-name>-template` and two triggerbindings `<pipeline-name>-push-binding` and `<pipeline-name>-pullrequest-binding`.
 
+Note that a number of [parameters](./Parameters.md) are automatically made available for use in your triggertemplate and additional [labelling](./Labels.md) is required to enable some UI filtering functionality.
+
 ### Service Account
 
 This field specifies the service account that will be used by the PipelineRun. It should be the same service account that you set up RBAC permissions for in the section 'Setting up a webhook from scratch' and that you patched credentials onto in the sections, 'Create credentials: Git' and 'Create credentials: Docker', above.

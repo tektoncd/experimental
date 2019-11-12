@@ -24,6 +24,8 @@ The link below does not contain all the information needed at this time - this m
 ### Usage Guides
 
 [Getting Started](./docs/GettingStarted.md)  
+[Parameters Available To Trigger Templates](./docs/Parameters.md)  
+[Labelling Pipeline Runs For UI Display](./docs/Labels.md)  
 [Multiple Pipelines](./docs/MultiplePipelines.md)  
 [Pull Request Status Updates](./docs/Monitoring.md)  
 [Additional Notes If Using Red Hat OpenShift](./docs/NotesOnOpenShiftInstallations.md)  

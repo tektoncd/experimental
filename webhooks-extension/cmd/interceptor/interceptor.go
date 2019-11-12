@@ -36,6 +36,16 @@ type Result struct {
 	} `json:"repository"`
 }
 
+type PushPayload struct {
+	github.WebHookPayload
+	WebhookBranch string `json:"webhooks-tekton-git-branch"`
+}
+
+type PullRequestPayload struct {
+	github.PullRequestEvent
+	WebhookBranch string `json:"webhooks-tekton-git-branch"`
+}
+
 func main() {
 	log.Print("Interceptor started")
 
@@ -116,8 +126,15 @@ func main() {
 			}
 
 			if validationPassed {
+				returnPayload, err := addBranchToPayload(request.Header.Get("X-Github-Event"), payload)
+				if err != nil {
+					log.Printf("[%s] Failed to add branch to payload processing Github event ID: %s. Error: %s", foundTriggerName, id, err.Error())
+					http.Error(writer, fmt.Sprint(err), http.StatusInternalServerError)
+					return
+				}
+
 				log.Printf("[%s] Validation PASS so writing response", foundTriggerName)
-				_, err := writer.Write(payload)
+				_, err = writer.Write(returnPayload)
 				if err != nil {
 					log.Printf("[%s] Failed to write response for Github event ID: %s. Error: %s", foundTriggerName, id, err.Error())
 					http.Error(writer, fmt.Sprint(err), http.StatusInternalServerError)
@@ -136,6 +153,37 @@ func main() {
 	})
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", 8080), nil))
+}
+
+func addBranchToPayload(event string, payload []byte) ([]byte, error) {
+	if "push" == event {
+		var toReturn PushPayload
+		var p github.WebHookPayload
+		err := json.Unmarshal(payload, &p)
+		if err != nil {
+			return nil, err
+		}
+		toReturn = PushPayload{
+			WebHookPayload: p,
+			WebhookBranch:  p.GetRef()[strings.LastIndex(p.GetRef(), "/")+1:],
+		}
+		return json.Marshal(toReturn)
+	} else if "pull_request" == event {
+		var toReturn PullRequestPayload
+		var pr github.PullRequestEvent
+		err := json.Unmarshal(payload, &pr)
+		if err != nil {
+			return nil, err
+		}
+		ref := pr.GetPullRequest().GetHead().GetRef()
+		toReturn = PullRequestPayload{
+			PullRequestEvent: pr,
+			WebhookBranch:    ref[strings.LastIndex(ref, "/")+1:],
+		}
+		return json.Marshal(toReturn)
+	} else {
+		return payload, nil
+	}
 }
 
 func sanitizeGitInput(input string) string {
