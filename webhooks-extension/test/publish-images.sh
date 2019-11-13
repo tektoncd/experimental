@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2018 The Tekton Authors
+# Copyright 2019 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ npm run build_ko
 
 export KO_DOCKER_REPO=gcr.io/tekton-nightly
 
-for img in extension sink; do
+for img in extension interceptor; do
     # Publish the image
     IMAGE=$(ko publish ./cmd/${img} 2>&1 | grep "Published ${KO_DOCKER_REPO}/${img}" | sed -n -r '/[0-9]+\/[0-9]+\/[0-9]+ [0-9]+:[0-9]+:[0-9]+.*Published/ { s/.*Published //;p}')
 
