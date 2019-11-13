@@ -268,7 +268,7 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    tekton-dashboard-bundle-location: web/extension.f7de3a6e.js
+    tekton-dashboard-bundle-location: web/extension.3db259b9.js
     tekton-dashboard-display-name: Webhooks
     tekton-dashboard-endpoints: webhooks.web
   labels:

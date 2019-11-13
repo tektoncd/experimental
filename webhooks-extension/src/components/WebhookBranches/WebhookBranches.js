@@ -13,6 +13,7 @@ limitations under the License.
 
 import React, { Component } from 'react';
 import { Modal } from 'carbon-components-react';
+import { getDashboardAPIRoot } from '../../api';
 
 import './WebhookBranches.scss';
 
@@ -48,6 +49,10 @@ export class WebhookBranches extends Component {
       .toLowerCase()
       .replace(/https?:\/\//, "")
       .split("/");
+    
+    if (repo != undefined && repo.endsWith(".git")) {
+      repo = repo.substring(0, repo.length - 4);
+    }
 
     this.props
       .fetchPipelineRuns(
@@ -112,6 +117,24 @@ export class WebhookBranches extends Component {
           });
         });
       });
+  }
+
+  formatCellContent(id, value, ns, pipe, repourl) {
+    // Render the branch as a clickable link
+    let url = new URL(repourl);
+    let server = url.hostname;
+    let org = url.pathname.split('/')[1].toLowerCase()
+    let repo = url.pathname.split('/')[2].toLowerCase()
+    if (repo != undefined && repo.toLowerCase().endsWith(".git")) {
+      repo = repo.substring(0, repo.length - 4);
+    }
+    if (id.endsWith(":branch")) {
+      const dashboardAPIRoot = getDashboardAPIRoot();
+      let uri = `${dashboardAPIRoot}/#/namespaces/${ns}/pipelineruns?labelSelector=tekton.dev%2Fpipeline%3D${pipe}%2Cwebhooks.tekton.dev%2FgitServer%3D${server}%2Cwebhooks.tekton.dev%2FgitOrg%3D${org}%2Cwebhooks.tekton.dev%2FgitRepo%3D${repo}%2Cwebhooks.tekton.dev%2FgitBranch%3D${value}`
+      return <a href={uri} rel="noopener noreferrer">{value}</a>
+    } else {
+      return value
+    }
   }
 
   render() {
@@ -212,7 +235,7 @@ export class WebhookBranches extends Component {
                               index === row.cells.length - 1 ? cell.value : null
                             }
                           >
-                            {cell.value}
+                            {this.formatCellContent(cell.id, cell.value, this.props.webhook.namespace, this.props.webhook.pipeline, this.props.webhook.url)}
                           </TableCell>
                         ))}
                       </TableRow>

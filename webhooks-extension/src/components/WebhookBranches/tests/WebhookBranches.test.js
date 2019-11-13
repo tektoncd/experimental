@@ -20,7 +20,7 @@ import 'react-testing-library/cleanup-after-each';
 beforeEach(jest.restoreAllMocks);
 
 const webhook = {
-  url: "https://githuub.com/someUser/someRepo",
+  url: "https://github.com/someUser/someRepo",
   namespace: "default",
   pipeline: "pipeline1"
 };
@@ -29,6 +29,9 @@ const pipelineRuns = [
   {
     metadata: {
       labels: {
+        "webhooks.tekton.dev/gitServer": "github.com",
+        "webhooks.tekton.dev/gitOrg": "someUser",
+        "webhooks.tekton.dev/gitRepo": "someRepo",
         "webhooks.tekton.dev/gitBranch": "master"
       }
     },
@@ -44,6 +47,9 @@ const pipelineRuns = [
   {
     metadata: {
       labels: {
+        "webhooks.tekton.dev/gitServer": "github.com",
+        "webhooks.tekton.dev/gitOrg": "someUser",
+        "webhooks.tekton.dev/gitRepo": "someRepo",
         "webhooks.tekton.dev/gitBranch": "branch1"
       }
     },
