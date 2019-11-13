@@ -59,6 +59,6 @@ spec:
 
 Once these steps have been taken, new pipelineruns will be configured correctly such that clicking on a webhook will render a listing similar to the image below:
 
-IMG TO BE ADDED UNDER ISSUE 49
+![Latest pipelinerun status for a webhook, displayed by branch with clickable link](./images/webhookBranches.png?raw=true "Latest pipelinerun status for a webhook, displayed by branch with clickable link")
 
 Clicking on the branch name will navigate to a filtered list of pipelineruns for this pipeline running against the specific branch of the repository.
