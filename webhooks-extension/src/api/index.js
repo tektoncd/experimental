@@ -16,12 +16,6 @@ import { get, post, deleteRequest } from './comms';
 const apiRoot = getAPIRoot();
 const dashboardAPIRoot = getDashboardAPIRoot();
 
-// Defined here for ease of mocking to test: would be great to remove
-// perhaps using enzyme and mocking state?
-export function getSelectedRows(selectedRows) {
-  return selectedRows
-}
-
 export function getAPIRoot() {
   const { href, hash } = window.location;
   let realHash = 'v1/extensions/webhooks-extension';

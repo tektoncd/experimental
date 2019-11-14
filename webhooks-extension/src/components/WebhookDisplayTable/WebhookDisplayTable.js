@@ -17,7 +17,7 @@ import '../WebhookCreate/WebhookCreate.scss';
 import Delete from '@carbon/icons-react/lib/delete/16';
 import AddAlt16 from '@carbon/icons-react/lib/add--alt/16';
 import { Modal, Checkbox } from 'carbon-components-react';
-import { getWebhooks, deleteWebhooks, getSelectedRows } from '../../api';
+import { getWebhooks, deleteWebhooks } from '../../api';
 
 import { Link, Redirect } from 'react-router-dom';
 import { WebhookBranches } from '../WebhookBranches';
@@ -66,6 +66,7 @@ export class WebhookDisplayTable extends Component {
     notificationStatusMsgShort: 'Webhook created successfully.',
     selectedWebhook: null,
     deletingWebhook: false,
+    showNotificationOnTable: false,
     overlayClassName: 'overlay-disabled'
   };
 
@@ -103,16 +104,18 @@ export class WebhookDisplayTable extends Component {
 
   showDeleteDialogHandlerInvisible = () => {
     this.setState({
-      showDeleteDialog: false
+      showDeleteDialog: false,
+      batchActions: null,
     });
   }
 
-  showDeleteDialogHandlerVisible = rowsInput => {
+  showDeleteDialogHandlerVisible = (rowsInput, batchActions) => {
     if (rowsInput.length > 0) {
       this.setState({
         showDeleteDialog: true,
         checked: false,
         userSelectedRows: rowsInput,
+        batchActions: batchActions,
       });
     } else {
       this.setState({
@@ -132,7 +135,7 @@ export class WebhookDisplayTable extends Component {
         deleteRuns = true;
     }
 
-    let rowsToUse = getSelectedRows(this.state.userSelectedRows);
+    let rowsToUse = this.state.userSelectedRows;
 
     let deletePromises = [];
 
@@ -160,44 +163,47 @@ export class WebhookDisplayTable extends Component {
       showDeleteDialog: false,
     })
 
-    Promise.all(deletePromises).then( () => {
-      this.fetchWebhooksForTable();
-      if(this.state.webhooks.length - rowsToUse.length === 0){
-        this.props.setshowLastWebhookDeletedNotification(true);
-      }
-      else {
+    Promise.all(deletePromises)
+      .then(() => {
+        if(this.state.webhooks.length - rowsToUse.length === 0){
+          this.props.setshowLastWebhookDeletedNotification(true);
+        }
+        else {
+          this.setState({
+            showNotificationOnTable: true,
+            notificationStatus: 'success',
+            notificationStatusMsgShort: 'Webhook(s) deleted successfully.',
+            notificationMessage: '',
+            overlayClassName: 'overlay-disabled',
+            deletingWebhook: false,
+          });
+        }
+      })
+      .catch(() => {
+        let notificationStatusToSet = '';
+        let notificationMessageToSet = '';
+        let notificationFullMessage = '';
+
+        if (displayTimeoutWarningNotification) {
+          notificationStatusToSet = 'warning'
+          notificationMessageToSet = 'Warning - timed out waiting to delete webhooks and potentially PipelineRuns: manually check the resources were deleted.';
+        } else {
+          notificationStatusToSet = 'error'
+          notificationMessageToSet =  'An error occurred deleting webhook(s).';
+          notificationFullMessage = 'Check the webhook(s) existed and both the dashboard and extension pods are healthy.';
+        }
         this.setState({
           showNotificationOnTable: true,
-          notificationStatus: 'success',
-          notificationStatusMsgShort: 'Webhook(s) deleted successfully.',
-          notificationMessage: '',
+          notificationStatus: notificationStatusToSet,
+          notificationStatusMsgShort: notificationMessageToSet,
+          notificationMessage: notificationFullMessage,
           overlayClassName: 'overlay-disabled',
           deletingWebhook: false,
         });
-      }
-     }).catch( () => {
-      this.fetchWebhooksForTable();
-      let notificationStatusToSet = '';
-      let notificationMessageToSet = '';
-      let notificationFullMessage = '';
-
-      if (displayTimeoutWarningNotification) {
-        notificationStatusToSet = 'warning'
-        notificationMessageToSet = 'Warning - timed out waiting to delete webhooks and potentially PipelineRuns: manually check the resources were deleted.';
-      } else {
-        notificationStatusToSet = 'error'
-        notificationMessageToSet =  'An error occurred deleting webhook(s).';
-        notificationFullMessage = 'Check the webhook(s) existed and both the dashboard and extension pods are healthy.';
-      }
-      this.setState({
-        showNotificationOnTable: true,
-        notificationStatus: notificationStatusToSet,
-        notificationStatusMsgShort: notificationMessageToSet,
-        notificationMessage: notificationFullMessage,
-        overlayClassName: 'overlay-disabled',
-        deletingWebhook: false,
+      })
+      .finally(() => {
+        this.fetchWebhooksForTable();
       });
-    });
   }
 
   togglePipelineRunClicked = () => {
@@ -282,7 +288,7 @@ export class WebhookDisplayTable extends Component {
                   lowContrast>
                 </InlineNotification>
               )}
-              {this.state.deletingWebhook && !this.state.showNotificationOnTable && (
+              {this.state.deletingWebhook && (
                 <InlineNotification
                   kind='info'
                   subtitle={<InlineLoading
@@ -332,7 +338,7 @@ export class WebhookDisplayTable extends Component {
                     </div>
                     <TableToolbar>
                       <TableBatchActions {...getBatchActionProps()}>
-                        <TableBatchAction id="delete-btn" renderIcon={Delete} onClick={() => {this.showDeleteDialogHandlerVisible(selectedRows)}}>Delete</TableBatchAction>
+                        <TableBatchAction id="delete-btn" renderIcon={Delete} onClick={() => {this.showDeleteDialogHandlerVisible(selectedRows, getBatchActionProps())}}>Delete</TableBatchAction>
                       </TableBatchActions>
                     </TableToolbar>
                     {
