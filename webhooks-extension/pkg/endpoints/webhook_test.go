@@ -598,6 +598,7 @@ func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedM
 }
 
 func getExpectedTriggers(hook webhook, monitorTriggerName string, r *Resource) []v1alpha1.EventListenerTrigger {
+	actions = pipelinesv1alpha1.Param{Name: "Wext-Incoming-Actions", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "opened,reopened,synchronize"}}
 	expectedHookParams, expectedMonitorParams := getExpectedParams(hook, r)
 	push := createTrigger(hook.Name+"-"+hook.Namespace+"-push-event",
 		hook.Pipeline+"-push-binding",
@@ -616,6 +617,7 @@ func getExpectedTriggers(hook webhook, monitorTriggerName string, r *Resource) [
 		hook.AccessTokenRef,
 		expectedHookParams,
 		r)
+	pullRequest.Interceptor.Header = append(pullRequest.Interceptor.Header, actions)
 
 	monitor := createTrigger(monitorTriggerName,
 		hook.PullTask+"-binding",
@@ -625,6 +627,7 @@ func getExpectedTriggers(hook webhook, monitorTriggerName string, r *Resource) [
 		hook.AccessTokenRef,
 		expectedMonitorParams,
 		r)
+	monitor.Interceptor.Header = append(monitor.Interceptor.Header, actions)
 
 	triggers := []v1alpha1.EventListenerTrigger{push, pullRequest, monitor}
 	return triggers

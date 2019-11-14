@@ -38,8 +38,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-var modifyingConfigMapLock sync.Mutex
-
+var (
+	modifyingConfigMapLock sync.Mutex
+	actions = pipelinesv1alpha1.Param{Name: "Wext-Incoming-Actions", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "opened,reopened,synchronize"}}
+)
 const eventListenerName = "tekton-webhooks-eventlistener"
 
 /*
@@ -64,6 +66,7 @@ func (r Resource) createEventListener(webhook webhook, namespace, monitorTrigger
 		"pull_request",
 		webhook.AccessTokenRef,
 		hookParams)
+	pullRequestTrigger.Interceptor.Header = append(pullRequestTrigger.Interceptor.Header, actions)
 
 	monitorTrigger := r.newTrigger(monitorTriggerName,
 		webhook.PullTask+"-binding",
@@ -72,6 +75,7 @@ func (r Resource) createEventListener(webhook webhook, namespace, monitorTrigger
 		"pull_request",
 		webhook.AccessTokenRef,
 		monitorParams)
+	monitorTrigger.Interceptor.Header = append(monitorTrigger.Interceptor.Header, actions)
 
 	triggers := []v1alpha1.EventListenerTrigger{pushTrigger, pullRequestTrigger, monitorTrigger}
 
@@ -109,6 +113,7 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 		"pull_request",
 		webhook.AccessTokenRef,
 		hookParams)
+	newPullRequestTrigger.Interceptor.Header = append(newPullRequestTrigger.Interceptor.Header, actions)
 
 	eventListener.Spec.Triggers = append(eventListener.Spec.Triggers, newPushTrigger)
 	eventListener.Spec.Triggers = append(eventListener.Spec.Triggers, newPullRequestTrigger)
@@ -128,6 +133,7 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 			"pull_request",
 			webhook.AccessTokenRef,
 			monitorParams)
+		newMonitor.Interceptor.Header = append(newMonitor.Interceptor.Header, actions)
 
 		eventListener.Spec.Triggers = append(eventListener.Spec.Triggers, newMonitor)
 	}
