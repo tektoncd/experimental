@@ -47,38 +47,6 @@ function fakeDeleteWebhooksFailure() {
   };
 }
 
-const fakeRowSelection = [
-  {
-    "id":"mywebhook|default",
-    "isSelected":true,
-    "isExpanded":false,
-    "cells":[
-      {
-        "id":"mywebhook|default:name","value":"mywebhook","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"name"
-        }
-      },
-      {
-        "id":"mywebhook|default:repository","value":"https://github.com/foo/bar","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"repository"
-        }
-      },
-      {
-        "id":"mywebhook|default:pipeline","value":"simple-helm-pipeline-insecure","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"pipeline"
-        }
-      },
-      {"id":"mywebhook|default:namespace","value":"default","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-      {
-        "header":"namespace"
-      }
-    }
-  ]}
-]
-
 const webhooks = [
   {
     id: '0|namespace',
@@ -98,14 +66,18 @@ const webhooks = [
 
 it('should display a success message on a good delete', async () => {
   let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
   let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
 
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
+  const { getByText, queryByTestId, getAllByLabelText } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*" setshowLastWebhookDeletedNotification={()=>{}} showNotificationOnTable={false}/>);
 
   expect(queryByTestId('webhook-notification')).toBeNull();
 
   await waitForElement(() => getByText('first test webhook'));
+
+  const checkbox = getAllByLabelText('Select row')[0];
+  await waitForElement(() => checkbox);
+
+  fireEvent.click(checkbox);
 
   const foundDeleteButton = document.getElementById('delete-btn');
   await waitForElement(() => foundDeleteButton);
@@ -116,66 +88,34 @@ it('should display a success message on a good delete', async () => {
   await waitForElement(() => foundDeleteButtonOnModal);
 
   expect(document.getElementsByClassName('bx--inline-loading__text').length).toBe(0);
-  
+
   fireEvent.click(foundDeleteButtonOnModal);
-  
+
   //check notification present
   expect(document.getElementsByClassName('bx--inline-loading__text').length).toBe(1);
   expect(document.getElementsByClassName('bx--inline-loading__text')[0].innerHTML).toBe("Webhook(s)&nbsp;under&nbsp;deletion, please do not navigate away from this page...");
 
 
   expect(getWebhooksMock).toHaveBeenCalled();
-  expect(getRowsMock).toHaveBeenCalled();
   expect(deleteWebhooksMock).toHaveBeenCalled();
-  
+
   await waitForElement(() => getByText('Webhook(s) deleted successfully.'));
 });
 
-it('should display an error message on delete with no webhook selected', async () => {
-  let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
-  let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
-
-  const { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
-
-  expect(queryByTestId('webhook-notification')).toBeNull();
-
-  await waitForElement(() => getByText('first test webhook'));
-
-  const foundDeleteButton = document.getElementById('delete-btn');
-  await waitForElement(() => foundDeleteButton);
-
-  // Delete a webhook successfully, this leaves the delete button visible with 0 selected afterwards
-  fireEvent.click(foundDeleteButton);
-
-  const foundDeleteButtonOnModal = document.getElementById('webhook-delete-modal').getElementsByClassName('bx--btn bx--btn--danger').item(0);
-  await waitForElement(() => foundDeleteButtonOnModal);
-
-  fireEvent.click(foundDeleteButtonOnModal);
-  
-  expect(getWebhooksMock).toHaveBeenCalled();
-  expect(getRowsMock).toHaveBeenCalled();
-  expect(deleteWebhooksMock).toHaveBeenCalled();
-  
-  await waitForElement(() => getByText('Webhook(s) deleted successfully.'));
-
-  // Click delete again and expect error notification
-  await waitForElement(() => foundDeleteButton);
-  fireEvent.click(foundDeleteButton);
-
-  await waitForElement(() => getByText('Error occurred deleting webhooks - no webhook was selected in the table.'));
-
-}, 7500);
-
-it('should display a fail message on a bad delete', async () => {  
+it('should display a fail message on a bad delete', async () => {
   jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-  jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowSelection);
-  jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.reject(fakeDeleteWebhooksFailure()));
+  jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.reject(fakeDeleteWebhooksFailure));
 
-  let { getByText, queryByTestId } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*"/>);
+  let { getByText, queryByTestId, getAllByLabelText } = renderWithRouter(<WebhookDisplayTable match={{}} selectedNamespace="*" setshowLastWebhookDeletedNotification={()=>{}} showNotificationOnTable={false}/>);
 
   expect(queryByTestId('webhook-notification')).toBeNull();
+
   await waitForElement(() => getByText('first test webhook'));
+
+  const checkbox = getAllByLabelText('Select row')[0];
+  await waitForElement(() => checkbox);
+
+  fireEvent.click(checkbox);
 
   const foundDeleteButton = document.getElementById('delete-btn');
   await waitForElement(() => foundDeleteButton);
@@ -185,17 +125,5 @@ it('should display a fail message on a bad delete', async () => {
   await waitForElement(() => foundDeleteButtonOnModal);
   fireEvent.click(foundDeleteButtonOnModal);
 
-  await waitForElement(() => getByText('An error occurred deleting webhook(s).')); 
-
-  jest.useFakeTimers();
-
-  setTimeout(() => {
-    expect(getByText('An error occurred deleting webhook(s).')).toBeInTheDocument
-  }, 1000);
-
-  setTimeout(() => {
-    expect(getByText('Check the webhook(s) existed and both the dashboard and extension pods are healthy.')).toBeInTheDocument
-  }, 1000);
-
-  jest.runAllTimers();
+  await waitForElement(() => getByText('An error occurred deleting webhook(s).'));
 });

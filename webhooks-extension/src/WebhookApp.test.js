@@ -63,96 +63,6 @@ function fakeDeleteWebhooksSuccess() {
   };
 }
 
-const fakeRowsSelection = [
-  {
-    "id":"mywebhook|default",
-    "isSelected":true,
-    "isExpanded":false,
-    "cells":[
-      {
-        "id":"mywebhook|default:name","value":"mywebhook","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"name"
-        }
-      },
-      {
-        "id":"mywebhook|default:repository","value":"https://github.com/foo/bar","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"repository"
-        }
-      },
-      {
-        "id":"mywebhook|default:pipeline","value":"simple-helm-pipeline-insecure","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"pipeline"
-        }
-      },
-      {"id":"mywebhook|default:namespace","value":"default","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-      {
-        "header":"namespace"
-      }
-    }
-  ]},
-  {
-    "id":"mywebhook2|default",
-    "isSelected":true,
-    "isExpanded":false,
-    "cells":[
-      {
-        "id":"mywebhook2|default:name","value":"mywebhook2","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"name"
-        }
-      },
-      {
-        "id":"mywebhook2|default:repository","value":"https://github.com/foo/bar","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"repository"
-        }
-      },
-      {
-        "id":"mywebhook2|default:pipeline","value":"simple-helm-pipeline-insecure","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"pipeline"
-        }
-      },
-      {"id":"mywebhook2|default:namespace","value":"default","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-      {
-        "header":"namespace"
-      }
-    }
-  ]},
-  {
-    "id":"mywebhook3|default",
-    "isSelected":true,
-    "isExpanded":false,
-    "cells":[
-      {
-        "id":"mywebhook3|default:name","value":"mywebhook3","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"name"
-        }
-      },
-      {
-        "id":"mywebhook3|default:repository","value":"https://github.com/foo/bar","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"repository"
-        }
-      },
-      {
-        "id":"mywebhook3|default:pipeline","value":"simple-helm-pipeline-insecure","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-        {
-          "header":"pipeline"
-        }
-      },
-      {"id":"mywebhook3|default:namespace","value":"default","isEditable":false,"isEditing":false,"isValid":true,"errors":null,"info":
-      {
-        "header":"namespace"
-      }
-    }
-  ]}
-]
-
 const secretsResponseMock = [
   {
     "name": "ghe",
@@ -225,9 +135,8 @@ const selectors = {
 };
 
 describe("change in components after last webhook(s) deleted & shows notification", () => {
-  const test = async (webhooks, fakeRowsSelected) => {
+  const test = async (webhooks) => {
     let getWebhooksMock = jest.spyOn(API, "getWebhooks").mockImplementation(() => Promise.resolve(webhooks));
-    let getRowsMock = jest.spyOn(API, "getSelectedRows").mockImplementation(() => fakeRowsSelected);
     let deleteWebhooksMock = jest.spyOn(API, "deleteWebhooks").mockImplementation(() => Promise.resolve(fakeDeleteWebhooksSuccess));
 
     const { getByText, queryByTestId } = renderWithRouter(
@@ -251,7 +160,6 @@ describe("change in components after last webhook(s) deleted & shows notificatio
     fireEvent.click(foundDeleteButtonOnModal);
 
     expect(getWebhooksMock).toHaveBeenCalled();
-    expect(getRowsMock).toHaveBeenCalled();
     expect(deleteWebhooksMock).toHaveBeenCalled();
 
     getWebhooksMock.mockImplementation(() => Promise.resolve([]));
@@ -263,14 +171,14 @@ describe("change in components after last webhook(s) deleted & shows notificatio
   }
 
   it('# of webhooks: 1', () => {
-    test([webhooks[0]], [fakeRowsSelection[0]]);
+    test([webhooks[0]]);
   });
 
   it('# of webhooks: 2', () => {
-    test(webhooks.slice(0,2), fakeRowsSelection.slice(0,2));
+    test(webhooks.slice(0,2));
   });
 
   it('# of webhooks: 3', () => {
-    test(webhooks, fakeRowsSelection);
+    test(webhooks);
   });
 });
