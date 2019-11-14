@@ -31,6 +31,7 @@ const (
 )
 
 type Result struct {
+	Action string `json:"action"`
 	Repository struct {
 		CloneURL string `json:"clone_url"`
 	} `json:"repository"`
@@ -113,8 +114,19 @@ func main() {
 				wantedEvent := request.Header.Get("Wext-Incoming-Event")
 				foundEvent := request.Header.Get("X-Github-Event")
 				if wantedEvent == foundEvent { // Wanted GitHub event type provided AND repository URL matches so all is well
-					validationPassed = true
-					log.Printf("[%s] Validation PASS (repository URL, secret payload, event type checked)", foundTriggerName)
+					wantedActions := request.Header["Wext-Incoming-Actions"]
+					if len(wantedActions) == 0 {  
+						validationPassed = true
+						log.Printf("[%s] Validation PASS (repository URL, secret payload, event type checked)", foundTriggerName)
+					} else {
+						actions := strings.Split(wantedActions[0], ",")
+						for _, action := range actions {
+							if action == result.Action {
+								validationPassed = true
+								log.Printf("[%s] Validation PASS (repository URL, secret payload, event type, action:%s checked)", foundTriggerName, action)
+							}
+						}
+					}
 				} else {
 					log.Printf("[%s] Validation FAIL (event type does not match, got %s but wanted %s)", foundTriggerName, foundEvent, wantedEvent)
 					http.Error(writer, fmt.Sprint(err), http.StatusExpectationFailed)
@@ -140,6 +152,8 @@ func main() {
 					http.Error(writer, fmt.Sprint(err), http.StatusInternalServerError)
 					return
 				}
+			} else {
+				http.Error(writer, "Validation failed", http.StatusExpectationFailed)
 			}
 		} else {
 			log.Printf("[%s] Validation FAIL (repository URL does not match, got %s but wanted %s): ",
