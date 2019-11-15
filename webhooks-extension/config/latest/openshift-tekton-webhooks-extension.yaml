@@ -640,7 +640,7 @@ spec:
     spec:
       containers:
         - name: validate
-          image: "gcr.io/tekton-nightly/webhooks-interceptor:latest"
+          image: "gcr.io/tekton-nightly/interceptor:latest"
           env:
             - name: INSTALLED_NAMESPACE
               valueFrom:
