@@ -45,18 +45,18 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
 
   * **To install a specific version:**
 
-    You need to use a URL that specifies the version you want to install, for example, for version 0.1.1:
+    You need to use a URL that specifies the version you want to install, for example, for version 0.2.0:
 
     _On Red Hat OpenShift:_
 
     ```bash
-    oc apply --filename https://github.com/tektoncd/dashboard/releases/previous/v0.1.1/openshift-webhooks-extension.yaml
+    oc apply --filename https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/openshift-webhooks-extension.yaml
     ```
 
     _On other Kubernetes environments:_
 
     ```bash
-    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/previous/v0.1.1/webhooks-extension_release.yaml
+    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/webhooks-extension_release.yaml
     ```
 
 <br/>
