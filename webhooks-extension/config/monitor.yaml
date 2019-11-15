@@ -160,8 +160,7 @@ spec:
       if not os.path.exists("/workspace/output/pull-request/"):
         os.makedirs("/workspace/output/pull-request/")
       if not os.path.exists("/workspace/output/pull-request/labels"):
-        os.makedirs("/workspace/output/pull-request/labels")
-        shutil.copyfile("/workspace/pull-request/labels/.MANIFEST","/workspace/output/pull-request/labels/.MANIFEST")
+        shutil.copytree("/workspace/pull-request/labels","/workspace/output/pull-request/labels")
       shutil.copyfile("/workspace/pull-request/base.json","/workspace/output/pull-request/base.json") 
       shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json") 
       EOF
