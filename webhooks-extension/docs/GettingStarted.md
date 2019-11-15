@@ -136,3 +136,39 @@ You can use `kubectl logs [pod-name] --all-containers` to check the output of ea
 ### 404 or 503 error in GitHub (red "x" next to your webhook)
 
 Sometimes the sink is not ready in time to receive a webhook event, and GitHub will report a 404 or 503 error. If this happens, you can redeliver the event from the GitHub webpage under the "Settings" > "Hooks" section to fix the problem.
+
+### Tekton Dashboard route is inaccessible in your web browser
+
+This can occur when you have the webhooks extension installed with a ServiceMeshMemberRoll and try to access the Tekton Dashboard:
+
+```
+Application is not available
+The application is currently not serving requests at this endpoint. It may not have been started or is still starting.
+
+Possible reasons you are seeing this page:
+
+The host doesn't exist. Make sure the hostname was typed correctly and that a route matching this hostname exists.
+The host exists, but doesn't have a matching path. Check if the URL path was typed correctly and that the route was created using the desired path.
+Route and path matches, but all pods are down. Make sure that the resources exposed by this route (pods, services, deployment configs, etc) have at least one pod running.
+```
+
+This is due to a usability "gotcha" with Service Mesh today. 
+
+It installs a NetworkPolicy in every namespace that's part of a member roll that restricts access to/from those namespaces. The assumption is that any traffic in/out of those namespaces should go via istio ingress gateways.
+
+You can get around this for now by adding your own NetworkPolicy allowing traffic to whatever pods (or all pods) in the namespace.
+
+You can apply a [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-allow-all-ingress-traffic) in the namespace that should be able to receive that traffic, for example, by `oc apply`ing this, while being in the same namespace that the Tekton Dashboard and Webhooks Extension is:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all
+spec:
+  podSelector: {}
+  ingress:
+  - {}
+  policyTypes:
+  - Ingress
+  ```
