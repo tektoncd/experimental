@@ -28,7 +28,7 @@ spec:
         type: string
       # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
       # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
-      # the github status URL to set the status into pending and use this secret to during that request.  
+      # the github status URL to set the status into pending and use this secret to during that request.
       - name: secret
         description: The secret containing the access token to access github
         type: string
@@ -62,7 +62,7 @@ spec:
     - |
       set -e
       cat <<EOF | python
-      import time, os, json, requests, pprint
+      import time, os, json, requests, pprint, shutil
       from kubernetes import client, config
       config.load_incluster_config()
       api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
@@ -137,6 +137,10 @@ spec:
                  "Status | Pipeline | PipelineRun | Namespace\n"
                  ":----- | :------- | :--------------- | :--------\n"
                  ) + "\n".join(results)
+      if not os.path.exists("/workspace/output/pull-request/labels"):
+        os.makedirs("/workspace/output/pull-request/labels")
+      if not os.path.exists("/workspace/output/pull-request/comments"):
+        os.makedirs("/workspace/output/pull-request/comments")
       handle = open("/workspace/pull-request/comments/newcomment.json", 'w')
       handle.write(comment)
       handle.close()
@@ -145,10 +149,14 @@ spec:
       else:
         detailsURL = "$URL" + "/#/pipelineruns"
       print("Set details url to: " + detailsURL)
-      status = json.dumps(dict(code=gitPRcode, description=gitPRdescription, id=gitPRcontext, url=detailsURL))
-      handle = open("/workspace/pull-request/status/newstatus.json", 'w')
+      status = json.dumps(dict(ID=gitPRcontext,Code=gitPRcode,Description=gitPRdescription,URL=detailsURL))
+      if not os.path.exists("/workspace/output/pull-request/status"):
+        os.makedirs("/workspace/output/pull-request/status")
+      handle = open("/workspace/output/pull-request/status/Tekton.json", 'w')
       handle.write(status)
       handle.close()
+      shutil.copyfile("/workspace/pull-request/base.json","/workspace/output/pull-request/base.json")
+      shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json")
       EOF
   - name: copy
     image: busybox
