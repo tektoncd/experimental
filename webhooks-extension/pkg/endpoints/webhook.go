@@ -14,24 +14,28 @@ limitations under the License.
 package endpoints
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	restful "github.com/emicklei/go-restful"
-	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
-	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/api/extensions/v1beta1"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	restful "github.com/emicklei/go-restful"
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
+	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
+	"golang.org/x/oauth2"
+	"golang.org/x/xerrors"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var modifyingConfigMapLock sync.Mutex
@@ -311,9 +315,6 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 
 	logging.Log.Infof("Webhook creation request received with request: %+v.", request)
 	installNs := r.Defaults.Namespace
-	if installNs == "" {
-		installNs = "default"
-	}
 
 	webhook := webhook{}
 	if err := request.ReadEntity(&webhook); err != nil {
@@ -321,6 +322,9 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		RespondError(response, err, http.StatusBadRequest)
 		return
 	}
+
+	// Sanitize GitRepositoryURL
+	webhook.GitRepositoryURL = strings.TrimSuffix(webhook.GitRepositoryURL, ".git")
 
 	if webhook.PullTask == "" {
 		webhook.PullTask = "monitor-task"
@@ -482,27 +486,23 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	}
 
 	if len(hooks) == 0 {
-		webhookTaskRun, err := r.createGitHubWebhookTaskRun("create", installNs, sanitisedURL, gitServer, webhook)
+		// Create webhook
+		err = r.doGitHubWebhookRequest(webhook, "subscribe", []string{"push", "pull_request"})
 		if err != nil {
-			msg := fmt.Sprintf("error creating taskrun to create github webhook. Error was: %s", err)
-			logging.Log.Errorf("%s", msg)
+			// Handle cleanup if it fails
+			// - remove from EventListener
+			// - delete ConfigMap entry?
+			// - delete EventListener?
 			err2 := r.deleteFromEventListener(webhook.Name+"-"+webhook.Namespace, installNs, monitorTriggerName, webhook.GitRepositoryURL)
 			if err2 != nil {
-				updatedMsg := fmt.Sprintf("error creating webhook creation taskrun. Also failed to cleanup and delete entry from eventlistener. Errors were: %s and %s", err, err2)
+				updatedMsg := fmt.Sprintf("error creating webhook. Also failed to cleanup and delete entry from eventlistener. Errors were: %s and %s", err, err2)
 				RespondError(response, errors.New(updatedMsg), http.StatusInternalServerError)
 				return
 			}
-			RespondError(response, errors.New(msg), http.StatusInternalServerError)
+			RespondError(response, err, http.StatusInternalServerError)
 			return
 		}
-		webhookTaskRunResult, err := r.checkTaskRunSucceeds(webhookTaskRun, installNs)
-		if !webhookTaskRunResult && err != nil {
-			msg := fmt.Sprintf("error in taskrun creating webhook. Error was: %s", err)
-			logging.Log.Errorf("%s", msg)
-			RespondError(response, errors.New(msg), http.StatusInternalServerError)
-			return
-		}
-		logging.Log.Debug("webhook taskrun succeeded")
+		logging.Log.Debug("webhook creation succeeded")
 	} else {
 		logging.Log.Debugf("webhook already exists for repository %s - not creating new hook in GitHub", sanitisedURL)
 	}
@@ -540,9 +540,9 @@ func (r Resource) createDeleteIngress(mode, installNS string) error {
 								Paths: []v1beta1.HTTPIngressPath{
 									{
 										Backend: v1beta1.IngressBackend{
-											ServiceName: "el-" + eventListenerName, 
+											ServiceName: "el-" + eventListenerName,
 											ServicePort: intstr.IntOrString{
-												Type: intstr.Int,
+												Type:   intstr.Int,
 												IntVal: 8080,
 											},
 										},
@@ -561,7 +561,7 @@ func (r Resource) createDeleteIngress(mode, installNS string) error {
 		logging.Log.Debug("Ingress has been created")
 		return nil
 	} else if mode == "delete" {
-		err := r.K8sClient.ExtensionsV1beta1().Ingresses(installNS).Delete("el-" + eventListenerName, &metav1.DeleteOptions{})
+		err := r.K8sClient.ExtensionsV1beta1().Ingresses(installNS).Delete("el-"+eventListenerName, &metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
@@ -569,7 +569,7 @@ func (r Resource) createDeleteIngress(mode, installNS string) error {
 		return nil
 	} else {
 		logging.Log.Debug("Wrong mode")
-		return errors.New("Wrong mode for createDeleteIngress") 
+		return errors.New("Wrong mode for createDeleteIngress")
 	}
 }
 
@@ -600,42 +600,6 @@ func (r Resource) createRouteTaskRun(mode, installNS string) (*pipelinesv1alpha1
 		return &pipelinesv1alpha1.TaskRun{}, err
 	}
 	logging.Log.Debugf("Route being created under taskrun %s", tr.GetName())
-
-	return tr, nil
-}
-
-func (r Resource) createGitHubWebhookTaskRun(mode, installNS, gitRepoURL, gitServer string, webhook webhook) (*pipelinesv1alpha1.TaskRun, error) {
-	params := []pipelinesv1alpha1.Param{
-		{Name: "Mode", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: mode}},
-		{Name: "CallbackURL", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: r.Defaults.CallbackURL}},
-		{Name: "GitHubRepoURL", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: gitRepoURL}},
-		{Name: "GitHubSecretName", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.AccessTokenRef}},
-		{Name: "GitHubAccessTokenKey", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}},
-		{Name: "GitHubUserNameKey", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: ""}},
-		{Name: "GitHubSecretStringKey", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "secretToken"}},
-		{Name: "GitHubServerUrl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: gitServer}}}
-
-	webhookTaskRun := pipelinesv1alpha1.TaskRun{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: mode + "-webhook-",
-			Namespace:    installNS,
-		},
-		Spec: pipelinesv1alpha1.TaskRunSpec{
-			Inputs: pipelinesv1alpha1.TaskRunInputs{
-				Params: params,
-			},
-			ServiceAccount: os.Getenv("SERVICE_ACCOUNT"),
-			TaskRef: &pipelinesv1alpha1.TaskRef{
-				Name: "webhook-task",
-			},
-		},
-	}
-
-	tr, err := r.TektonClient.TektonV1alpha1().TaskRuns(installNS).Create(&webhookTaskRun)
-	if err != nil {
-		return &pipelinesv1alpha1.TaskRun{}, err
-	}
-	logging.Log.Debugf("Webhook being created/deleted under taskrun %s", tr.GetName())
 
 	return tr, nil
 }
@@ -727,24 +691,13 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 			if len(webhooks) == 1 {
 				logging.Log.Debug("No other pipelines triggered by this GitHub webhook, deleting webhook")
 				remaining = 0
-				sanitisedURL := gitServer + "/" + gitOwner + "/" + gitRepo
-				deleteWebhookTaskRun, err := r.createGitHubWebhookTaskRun("delete", r.Defaults.Namespace, sanitisedURL, gitServer, hook)
+				// Delete webhook
+				err := r.doGitHubWebhookRequest(hook, "unsubscribe", []string{"push", "pull_request"})
 				if err != nil {
-					logging.Log.Error(err)
-					theError := errors.New("error during creation of taskrun to delete webhook. ")
-					RespondError(response, theError, http.StatusInternalServerError)
+					RespondError(response, err, http.StatusInternalServerError)
 					return
 				}
-
-				webhookDeleted, err := r.checkTaskRunSucceeds(deleteWebhookTaskRun, r.Defaults.Namespace)
-				if !webhookDeleted && err != nil {
-					logging.Log.Error(err)
-					theError := errors.New("error during taskrun deleting webhook.")
-					RespondError(response, theError, http.StatusInternalServerError)
-					return
-				} else {
-					logging.Log.Debug("Webhook deletion taskrun succeeded")
-				}
+				logging.Log.Debug("Webhook deletion succeeded")
 			} else {
 				remaining = len(webhooks) - 1
 			}
@@ -901,11 +854,6 @@ func (r Resource) deleteWebhookFromConfigMap(repository, webhookName, namespace 
 }
 
 func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Response) {
-	installNs := r.Defaults.Namespace
-	if installNs == "" {
-		installNs = "default"
-	}
-
 	logging.Log.Debugf("Get all webhooks")
 	sources, err := r.readGitHubWebhooksFromConfigMap()
 	if err != nil {
@@ -1106,4 +1054,40 @@ func (r Resource) RegisterWeb(container *restful.Container) {
 		handler = http.FileServer(http.Dir(webResourcesDir))
 	}
 	container.Handle("/web/", http.StripPrefix("/web/", handler))
+}
+
+// getWebhookSecretTokens returns the "secretToken" and "accessToken" stored in the Secret
+// with the name specified by the parameter, and in the namespace specified by r.Defaults.Namespace.
+func (r Resource) getWebhookSecretTokens(name string) (accessToken string, secretToken string, err error) {
+	// Access token is stored as 'accessToken' and secret as 'secretToken'
+	secret, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return "", "", xerrors.Errorf("error getting Webhook secret. Error was: %w", err)
+	}
+	accessToken = string(secret.Data["accessToken"])
+	secretToken = string(secret.Data["secretToken"])
+	return accessToken, secretToken, nil
+}
+
+// createOAuth2Client returns an HTTP client with oauth2 authentication using the provided accessToken
+func createOAuth2Client(ctx context.Context, accessToken string) *http.Client {
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
+	return oauth2.NewClient(ctx, ts)
+}
+
+// doGitHubWebhookRequest executes a GitHub PubSubHubbub request for the specified webhook.
+// hubMode: "subscribe" or "unsubscribe"
+// events: the list of events to subscribe to or unsubscribe from; for example, {"push", "pull_request"}
+func (r Resource) doGitHubWebhookRequest(webhook webhook, hubMode string, events []string) error {
+	// Access token is stored as 'accessToken' and secret as 'secretToken'
+	accessToken, secretToken, err := r.getWebhookSecretTokens(webhook.AccessTokenRef)
+	if err != nil {
+		return err
+	}
+
+	// Create http client
+	ctx := context.Background()
+	client := createOAuth2Client(ctx, accessToken)
+
+	return doGitHubHubbubRequest(client, webhook.GitRepositoryURL, hubMode, r.Defaults.CallbackURL, secretToken, events)
 }
