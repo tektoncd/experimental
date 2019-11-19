@@ -15,20 +15,23 @@ package endpoints
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	restful "github.com/emicklei/go-restful"
-	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+
+	restful "github.com/emicklei/go-restful"
+	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var server *httptest.Server
@@ -451,21 +454,6 @@ func TestCreateAndDeleteWebhook(t *testing.T) {
 		}
 	}
 	testGetAllWebhooks([]webhook{}, r, t)
-
-	for _, h := range hooks {
-		createTriggerResources(h, r)
-
-		resp := createWebhook(h, r)
-		if resp.StatusCode() != 201 {
-			t.Errorf("Webhook creation failed for webhook %s but was expected to succeed", h.Name)
-		}
-	}
-	testGetAllWebhooks(hooks, r, t)
-
-	// Delete the first webhook
-	deleteRequest, _ := http.NewRequest(http.MethodDelete, server.URL+"/webhooks/"+hooks[0].Name+"?namespace="+hooks[0].Namespace+"&repository="+hooks[0].GitRepositoryURL, nil)
-	http.DefaultClient.Do(deleteRequest)
-	testGetAllWebhooks(hooks[1:], r, t)
 }
 
 func TestDockerRegUnset(t *testing.T) {
@@ -762,6 +750,17 @@ func createTriggerResources(hook webhook, r *Resource) {
 		},
 	}
 
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      hook.AccessTokenRef,
+			Namespace: installNs,
+		},
+		Data: map[string][]byte{
+			"accessToken": []byte("access"),
+			"secretToken": []byte("secret"),
+		},
+	}
+
 	_, err := r.TriggersClient.TektonV1alpha1().TriggerTemplates(installNs).Create(&template)
 	if err != nil {
 		fmt.Printf("Error creating fake triggertemplate %s", template.Name)
@@ -774,7 +773,122 @@ func createTriggerResources(hook webhook, r *Resource) {
 	if err != nil {
 		fmt.Printf("Error creating fake triggerbinding %s", pullBinding.Name)
 	}
+	_, err = r.K8sClient.CoreV1().Secrets(installNs).Create(&secret)
+	if err != nil {
+		fmt.Printf("Error creating fake secret %s", secret.Name)
+	}
 
 	return
 
+}
+
+func Test_getWebhookSecretTokens(t *testing.T) {
+	// Access token is stored as 'accessToken' and secret as 'secretToken'
+	tests := []struct {
+		name            string
+		secret          *corev1.Secret
+		wantAccessToken string
+		wantSecretToken string
+	}{
+		{
+			name: "foo",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Data: map[string][]byte{
+					"accessToken": []byte("myAccessToken"),
+					"secretToken": []byte("mySecretToken"),
+				},
+			},
+			wantAccessToken: "myAccessToken",
+			wantSecretToken: "mySecretToken",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup resources
+			r := dummyResource()
+			if _, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Create(tt.secret); err != nil {
+				t.Errorf("getWebhookSecretTokens() error creating secret: %s", err)
+			}
+			// Test
+			gotAccessToken, gotSecretToken, err := r.getWebhookSecretTokens(tt.name)
+			if err != nil {
+				t.Errorf("getWebhookSecretTokens() returned an error: %s", err)
+			}
+			if tt.wantAccessToken != gotAccessToken {
+				t.Errorf("getWebhookSecretTokens() accessToken = %s, want %s", gotAccessToken, tt.wantAccessToken)
+			}
+			if tt.wantSecretToken != gotSecretToken {
+				t.Errorf("getWebhookSecretTokens() secretToken = %s, want %s", gotSecretToken, tt.wantSecretToken)
+			}
+		})
+	}
+}
+
+func Test_getWebhookSecretTokens_error(t *testing.T) {
+	// Access token is stored as 'accessToken' and secret as 'secretToken'
+	tests := []struct {
+		name   string
+		secret *corev1.Secret
+	}{
+		{
+			name: "namenotfound",
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Data: map[string][]byte{
+					"accessToken": []byte("myAccessToken"),
+					"secretToken": []byte("mySecretToken"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup resources
+			r := dummyResource()
+			if _, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Create(tt.secret); err != nil {
+				t.Errorf("getWebhookSecretTokens() error creating secret: %s", err)
+			}
+			// Test
+			if _, _, err := r.getWebhookSecretTokens(tt.name); err == nil {
+				t.Errorf("getWebhookSecretTokens() did not return an error when expected")
+			}
+		})
+	}
+}
+
+func Test_createOAuth2Client(t *testing.T) {
+	// Create client
+	accessToken := "foo"
+	ctx := context.Background()
+	client := createOAuth2Client(ctx, accessToken)
+	// Test
+	responseText := "my response"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if !strings.Contains(authHeader, accessToken) {
+			t.Errorf("createOAuth2Client() expected authHeader to contain: %s; authHeader is: %s", accessToken, authHeader)
+		}
+		_, err := w.Write([]byte(responseText))
+		if err != nil {
+			t.Errorf("createOAuth2Client() error writing response: %s", err)
+		}
+	}))
+	defer ts.Close()
+	resp, err := client.Get(ts.URL)
+	if err != nil {
+		t.Logf("createOAuth2Client() error sending request: %s", err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Logf("createOAuth2Client() error reading response body")
+	}
+	if string(body) != responseText {
+		t.Logf("createOAuth2Client() expected response text %s; got: %s", responseText, body)
+	}
 }

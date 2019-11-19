@@ -14,7 +14,6 @@ else
   kubectl delete deployment tekton-webhooks-extension-validator -n ${DASHBOARD_INSTALL_NS}
   kubectl delete service webhooks-extension -n ${DASHBOARD_INSTALL_NS}
   kubectl delete service tekton-webhooks-extension-validator -n ${DASHBOARD_INSTALL_NS}
-  kubectl delete task webhook-task -n ${DASHBOARD_INSTALL_NS}
   kubectl delete task ingress-task -n ${DASHBOARD_INSTALL_NS}
   kubectl delete task monitor-task -n ${DASHBOARD_INSTALL_NS}
   kubectl delete task route-task -n ${DASHBOARD_INSTALL_NS}
