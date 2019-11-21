@@ -535,7 +535,7 @@
   version = "kubernetes-1.12.9"
 
 [[projects]]
-  digest = "1:b6ba3dc64add5ba37fdfe21157d24794a87d40acc3e24cda8b380558a216ae7a"
+  digest = "1:68cd0de3f7637abe87f655577d25f86347ae57d3eb957e4f3a52a3217168e444"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -683,6 +683,7 @@
     "pkg/version",
     "plugin/pkg/client/auth/exec",
     "rest",
+    "rest/fake",
     "rest/watch",
     "testing",
     "tools/cache",
@@ -752,6 +753,7 @@
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/rest/fake",
     "k8s.io/client-go/testing",
     "knative.dev/pkg/apis",
   ]
