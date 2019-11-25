@@ -24,7 +24,11 @@ function validateInputs(value, id) {
       return false;
     }
 
-    if (!/[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/.test(trimmed)) {
+    if (trimmed.endsWith(".")) {
+      return false;
+    }
+
+    if (/[^-.a-z1-9]/.test(trimmed)) {
       return false;
     }
   }
