@@ -142,7 +142,8 @@ spec:
                  ) + "\n".join(results)
       if not os.path.exists("/workspace/output/pull-request/comments"):
         os.makedirs("/workspace/output/pull-request/comments")
-        shutil.copyfile("/workspace/pull-request/comments/.MANIFEST","/workspace/output/pull-request/comments/.MANIFEST")
+        if os.path.exists("/workspace/pull-request/comments/.MANIFEST"):
+          shutil.copyfile("/workspace/pull-request/comments/.MANIFEST","/workspace/output/pull-request/comments/.MANIFEST")
       handle = open("/workspace/output/pull-request/comments/newcomment.json", 'w')
       handle.write(comment)
       handle.close()
