@@ -20,7 +20,7 @@ function validateInputs(value, id) {
   }
 
   if (id === "name" || id === "newSecretName") {
-    if (trimmed.length > 253) {
+    if (trimmed.length > 57) {
       return false;
     }
 
@@ -550,7 +550,7 @@ class WebhookCreatePage extends Component {
                     labelText="Display Name"
                     data-testid="display-name-entry"
                     invalid={invalidFields.indexOf('name') > -1}
-                    invalidText="Must be less than 563 characters, contain only lowercase alphanumeric character, . or - ."
+                    invalidText="Must be fewer than 58 characters, contain only lowercase alphanumeric characters, . or - ."
                   />
                 </div>
               </div>

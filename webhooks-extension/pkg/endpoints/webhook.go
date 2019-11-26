@@ -42,6 +42,7 @@ var (
 	modifyingConfigMapLock sync.Mutex
 	actions = pipelinesv1alpha1.Param{Name: "Wext-Incoming-Actions", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "opened,reopened,synchronize"}}
 )
+
 const eventListenerName = "tekton-webhooks-eventlistener"
 
 /*
@@ -336,9 +337,9 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		webhook.PullTask = "monitor-task"
 	}
 
-	if webhook.ReleaseName != "" {
-		if len(webhook.ReleaseName) > 63 {
-			tooLongMessage := fmt.Sprintf("requested release name (%s) must be less than 64 characters", webhook.ReleaseName)
+	if webhook.Name != "" {
+		if len(webhook.Name) > 57 {
+			tooLongMessage := fmt.Sprintf("requested release name (%s) must be less than 58 characters", webhook.Name)
 			err := errors.New(tooLongMessage)
 			logging.Log.Errorf("error: %s", err.Error())
 			RespondError(response, err, http.StatusBadRequest)
