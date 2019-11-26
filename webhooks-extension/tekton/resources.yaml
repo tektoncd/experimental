@@ -37,9 +37,9 @@ spec:
 apiVersion: tekton.dev/v1alpha1
 kind: PipelineResource
 metadata:
-  name: webhooks-extension-sink-image
+  name: webhooks-extension-interceptor-image
 spec:
   type: image
   params:
    - name: url
-     value: cmd/sink # Registry is provided via parameter, this is a hack see #569
+     value: cmd/interceptor # Registry is provided via parameter, this is a hack see #569

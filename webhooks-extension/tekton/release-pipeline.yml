@@ -19,7 +19,7 @@ spec:
     type: storage
   - name: builtWebhooksExtensionExtensionImage
     type: image
-  - name: builtWebhooksExtensionSinkImage
+  - name: builtWebhooksExtensionInterceptorImage
     type: image
   tasks:
     - name: build
@@ -55,6 +55,6 @@ spec:
             resource: bucket
           - name: builtWebhooksExtensionExtensionImage
             resource: builtWebhooksExtensionExtensionImage
-          - name: builtWebhooksExtensionSinkImage
-            resource: builtWebhooksExtensionSinkImage
+          - name: builtWebhooksExtensionInterceptorImage
+            resource: builtWebhooksExtensionInterceptorImage
 

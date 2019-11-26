@@ -82,7 +82,7 @@ Run a test release:
 ```bash
 VERSION_TAG=test-1
 PIPELINE_NAMESPACE=tekton-pipelines
-tkn pipeline start webhooks-extension-release -p versionTag=$VERSION_TAG -r source-repo=tekton-experimental-git -r bucket=tekton-webhook-bucket -r builtWebhooksExtensionExtensionImage=webhooks-extension-extension-image -r builtWebhooksExtensionSinkImage=webhooks-extension-sink-image -n $PIPELINE_NAMESPACE
+tkn pipeline start webhooks-extension-release -p versionTag=$VERSION_TAG -r source-repo=tekton-experimental-git -r bucket=tekton-webhook-bucket -r builtWebhooksExtensionExtensionImage=webhooks-extension-extension-image -r builtWebhooksExtensionInterceptorImage=webhooks-extension-interceptor-image -n $PIPELINE_NAMESPACE
 ```
 
 This will result in release artifacts appearing in the Google Cloud bucket `gs://tekton-releases/webhooks-extension/test-release/test-1`. If you need to run a second build, incremement $VERSION_TAG. Once you're finished, clean up:
@@ -97,7 +97,7 @@ Now you can kick off the release build:
 ```bash
 VERSION_TAG=v0.x.y
 PIPELINE_NAMESPACE=tekton-pipelines
-tkn pipeline start webhooks-extension-release -p versionTag=$VERSION_TAG -r source-repo=tekton-experimental-git -r bucket=tekton-webhook-bucket -r builtWebhooksExtensionExtensionImage=webhooks-extension-extension-image -r builtWebhooksExtensionSinkImage=webhooks-extension-sink-image -n $PIPELINE_NAMESPACE
+tkn pipeline start webhooks-extension-release -p versionTag=$VERSION_TAG -r source-repo=tekton-experimental-git -r bucket=tekton-webhook-bucket -r builtWebhooksExtensionExtensionImage=webhooks-extension-extension-image -r builtWebhooksExtensionInterceptorImage=webhooks-extension-interceptor-image -n $PIPELINE_NAMESPACE
 ```
 
 Monitor the build logs to see the image coordinates that the image is pushed to. Two files, `tekton-webhooks-extension-release.yaml` and `openshift-tekton-webhooks-extension-release.yaml` should appear in the `latest` directory, and a subdirectory of `previous` under https://console.cloud.google.com/storage/browser/tekton-releases/webhooks-extension.
