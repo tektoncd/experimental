@@ -39,8 +39,8 @@ import (
 )
 
 var (
-	modifyingConfigMapLock sync.Mutex
-	actions = pipelinesv1alpha1.Param{Name: "Wext-Incoming-Actions", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "opened,reopened,synchronize"}}
+	modifyingEventListenerLock sync.Mutex
+	actions                    = pipelinesv1alpha1.Param{Name: "Wext-Incoming-Actions", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "opened,reopened,synchronize"}}
 )
 
 const eventListenerName = "tekton-webhooks-eventlistener"
@@ -202,7 +202,8 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 		{Name: "webhooks-tekton-service-account", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.ServiceAccount}},
 		{Name: "webhooks-tekton-git-server", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: server}},
 		{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}},
-		{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}}}
+		{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}},
+		{Name: "webhooks-tekton-pull-task", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.PullTask}}}
 
 	if webhook.DockerRegistry != "" {
 		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.DockerRegistry}})
@@ -315,10 +316,10 @@ func getGitValues(url string) (gitServer, gitOwner, gitRepo string, err error) {
 	return gitServer, gitOwner, gitRepo, nil
 }
 
-// Creates a webhook for a given repository and populates (creating if doesn't yet exist) a ConfigMap storing this information
+// Creates a webhook for a given repository and populates (creating if doesn't yet exist) an eventlistener
 func (r Resource) createWebhook(request *restful.Request, response *restful.Response) {
-	modifyingConfigMapLock.Lock()
-	defer modifyingConfigMapLock.Unlock()
+	modifyingEventListenerLock.Lock()
+	defer modifyingEventListenerLock.Unlock()
 
 	logging.Log.Infof("Webhook creation request received with request: %+v.", request)
 	installNs := r.Defaults.Namespace
@@ -378,14 +379,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		return
 	}
 
-	gitServer, gitOwner, gitRepo, err := getGitValues(webhook.GitRepositoryURL)
-	if err != nil {
-		logging.Log.Errorf("error parsing git repository URL %s in getGitValues(): %s", webhook.GitRepositoryURL, err)
-		RespondError(response, errors.New("error parsing GitRepositoryURL, check pod logs for more details"), http.StatusInternalServerError)
-		return
-	}
-	sanitisedURL := gitServer + "/" + gitOwner + "/" + gitRepo
-	hooks, err := r.getGitHubWebhooksFromConfigMap(sanitisedURL)
+	hooks, err := r.getHooksForRepo(webhook.GitRepositoryURL)
 	if len(hooks) > 0 {
 		for _, hook := range hooks {
 			if hook.Name == webhook.Name && hook.Namespace == webhook.Namespace {
@@ -425,6 +419,13 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		return
 	}
 
+	gitServer, gitOwner, gitRepo, err := getGitValues(webhook.GitRepositoryURL)
+	if err != nil {
+		logging.Log.Errorf("error parsing git repository URL %s in getGitValues(): %s", webhook.GitRepositoryURL, err)
+		RespondError(response, errors.New("error parsing GitRepositoryURL, check pod logs for more details"), http.StatusInternalServerError)
+		return
+	}
+	sanitisedURL := gitServer + "/" + gitOwner + "/" + gitRepo
 	// Single monitor trigger for all triggers on a repo - thus name to use for monitor is
 	monitorTriggerName := strings.TrimPrefix(gitServer+"/"+gitOwner+"/"+gitRepo, "http://")
 	monitorTriggerName = strings.TrimPrefix(monitorTriggerName, "https://")
@@ -498,7 +499,6 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		if err != nil {
 			// Handle cleanup if it fails
 			// - remove from EventListener
-			// - delete ConfigMap entry?
 			// - delete EventListener?
 			err2 := r.deleteFromEventListener(webhook.Name+"-"+webhook.Namespace, installNs, monitorTriggerName, webhook.GitRepositoryURL)
 			if err2 != nil {
@@ -514,16 +514,6 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		logging.Log.Debugf("webhook already exists for repository %s - not creating new hook in GitHub", sanitisedURL)
 	}
 
-	webhooks, err := r.readGitHubWebhooksFromConfigMap()
-	if err != nil {
-		logging.Log.Errorf("error getting GitHub webhooks: %s.", err.Error())
-		RespondError(response, err, http.StatusInternalServerError)
-		return
-	}
-
-	webhooks[sanitisedURL] = append(webhooks[sanitisedURL], webhook)
-	logging.Log.Debugf("Writing the GitHubSource webhook ConfigMap in namespace %s", installNs)
-	r.writeGitHubWebhooks(webhooks)
 	response.WriteHeader(http.StatusCreated)
 }
 
@@ -639,10 +629,10 @@ func (r Resource) checkTaskRunSucceeds(originalTaskRun *pipelinesv1alpha1.TaskRu
 	return false, err
 }
 
-// Removes from ConfigMap, removes the actual GitHubSource, removes the webhook
+// Removes from Eventlistener, removes the webhook
 func (r Resource) deleteWebhook(request *restful.Request, response *restful.Response) {
-	modifyingConfigMapLock.Lock()
-	defer modifyingConfigMapLock.Unlock()
+	modifyingEventListenerLock.Lock()
+	defer modifyingEventListenerLock.Unlock()
 	logging.Log.Debug("In deleteWebhook")
 	name := request.PathParameter("name")
 	repo := request.QueryParameter("repository")
@@ -671,7 +661,7 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 
 	logging.Log.Debugf("in deleteWebhook, name: %s, repo: %s, delete pipeline runs: %s", name, repo, deletePipelineRuns)
 
-	webhooks, err := r.getGitHubWebhooksFromConfigMap(repo)
+	webhooks, err := r.getHooksForRepo(repo)
 	if err != nil {
 		RespondError(response, err, http.StatusNotFound)
 		return
@@ -691,13 +681,11 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 	monitorTriggerName = strings.TrimPrefix(monitorTriggerName, "https://")
 
 	found := false
-	var remaining int
 	for _, hook := range webhooks {
 		if hook.Name == name && hook.Namespace == namespace {
 			found = true
 			if len(webhooks) == 1 {
 				logging.Log.Debug("No other pipelines triggered by this GitHub webhook, deleting webhook")
-				remaining = 0
 				// Delete webhook
 				err := r.doGitHubWebhookRequest(hook, "unsubscribe", []string{"push", "pull_request"})
 				if err != nil {
@@ -705,20 +693,10 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 					return
 				}
 				logging.Log.Debug("Webhook deletion succeeded")
-			} else {
-				remaining = len(webhooks) - 1
 			}
 			if toDeletePipelineRuns {
 				r.deletePipelineRuns(repo, namespace, hook.Pipeline)
 			}
-			err := r.deleteWebhookFromConfigMap(repo, name, namespace, remaining)
-			if err != nil {
-				logging.Log.Error(err)
-				theError := errors.New("error deleting webhook from configmap.")
-				RespondError(response, theError, http.StatusInternalServerError)
-				return
-			}
-
 			eventListenerEntryPrefix := name + "-" + namespace
 			err = r.deleteFromEventListener(eventListenerEntryPrefix, r.Defaults.Namespace, monitorTriggerName, repo)
 			if err != nil {
@@ -830,50 +808,112 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerName, r
 	return err
 }
 
-// Delete the webhook information from our ConfigMap
-func (r Resource) deleteWebhookFromConfigMap(repository, webhookName, namespace string, remainingCount int) error {
-	logging.Log.Debugf("Deleting webhook info named %s on repository %s running in namespace %s from ConfigMap", webhookName, repository, namespace)
-	repository = strings.ToLower(strings.TrimSuffix(repository, ".git"))
-	allHooks, err := r.readGitHubWebhooksFromConfigMap()
-	if err != nil {
-		return err
-	}
-
-	if remainingCount > 0 {
-		logging.Log.Debugf("Finding webhook for repository %s", repository)
-		for i, hook := range allHooks[repository] {
-			if hook.Name == webhookName && hook.Namespace == namespace {
-				logging.Log.Debugf("Removing webhook from ConfigMap")
-				allHooks[repository][i] = allHooks[repository][len(allHooks[repository])-1]
-				allHooks[repository] = allHooks[repository][:len(allHooks[repository])-1]
-			}
-		}
-	} else {
-		logging.Log.Debugf("Deleting last webhook for repository %s", repository)
-		delete(allHooks, repository)
-	}
-
-	err = r.writeGitHubWebhooks(allHooks)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r Resource) getAllWebhooks(request *restful.Request, response *restful.Response) {
 	logging.Log.Debugf("Get all webhooks")
-	sources, err := r.readGitHubWebhooksFromConfigMap()
+	webhooks, err := r.getWebhooksFromEventListener()
 	if err != nil {
 		logging.Log.Errorf("error trying to get webhooks: %s.", err.Error())
 		RespondError(response, err, http.StatusInternalServerError)
 		return
 	}
-	sourcesList := []webhook{}
-	for _, value := range sources {
-		sourcesList = append(sourcesList, value...)
-	}
-	response.WriteEntity(sourcesList)
+	response.WriteEntity(webhooks)
+}
 
+func (r Resource) getHooksForRepo(gitURL string) ([]webhook, error) {
+	hooksForRepo := []webhook{}
+	allHooks, err := r.getWebhooksFromEventListener()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, hook := range allHooks {
+		if hook.GitRepositoryURL == gitURL {
+			hooksForRepo = append(hooksForRepo, hook)
+		}
+	}
+
+	return hooksForRepo, nil
+}
+
+func (r Resource) getWebhooksFromEventListener() ([]webhook, error) {
+	logging.Log.Debugf("Getting webhooks from eventlistener")
+	el, err := r.TriggersClient.TektonV1alpha1().EventListeners(r.Defaults.Namespace).Get(eventListenerName, metav1.GetOptions{})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return []webhook{}, nil
+		}
+		return nil, err
+	}
+	hooks := []webhook{}
+	var hook webhook
+	for _, trigger := range el.Spec.Triggers {
+		checkHook := false
+		if strings.HasSuffix(trigger.Name, "-push-event") {
+			hook = getHookFromTrigger(trigger, "-push-event")
+			checkHook = true
+		} else if strings.HasSuffix(trigger.Name, "-pullrequest-event") {
+			hook = getHookFromTrigger(trigger, "-pullrequest-event")
+			checkHook = true
+		}
+		if checkHook && !containedInArray(hooks, hook) {
+			hooks = append(hooks, hook)
+		}
+	}
+	return hooks, nil
+}
+
+func getHookFromTrigger(t v1alpha1.EventListenerTrigger, suffix string) webhook {
+
+	var releaseName, namespace, serviceaccount, pulltask, dockerreg, helmsecret, repo, gitSecret string
+	for _, param := range t.Params {
+		switch param.Name {
+		case "webhooks-tekton-release-name":
+			releaseName = param.Value.StringVal
+		case "webhooks-tekton-target-namespace":
+			namespace = param.Value.StringVal
+		case "webhooks-tekton-service-account":
+			serviceaccount = param.Value.StringVal
+		case "webhooks-tekton-pull-task":
+			pulltask = param.Value.StringVal
+		case "webhooks-tekton-docker-registry":
+			dockerreg = param.Value.StringVal
+		case "webhooks-tekton-helm-secret":
+			helmsecret = param.Value.StringVal
+		}
+	}
+
+	for _, header := range t.Interceptor.Header {
+		switch header.Name {
+		case "Wext-Repository-Url":
+			repo = header.Value.StringVal
+		case "Wext-Secret-Name":
+			gitSecret = header.Value.StringVal
+		}
+	}
+
+	triggerAsHook := webhook{
+		Name:             strings.TrimSuffix(t.Name, "-"+namespace+suffix),
+		Namespace:        namespace,
+		Pipeline:         strings.TrimSuffix(t.Template.Name, "-template"),
+		GitRepositoryURL: repo,
+		HelmSecret:       helmsecret,
+		PullTask:         pulltask,
+		DockerRegistry:   dockerreg,
+		ServiceAccount:   serviceaccount,
+		ReleaseName:      releaseName,
+		AccessTokenRef:   gitSecret,
+	}
+
+	return triggerAsHook
+}
+
+func containedInArray(array []webhook, hook webhook) bool {
+	for _, item := range array {
+		if item == hook {
+			return true
+		}
+	}
+	return false
 }
 
 func (r Resource) deletePipelineRuns(gitRepoURL, namespace, pipeline string) error {
@@ -911,82 +951,6 @@ func (r Resource) deletePipelineRuns(gitRepoURL, namespace, pipeline string) err
 	}
 	if !found {
 		logging.Log.Infof("No matching PipelineRuns found")
-	}
-	return nil
-}
-
-// Retrieve webhook entry from configmap for the GitHub URL
-func (r Resource) getGitHubWebhooksFromConfigMap(gitRepoURL string) ([]webhook, error) {
-	logging.Log.Debugf("Getting GitHub webhooks for repository URL %s", gitRepoURL)
-
-	sources, err := r.readGitHubWebhooksFromConfigMap()
-	if err != nil {
-		return []webhook{}, err
-	}
-	gitRepoURL = strings.ToLower(strings.TrimSuffix(gitRepoURL, ".git"))
-	if sources[gitRepoURL] != nil {
-		return sources[gitRepoURL], nil
-	}
-
-	return []webhook{}, fmt.Errorf("could not find webhook with GitRepositoryURL: %s", gitRepoURL)
-
-}
-
-func (r Resource) readGitHubWebhooksFromConfigMap() (map[string][]webhook, error) {
-	logging.Log.Debugf("Reading GitHub webhooks.")
-	configMapClient := r.K8sClient.CoreV1().ConfigMaps(r.Defaults.Namespace)
-	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
-	if err != nil {
-		logging.Log.Debugf("Creating a new ConfigMap as an error occurred retrieving an existing one: %s.", err.Error())
-		configMap = &corev1.ConfigMap{}
-		configMap.BinaryData = make(map[string][]byte)
-	}
-	raw, ok := configMap.BinaryData["GitHubSource"]
-	var result map[string][]webhook
-	if ok {
-		err = json.Unmarshal(raw, &result)
-		if err != nil {
-			logging.Log.Errorf("error unmarshalling in readGitHubSource: %s", err.Error())
-			return map[string][]webhook{}, err
-		}
-	} else {
-		result = make(map[string][]webhook)
-	}
-	return result, nil
-}
-
-func (r Resource) writeGitHubWebhooks(sources map[string][]webhook) error {
-	logging.Log.Debugf("In writeGitHubWebhooks")
-	configMapClient := r.K8sClient.CoreV1().ConfigMaps(r.Defaults.Namespace)
-	configMap, err := configMapClient.Get(ConfigMapName, metav1.GetOptions{})
-	var create = false
-	if err != nil {
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ConfigMapName,
-				Namespace: r.Defaults.Namespace,
-			},
-		}
-		configMap.BinaryData = make(map[string][]byte)
-		create = true
-	}
-	buf, err := json.Marshal(sources)
-	if err != nil {
-		logging.Log.Errorf("error marshalling GitHub webhooks: %s.", err.Error())
-		return err
-	}
-	configMap.BinaryData["GitHubSource"] = buf
-	if create {
-		_, err = configMapClient.Create(configMap)
-		if err != nil {
-			logging.Log.Errorf("error creating configmap for GitHub webhooks: %s.", err.Error())
-			return err
-		}
-	} else {
-		_, err = configMapClient.Update(configMap)
-		if err != nil {
-			logging.Log.Errorf("error updating configmap for GitHub webhooks: %s.", err.Error())
-		}
 	}
 	return nil
 }
