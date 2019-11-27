@@ -567,6 +567,7 @@ func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedM
 	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-server", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: server}})
 	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}})
 	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-pull-task", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.PullTask}})
 	if hook.DockerRegistry != "" {
 		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.DockerRegistry}})
 	}
