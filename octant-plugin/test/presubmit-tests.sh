@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2019 The Tekton Authors
+# Copyright 2018 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,20 +21,21 @@
 # Use the flags --build-tests, --unit-tests and --integration-tests
 # to run a specific set of tests.
 
-source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
+# Markdown linting failures don't show up properly in Gubernator resulting
+# in a net-negative contributor experience.
+export DISABLE_MD_LINTING=1
+export TEST_FOLDER=$(pwd)
 
-CHANGED_FILES="$(list_changed_files)"
+source $(dirname $0)/../../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
-function run() {
-    folder=$1
-    header "${folder}"
-    shift
-    pushd $(dirname $0)/../${folder} || return 1
-    ./test/presubmit-tests.sh $@ || exited=1
-    popd >/dev/null
-    return $exited
+# June 28th 2019: work around https://github.com/tektoncd/plumbing/issues/44
+function unit_tests() {
+  local failed=0
+  echo "Using overridden unit_tests"
+  go test -v -race ./... || failed=1
+  echo "unit_tests returning $@"
+  return ${failed}
 }
 
-run webhooks-extension $@ || exit 1
-run catalogs $@ || exit 1
-run octant-plugins $@ || exit 1
+# We use the default build, unit and integration test runners.
+main $@
