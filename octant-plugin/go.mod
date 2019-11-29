@@ -3,6 +3,7 @@ module github.com/tektoncd/experimental/octant-plugin
 go 1.12
 
 require (
+	github.com/google/licenseclassifier v0.0.0-20190926221455-842c0d70d702 // indirect
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/tektoncd/pipeline v0.6.0
