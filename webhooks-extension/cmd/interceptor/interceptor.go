@@ -16,14 +16,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/go-github/github"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/google/go-github/github"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 )
 
 type Result struct {
-	Action string `json:"action"`
+	Action     string `json:"action"`
 	Repository struct {
 		CloneURL string `json:"clone_url"`
 	} `json:"repository"`
@@ -115,7 +116,7 @@ func main() {
 				foundEvent := request.Header.Get("X-Github-Event")
 				if wantedEvent == foundEvent { // Wanted GitHub event type provided AND repository URL matches so all is well
 					wantedActions := request.Header["Wext-Incoming-Actions"]
-					if len(wantedActions) == 0 {  
+					if len(wantedActions) == 0 {
 						validationPassed = true
 						log.Printf("[%s] Validation PASS (repository URL, secret payload, event type checked)", foundTriggerName)
 					} else {
