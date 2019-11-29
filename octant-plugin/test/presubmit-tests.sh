@@ -25,8 +25,33 @@
 # in a net-negative contributor experience.
 export DISABLE_MD_LINTING=1
 export TEST_FOLDER=$(pwd)
+export GO111MODULE=on
 
 source $(dirname $0)/../../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
+
+function pre_build_tests() {
+    pushd ${TEST_FOLDER}
+}
+
+function pre_unit_tests() {
+    pushd ${TEST_FOLDER}
+}
+
+function pre_integration_tests() {
+    pushd ${TEST_FOLDER}
+}
+
+function post_build_tests() {
+    popd
+}
+
+function post_unit_tests() {
+    popd
+}
+
+function post_integration_tests() {
+    popd
+}
 
 # June 28th 2019: work around https://github.com/tektoncd/plumbing/issues/44
 function unit_tests() {
