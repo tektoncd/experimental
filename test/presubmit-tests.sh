@@ -36,3 +36,4 @@ function run() {
 }
 
 run webhooks-extension $@ || exit 1
+run catalogs $@ || exit 1
