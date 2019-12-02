@@ -189,6 +189,28 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:e6deb5269daaf7ab91e3a04a1570d690a60a982d595d090882cee3ded817bb04"
+  name = "github.com/openshift/api"
+  packages = ["route/v1"]
+  pruneopts = "UT"
+  revision = "0d921e363e951d89f583292c60d013c318df64dc"
+  version = "v3.9.0"
+
+[[projects]]
+  digest = "1:cb6e92c0c79615d275e1ebabd1177f0e73a2271841bd703a195568c01f33249f"
+  name = "github.com/openshift/client-go"
+  packages = [
+    "route/clientset/versioned",
+    "route/clientset/versioned/fake",
+    "route/clientset/versioned/scheme",
+    "route/clientset/versioned/typed/route/v1",
+    "route/clientset/versioned/typed/route/v1/fake",
+  ]
+  pruneopts = "UT"
+  revision = "1fa528d3be060e4c7178eb69e76d37cf7e699e3c"
+  version = "v3.9.0"
+
+[[projects]]
   branch = "master"
   digest = "1:89da0f0574bc94cfd0ac8b59af67bf76cdd110d503df2721006b9f0492394333"
   name = "github.com/petar/GoLLRB"
@@ -535,7 +557,7 @@
   version = "kubernetes-1.12.9"
 
 [[projects]]
-  digest = "1:68cd0de3f7637abe87f655577d25f86347ae57d3eb957e4f3a52a3217168e444"
+  digest = "1:b6ba3dc64add5ba37fdfe21157d24794a87d40acc3e24cda8b380558a216ae7a"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -683,7 +705,6 @@
     "pkg/version",
     "plugin/pkg/client/auth/exec",
     "rest",
-    "rest/fake",
     "rest/watch",
     "testing",
     "tools/cache",
@@ -732,8 +753,12 @@
   analyzer-version = 1
   input-imports = [
     "github.com/emicklei/go-restful",
+    "github.com/google/go-cmp/cmp",
     "github.com/google/go-github/github",
     "github.com/mitchellh/mapstructure",
+    "github.com/openshift/api/route/v1",
+    "github.com/openshift/client-go/route/clientset/versioned",
+    "github.com/openshift/client-go/route/clientset/versioned/fake",
     "github.com/tektoncd/dashboard/pkg/logging",
     "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1",
     "github.com/tektoncd/pipeline/pkg/client/clientset/versioned",
@@ -743,7 +768,6 @@
     "github.com/tektoncd/triggers/pkg/client/clientset/versioned/fake",
     "go.uber.org/zap",
     "golang.org/x/oauth2",
-    "golang.org/x/xerrors",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
@@ -753,7 +777,6 @@
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/rest",
-    "k8s.io/client-go/rest/fake",
     "k8s.io/client-go/testing",
     "knative.dev/pkg/apis",
   ]

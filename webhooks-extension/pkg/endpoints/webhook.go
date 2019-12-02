@@ -14,28 +14,25 @@ limitations under the License.
 package endpoints
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-
 	restful "github.com/emicklei/go-restful"
 	routesv1 "github.com/openshift/api/route/v1"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
-	"golang.org/x/oauth2"
-	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 var (
@@ -410,6 +407,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	if templateErr != nil || pushErr != nil || pullrequestErr != nil {
 		msg := fmt.Sprintf("Could not find the required trigger template or trigger bindings in namespace: %s. Expected to find: %s, %s and %s", installNs, webhook.Pipeline+"-template", webhook.Pipeline+"-push-binding", webhook.Pipeline+"-pullrequest-binding")
 		logging.Log.Errorf("%s", msg)
+		logging.Log.Errorf("template error: `%s`, pushbinding error: `%s`, pullrequest error: `%s`", templateErr, pushErr, pullrequestErr)
 		RespondError(response, errors.New(msg), http.StatusBadRequest)
 		return
 	}
@@ -450,6 +448,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 			RespondError(response, errors.New(msg), http.StatusInternalServerError)
 			return
 		}
+
 		_, varexists := os.LookupEnv("PLATFORM")
 		if !varexists {
 			err = r.createDeleteIngress("create", installNs)
@@ -485,12 +484,20 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	}
 
 	if len(hooks) == 0 {
+		// // Give the eventlistener a chance to be up and running or webhook ping
+		// // will get a 503 and might confuse people (although resend will work)
+		for i := 0; i < 30; i = i + 1 {
+			a, _ := r.K8sClient.Apps().Deployments(installNs).Get(routeName, metav1.GetOptions{})
+			replicas := a.Status.ReadyReplicas
+			if replicas > 0 {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+
 		// Create webhook
-		err = r.doGitHubWebhookRequest(webhook, "subscribe", []string{"push", "pull_request"})
+		err = r.AddWebhook(webhook, gitOwner, gitRepo)
 		if err != nil {
-			// Handle cleanup if it fails
-			// - remove from EventListener
-			// - delete EventListener?
 			err2 := r.deleteFromEventListener(webhook.Name+"-"+webhook.Namespace, installNs, monitorTriggerName, webhook.GitRepositoryURL)
 			if err2 != nil {
 				updatedMsg := fmt.Sprintf("error creating webhook. Also failed to cleanup and delete entry from eventlistener. Errors were: %s and %s", err, err2)
@@ -619,7 +626,7 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 			if len(webhooks) == 1 {
 				logging.Log.Debug("No other pipelines triggered by this GitHub webhook, deleting webhook")
 				// Delete webhook
-				err := r.doGitHubWebhookRequest(hook, "unsubscribe", []string{"push", "pull_request"})
+				err := r.RemoveWebhook(hook, gitOwner, gitRepo)
 				if err != nil {
 					RespondError(response, err, http.StatusInternalServerError)
 					return
@@ -949,48 +956,16 @@ func (r Resource) RegisterWeb(container *restful.Container) {
 	container.Handle("/web/", http.StripPrefix("/web/", handler))
 }
 
-// getWebhookSecretTokens returns the "secretToken" and "accessToken" stored in the Secret
-// with the name specified by the parameter, and in the namespace specified by r.Defaults.Namespace.
-func (r Resource) getWebhookSecretTokens(name string) (accessToken string, secretToken string, err error) {
-	// Access token is stored as 'accessToken' and secret as 'secretToken'
-	secret, err := r.K8sClient.CoreV1().Secrets(r.Defaults.Namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return "", "", xerrors.Errorf("error getting Webhook secret. Error was: %w", err)
-	}
-	accessToken = string(secret.Data["accessToken"])
-	secretToken = string(secret.Data["secretToken"])
-	return accessToken, secretToken, nil
-}
-
-// createOAuth2Client returns an HTTP client with oauth2 authentication using the provided accessToken
-func createOAuth2Client(ctx context.Context, accessToken string) *http.Client {
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
-	return oauth2.NewClient(ctx, ts)
-}
-
-// doGitHubWebhookRequest executes a GitHub PubSubHubbub request for the specified webhook.
-// hubMode: "subscribe" or "unsubscribe"
-// events: the list of events to subscribe to or unsubscribe from; for example, {"push", "pull_request"}
-func (r Resource) doGitHubWebhookRequest(webhook webhook, hubMode string, events []string) error {
-	// Access token is stored as 'accessToken' and secret as 'secretToken'
-	accessToken, secretToken, err := r.getWebhookSecretTokens(webhook.AccessTokenRef)
-	if err != nil {
-		return err
-	}
-
-	// Create http client
-	ctx := context.Background()
-	client := createOAuth2Client(ctx, accessToken)
-
-	return doGitHubHubbubRequest(client, webhook.GitRepositoryURL, hubMode, r.Defaults.CallbackURL, secretToken, events)
-}
-
 // createOpenshiftRoute attempts to create an Openshift Route on the service.
 // The Route has the same name as the service
 func (r Resource) createOpenshiftRoute(serviceName string) error {
+	annotations := make(map[string]string)
+	annotations["haproxy.router.openshift.io/timeout"] = "2m"
+
 	route := &routesv1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: serviceName,
+			Name:        serviceName,
+			Annotations: annotations,
 		},
 		Spec: routesv1.RouteSpec{
 			To: routesv1.RouteTargetReference{
