@@ -14,62 +14,104 @@ limitations under the License.
 package endpoints
 
 import (
-	"fmt"
-	"net/http"
-	"net/url"
-
+	"context"
+	github "github.com/google/go-github/github"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
-	"golang.org/x/xerrors"
+	utils "github.com/tektoncd/experimental/webhooks-extension/pkg/utils"
+	"net/url"
+	"os"
 )
 
-// isGitHubEnterprise returns whether the url is for GitHub Enterprise or not
-func isGitHubEnterprise(u *url.URL) bool {
-	return (u.Host != "github.com")
+type GitHub struct {
+	Client    *github.Client
+	Context   context.Context
+	Org       string
+	Repo      string
+	SSLVerify bool
+	Resource  Resource
 }
 
-// getGitHubHubbubAPI returns the API URL for the GitHub PubSubHubbub API
-func getGitHubHubbubAPI(u *url.URL) string {
-	// Public GitHub PubSubHubbub API URL is "https://api.github.com/hub"
-	hubbubAPI := "https://api.github.com/hub"
-
-	// Enterprise GitHub API URL is "https://my.company.xyz/api/v3/hub"
-	if isGitHubEnterprise(u) {
-		hubbubAPI = fmt.Sprintf("%s://%s/api/v3/hub", u.Scheme, u.Host)
-	}
-
-	return hubbubAPI
+type GitHubWebhook struct {
+	Hook *github.Hook
 }
 
-// doGitHubHubbubRequest executes a GitHub PubSubHubbub request given the specified parameters
-// GitHub PubSubHubbub API documentation: https://developer.github.com/v3/repos/hooks/#pubsubhubbub
-// mode: "subscribe" or "unsubscribe"
-// callback: the URI to receive the updates
-// secret: shared secret key to authenticate event messages
-// events: the list of events to subscribe to or unsubscribe from; for example, {"push", "pull_request"}
-func doGitHubHubbubRequest(client *http.Client, repoURL, mode, callback, secret string, events []string) error {
-	// Get GitHub PubSubHubbub API URL
-	u, err := url.Parse(repoURL)
+// GitHub GitProvider ----------------------------------------------------------------------------------------------------
+func (r Resource) initGitHub(sslVerify bool, apiURL, secret, org, repo string) (*GitHub, error) {
+	// Access token is stored as 'accessToken' and secret as 'secretToken'
+	accessToken, _, err := utils.GetWebhookSecretTokens(r.K8sClient, r.Defaults.Namespace, secret)
 	if err != nil {
-		return xerrors.Errorf("error parsing GitHub repo URL %s. Error was: %w", repoURL, err)
+		return nil, err
 	}
-	hubbubAPI := getGitHubHubbubAPI(u)
 
-	// Send request for each event type (example event type: "push")
-	for _, event := range events {
-		resp, err := client.PostForm(hubbubAPI, url.Values{
-			"hub.mode":     {mode},
-			"hub.topic":    {fmt.Sprintf("%s/events/%s", repoURL, event)},
-			"hub.callback": {callback},
-			"hub.secret":   {secret},
-		})
-		if err != nil {
-			return xerrors.Errorf("error sending PubSubHubbub %s (%s) request: %w", mode, event, err)
-		}
-		// Should receive 204 No Content on success
-		if resp.StatusCode != http.StatusNoContent {
-			return xerrors.Errorf("error sending PubSubHubbub %s (%s) request. Status: %s", mode, event, resp.Status)
-		}
-		logging.Log.Debugf("PubSubHubbub %s (%s) response: %s", mode, event, resp)
+	// Create the client
+	ctx := context.Background()
+	tc := utils.CreateOAuth2Client(ctx, accessToken)
+	client := github.NewClient(tc)
+
+	// Set api base url
+	ghURL, err := url.Parse(apiURL)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	client.BaseURL = ghURL
+
+	return &GitHub{Client: client, Context: ctx, Org: org, Repo: repo, SSLVerify: sslVerify, Resource: r}, nil
+}
+
+func (gh GitHub) AddWebhook(hook webhook) error {
+	_, secretToken, err := utils.GetWebhookSecretTokens(gh.Resource.K8sClient, gh.Resource.Defaults.Namespace, hook.AccessTokenRef)
+	if err != nil {
+		return err
+	}
+	ssl := 0
+	if !gh.SSLVerify {
+		ssl = 1
+	}
+
+	// Specify webhook options
+	cfg := make(map[string]interface{})
+	cfg["url"] = os.Getenv("WEBHOOK_CALLBACK_URL")
+	cfg["insecure_ssl"] = ssl
+	cfg["secret"] = secretToken
+	cfg["content_type"] = "json"
+	events := []string{"push", "pull_request"}
+	active := true
+	hookDefinition := &github.Hook{
+		Config: cfg,
+		Events: events,
+		Active: &active,
+	}
+	// Create webhook
+	_, _, err = gh.Client.Repositories.CreateHook(gh.Context, gh.Org, gh.Repo, hookDefinition)
+	return err
+}
+
+func (gh GitHub) DeleteWebhook(hook GitWebhook) error {
+	_, err := gh.Client.Repositories.DeleteHook(gh.Context, gh.Org, gh.Repo, int64(hook.GetID()))
+	return err
+}
+
+func (gh GitHub) GetAllWebhooks() ([]GitWebhook, error) {
+	hooks, _, err := gh.Client.Repositories.ListHooks(gh.Context, gh.Org, gh.Repo, nil)
+	if err != nil {
+		return nil, err
+	}
+	webhooks := make([]GitWebhook, len(hooks))
+	for i, hook := range hooks {
+		webhooks[i] = GitHubWebhook{Hook: hook}
+	}
+	return webhooks, err
+}
+
+func (ghWebhook GitHubWebhook) GetID() int {
+	return int(ghWebhook.Hook.GetID())
+}
+
+func (ghWebhook GitHubWebhook) GetURL() string {
+	url, ok := ghWebhook.Hook.Config["url"].(string)
+	if !ok {
+		logging.Log.Error("webhook does not have string config 'url.' Setting webhook url to empty string.")
+		url = ""
+	}
+	return url
 }

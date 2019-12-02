@@ -86,6 +86,9 @@ rules:
   - pipelineruns
   - pipelineresources
   - eventlisteners
+  - triggerbindings
+  - triggertemplates
+  - conditions
   verbs:
   - get
   - list
@@ -240,6 +243,9 @@ spec:
         # openshift_master_default_subdomain usually of the format 'apps.host.company.com'
         - name: WEBHOOK_CALLBACK_URL
           value: http://el-tekton-webhooks-eventlistener-tekton-pipelines.{openshift_master_default_subdomain}"
+        # If the WEBHOOK_CALLBACK_URL's protocol is https, should ssl verification be enabled/disabled
+        - name: SSL_VERIFICATION_ENABLED
+          value: "false"
         - name: SERVICE_ACCOUNT
           valueFrom:
             fieldRef:

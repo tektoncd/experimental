@@ -14,10 +14,14 @@ limitations under the License.
 package utils
 
 import (
-	"strings"
-
+	"context"
 	restful "github.com/emicklei/go-restful"
 	logging "github.com/tektoncd/dashboard/pkg/logging"
+	"golang.org/x/oauth2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sclient "k8s.io/client-go/kubernetes"
+	"net/http"
+	"strings"
 )
 
 // RespondError - logs and writes an error response with a desired status code
@@ -40,4 +44,23 @@ func RespondMessageAndLogError(response *restful.Response, err error, message st
 	logging.Log.Debugf("Message: %s", message)
 	response.AddHeader("Content-Type", "text/plain")
 	response.WriteErrorString(statusCode, message)
+}
+
+// createOAuth2Client returns an HTTP client with oauth2 authentication using the provided accessToken
+func CreateOAuth2Client(ctx context.Context, accessToken string) *http.Client {
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
+	return oauth2.NewClient(ctx, ts)
+}
+
+// getWebhookSecretTokens returns the "secretToken" and "accessToken" stored in the Secret
+// with the name specified by the parameter, and in the namespace specified by r.Defaults.Namespace.
+func GetWebhookSecretTokens(kubeClient k8sclient.Interface, namespace, name string) (accessToken string, secretToken string, err error) {
+	// Access token is stored as 'accessToken' and secret as 'secretToken'
+	secret, err := kubeClient.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return "", "", err
+	}
+	accessToken = string(secret.Data["accessToken"])
+	secretToken = string(secret.Data["secretToken"])
+	return accessToken, secretToken, nil
 }
