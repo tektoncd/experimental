@@ -22,7 +22,7 @@ import (
 func TestAddBranchToPushPayload(t *testing.T) {
 
 	ref := "refs/head/master"
-	pushPayloadStruct := github.WebHookPayload{
+	pushPayloadStruct := github.PushEvent{
 		Ref: &ref,
 	}
 	payload, err := json.Marshal(pushPayloadStruct)
