@@ -39,7 +39,7 @@ type Result struct {
 }
 
 type PushPayload struct {
-	github.WebHookPayload
+	github.PushEvent
 	WebhookBranch string `json:"webhooks-tekton-git-branch"`
 }
 
@@ -173,14 +173,14 @@ func main() {
 func addBranchToPayload(event string, payload []byte) ([]byte, error) {
 	if "push" == event {
 		var toReturn PushPayload
-		var p github.WebHookPayload
+		var p github.PushEvent
 		err := json.Unmarshal(payload, &p)
 		if err != nil {
 			return nil, err
 		}
 		toReturn = PushPayload{
-			WebHookPayload: p,
-			WebhookBranch:  p.GetRef()[strings.LastIndex(p.GetRef(), "/")+1:],
+			PushEvent:     p,
+			WebhookBranch: p.GetRef()[strings.LastIndex(p.GetRef(), "/")+1:],
 		}
 		return json.Marshal(toReturn)
 	} else if "pull_request" == event {
