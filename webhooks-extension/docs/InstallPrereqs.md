@@ -20,16 +20,6 @@
 
 2. Install [Tekton Dashboard](https://github.com/tektoncd/dashboard)
 
-    As the webhook and route are currently created using taskruns, you will want to increase the gateway timeout as the creation of these artifacts will often take in excess of 30s.  
-  
-    _On RedHat OpenShift:_ 
-  
-    Increase the gateway timeout on the tekton-dashboard route using the following command:
-
-        ```
-        oc annotate route tekton-dashboard --overwrite haproxy.router.openshift.io/timeout=5m
-        ```
-
 3. Install [Tekton Triggers](https://github.com/tektoncd/triggers/blob/master/docs/install.md#installing-tekton-triggers-1) version 0.1  
 
 4. Install a LoadBalancer if one is not present on your cluster.  For Docker Desktop you could consider using nginx as per the following instructions:

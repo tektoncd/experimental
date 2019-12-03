@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	restful "github.com/emicklei/go-restful"
+	routesv1 "github.com/openshift/api/route/v1"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
@@ -43,7 +43,10 @@ var (
 	actions                    = pipelinesv1alpha1.Param{Name: "Wext-Incoming-Actions", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "opened,reopened,synchronize"}}
 )
 
-const eventListenerName = "tekton-webhooks-eventlistener"
+const (
+	eventListenerName = "tekton-webhooks-eventlistener"
+	routeName         = "el-" + eventListenerName
+)
 
 /*
 	Creation of the eventlistener, called when no eventlistener exists at
@@ -456,38 +459,26 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 				logging.Log.Debugf("Deleting eventlistener as failed creating Ingress")
 				err2 := r.TriggersClient.TektonV1alpha1().EventListeners(installNs).Delete(eventListenerName, &metav1.DeleteOptions{})
 				if err2 != nil {
-					updatedMsg := fmt.Sprintf("error creating webhook due to error creating taskrun to create ingress. Also failed to cleanup and delete eventlistener. Errors were: %s and %s", err, err2)
+					updatedMsg := fmt.Sprintf("error creating webhook due to error creating ingress. Also failed to cleanup and delete eventlistener. Errors were: %s and %s", err, err2)
 					RespondError(response, errors.New(updatedMsg), http.StatusInternalServerError)
 					return
 				}
 				RespondError(response, errors.New(msg), http.StatusInternalServerError)
 				return
 			} else {
-				logging.Log.Debug("ingress creation taskrun succeeded")
+				logging.Log.Debug("ingress creation succeeded")
 			}
 		} else {
-			routeTaskRun, err := r.createRouteTaskRun("create", installNs)
-			if err != nil {
-				msg := fmt.Sprintf("error creating webhook due to error creating taskrun to create route. Error was: %s", err)
-				logging.Log.Errorf("%s", msg)
+			if err := r.createOpenshiftRoute(routeName); err != nil {
+				logging.Log.Debug("Failed to create Route, deleting EventListener...")
 				err2 := r.TriggersClient.TektonV1alpha1().EventListeners(installNs).Delete(eventListenerName, &metav1.DeleteOptions{})
 				if err2 != nil {
-					updatedMsg := fmt.Sprintf("error creating webhook due to error creating taskrun to create routes. Also failed to cleanup and delete eventlistener. Errors were: %s and %s", err, err2)
+					updatedMsg := fmt.Sprintf("Error creating webhook due to error creating route. Also failed to cleanup and delete eventlistener. Errors were: %s and %s", err, err2)
 					RespondError(response, errors.New(updatedMsg), http.StatusInternalServerError)
 					return
 				}
-				RespondError(response, errors.New(msg), http.StatusInternalServerError)
+				RespondError(response, err, http.StatusInternalServerError)
 				return
-			}
-
-			routeTaskRunResult, err := r.checkTaskRunSucceeds(routeTaskRun, installNs)
-			if !routeTaskRunResult && err != nil {
-				msg := fmt.Sprintf("error creating webhook due to error in taskrun to create route. Error was: %s", err)
-				logging.Log.Errorf("%s", msg)
-				RespondError(response, errors.New(msg), http.StatusInternalServerError)
-				return
-			} else {
-				logging.Log.Debug("route creation taskrun succeeded")
 			}
 		}
 
@@ -568,65 +559,6 @@ func (r Resource) createDeleteIngress(mode, installNS string) error {
 		logging.Log.Debug("Wrong mode")
 		return errors.New("Wrong mode for createDeleteIngress")
 	}
-}
-
-func (r Resource) createRouteTaskRun(mode, installNS string) (*pipelinesv1alpha1.TaskRun, error) {
-
-	params := []pipelinesv1alpha1.Param{
-		{Name: "Mode", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: mode}},
-		{Name: "EventListenerServiceName", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "el-" + eventListenerName}}}
-
-	routeTaskRun := pipelinesv1alpha1.TaskRun{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: mode + "-route-",
-			Namespace:    installNS,
-		},
-		Spec: pipelinesv1alpha1.TaskRunSpec{
-			Inputs: pipelinesv1alpha1.TaskRunInputs{
-				Params: params,
-			},
-			ServiceAccount: os.Getenv("SERVICE_ACCOUNT"),
-			TaskRef: &pipelinesv1alpha1.TaskRef{
-				Name: "route-task",
-			},
-		},
-	}
-
-	tr, err := r.TektonClient.TektonV1alpha1().TaskRuns(installNS).Create(&routeTaskRun)
-	if err != nil {
-		return &pipelinesv1alpha1.TaskRun{}, err
-	}
-	logging.Log.Debugf("Route being created under taskrun %s", tr.GetName())
-
-	return tr, nil
-}
-
-func (r Resource) checkTaskRunSucceeds(originalTaskRun *pipelinesv1alpha1.TaskRun, installNS string) (bool, error) {
-	var err error
-	retries := 1
-	for retries < 120 {
-		taskRun, err := r.TektonClient.TektonV1alpha1().TaskRuns(installNS).Get(originalTaskRun.Name, metav1.GetOptions{})
-		if err != nil {
-			logging.Log.Debugf("Error occured retrieving taskrun %s.", originalTaskRun.Name)
-			return false, err
-		}
-		if taskRun.IsDone() {
-			if taskRun.IsSuccessful() {
-				return true, nil
-			}
-			if taskRun.IsCancelled() {
-				err = errors.New("taskrun " + taskRun.Name + " is in a cancelled state")
-				return false, err
-			}
-			err = errors.New("taskrun " + taskRun.Name + " is in a failed or unknown state")
-			return false, err
-		}
-		time.Sleep(1 * time.Second)
-		retries = retries + 1
-	}
-
-	err = errors.New("taskrun " + originalTaskRun.Name + " is not reporting as successful or cancelled")
-	return false, err
 }
 
 // Removes from Eventlistener, removes the webhook
@@ -780,22 +712,13 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerName, r
 				return nil
 			}
 		} else {
-			routeTaskRun, err := r.createRouteTaskRun("delete", installNS)
-			if err != nil {
-				msg := fmt.Sprintf("error deleting webhook due to error creating taskrun to delete route. Error was: %s", err)
+			if err := r.deleteOpenshiftRoute(routeName); err != nil {
+				msg := fmt.Sprintf("error deleting webhook due to error deleting route. Error was: %s", err)
 				logging.Log.Errorf("%s", msg)
 				return err
 			}
-			routeTaskRunResult, err := r.checkTaskRunSucceeds(routeTaskRun, installNS)
-			if !routeTaskRunResult && err != nil {
-				msg := fmt.Sprintf("error deleting webhook due to error in taskrun to delete route. Error was: %s", err)
-				logging.Log.Errorf("%s", msg)
-				return err
-			} else {
-				logging.Log.Debug("route deletion taskrun succeeded")
-			}
+			logging.Log.Debug("route deletion succeeded")
 		}
-
 	} else {
 		el.Spec.Triggers = newTriggers
 		_, err = r.TriggersClient.TektonV1alpha1().EventListeners(installNS).Update(el)
@@ -804,7 +727,6 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerName, r
 			return err
 		}
 	}
-
 	return err
 }
 
@@ -1061,4 +983,27 @@ func (r Resource) doGitHubWebhookRequest(webhook webhook, hubMode string, events
 	client := createOAuth2Client(ctx, accessToken)
 
 	return doGitHubHubbubRequest(client, webhook.GitRepositoryURL, hubMode, r.Defaults.CallbackURL, secretToken, events)
+}
+
+// createOpenshiftRoute attempts to create an Openshift Route on the service.
+// The Route has the same name as the service
+func (r Resource) createOpenshiftRoute(serviceName string) error {
+	route := &routesv1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: serviceName,
+		},
+		Spec: routesv1.RouteSpec{
+			To: routesv1.RouteTargetReference{
+				Kind: "Service",
+				Name: serviceName,
+			},
+		},
+	}
+	_, err := r.RoutesClient.RouteV1().Routes(r.Defaults.Namespace).Create(route)
+	return err
+}
+
+// deleteOpenshiftRoute attempts to delete an Openshift Route
+func (r Resource) deleteOpenshiftRoute(routeName string) error {
+	return r.RoutesClient.RouteV1().Routes(r.Defaults.Namespace).Delete(routeName, &metav1.DeleteOptions{})
 }
