@@ -19,18 +19,22 @@ import (
 	"testing"
 )
 
-func TestAddBranchToPushPayload(t *testing.T) {
+func TestAddExtrasToPushPayload(t *testing.T) {
 
 	ref := "refs/head/master"
+	commit := "12dee2323r2ef232ef2redw2"
 	pushPayloadStruct := github.PushEvent{
 		Ref: &ref,
+		HeadCommit: &github.PushEventCommit{
+			ID: &commit,
+		},
 	}
 	payload, err := json.Marshal(pushPayloadStruct)
 	if err != nil {
 		t.Errorf("Error in json.Marshal(pushPayloadStruct) %s", err)
 	}
 
-	bytes, err := addBranchToPayload("push", payload)
+	bytes, err := addExtrasToPayload("push", payload)
 	if err != nil {
 		t.Errorf("Error in addBranchToPayload %s", err)
 	}
@@ -44,16 +48,55 @@ func TestAddBranchToPushPayload(t *testing.T) {
 	if "master" != p.WebhookBranch {
 		t.Errorf("Branch name not added as expected, branch was returned as %s", p.WebhookBranch)
 	}
-
+	if "12dee23" != p.WebhookSuggestedImageTag {
+		t.Errorf("Suggested image tag not added as expected, tag was returned as %s", p.WebhookSuggestedImageTag)
+	}
 }
 
-func TestAddBranchToPullRequestPayload(t *testing.T) {
+func TestAddExtrasToPushPayloadForTag(t *testing.T) {
 
-	ref := "refs/head/master"
+	ref := "refs/tags/v1.0.1"
+	commit := "12dee2323r2ef232ef2redw2"
+	pushPayloadStruct := github.PushEvent{
+		Ref: &ref,
+		HeadCommit: &github.PushEventCommit{
+			ID: &commit,
+		},
+	}
+	payload, err := json.Marshal(pushPayloadStruct)
+	if err != nil {
+		t.Errorf("Error in json.Marshal(pushPayloadStruct) %s", err)
+	}
+
+	bytes, err := addExtrasToPayload("push", payload)
+	if err != nil {
+		t.Errorf("Error in addBranchToPayload %s", err)
+	}
+
+	var p PushPayload
+	err = json.Unmarshal(bytes, &p)
+	if err != nil {
+		t.Errorf("Error in json.Unmarshal %s", err)
+	}
+
+	// this is technically wrong as it isnt a branch - issue #378 to address this
+	if "v1.0.1" != p.WebhookBranch {
+		t.Errorf("Branch name not added as expected, branch was returned as %s", p.WebhookBranch)
+	}
+	if "v1.0.1" != p.WebhookSuggestedImageTag {
+		t.Errorf("Suggested image tag not added as expected, tag was returned as %s", p.WebhookSuggestedImageTag)
+	}
+}
+
+func TestAddExtrasToPullRequestPayload(t *testing.T) {
+
+	ref := "refs/heads/master"
+	commit := "9h3f39fu3hf39uh33"
 	pullrequestPayloadStruct := github.PullRequestEvent{
 		PullRequest: &github.PullRequest{
 			Head: &github.PullRequestBranch{
 				Ref: &ref,
+				SHA: &commit,
 			},
 		},
 	}
@@ -63,7 +106,7 @@ func TestAddBranchToPullRequestPayload(t *testing.T) {
 		t.Errorf("Error in json.Marshal(pullrequestPayloadStruct) %s", err)
 	}
 
-	bytes, err := addBranchToPayload("pull_request", payload)
+	bytes, err := addExtrasToPayload("pull_request", payload)
 	if err != nil {
 		t.Errorf("Error in addBranchToPayload %s", err)
 	}
@@ -77,10 +120,12 @@ func TestAddBranchToPullRequestPayload(t *testing.T) {
 	if "master" != p.WebhookBranch {
 		t.Errorf("Branch name not added as expected, branch was returned as %s", p.WebhookBranch)
 	}
-
+	if "9h3f39f" != p.WebhookSuggestedImageTag {
+		t.Errorf("Suggested image tag not added as expected, tag was returned as %s", p.WebhookSuggestedImageTag)
+	}
 }
 
-func TestAddBranchToOtherEventPayload(t *testing.T) {
+func TestAddExtrasToOtherEventPayload(t *testing.T) {
 
 	eventPayloadStruct := github.PingEvent{}
 
@@ -89,7 +134,7 @@ func TestAddBranchToOtherEventPayload(t *testing.T) {
 		t.Errorf("Error in json.Marshal(eventPayloadStruct) %s", err)
 	}
 
-	bytes, err := addBranchToPayload("ping", payload)
+	bytes, err := addExtrasToPayload("ping", payload)
 	if err != nil {
 		t.Errorf("Error in addBranchToPayload %s", err)
 	}

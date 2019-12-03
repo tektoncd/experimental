@@ -40,12 +40,14 @@ type Result struct {
 
 type PushPayload struct {
 	github.PushEvent
-	WebhookBranch string `json:"webhooks-tekton-git-branch"`
+	WebhookBranch            string `json:"webhooks-tekton-git-branch"`
+	WebhookSuggestedImageTag string `json:"webhooks-tekton-image-tag"`
 }
 
 type PullRequestPayload struct {
 	github.PullRequestEvent
-	WebhookBranch string `json:"webhooks-tekton-git-branch"`
+	WebhookBranch            string `json:"webhooks-tekton-git-branch"`
+	WebhookSuggestedImageTag string `json:"webhooks-tekton-image-tag"`
 }
 
 func main() {
@@ -139,7 +141,7 @@ func main() {
 			}
 
 			if validationPassed {
-				returnPayload, err := addBranchToPayload(request.Header.Get("X-Github-Event"), payload)
+				returnPayload, err := addExtrasToPayload(request.Header.Get("X-Github-Event"), payload)
 				if err != nil {
 					log.Printf("[%s] Failed to add branch to payload processing Github event ID: %s. Error: %s", foundTriggerName, id, err.Error())
 					http.Error(writer, fmt.Sprint(err), http.StatusInternalServerError)
@@ -170,7 +172,8 @@ func main() {
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", 8080), nil))
 }
 
-func addBranchToPayload(event string, payload []byte) ([]byte, error) {
+// Adds branch and a suggested image tag
+func addExtrasToPayload(event string, payload []byte) ([]byte, error) {
 	if "push" == event {
 		var toReturn PushPayload
 		var p github.PushEvent
@@ -179,8 +182,9 @@ func addBranchToPayload(event string, payload []byte) ([]byte, error) {
 			return nil, err
 		}
 		toReturn = PushPayload{
-			PushEvent:     p,
-			WebhookBranch: p.GetRef()[strings.LastIndex(p.GetRef(), "/")+1:],
+			PushEvent:                p,
+			WebhookBranch:            p.GetRef()[strings.LastIndex(p.GetRef(), "/")+1:],
+			WebhookSuggestedImageTag: getSuggestedTag(p.GetRef(), *p.HeadCommit.ID),
 		}
 		return json.Marshal(toReturn)
 	} else if "pull_request" == event {
@@ -192,8 +196,9 @@ func addBranchToPayload(event string, payload []byte) ([]byte, error) {
 		}
 		ref := pr.GetPullRequest().GetHead().GetRef()
 		toReturn = PullRequestPayload{
-			PullRequestEvent: pr,
-			WebhookBranch:    ref[strings.LastIndex(ref, "/")+1:],
+			PullRequestEvent:         pr,
+			WebhookBranch:            ref[strings.LastIndex(ref, "/")+1:],
+			WebhookSuggestedImageTag: getSuggestedTag(ref, *pr.PullRequest.Head.SHA),
 		}
 		return json.Marshal(toReturn)
 	} else {
@@ -207,4 +212,14 @@ func sanitizeGitInput(input string) string {
 	noHTTPSPrefix := strings.TrimPrefix(asLower, "https://")
 	noHTTPrefix := strings.TrimPrefix(noHTTPSPrefix, "http://")
 	return noHTTPrefix
+}
+
+func getSuggestedTag(ref, commit string) string {
+	var suggestedImageTag string
+	if strings.HasPrefix(ref, "refs/tags/") {
+		suggestedImageTag = ref[strings.LastIndex(ref, "/")+1:]
+	} else {
+		suggestedImageTag = commit[0:7]
+	}
+	return suggestedImageTag
 }
