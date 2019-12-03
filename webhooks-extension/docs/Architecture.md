@@ -34,15 +34,18 @@ Note: On installation of the webhooks extension a number of tasks and deployment
 
 The diagram above shows the events that take place when webhooks are created via the UI. The process consists of:
 
-1) Creating or updating the eventlistener with the new trigger (webhook).  For each webhook there are currently two triggers added to the event listener.  This is because push and pull request webhook payloads from GitHub contain information in different places and it is highly likely you will need different bindings to retrieve the relevant information from the event payload. 
+1) Creating or updating the eventlistener from a dashboard webhook request.
+For each webhook, two* trigger are created. Theese triggers are for push and
+pull request webhook payloads from GitHub, where each payload is structured
+differently (highly likely you will need different bindings for the payload). A
+third trigger is created for webhooks on a distinct GitHub repository (no such
+webhook exists yet). This trigger is for the monitor taskrun that is created
+when a pull request event occurs on the repository.
 
-    A third trigger is added when the first webhook is created for each GitHub repository. This trigger is for the monitor taskrun that is created when a pull request event occurs on the repository.  You will only have one monitor trigger per git repository.
+2) Creation of a ingress/route which exposes the eventlistener to the world outside of the cluster.
 
-2) Creation of a taskrun to create the ingress/route which exposes the eventlistener to the world outside of the cluster.
+3) Creation of the actual webhook in GitHub (if one does not already exist).
 
-3) Creation of a taskrun to create the webhook in GitHub (if one does not already exist).
-
-Currently there is also a fourth stage where a `githubwebhook` config map is created (or updated) to hold the configuration of the webhooks across the different git repositories.  This configmap is used to display the webhooks in the UI but is likely to be removed as the data is also within the eventlistener.
 <br/>
 <br/>
 

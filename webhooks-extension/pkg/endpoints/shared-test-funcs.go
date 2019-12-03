@@ -16,17 +16,19 @@ package endpoints
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+
 	restful "github.com/emicklei/go-restful"
 	"github.com/mitchellh/mapstructure"
+	fakeroutesclientset "github.com/openshift/client-go/route/clientset/versioned/fake"
 	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	fakeclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	faketriggerclientset "github.com/tektoncd/triggers/pkg/client/clientset/versioned/fake"
-	"io"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	fakek8sclientset "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/apis"
-	"net/http"
 )
 
 func dummyK8sClientset() *fakek8sclientset.Clientset {
@@ -88,6 +90,11 @@ func dummyTriggersClientset() *faketriggerclientset.Clientset {
 	return result
 }
 
+func dummyRoutesClientset() *fakeroutesclientset.Clientset {
+	result := fakeroutesclientset.NewSimpleClientset()
+	return result
+}
+
 func dummyHTTPRequest(method string, url string, body io.Reader) *http.Request {
 	httpReq, _ := http.NewRequest(method, url, body)
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -131,6 +138,7 @@ func dummyResource() *Resource {
 		K8sClient:      dummyK8sClientset(),
 		TektonClient:   dummyClientset(),
 		TriggersClient: dummyTriggersClientset(),
+		RoutesClient:   dummyRoutesClientset(),
 		Defaults:       dummyDefaults(),
 	}
 

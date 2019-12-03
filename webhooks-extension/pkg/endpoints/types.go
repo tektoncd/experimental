@@ -16,6 +16,7 @@ package endpoints
 import (
 	"os"
 
+	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	tektoncdclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	triggersclientset "github.com/tektoncd/triggers/pkg/client/clientset/versioned"
@@ -28,6 +29,7 @@ type Resource struct {
 	TektonClient   tektoncdclientset.Interface
 	K8sClient      k8sclientset.Interface
 	TriggersClient triggersclientset.Interface
+	RoutesClient   routeclientset.Interface
 	Defaults       EnvDefaults
 }
 
@@ -54,9 +56,17 @@ func NewResource() (Resource, error) {
 		return Resource{}, err
 	}
 
+	// Setup triggers client
 	triggersClient, err := triggersclientset.NewForConfig(config)
 	if err != nil {
 		logging.Log.Errorf("error building triggers clientset: %s.", err.Error())
+		return Resource{}, err
+	}
+	// Currently Openshift does not have a top level client, but instead one for
+	// each apiGroup
+	routesClient, err := routeclientset.NewForConfig(config)
+	if err != nil {
+		logging.Log.Errorf("Error building routes clientset: %s.", err.Error())
 		return Resource{}, err
 	}
 
@@ -74,6 +84,7 @@ func NewResource() (Resource, error) {
 		K8sClient:      k8sClient,
 		TektonClient:   tektonClient,
 		TriggersClient: triggersClient,
+		RoutesClient:   routesClient,
 		Defaults:       defaults,
 	}
 	return r, nil

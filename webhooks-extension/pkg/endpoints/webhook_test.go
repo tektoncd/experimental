@@ -27,6 +27,8 @@ import (
 	"testing"
 
 	restful "github.com/emicklei/go-restful"
+	"github.com/google/go-cmp/cmp"
+	routesv1 "github.com/openshift/api/route/v1"
 	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -894,5 +896,92 @@ func Test_createOAuth2Client(t *testing.T) {
 	}
 	if string(body) != responseText {
 		t.Logf("createOAuth2Client() expected response text %s; got: %s", responseText, body)
+	}
+}
+
+func Test_createOpenshiftRoute(t *testing.T) {
+	tests := []struct {
+		name        string
+		serviceName string
+		route       *routesv1.Route
+		hasErr      bool
+	}{
+		{
+			name:        "OpenShift Route",
+			serviceName: "route",
+			route: &routesv1.Route{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "route",
+					// Namepace in the dummy resource
+					Namespace: "default",
+				},
+				Spec: routesv1.RouteSpec{
+					To: routesv1.RouteTargetReference{
+						Kind: "Service",
+						Name: "route",
+					},
+				},
+			},
+			hasErr: false,
+		},
+	}
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			r := dummyResource()
+			var hasErr bool
+			if err := r.createOpenshiftRoute(tests[i].serviceName); err != nil {
+				hasErr = true
+			}
+			if diff := cmp.Diff(tests[i].hasErr, hasErr); diff != "" {
+				t.Fatalf("Error mismatch (-want +got):\n%s", diff)
+			}
+			route, err := r.RoutesClient.RouteV1().Routes(r.Defaults.Namespace).Get(tests[i].serviceName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(tests[i].route, route); diff != "" {
+				t.Errorf("Route mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func Test_deleteOpenshiftRoute(t *testing.T) {
+	tests := []struct {
+		name      string
+		routeName string
+		hasErr    bool
+	}{
+		{
+			name:      "OpenShift Route",
+			routeName: "route",
+			hasErr:    false,
+		},
+	}
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			r := dummyResource()
+			// Seed route for deletion
+			route := &routesv1.Route{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: tests[i].routeName,
+				},
+			}
+			if _, err := r.RoutesClient.RouteV1().Routes(r.Defaults.Namespace).Create(route); err != nil {
+				t.Fatal(err)
+			}
+			// Delete
+			var hasErr bool
+			if err := r.deleteOpenshiftRoute(tests[i].routeName); err != nil {
+				hasErr = true
+			}
+			if diff := cmp.Diff(tests[i].hasErr, hasErr); diff != "" {
+				t.Fatalf("Error mismatch (-want +got):\n%s", diff)
+			}
+			_, err := r.RoutesClient.RouteV1().Routes(r.Defaults.Namespace).Get(tests[i].routeName, metav1.GetOptions{})
+			if err == nil {
+				t.Errorf("Route not expected")
+			}
+		})
 	}
 }
