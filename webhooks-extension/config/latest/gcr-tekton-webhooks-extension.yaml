@@ -287,7 +287,7 @@ spec:
               pr = entry["metadata"]["name"]
               namespace = entry["metadata"]["namespace"]
               pipeline = entry["spec"]["pipelineRef"]["name"]
-              link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
+              link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelineruns/" + pr
               print("Checking pipelinerun " + pr + " in namespace " + namespace)
               if entry["status"]["conditions"][0]["status"] == u'True' and entry["status"]["conditions"][0]["type"] == u'Succeeded':
                 print("Success - pipelinerun " + pr + " in namespace " + namespace)
@@ -298,7 +298,7 @@ spec:
                 print("Failed - pipelinerun " + pr + " in namespace " + namespace)
                 runsFailed.append("[**$COMMENT_FAILURE**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
                 continue
-              link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelines/" + pipeline + "/runs/" + pr
+              link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelineruns/" + pr
               runsIncomplete.append("[**$COMMENT_TIMEOUT**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
             if len(runsIncomplete) == 0:
               break
