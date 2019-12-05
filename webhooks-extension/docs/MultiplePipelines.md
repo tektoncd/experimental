@@ -4,11 +4,11 @@
 
 It is possible to trigger multiple pipelines by creating multiple webhooks against the same repository in the Tekton dashboard UI.  Under the covers, only a single webhook is actually created on the git repository itself.
 
-The Tekton dashboard UI will list this 'multiple pipeline' configuration as mutiple webhooks, but if you were to look in GitHub itself you would see only one hook.
+The Tekton dashboard UI will list this 'multiple pipeline' configuration as mutiple webhooks, but if you were to look in GitHub/Gitlab itself you would see only one hook.
 
 ![Multiple pipelines](./images/twoPipelines.png?raw=true "Multiple pipelines shown as two webhooks in the Tekton UI")
 
-NOTE: The GitHub webhook is created for you - you do not manually create it.
+NOTE: The GitHub/Gitlab webhook is created for you - you do not manually create it.
 
 ![Multiple pipelines - Single GitHub webhook](./images/singleGHHook.png?raw=true "A single webhook shown on the GitHub repository, in GitHub")
 

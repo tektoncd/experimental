@@ -2,9 +2,9 @@
 
 ## Introduction
 
-The [Tekton Dashboard](https://github.com/tektoncd/dashboard) is a general purpose, web-based UI for [Tekton Pipelines](https://github.com/tektoncd/pipeline). The Dashboard [Webhooks Extension](https://github.com/tektoncd/experimental/tree/master/webhooks-extension) allows users to set up GitHub webhooks that will trigger Tekton PipelineRuns and associated TaskRuns. This extension is intended to support Continuous Integration and Continuous Delivery (CI/CD) workflows. Git-driven workflow and automation is a common pattern that we expect most of our readers will be comfortable and familiar with.
+The [Tekton Dashboard](https://github.com/tektoncd/dashboard) is a general purpose, web-based UI for [Tekton Pipelines](https://github.com/tektoncd/pipeline). The Dashboard [Webhooks Extension](https://github.com/tektoncd/experimental/tree/master/webhooks-extension) allows users to set up GitHub/Gitlab webhooks that will trigger Tekton PipelineRuns and associated TaskRuns. This extension is intended to support Continuous Integration and Continuous Delivery (CI/CD) workflows. Git-driven workflow and automation is a common pattern that we expect most of our readers will be comfortable and familiar with.
 
-This article aims to help you get webhooks up and running with Tekton. We talk about 'GitHub webhooks' in this article because as of October 2019, that is what the webhooks extension currently supports. Support for GitLab is on our roadmap but not yet implemented. 
+This article aims to help you get webhooks up and running with Tekton. We talk about 'GitHub webhooks' in this article but Gitlab is also supported. 
 
 ## Installation
 

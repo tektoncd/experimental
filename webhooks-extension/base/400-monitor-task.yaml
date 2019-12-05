@@ -10,12 +10,15 @@ spec:
       - name: pull-request
         type: pullRequest
     params:
+      - name: statusesurl
+        description: The statuses url
+        type: string
       - name: commentsuccess
         description: The text to use in the situation where a PipelineRun has succeeded.
         default: "Success"
         type: string
       - name: commentfailure
-        description: The text to use in the situation where a PipelineRun has a failed.
+        description: The text to use in the situation where a PipelineRun has failed.
         default: "Failed"
         type: string
       - name: commenttimeout
@@ -30,11 +33,22 @@ spec:
         description: The URL to the pipelineruns page of the dashboard
         default: "http://localhost:9097/"
         type: string
+      - name: provider
+        description: The git provider, "github" or "gitlab"
+        default: "github"
+        type: string
+      - name: apiurl
+        description: The git api URL for the repository
+        type: string
+      - name: insecure-skip-tls-verify
+        description: Whether or not to verify SSL Certificates from the git server ("true" or "false")
+        default: "false"
+        type: string
       # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
       # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
-      # the github status URL to set the status into pending and use this secret to during that request.  
+      # the git status URL to set the status into pending and use this secret to during that request.  
       - name: secret
-        description: The secret containing the access token to access github
+        description: The secret containing the access token to access the git server
         type: string
       # Up to here
   outputs:
@@ -59,8 +73,16 @@ spec:
         value: $(inputs.params.commentmissing)
       - name: URL
         value: $(inputs.params.dashboard-url)
+      - name: STATUSES_URL
+        value: $(inputs.params.statusesurl)
+      - name: GITPROVIDER
+        value: $(inputs.params.provider)
+      - name: GITAPIURL
+        value: $(inputs.params.apiurl)
+      - name: SKIPSSLVERIFY
+        value: $(inputs.params.insecure-skip-tls-verify)
       # This can be deleted after any fix to the above mentioned pending status change
-      - name: GITHUBTOKEN
+      - name: GITTOKEN
         valueFrom:
           secretKeyRef:
             key: accessToken
@@ -72,37 +94,35 @@ spec:
     - |
       set -e
       cat <<EOF | python
-      import time, os, json, requests, pprint, shutil
+      import time, os, json, requests, pprint, shutil, distutils.util
       from kubernetes import client, config
-      
       def diff(li1, li2): 
         li_dif = [i for i in li1 + li2 if i not in li1 or i not in li2] 
         return li_dif
-
       config.load_incluster_config()
       api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
       gitPRcontext = "Tekton"
-      gitPRurl = ""
-      # This is the code thats puts the pullrequest into pending status, this is code to rip out later if there
-      # is a fix to the above mentioned update status to pending issue.
-      with open("/workspace/pull-request/github/pr.json") as fp:
-        rawdata = json.load(fp)
-        statusurl = rawdata['statuses_url']
-      pendingData = {
-        "state": "pending",
-        "description": "pipelines in progress",
-        "target_url": "",
-        "context": "Tekton"
-      }
-      print("Setting status to pending with URL : " + statusurl)
-      resp = requests.post(statusurl, json.dumps(pendingData), headers = {'Content-Type': 'application/json', 'Authorization': "Bearer $GITHUBTOKEN"})
-      print(resp)
-      # End of code to replace
+      gitPRurl = ""  
       if not "$URL".startswith("http"):
         pipelineRunURLPrefix = "http://" + "$URL"
       else:
-        pipelineRunURLPrefix = "$URL"
-      labelToCheck = "tekton.dev/triggers-eventid=$EVENTID" 
+        pipelineRunURLPrefix = "$URL"    
+      verifySSL = not bool(distutils.util.strtobool("$SKIPSSLVERIFY"))
+      if "$GITPROVIDER" == "github":
+        statusurl = "$STATUSES_URL"
+        pendingData = {
+          "state": "pending",
+          "description": "pipelines in progress",
+          "target_url": pipelineRunURLPrefix + "/#/pipelineruns",
+          "context": "Tekton"
+        }
+        resp = requests.post(statusurl, json.dumps(pendingData), headers = {'Content-Type': 'application/json', 'Authorization': "Token $GITTOKEN"}, verify=verifySSL)
+        print(resp)
+      if "$GITPROVIDER" == "gitlab":
+        statusurl = "$GITAPIURL" + "/" + "$STATUSES_URL" + "?state=pending&name=Tekton&target_url=" + pipelineRunURLPrefix + "/#/pipelineruns"
+        resp = requests.post(statusurl, headers = {'Authorization': "Bearer $GITTOKEN"}, verify=verifySSL)
+        print(resp)
+      labelToCheck = "tekton.dev/triggers-eventid=$EVENTID"
       runsPassed = []
       runsFailed = []
       runsIncomplete = []
@@ -110,7 +130,6 @@ spec:
       failed = 0
       i = range(180)
       initial_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)["items"]
-
       for x in i:
           time.sleep( 10 )
           runsPassed = []
@@ -121,7 +140,6 @@ spec:
           # This is easiest done by reopening an existing PullRequest
           # It's important to delete the PipelineRun only after the monitor task is already running because 
           # the first thing it's going to do is figure out the PipelineRuns to watch over
-
           failed = 0
           found_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)["items"]
           
@@ -136,7 +154,6 @@ spec:
               if data not in runsMissing:
                 # Don't add duplicates. Fear not, once this run is found it'll be removed
                 runsMissing.append(data)
-
           if len(found_runs) > 0:
             for entry in found_runs:
               pr = entry["metadata"]["name"]
@@ -180,6 +197,7 @@ spec:
                  "Status | Pipeline | PipelineRun | Namespace\n"
                  ":----- | :------- | :--------------- | :--------\n"
                  ) + "\n".join(results)
+      shutil.copyfile("/workspace/pull-request/pr.json","/workspace/output/pull-request/pr.json")
       # Preserve existing comments
       shutil.copytree("/workspace/pull-request/comments","/workspace/output/pull-request/comments")
       handle = open("/workspace/output/pull-request/comments/newcomment.json", 'w')
@@ -189,17 +207,16 @@ spec:
         detailsURL = "http://" + "$URL" + "/#/pipelineruns"
       else:
         detailsURL = "$URL" + "/#/pipelineruns"
-      print("Set details url to: " + detailsURL)
-      status = json.dumps(dict(ID=gitPRcontext,Code=gitPRcode,Description=gitPRdescription,URL=detailsURL))
+      print("Set details url to " + detailsURL)
+      status = json.dumps(dict(Label=gitPRcontext,state=gitPRcode,Desc=gitPRdescription,Target=detailsURL))
+      print("Setting status to " + status)
       if not os.path.exists("/workspace/output/pull-request/status"):
         os.makedirs("/workspace/output/pull-request/status")
       handle = open("/workspace/output/pull-request/status/Tekton.json", 'w')
       handle.write(status)
       handle.close()
-      if not os.path.exists("/workspace/output/pull-request/"):
-        os.makedirs("/workspace/output/pull-request/")
       if not os.path.exists("/workspace/output/pull-request/labels"):
         shutil.copytree("/workspace/pull-request/labels","/workspace/output/pull-request/labels")
       shutil.copyfile("/workspace/pull-request/base.json","/workspace/output/pull-request/base.json") 
-      shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json") 
+      shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json")
       EOF

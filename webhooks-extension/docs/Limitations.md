@@ -1,9 +1,11 @@
 # Limitations
 <br/>
 
-- Only GitHub webhooks are currently supported.
+- Only GitHub and Gitlab webhooks are currently supported.
+- Your git server host URL needs to contain github or gitlab in its name.
 - Webhooks in GitHub are sometimes left behind after deletion (details further below).
-- Only `push` and `pull_request` events are currently supported, these are the events defined on the webhook.
+- Only `push` and `pull_request` events are currently supported for GitHub, these are the events defined on the webhook, tag creation shows as a push event and will also trigger pipelines.
+- Only `push` and `tag push` and `merge request` events are currently supported for GitLab, these are the events defined on the webhook.
 - The trigger template needs to be available in the install namespace with the name `<pipeline-name>-template` (details further below).
 - The two trigger bindings need to available in the install namespace with the names `<pipeline-name>-push-binding` and `<pipeline-name>-pullrequest-binding` (details further below).
 - Limited configurable parameters are added to the trigger in the eventlistener through the UI, statics could be added in your trigger binding (details further below).

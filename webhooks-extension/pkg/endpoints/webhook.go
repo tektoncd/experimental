@@ -20,6 +20,7 @@ import (
 	restful "github.com/emicklei/go-restful"
 	routesv1 "github.com/openshift/api/route/v1"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
+	"github.com/tektoncd/experimental/webhooks-extension/pkg/utils"
 	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,8 +42,9 @@ var (
 )
 
 const (
-	eventListenerName = "tekton-webhooks-eventlistener"
-	routeName         = "el-" + eventListenerName
+	eventListenerName  = "tekton-webhooks-eventlistener"
+	routeName          = "el-" + eventListenerName
+	webhookextPullTask = "monitor-task"
 )
 
 /*
@@ -56,7 +58,7 @@ func (r Resource) createEventListener(webhook webhook, namespace, monitorTrigger
 		webhook.Pipeline+"-push-binding",
 		webhook.Pipeline+"-template",
 		webhook.GitRepositoryURL,
-		"push",
+		"push, Push Hook, Tag Push Hook",
 		webhook.AccessTokenRef,
 		hookParams)
 
@@ -64,16 +66,21 @@ func (r Resource) createEventListener(webhook webhook, namespace, monitorTrigger
 		webhook.Pipeline+"-pullrequest-binding",
 		webhook.Pipeline+"-template",
 		webhook.GitRepositoryURL,
-		"pull_request",
+		"pull_request, Merge Request Hook",
 		webhook.AccessTokenRef,
 		hookParams)
 	pullRequestTrigger.Interceptor.Header = append(pullRequestTrigger.Interceptor.Header, actions)
 
+	monitorBindingName, err := getMonitorBindingName(webhook.GitRepositoryURL, webhook.PullTask)
+	if err != nil {
+		return nil, err
+	}
+
 	monitorTrigger := r.newTrigger(monitorTriggerName,
-		webhook.PullTask+"-binding",
+		monitorBindingName,
 		webhook.PullTask+"-template",
 		webhook.GitRepositoryURL,
-		"pull_request",
+		"pull_request, Merge Request Hook",
 		webhook.AccessTokenRef,
 		monitorParams)
 	monitorTrigger.Interceptor.Header = append(monitorTrigger.Interceptor.Header, actions)
@@ -103,7 +110,7 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 		webhook.Pipeline+"-push-binding",
 		webhook.Pipeline+"-template",
 		webhook.GitRepositoryURL,
-		"push",
+		"push, Push Hook, Tag Push Hook",
 		webhook.AccessTokenRef,
 		hookParams)
 
@@ -111,7 +118,7 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 		webhook.Pipeline+"-pullrequest-binding",
 		webhook.Pipeline+"-template",
 		webhook.GitRepositoryURL,
-		"pull_request",
+		"pull_request, Merge Request Hook",
 		webhook.AccessTokenRef,
 		hookParams)
 	newPullRequestTrigger.Interceptor.Header = append(newPullRequestTrigger.Interceptor.Header, actions)
@@ -127,11 +134,16 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 		}
 	}
 	if !existingMonitorFound {
+		monitorBindingName, err := getMonitorBindingName(webhook.GitRepositoryURL, webhook.PullTask)
+		if err != nil {
+			return nil, err
+		}
+
 		newMonitor := r.newTrigger(monitorTriggerName,
-			webhook.PullTask+"-binding",
+			monitorBindingName,
 			webhook.PullTask+"-template",
 			webhook.GitRepositoryURL,
-			"pull_request",
+			"pull_request, Merge Request Hook",
 			webhook.AccessTokenRef,
 			monitorParams)
 		newMonitor.Interceptor.Header = append(newMonitor.Interceptor.Header, actions)
@@ -140,6 +152,18 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 	}
 
 	return r.TriggersClient.TektonV1alpha1().EventListeners(eventListener.GetNamespace()).Update(eventListener)
+}
+
+func getMonitorBindingName(repoURL, monitorTask string) (string, error) {
+	monitorBindingName := monitorTask + "-binding"
+	if monitorTask == webhookextPullTask {
+		provider, _, err := utils.GetGitProviderAndAPIURL(repoURL)
+		if err != nil {
+			return "", err
+		}
+		monitorBindingName = monitorTask + "-" + provider + "-binding"
+	}
+	return monitorBindingName, nil
 }
 
 func (r Resource) newTrigger(name, bindingName, templateName, repoURL, event, secretName string, params []pipelinesv1alpha1.Param) v1alpha1.EventListenerTrigger {
@@ -196,6 +220,18 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 		logging.Log.Infof("Release name based on repository name: %s", releaseName)
 	}
 
+	sslVerify := true
+	ssl := os.Getenv("SSL_VERIFICATION_ENABLED")
+	if strings.ToLower(ssl) == "false" {
+		logging.Log.Warn("SSL_VERIFICATION_ENABLED SET TO FALSE")
+		sslVerify = false
+	}
+
+	provider, apiURL, err := utils.GetGitProviderAndAPIURL(webhook.GitRepositoryURL)
+	if err != nil {
+		logging.Log.Errorf("error returned from GetGitProviderAndAPIURL: %s", err)
+	}
+
 	hookParams := []pipelinesv1alpha1.Param{
 		{Name: "webhooks-tekton-release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: releaseName}},
 		{Name: "webhooks-tekton-target-namespace", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.Namespace}},
@@ -203,7 +239,10 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 		{Name: "webhooks-tekton-git-server", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: server}},
 		{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}},
 		{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}},
-		{Name: "webhooks-tekton-pull-task", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.PullTask}}}
+		{Name: "webhooks-tekton-pull-task", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.PullTask}},
+		{Name: "webhooks-tekton-ssl-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: strconv.FormatBool(sslVerify)}},
+		{Name: "webhooks-tekton-insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: strconv.FormatBool(!sslVerify)}},
+	}
 
 	if webhook.DockerRegistry != "" {
 		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.DockerRegistry}})
@@ -237,6 +276,9 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 		{Name: "gitsecretname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.AccessTokenRef}},
 		{Name: "gitsecretkeyname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}},
 		{Name: "dashboardurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: r.getDashboardURL(r.Defaults.Namespace)}},
+		{Name: "insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: strconv.FormatBool(!sslVerify)}},
+		{Name: "provider", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: provider}},
+		{Name: "apiurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: apiURL}},
 	}
 
 	return hookParams, prMonitorParams
@@ -340,7 +382,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	webhook.GitRepositoryURL = strings.TrimSuffix(webhook.GitRepositoryURL, ".git")
 
 	if webhook.PullTask == "" {
-		webhook.PullTask = "monitor-task"
+		webhook.PullTask = webhookextPullTask
 	}
 
 	if webhook.Name != "" {
