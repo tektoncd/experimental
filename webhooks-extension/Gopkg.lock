@@ -301,6 +301,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:b5712d3cd9ebee0caff53dc3c14aedad7fdced06387b4d8e4076e7220cd4f1e7"
+  name = "github.com/xanzy/go-gitlab"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f74501cbc643b2731fcdfb29ca53230bbb2b935a"
+  version = "v0.22.2"
+
+[[projects]]
   digest = "1:a5158647b553c61877aa9ae74f4015000294e47981e6b8b07525edcbb0747c81"
   name = "go.uber.org/atomic"
   packages = ["."]
@@ -766,6 +774,7 @@
     "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1",
     "github.com/tektoncd/triggers/pkg/client/clientset/versioned",
     "github.com/tektoncd/triggers/pkg/client/clientset/versioned/fake",
+    "github.com/xanzy/go-gitlab",
     "go.uber.org/zap",
     "golang.org/x/oauth2",
     "k8s.io/api/core/v1",

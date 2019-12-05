@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -39,6 +40,12 @@ import (
 )
 
 var server *httptest.Server
+
+type testcase struct {
+	Webhook          webhook
+	expectedProvider string
+	expectedAPIURL   string
+}
 
 // All event sources will be created in the "default" namespace because the INSTALLED_NAMESPACE env variable is not set
 const installNs = "default"
@@ -110,48 +117,86 @@ func TestNewTrigger(t *testing.T) {
 }
 
 func TestGetParams(t *testing.T) {
-	var webHooks = []webhook{
+
+	var testcases = []testcase{
 		{
-			Name:             "name1",
-			Namespace:        installNs,
-			GitRepositoryURL: "https://github.com/owner/repo",
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
-			DockerRegistry:   "registry1",
-			HelmSecret:       "helmsecret1",
-			ReleaseName:      "releasename1",
-			PullTask:         "pulltask1",
-			OnSuccessComment: "onsuccesscomment1",
-			OnFailureComment: "onfailurecomment1",
-			OnTimeoutComment: "ontimeoutcomment1",
-			OnMissingComment: "onmissingcomment1",
+			Webhook: webhook{
+				Name:             "name1",
+				Namespace:        installNs,
+				GitRepositoryURL: "https://github.com/owner/repo",
+				AccessTokenRef:   "token1",
+				Pipeline:         "pipeline1",
+				DockerRegistry:   "registry1",
+				HelmSecret:       "helmsecret1",
+				ReleaseName:      "releasename1",
+				PullTask:         "pulltask1",
+				OnSuccessComment: "onsuccesscomment1",
+				OnFailureComment: "onfailurecomment1",
+				OnTimeoutComment: "ontimeoutcomment1",
+				OnMissingComment: "onmissingcomment1",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 		{
-			Name:             "name2",
-			Namespace:        "foo",
-			GitRepositoryURL: "https://github.com/owner/repo2",
-			AccessTokenRef:   "token2",
-			Pipeline:         "pipeline2",
-			DockerRegistry:   "registry2",
-			OnSuccessComment: "onsuccesscomment2",
-			OnFailureComment: "onfailurecomment2",
-			OnTimeoutComment: "ontimeoutcomment2",
-			OnMissingComment: "onmissingcomment2",
+			Webhook: webhook{
+				Name:             "name2",
+				Namespace:        "foo",
+				GitRepositoryURL: "https://github.com/owner/repo2",
+				AccessTokenRef:   "token2",
+				Pipeline:         "pipeline2",
+				DockerRegistry:   "registry2",
+				OnSuccessComment: "onsuccesscomment2",
+				OnFailureComment: "onfailurecomment2",
+				OnTimeoutComment: "ontimeoutcomment2",
+				OnMissingComment: "onmissingcomment2",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 		{
-			Name:             "name3",
-			Namespace:        "foo2",
-			GitRepositoryURL: "https://github.com/owner/repo3",
-			AccessTokenRef:   "token3",
-			Pipeline:         "pipeline3",
-			ServiceAccount:   "my-sa",
+			Webhook: webhook{
+				Name:             "name3",
+				Namespace:        "foo2",
+				GitRepositoryURL: "https://github.com/owner/repo3",
+				AccessTokenRef:   "token3",
+				Pipeline:         "pipeline3",
+				ServiceAccount:   "my-sa",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
+		},
+		{
+			Webhook: webhook{
+				Name:             "name4",
+				Namespace:        "foo2",
+				GitRepositoryURL: "https://gitlab.company.com/owner/repo3",
+				AccessTokenRef:   "token3",
+				Pipeline:         "pipeline3",
+				ServiceAccount:   "my-sa",
+			},
+			expectedProvider: "gitlab",
+			expectedAPIURL:   "https://gitlab.company.com/api/v4",
+		},
+		{
+			Webhook: webhook{
+				Name:             "name5",
+				Namespace:        "foo2",
+				GitRepositoryURL: "https://github.company.com/owner/repo3",
+				AccessTokenRef:   "token3",
+				Pipeline:         "pipeline3",
+				ServiceAccount:   "my-sa",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://github.company.com/api/v3/",
 		},
 	}
 
 	r := dummyResource()
-	for _, hook := range webHooks {
-		hookParams, monitorParams := r.getParams(hook)
-		expectedHookParams, expectedMonitorParams := getExpectedParams(hook, r)
+	os.Setenv("SSL_VERIFICATION_ENABLED", "true")
+	for _, tt := range testcases {
+		hookParams, monitorParams := r.getParams(tt.Webhook)
+		expectedHookParams, expectedMonitorParams := getExpectedParams(tt.Webhook, r, tt.expectedProvider, tt.expectedAPIURL)
 		if !reflect.DeepEqual(hookParams, expectedHookParams) {
 			t.Error("The webhook params returned from r.getParams were not as expected")
 			t.Errorf("got hookParams: %+v", hookParams)
@@ -166,49 +211,61 @@ func TestGetParams(t *testing.T) {
 }
 
 func TestCreateEventListener(t *testing.T) {
-	var hooks = []webhook{
+	var testcases = []testcase{
 		{
-			Name:             "name1",
-			Namespace:        installNs,
-			GitRepositoryURL: "https://github.com/owner/repo",
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
-			DockerRegistry:   "registry1",
-			HelmSecret:       "helmsecret1",
-			ReleaseName:      "releasename1",
-			PullTask:         "pulltask1",
-			OnSuccessComment: "onsuccesscomment1",
-			OnFailureComment: "onfailurecomment1",
-			OnTimeoutComment: "ontimeoutcomment1",
-			OnMissingComment: "onmissingcomment1",
+			Webhook: webhook{
+				Name:             "name1",
+				Namespace:        installNs,
+				GitRepositoryURL: "https://github.com/owner/repo",
+				AccessTokenRef:   "token1",
+				Pipeline:         "pipeline1",
+				DockerRegistry:   "registry1",
+				HelmSecret:       "helmsecret1",
+				ReleaseName:      "releasename1",
+				PullTask:         "pulltask1",
+				OnSuccessComment: "onsuccesscomment1",
+				OnFailureComment: "onfailurecomment1",
+				OnTimeoutComment: "ontimeoutcomment1",
+				OnMissingComment: "onmissingcomment1",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 		{
-			Name:             "name2",
-			Namespace:        "foo",
-			GitRepositoryURL: "https://github.com/owner/repo2",
-			AccessTokenRef:   "token2",
-			Pipeline:         "pipeline2",
-			DockerRegistry:   "registry2",
-			OnSuccessComment: "onsuccesscomment2",
-			OnFailureComment: "onfailurecomment2",
-			OnTimeoutComment: "ontimeoutcomment2",
-			OnMissingComment: "onmissingcomment2",
+			Webhook: webhook{
+				Name:             "name2",
+				Namespace:        "foo",
+				GitRepositoryURL: "https://github.com/owner/repo2",
+				AccessTokenRef:   "token2",
+				Pipeline:         "pipeline2",
+				DockerRegistry:   "registry2",
+				OnSuccessComment: "onsuccesscomment2",
+				OnFailureComment: "onfailurecomment2",
+				OnTimeoutComment: "ontimeoutcomment2",
+				OnMissingComment: "onmissingcomment2",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 		{
-			Name:             "name3",
-			Namespace:        "foo2",
-			GitRepositoryURL: "https://github.com/owner/repo3",
-			AccessTokenRef:   "token3",
-			Pipeline:         "pipeline3",
-			ServiceAccount:   "my-sa",
-			PullTask:         "check-me",
+			Webhook: webhook{
+				Name:             "name3",
+				Namespace:        "foo2",
+				GitRepositoryURL: "https://github.com/owner/repo3",
+				AccessTokenRef:   "token3",
+				Pipeline:         "pipeline3",
+				ServiceAccount:   "my-sa",
+				PullTask:         "check-me",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 	}
 
 	r := dummyResource()
 
-	for _, hook := range hooks {
-		el, err := r.createEventListener(hook, "install-namespace", "my/monitor/name")
+	for _, tt := range testcases {
+		el, err := r.createEventListener(tt.Webhook, "install-namespace", "my/monitor/name")
 		if err != nil {
 			t.Errorf("Error creating eventlistener: %s", err)
 		}
@@ -225,7 +282,7 @@ func TestCreateEventListener(t *testing.T) {
 		if len(el.Spec.Triggers) != 3 {
 			t.Errorf("Eventlistener had %d triggers, but expected 3", len(el.Spec.Triggers))
 		} else {
-			expectedTriggers := getExpectedTriggers(hook, "my/monitor/name", r)
+			expectedTriggers := getExpectedTriggers(tt.Webhook, "my/monitor/name", r, tt.expectedProvider, tt.expectedAPIURL)
 			if !reflect.DeepEqual(el.Spec.Triggers, expectedTriggers) {
 				t.Errorf("Eventlistener trigger did not match expectation")
 				t.Errorf("got: %+v", el.Spec.Triggers)
@@ -240,57 +297,69 @@ func TestCreateEventListener(t *testing.T) {
 }
 
 func TestUpdateEventListenerTriggerListing(t *testing.T) {
-	var hooks = []webhook{
+	var testcases = []testcase{
 		{
-			Name:             "name1",
-			Namespace:        installNs,
-			GitRepositoryURL: "https://github.com/owner/repo",
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
-			DockerRegistry:   "registry1",
-			HelmSecret:       "helmsecret1",
-			ReleaseName:      "releasename1",
-			PullTask:         "pulltask1",
-			OnSuccessComment: "onsuccesscomment1",
-			OnFailureComment: "onfailurecomment1",
-			OnTimeoutComment: "ontimeoutcomment1",
-			OnMissingComment: "onmissingcomment1",
+			Webhook: webhook{
+				Name:             "name1",
+				Namespace:        installNs,
+				GitRepositoryURL: "https://github.com/owner/repo",
+				AccessTokenRef:   "token1",
+				Pipeline:         "pipeline1",
+				DockerRegistry:   "registry1",
+				HelmSecret:       "helmsecret1",
+				ReleaseName:      "releasename1",
+				PullTask:         "pulltask1",
+				OnSuccessComment: "onsuccesscomment1",
+				OnFailureComment: "onfailurecomment1",
+				OnTimeoutComment: "ontimeoutcomment1",
+				OnMissingComment: "onmissingcomment1",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 		{
-			Name:             "name2",
-			Namespace:        "foo",
-			GitRepositoryURL: "https://github.com/owner/repo",
-			AccessTokenRef:   "token2",
-			Pipeline:         "pipeline2",
-			DockerRegistry:   "registry2",
-			OnSuccessComment: "onsuccesscomment2",
-			OnFailureComment: "onfailurecomment2",
-			OnTimeoutComment: "ontimeoutcomment2",
-			OnMissingComment: "onmissingcomment2",
+			Webhook: webhook{
+				Name:             "name2",
+				Namespace:        "foo",
+				GitRepositoryURL: "https://github.com/owner/repo",
+				AccessTokenRef:   "token2",
+				Pipeline:         "pipeline2",
+				DockerRegistry:   "registry2",
+				OnSuccessComment: "onsuccesscomment2",
+				OnFailureComment: "onfailurecomment2",
+				OnTimeoutComment: "ontimeoutcomment2",
+				OnMissingComment: "onmissingcomment2",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 		{
-			Name:             "name3",
-			Namespace:        "foo2",
-			GitRepositoryURL: "https://github.com/owner/repo2",
-			AccessTokenRef:   "token3",
-			Pipeline:         "pipeline3",
-			ServiceAccount:   "my-sa",
-			PullTask:         "check-me",
+			Webhook: webhook{
+				Name:             "name3",
+				Namespace:        "foo2",
+				GitRepositoryURL: "https://github.com/owner/repo2",
+				AccessTokenRef:   "token3",
+				Pipeline:         "pipeline3",
+				ServiceAccount:   "my-sa",
+				PullTask:         "check-me",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 	}
 
 	r := dummyResource()
 	os.Setenv("SERVICE_ACCOUNT", "tekton-test-service-account")
 
-	el, err := r.createEventListener(hooks[0], "install-namespace", hooks[0].GitRepositoryURL[strings.LastIndex(hooks[0].GitRepositoryURL, ":")+3:])
+	el, err := r.createEventListener(testcases[0].Webhook, "install-namespace", testcases[0].Webhook.GitRepositoryURL[strings.LastIndex(testcases[0].Webhook.GitRepositoryURL, ":")+3:])
 	if err != nil {
 		t.Errorf("Error creating eventlistener: %s", err)
 	}
-	el, err = r.updateEventListener(el, hooks[1], hooks[1].GitRepositoryURL[strings.LastIndex(hooks[1].GitRepositoryURL, ":")+3:])
+	el, err = r.updateEventListener(el, testcases[1].Webhook, testcases[1].Webhook.GitRepositoryURL[strings.LastIndex(testcases[1].Webhook.GitRepositoryURL, ":")+3:])
 	if err != nil {
 		t.Errorf("Error updating eventlistener - first time: %s", err)
 	}
-	el, err = r.updateEventListener(el, hooks[2], hooks[2].GitRepositoryURL[strings.LastIndex(hooks[2].GitRepositoryURL, ":")+3:])
+	el, err = r.updateEventListener(el, testcases[2].Webhook, testcases[2].Webhook.GitRepositoryURL[strings.LastIndex(testcases[2].Webhook.GitRepositoryURL, ":")+3:])
 	if err != nil {
 		t.Errorf("Error updating eventlistener - second time: %s", err)
 	}
@@ -305,8 +374,8 @@ func TestUpdateEventListenerTriggerListing(t *testing.T) {
 		// triggers such that the monitor is only expected once.
 		expectedTriggers := []v1alpha1.EventListenerTrigger{}
 		triggerNamesExpected := make(map[string]string)
-		for _, hook := range hooks {
-			for _, t := range getExpectedTriggers(hook, hook.GitRepositoryURL[strings.LastIndex(hook.GitRepositoryURL, ":")+3:], r) {
+		for _, tt := range testcases {
+			for _, t := range getExpectedTriggers(tt.Webhook, tt.Webhook.GitRepositoryURL[strings.LastIndex(tt.Webhook.GitRepositoryURL, ":")+3:], r, tt.expectedProvider, tt.expectedAPIURL) {
 				if triggerNamesExpected[t.Name] == "" {
 					triggerNamesExpected[t.Name] = "added"
 					expectedTriggers = append(expectedTriggers, t)
@@ -329,43 +398,51 @@ func TestUpdateEventListenerTriggerListing(t *testing.T) {
 }
 
 func TestDeleteFromEventListener(t *testing.T) {
-	var hooks = []webhook{
+	var testcases = []testcase{
 		{
-			Name:             "name1",
-			Namespace:        installNs,
-			GitRepositoryURL: "https://github.com/owner/repo",
-			AccessTokenRef:   "token1",
-			Pipeline:         "pipeline1",
-			DockerRegistry:   "registry1",
-			HelmSecret:       "helmsecret1",
-			ReleaseName:      "releasename1",
-			PullTask:         "pulltask1",
-			OnSuccessComment: "onsuccesscomment1",
-			OnFailureComment: "onfailurecomment1",
-			OnTimeoutComment: "ontimeoutcomment1",
-			OnMissingComment: "onmissingcomment1",
+			Webhook: webhook{
+				Name:             "name1",
+				Namespace:        installNs,
+				GitRepositoryURL: "https://github.com/owner/repo",
+				AccessTokenRef:   "token1",
+				Pipeline:         "pipeline1",
+				DockerRegistry:   "registry1",
+				HelmSecret:       "helmsecret1",
+				ReleaseName:      "releasename1",
+				PullTask:         "pulltask1",
+				OnSuccessComment: "onsuccesscomment1",
+				OnFailureComment: "onfailurecomment1",
+				OnTimeoutComment: "ontimeoutcomment1",
+				OnMissingComment: "onmissingcomment1",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 		{
-			Name:             "name2",
-			Namespace:        "foo",
-			GitRepositoryURL: "https://github.com/owner/repo",
-			AccessTokenRef:   "token2",
-			Pipeline:         "pipeline2",
-			DockerRegistry:   "registry2",
-			OnSuccessComment: "onsuccesscomment2",
-			OnFailureComment: "onfailurecomment2",
-			OnTimeoutComment: "ontimeoutcomment2",
-			OnMissingComment: "onmissingcomment2",
+			Webhook: webhook{
+				Name:             "name2",
+				Namespace:        "foo",
+				GitRepositoryURL: "https://github.com/owner/repo",
+				AccessTokenRef:   "token2",
+				Pipeline:         "pipeline2",
+				DockerRegistry:   "registry2",
+				OnSuccessComment: "onsuccesscomment2",
+				OnFailureComment: "onfailurecomment2",
+				OnTimeoutComment: "ontimeoutcomment2",
+				OnMissingComment: "onmissingcomment2",
+			},
+			expectedProvider: "github",
+			expectedAPIURL:   "https://api.github.com/",
 		},
 	}
 
 	r := dummyResource()
 	os.Setenv("SERVICE_ACCOUNT", "tekton-test-service-account")
-	el, err := r.createEventListener(hooks[0], "install-namespace", hooks[0].GitRepositoryURL[strings.LastIndex(hooks[0].GitRepositoryURL, ":")+3:])
+	el, err := r.createEventListener(testcases[0].Webhook, "install-namespace", testcases[0].Webhook.GitRepositoryURL[strings.LastIndex(testcases[0].Webhook.GitRepositoryURL, ":")+3:])
 	if err != nil {
 		t.Errorf("Error creating eventlistener: %s", err)
 	}
-	el, err = r.updateEventListener(el, hooks[1], hooks[1].GitRepositoryURL[strings.LastIndex(hooks[1].GitRepositoryURL, ":")+3:])
+	el, err = r.updateEventListener(el, testcases[1].Webhook, testcases[1].Webhook.GitRepositoryURL[strings.LastIndex(testcases[1].Webhook.GitRepositoryURL, ":")+3:])
 	if err != nil {
 		t.Errorf("Error updating eventlistener: %s", err)
 	}
@@ -380,8 +457,8 @@ func TestDeleteFromEventListener(t *testing.T) {
 	// triggers such that the monitor is only expected once.
 	expectedTriggers := []v1alpha1.EventListenerTrigger{}
 	triggerNamesExpected := make(map[string]string)
-	for _, hook := range hooks {
-		for _, t := range getExpectedTriggers(hook, hook.GitRepositoryURL[strings.LastIndex(hook.GitRepositoryURL, ":")+3:], r) {
+	for _, tt := range testcases {
+		for _, t := range getExpectedTriggers(tt.Webhook, tt.Webhook.GitRepositoryURL[strings.LastIndex(tt.Webhook.GitRepositoryURL, ":")+3:], r, tt.expectedProvider, tt.expectedAPIURL) {
 			if triggerNamesExpected[t.Name] == "" {
 				triggerNamesExpected[t.Name] = "added"
 				expectedTriggers = append(expectedTriggers, t)
@@ -395,7 +472,7 @@ func TestDeleteFromEventListener(t *testing.T) {
 		t.Errorf("expected: %+v", expectedTriggers)
 	}
 
-	err = r.deleteFromEventListener(hooks[1].Name+"-"+hooks[1].Namespace, "install-namespace", hooks[1].GitRepositoryURL[strings.LastIndex(hooks[1].GitRepositoryURL, ":")+3:], "https://github.com/owner/repo")
+	err = r.deleteFromEventListener(testcases[1].Webhook.Name+"-"+testcases[1].Webhook.Namespace, "install-namespace", testcases[1].Webhook.GitRepositoryURL[strings.LastIndex(testcases[1].Webhook.GitRepositoryURL, ":")+3:], "https://github.com/owner/repo")
 	if err != nil {
 		t.Errorf("Error deleting entry from eventlistener: %s", err)
 	}
@@ -405,7 +482,7 @@ func TestDeleteFromEventListener(t *testing.T) {
 		t.Errorf("Eventlistener had %d triggers, but expected 3", len(el.Spec.Triggers))
 	}
 
-	expectedRemainingTrigger := getExpectedTriggers(hooks[0], hooks[0].GitRepositoryURL[strings.LastIndex(hooks[0].GitRepositoryURL, ":")+3:], r)
+	expectedRemainingTrigger := getExpectedTriggers(testcases[0].Webhook, testcases[0].Webhook.GitRepositoryURL[strings.LastIndex(testcases[0].Webhook.GitRepositoryURL, ":")+3:], r, testcases[0].expectedProvider, testcases[0].expectedAPIURL)
 	if !reflect.DeepEqual(el.Spec.Triggers, expectedRemainingTrigger) {
 		t.Errorf("Eventlistener trigger did not match expectation")
 		t.Errorf("got: %+v", el.Spec.Triggers)
@@ -561,7 +638,7 @@ func createDashboardService(name, labelValue string) *corev1.Service {
 	return dashSVC
 }
 
-func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedMonitorParams []pipelinesv1alpha1.Param) {
+func getExpectedParams(hook webhook, r *Resource, expectedProvider, expectedAPIURL string) (expectedHookParams, expectedMonitorParams []pipelinesv1alpha1.Param) {
 	url := strings.TrimPrefix(hook.GitRepositoryURL, "https://")
 	url = strings.TrimPrefix(url, "http://")
 
@@ -569,6 +646,10 @@ func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedM
 	org := strings.TrimPrefix(url, server+"/")
 	org = org[0:strings.Index(org, "/")]
 	repo := url[strings.LastIndex(url, "/")+1:]
+
+	sslverify := os.Getenv("SSL_VERIFICATION_ENABLED")
+	insecureAsBool, _ := strconv.ParseBool(sslverify)
+	insecureAsString := strconv.FormatBool(!insecureAsBool)
 
 	expectedHookParams = []pipelinesv1alpha1.Param{}
 	if hook.ReleaseName != "" {
@@ -582,6 +663,8 @@ func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedM
 	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}})
 	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}})
 	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-pull-task", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.PullTask}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-ssl-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: sslverify}})
+	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: insecureAsString}})
 	if hook.DockerRegistry != "" {
 		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.DockerRegistry}})
 	}
@@ -613,18 +696,21 @@ func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedM
 	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.AccessTokenRef}})
 	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretkeyname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}})
 	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "dashboardurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: r.getDashboardURL(r.Defaults.Namespace)}})
+	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: insecureAsString}})
+	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "provider", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: expectedProvider}})
+	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "apiurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: expectedAPIURL}})
 
 	return
 }
 
-func getExpectedTriggers(hook webhook, monitorTriggerName string, r *Resource) []v1alpha1.EventListenerTrigger {
+func getExpectedTriggers(hook webhook, monitorTriggerName string, r *Resource, expectedProvider, expectedAPIURL string) []v1alpha1.EventListenerTrigger {
 	actions = pipelinesv1alpha1.Param{Name: "Wext-Incoming-Actions", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "opened,reopened,synchronize"}}
-	expectedHookParams, expectedMonitorParams := getExpectedParams(hook, r)
+	expectedHookParams, expectedMonitorParams := getExpectedParams(hook, r, expectedProvider, expectedAPIURL)
 	push := createTrigger(hook.Name+"-"+hook.Namespace+"-push-event",
 		hook.Pipeline+"-push-binding",
 		hook.Pipeline+"-template",
 		hook.GitRepositoryURL,
-		"push",
+		"push, Push Hook, Tag Push Hook",
 		hook.AccessTokenRef,
 		expectedHookParams,
 		r)
@@ -633,7 +719,7 @@ func getExpectedTriggers(hook webhook, monitorTriggerName string, r *Resource) [
 		hook.Pipeline+"-pullrequest-binding",
 		hook.Pipeline+"-template",
 		hook.GitRepositoryURL,
-		"pull_request",
+		"pull_request, Merge Request Hook",
 		hook.AccessTokenRef,
 		expectedHookParams,
 		r)
@@ -643,7 +729,7 @@ func getExpectedTriggers(hook webhook, monitorTriggerName string, r *Resource) [
 		hook.PullTask+"-binding",
 		hook.PullTask+"-template",
 		hook.GitRepositoryURL,
-		"pull_request",
+		"pull_request, Merge Request Hook",
 		hook.AccessTokenRef,
 		expectedMonitorParams,
 		r)
@@ -888,7 +974,7 @@ func Test_createOAuth2Client(t *testing.T) {
 	// Create client
 	accessToken := "foo"
 	ctx := context.Background()
-	client := utils.CreateOAuth2Client(ctx, accessToken)
+	client := utils.CreateOAuth2Client(ctx, accessToken, true)
 	// Test
 	responseText := "my response"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

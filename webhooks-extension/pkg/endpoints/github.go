@@ -45,7 +45,7 @@ func (r Resource) initGitHub(sslVerify bool, apiURL, secret, org, repo string) (
 
 	// Create the client
 	ctx := context.Background()
-	tc := utils.CreateOAuth2Client(ctx, accessToken)
+	tc := utils.CreateOAuth2Client(ctx, accessToken, sslVerify)
 	client := github.NewClient(tc)
 
 	// Set api base url

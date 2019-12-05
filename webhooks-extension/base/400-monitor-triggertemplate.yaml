@@ -8,6 +8,9 @@ spec:
   - name: pullrequesturl
     description: The pull request url
     type: string
+  - name: statusesurl
+    description: The statuses url
+    type: string
   - name: gitsecretname
     description: The git secret name
     default: github-secrets
@@ -36,6 +39,18 @@ spec:
     description: The URL to the pipelineruns page of the dashboard
     default: "http://localhost:9097/"
     type: string
+  - name: provider
+    description: The git provider, "github" or "gitlab"
+    default: "github"
+    type: string
+  - name: apiurl
+    description: The git api URL for the repository
+    default: ""
+    type: string
+  - name: insecure-skip-tls-verify
+    description: Whether or not to skip SSL validation of certificates ("true" or "false")
+    default: "false"
+    type: string
   resourcetemplates:
   - apiVersion: tekton.dev/v1alpha1
     kind: PipelineResource
@@ -47,8 +62,10 @@ spec:
       params:
         - name: url
           value: $(params.pullrequesturl)
+        - name: insecure-skip-tls-verify
+          value: $(params.insecure-skip-tls-verify)
       secrets:
-        - fieldName: githubToken
+        - fieldName: authToken
           secretName: $(params.gitsecretname)
           secretKey: $(params.gitsecretkeyname)
   - apiVersion: tekton.dev/v1alpha1
@@ -72,6 +89,14 @@ spec:
           value: $(params.dashboardurl)
         - name: secret
           value: $(params.gitsecretname)
+        - name: statusesurl
+          value: $(params.statusesurl)
+        - name: provider
+          value: $(params.provider)
+        - name: apiurl
+          value: $(params.apiurl)
+        - name: insecure-skip-tls-verify
+          value: $(params.insecure-skip-tls-verify)
         resources:
         - name: pull-request
           resourceRef:

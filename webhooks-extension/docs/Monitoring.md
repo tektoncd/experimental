@@ -1,6 +1,8 @@
 # Pull Request Status Updates 
 
-If the webhook is triggered due to a pull request being created (or updated with code), a monitor task will be run to track and report on the status of the configured PipelineRun that is started by the webhooks-extension.  The sequence of events are as follows:
+Note:- The terms and images used in this documentation relate to Github, however the monitor does also updates status and comments on Gitlab merge requests.  
+
+If the webhook is triggered due to a pull request being created or updated with code, a monitor task will be run to track and report on the status of the configured PipelineRun that is started by the webhooks-extension.  The sequence of events are as follows:
 
 1.  Creation of a PipelineRun by the webhooks-extension's `sink` handler occurs in response to the configured webhook.
 
