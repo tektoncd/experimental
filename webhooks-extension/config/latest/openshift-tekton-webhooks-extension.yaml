@@ -6,11 +6,12 @@ metadata:
   name: tekton-webhooks-extension
   namespace: tekton-pipelines
 ---
+# webhooks-extension must be able to list pipelines and service accounts in remote namespaces
+# monitor needs to list pipelineruns
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: tekton-webhooks-extension-minimal
-  namespace: tekton-pipelines
+  name: tekton-webhooks-extension-minimal-cluster-powers
 rules:
 - apiGroups:
   - security.openshift.io
@@ -25,9 +26,36 @@ rules:
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelines
+  - pipelineruns
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-webhooks-extension-minimal-cluster-powers
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-webhooks-extension-minimal-cluster-powers
+subjects:
+- kind: ServiceAccount
+  name: tekton-webhooks-extension
+  namespace: tekton-pipelines
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tekton-webhooks-extension-minimal
+  namespace: tekton-pipelines
+rules:
 - apiGroups:
   - ""
   resources:
@@ -152,18 +180,17 @@ rules:
   - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
+  namespace: tekton-pipelines
   name: tekton-webhooks-extension-minimal
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: tekton-webhooks-extension-minimal
 subjects:
 - kind: ServiceAccount
   name: tekton-webhooks-extension
-  namespace: tekton-pipelines
----
 ---
 apiVersion: v1
 kind: ServiceAccount
