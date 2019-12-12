@@ -191,11 +191,18 @@ rules:
 - apiGroups:
   - tekton.dev
   resources:
-  - pipelineruns
   - pipelineresources
   - taskruns
   verbs:
   - create
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelineruns
+  verbs:
+  - create
+  - get
+  - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -242,7 +249,7 @@ spec:
         # If this endpoint's protocol is https, ssl verification will be enabled on the github webhook
         # openshift_master_default_subdomain usually of the format 'apps.host.company.com'
         - name: WEBHOOK_CALLBACK_URL
-          value: http://el-tekton-webhooks-eventlistener-tekton-pipelines.{openshift_master_default_subdomain}"
+          value: http://el-tekton-webhooks-eventlistener-tekton-pipelines.{openshift_master_default_subdomain}
         # If the WEBHOOK_CALLBACK_URL's protocol is https, should ssl verification be enabled/disabled
         - name: SSL_VERIFICATION_ENABLED
           value: "false"
@@ -252,7 +259,7 @@ spec:
               fieldPath: spec.serviceAccountName
         - name: PLATFORM
           value: "openshift"
-        image: "gcr.io/tekton-nightly/extension:latest"
+        image:  "gcr.io/tekton-nightly/extension:latest"
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -524,7 +531,7 @@ spec:
       generateName: monitor-taskrun-
       namespace: tekton-pipelines
     spec:
-      serviceAccount: tekton-webhooks-extension
+      serviceAccountName: tekton-webhooks-extension
       taskRef:
         name: monitor-task
       inputs:

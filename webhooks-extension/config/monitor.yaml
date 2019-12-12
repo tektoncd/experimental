@@ -233,7 +233,7 @@ spec:
       generateName: monitor-taskrun-
       namespace: tekton-pipelines
     spec:
-      serviceAccount: tekton-webhooks-extension-eventlistener
+      serviceAccountName: tekton-webhooks-extension
       taskRef:
         name: monitor-task
       inputs:
