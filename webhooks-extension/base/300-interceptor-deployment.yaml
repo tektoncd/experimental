@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: validate
-          image: "github.com/tektoncd/experimental/webhooks-extension/cmd/interceptor"
+          image: interceptorImage
           env:
             - name: INSTALLED_NAMESPACE
               valueFrom:

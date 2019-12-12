@@ -26,13 +26,13 @@ Note: If you want to install into an alternative namespace you would need to mod
 
       _On Red Hat OpenShift:_
 
-      - Open config/latest/openshift-development/openshift-tekton-webhooks-extension.yaml.
+      - Open overlays/openshift-all/deployment-patch.yaml.
       - Find WEBHOOK_CALLBACK_URL.
       - Edit the value - this should simply be a case of replacing {openshift_master_default_subdomain} with your actual value.
 
       _On other Kubernetes environments:_
 
-      - Open config/latest/gcr-tekton-webhooks-extension.yaml.
+      - Open overlays/plainkube-all/deployment-patch.yaml.
       - Find WEBHOOK_CALLBACK_URL.
       - Edit the value - this could simply be a case of replacing IPADDRESS with your actual value.  
 
@@ -41,13 +41,13 @@ Note: If you want to install into an alternative namespace you would need to mod
       _On Red Hat OpenShift:_
 
       ```bash
-      oc apply -f config/latest/openshift-tekton-webhooks-extension.yaml
+      kubectl apply -k overlays/openshift-latest
       ```
 
       _On other Kubernetes environments:_
 
       ```bash
-      kubectl apply -f config/latest/gcr-tekton-webhooks-extension.yaml
+      kubectl apply -k overlays/latest
       ```  
 <br/>
 <br/>

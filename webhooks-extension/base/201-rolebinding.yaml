@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: tekton-pipelines
+  name: tekton-webhooks-extension-minimal
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tekton-webhooks-extension-minimal
+subjects:
+- kind: ServiceAccount
+  name: tekton-webhooks-extension

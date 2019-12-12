@@ -116,23 +116,23 @@ function install_webhooks_extension() {
 
   # Current Release
   if [[ $version == "1" ]]; then
-    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml
+    kubectl apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/tekton-webhooks-extension-release.yaml
   # Nightly Build
   elif [[ $version == "2" ]]; then
     pushd $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension
-    kubectl apply -f config/latest/gcr-tekton-webhooks-extension.yaml
+    kubectl apply -k overlays/latest
     popd
   # Development Version
   else
     pushd $GOPATH/src/github.com/tektoncd/experimental/webhooks-extension
-    sed -i .previous -e "s/IPADDRESS/$IPADDRESS/g" config/extension-deployment.yaml
-    rm config/extension-deployment.yaml.previous
+    sed -i .previous -e "s/IPADDRESS/$IPADDRESS/g" overlays/plainkube-all/deployment-patch.yaml
+    rm overlays/plainkube-all/deployment-patch.yaml.previous
     namespace=$1
     docker login
     npm ci
     npm run build_ko
     dep ensure -v
-    timeout 60 "ko apply -f config -n $namespace"
+    timeout 60 "kustomize build overlays/development | ko apply -f - -n $namespace"
     popd
   fi
 }

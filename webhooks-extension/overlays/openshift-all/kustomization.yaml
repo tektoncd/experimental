@@ -1,0 +1,6 @@
+bases:
+- ../../base
+patches:
+- clusterRole-patch.yaml
+- role-patch.yaml
+- deployment-patch.yaml

@@ -1,0 +1,24 @@
+# This ClusterRole will be granted to webhooks-extension (list serviceaccounts, pipelines)
+# and the PullRequest monitor (list PipelineRuns)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tekton-webhooks-extension-minimal-cluster-powers
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelines
+  - pipelineruns
+  verbs:
+  - get
+  - list
+  - watch

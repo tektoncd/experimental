@@ -18,6 +18,7 @@ You must install these tools:
 - kubectl: For interacting with your kube cluster
 - [Node.js & npm](https://nodejs.org/): For building and running the frontend locally. _Node.js 10.x is strongly recommended_
 - jq: Used in the setup_webhook_simple_test.sh script.
+- kustomize: For development, unless and until `ko -k` happens. 
 
 ## Dependency Versioning
 The installation script installs versions of Tekton and Tekton Triggers as per values in the version section of [config.sh](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/test/config.sh).

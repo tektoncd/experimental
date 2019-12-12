@@ -1,0 +1,16 @@
+resources:
+- 200-clusterrole-eventListener.yaml
+- 200-clusterrole.yaml
+- 200-role.yaml
+- 200-serviceaccount-eventListener.yaml
+- 200-serviceaccount.yaml
+- 201-clusterrolebinding-eventListener.yaml
+- 201-clusterrolebinding.yaml
+- 201-rolebinding.yaml
+- 300-extension-deployment.yaml
+- 300-extension-service.yaml
+- 300-interceptor-deployment.yaml
+- 300-interceptor-service.yaml
+- 400-monitor-task.yaml
+- 400-monitor-triggerbinding.yaml
+- 400-monitor-triggertemplate.yaml

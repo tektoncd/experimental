@@ -1,0 +1,9 @@
+bases:
+- ./plainkube-all
+images:
+- name: webhooksExtensionImage
+  newName: gcr.io/tekton-nightly/extension
+  newTag: latest
+- name: interceptorImage
+  newName: gcr.io/tekton-nightly/interceptor
+  newTag: latest

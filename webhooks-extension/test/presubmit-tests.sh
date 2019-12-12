@@ -75,21 +75,13 @@ function node_test() {
     hash=$(ls -t dist/extension.*.js | head -1 | cut -f 2 -d '.')
     echo "LATEST HASH: $hash"
 
-    yaml=$(grep -i "tekton-dashboard-bundle-location:" config/extension-service.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
-    yaml2=$(grep -i "tekton-dashboard-bundle-location:" config/latest/gcr-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
-    yaml3=$(grep -i "tekton-dashboard-bundle-location:" config/latest/openshift-tekton-webhooks-extension.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
-    yaml4=$(grep -i "tekton-dashboard-bundle-location:" config/openshift/openshift-tekton-webhooks-extension-release.yaml  | cut -f 2 -d ':' | cut -f 2 -d '.')
-    yaml5=$(grep -i "tekton-dashboard-bundle-location:" config/openshift-development/openshift-tekton-webhooks-extension-development.yaml  | cut -f 2 -d ':' | cut -f 2 -d '.')
-    echo "YAML HASH in config/extension-service.yaml: $yaml"
-    echo "YAML HASH config/latest/gcr-tekton-webhooks-extension.yaml: $yaml2"
-    echo "YAML HASH config/latest/openshift-tekton-webhooks-extension.yaml: $yaml3"
-    echo "YAML HASH config/openshift/openshift-tekton-webhooks-extension-release.yaml: $yaml4"
-    echo "YAML HASH config/openshift-development/openshift-tekton-webhooks-extension-development.yaml: $yaml5"
-
-    if [[ $hash != $yaml ]] || [[ $hash != $yaml2 ]] || [[ $hash != $yaml3 ]] || [[ $hash != $yaml4 ]] || [[ $hash != $yaml5 ]]; then
+    yaml=$(grep -i "tekton-dashboard-bundle-location:" base/300-extension-service.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
+    echo "YAML HASH in base/300-extension-service.yaml: $yaml"
+    
+    if [[ $hash != $yaml ]]; then
       echo "######## FAIL/ERROR ########"
       echo "--------------------------------------------------------------------------"
-      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: check values in config/extension-service.yaml, config/latest/gcr-tekton-webhooks-extension.yaml config/latest/openshift-tekton-webhooks-extension.yaml, config/openshift/openshift-tekton-webhooks-extension-release.yaml and config/openshift-development/openshift-tekton-webhooks-extension-development.yaml"
+      echo "HASH MISMATCH BETWEEN ACTUAL BUILD AND YAML: check values in base/300-extension-service.yaml"
       echo "--------------------------------------------------------------------------"
       failed=1
     fi
