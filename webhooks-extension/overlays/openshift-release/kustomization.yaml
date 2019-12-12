@@ -1,0 +1,9 @@
+bases:
+- ../openshift-all
+images:
+- name: webhooksExtensionImage
+  newName: gcr.io/tekton-releases/github.com/tektoncd/experimental/webhooks-extension/cmd/extension
+  newTag: v0.3.0
+- name: interceptorImage
+  newName: gcr.io/tekton-releases/github.com/tektoncd/experimental/webhooks-extension/cmd/interceptor
+  newTag: v0.3.0

@@ -1,0 +1,5 @@
+bases:
+- ../../base
+patches:
+- role-patch.yaml
+- deployment-patch.yaml

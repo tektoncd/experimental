@@ -1,7 +1,7 @@
 # Uninstall
 <br/>
 
-To uninstall to webhooks extension:
+To uninstall the webhooks extension:
 <br/>
 
 1. Clone this repository
@@ -11,10 +11,18 @@ To uninstall to webhooks extension:
     ```
 
 2. Use the `kubectl delete` command to delete the webhooks extension
+      
+      _On Red Hat OpenShift:_
 
-    ```bash
-    kubectl delete -f config/latest/gcr-tekton-webhooks-extension.yaml
-    ```
+      ```bash
+      kubectl delete -k overlays/openshift-latest
+      ```
+
+      _On other Kubernetes environments:_
+
+      ```bash
+      kubectl delete -k overlays/latest
+      ```  
 <br/>
 
 Uninstall any of the prereqs added during installation:

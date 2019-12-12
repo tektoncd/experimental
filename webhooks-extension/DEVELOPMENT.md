@@ -9,11 +9,23 @@ Use `npm ci` when installing from source to install with a clean set of dependen
 If modifying the UI code and wanting to deploy your updated version:
 
 1) Run `npm run build` this will create a new file in the dist directory
-2) Update config/extension-service.yaml to reference this newly created file in the dist directory, this should simply be a matter of changing the hash value - do not change the web/ prefix
+2) Update base/300-extension-service.yaml to reference this newly created file in the dist directory, this should simply be a matter of changing the hash value - do not change the web/ prefix
 
     `tekton-dashboard-bundle-location: "web/extension.hashvalue.js"`
 
-3) Reinstall the extension. It will automatically be picked up by the running dashboard
+3) Reinstall the extension. It will automatically be picked up by the running dashboard. Use
+
+```
+kustomize build overlays/development | ko apply -f -
+```
+
+if developing on a plain Kubernetes system, or 
+
+```
+kustomize build overlays/openshift-development | ko apply -f -
+```
+
+if developing against OpenShift or OKD. 
 
 ## Linting
 

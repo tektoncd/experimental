@@ -1,0 +1,79 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: monitor-task-template
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: pullrequesturl
+    description: The pull request url
+    type: string
+  - name: gitsecretname
+    description: The git secret name
+    default: github-secrets
+    type: string
+  - name: gitsecretkeyname
+    description: The git secret key name
+    default: token
+    type: string
+  - name: commentsuccess
+    description: The text of the success comment
+    default: "Success"
+    type: string
+  - name: commentfailure
+    description: The text of the failure comment
+    default: "Failed"
+    type: string
+  - name: commenttimeout
+    description: The text of the timeout comment
+    default: "Unknown"
+    type: string
+  - name: dashboardurl
+    description: The URL to the pipelineruns page of the dashboard
+    default: "http://localhost:9097/"
+    type: string
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: pull-request-$(uid)
+      namespace: tekton-pipelines
+    spec:
+      type: pullRequest
+      params:
+        - name: url
+          value: $(params.pullrequesturl)
+      secrets:
+        - fieldName: githubToken
+          secretName: $(params.gitsecretname)
+          secretKey: $(params.gitsecretkeyname)
+  - apiVersion: tekton.dev/v1alpha1
+    kind: TaskRun
+    metadata:
+      generateName: monitor-taskrun-
+      namespace: tekton-pipelines
+    spec:
+      serviceAccountName: tekton-webhooks-extension
+      taskRef:
+        name: monitor-task
+      inputs:
+        params:
+        - name: commentsuccess
+          value: $(params.commentsuccess)
+        - name: commentfailure
+          value: $(params.commentfailure)
+        - name: commenttimeout
+          value: $(params.commenttimeout)
+        - name: dashboard-url
+          value: $(params.dashboardurl)
+        - name: secret
+          value: $(params.gitsecretname)
+        resources:
+        - name: pull-request
+          resourceRef:
+            name: pull-request-$(uid)
+      outputs:
+        resources:
+        - name: pull-request
+          resourceRef:
+            name: pull-request-$(uid)

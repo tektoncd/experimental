@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: webhooks-extension
+  name: webhooks-extension
+  namespace: tekton-pipelines
+spec:
+  template:
+    spec:
+      containers:
+        - name: webhooks-extension
+          env:
+          # If this endpoint's protocol is https, ssl verification will be enabled on the github webhook
+          # openshift_master_default_subdomain usually of the format 'apps.host.company.com'
+          - name: WEBHOOK_CALLBACK_URL
+            value: http://el-tekton-webhooks-eventlistener-tekton-pipelines.{openshift_master_default_subdomain}
+          # If the WEBHOOK_CALLBACK_URL's protocol is https, should ssl verification be enabled/disabled?
+          # See https://github.com/tektoncd/experimental/issues/399
+          - name: PLATFORM
+            value: openshift

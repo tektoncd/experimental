@@ -1,0 +1,9 @@
+bases:
+- ../openshift-all
+images:
+- name: webhooksExtensionImage
+  newName: "github.com/tektoncd/experimental/webhooks-extension/cmd/extension"
+  newTag:
+- name: interceptorImage
+  newName: "github.com/tektoncd/experimental/webhooks-extension/cmd/interceptor"
+  newTag: 

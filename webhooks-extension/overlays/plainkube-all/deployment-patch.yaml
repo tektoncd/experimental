@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: webhooks-extension
+  name: webhooks-extension
+  namespace: tekton-pipelines
+spec:
+  template:
+    spec:
+      containers:
+        - name: webhooks-extension
+          env:
+          - name: WEBHOOK_CALLBACK_URL
+            value: http://listener.IPADDRESS.nip.io

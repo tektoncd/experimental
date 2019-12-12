@@ -1,0 +1,9 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: monitor-task-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: pullrequesturl
+    value: $(body.pull_request.html_url)
