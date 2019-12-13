@@ -105,6 +105,7 @@ type webhook struct {
 	OnSuccessComment string `json:"onsuccesscomment,omitempty"`
 	OnFailureComment string `json:"onfailurecomment,omitempty"`
 	OnTimeoutComment string `json:"ontimeoutcomment,omitempty"`
+	OnMissingComment string `json:"onmissingcomment,omitempty"`
 }
 
 // ConfigMapName ... the name of the ConfigMap to create

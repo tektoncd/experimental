@@ -28,6 +28,10 @@ spec:
     description: The text of the timeout comment
     default: "Unknown"
     type: string
+  - name: commentmissing
+    description: The text of the missing comment
+    default: "Missing"
+    type: string
   - name: dashboardurl
     description: The URL to the pipelineruns page of the dashboard
     default: "http://localhost:9097/"
