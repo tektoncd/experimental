@@ -140,10 +140,8 @@ spec:
                  "Status | Pipeline | PipelineRun | Namespace\n"
                  ":----- | :------- | :--------------- | :--------\n"
                  ) + "\n".join(results)
-      if not os.path.exists("/workspace/output/pull-request/comments"):
-        os.makedirs("/workspace/output/pull-request/comments")
-        if os.path.exists("/workspace/pull-request/comments/.MANIFEST"):
-          shutil.copyfile("/workspace/pull-request/comments/.MANIFEST","/workspace/output/pull-request/comments/.MANIFEST")
+      # Preserve existing comments
+      shutil.copytree("/workspace/pull-request/comments","/workspace/output/pull-request/comments")
       handle = open("/workspace/output/pull-request/comments/newcomment.json", 'w')
       handle.write(comment)
       handle.close()
