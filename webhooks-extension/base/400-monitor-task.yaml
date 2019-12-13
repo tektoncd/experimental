@@ -11,16 +11,20 @@ spec:
         type: pullRequest
     params:
       - name: commentsuccess
-        description: The text of the success comment
+        description: The text to use in the situation where a PipelineRun has succeeded.
         default: "Success"
         type: string
       - name: commentfailure
-        description: The text of the failure comment
+        description: The text to use in the situation where a PipelineRun has a failed.
         default: "Failed"
         type: string
       - name: commenttimeout
-        description: The text of the timeout comment
+        description: The text to use in the situation where a PipelineRun has timed out.
         default: "Unknown"
+        type: string
+      - name: commentmissing
+        description: The text to use in the situation where a PipelineRun cannot be found.
+        default: "Missing"
         type: string
       - name: dashboard-url
         description: The URL to the pipelineruns page of the dashboard
@@ -51,6 +55,8 @@ spec:
         value: $(inputs.params.commentfailure)
       - name: COMMENT_TIMEOUT
         value: $(inputs.params.commenttimeout)
+      - name: COMMENT_MISSING
+        value: $(inputs.params.commentmissing)
       - name: URL
         value: $(inputs.params.dashboard-url)
       # This can be deleted after any fix to the above mentioned pending status change
@@ -68,6 +74,11 @@ spec:
       cat <<EOF | python
       import time, os, json, requests, pprint, shutil
       from kubernetes import client, config
+      
+      def diff(li1, li2): 
+        li_dif = [i for i in li1 + li2 if i not in li1 or i not in li2] 
+        return li_dif
+
       config.load_incluster_config()
       api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
       gitPRcontext = "Tekton"
@@ -91,25 +102,51 @@ spec:
         pipelineRunURLPrefix = "http://" + "$URL"
       else:
         pipelineRunURLPrefix = "$URL"
-      labelToCheck = "tekton.dev/triggers-eventid=$EVENTID"
+      labelToCheck = "tekton.dev/triggers-eventid=$EVENTID" 
       runsPassed = []
       runsFailed = []
       runsIncomplete = []
+      runsMissing = []
       failed = 0
       i = range(180)
+      initial_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)["items"]
+
       for x in i:
           time.sleep( 10 )
           runsPassed = []
           runsFailed = []
           runsIncomplete = []
+          # To test this we need a webhook that will kick off two Pipelines
+          # We will then delete one PipelineRun and observe it is correctly picked up as missing
+          # This is easiest done by reopening an existing PullRequest
+          # It's important to delete the PipelineRun only after the monitor task is already running because 
+          # the first thing it's going to do is figure out the PipelineRuns to watch over
+
           failed = 0
-          api_response = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)
-          if len(api_response["items"]) > 0:
-            for entry in api_response["items"]:
+          found_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)["items"]
+          
+          missingRuns = diff(initial_runs, found_runs)
+          if len(missingRuns) > 0:
+            for missingRun in missingRuns:
+              pr = missingRun["metadata"]["name"]
+              namespace = missingRun["metadata"]["namespace"]
+              pipeline = missingRun["spec"]["pipelineRef"]["name"]
+              link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelineruns/"
+              data = "[**$COMMENT_MISSING**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace
+              if data not in runsMissing:
+                # Don't add duplicates. Fear not, once this run is found it'll be removed
+                runsMissing.append(data)
+
+          if len(found_runs) > 0:
+            for entry in found_runs:
               pr = entry["metadata"]["name"]
               namespace = entry["metadata"]["namespace"]
               pipeline = entry["spec"]["pipelineRef"]["name"]
               link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelineruns/" + pr
+              missingLink = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelineruns/"
+              missingDataEntry = "[**$COMMENT_MISSING**](" + missingLink + ") | " + pipeline + " | " + pr + " | " + namespace
+              if missingDataEntry in runsMissing:
+                runsMissing.remove(data)
               print("Checking pipelinerun " + pr + " in namespace " + namespace)
               if entry["status"]["conditions"][0]["status"] == u'True' and entry["status"]["conditions"][0]["type"] == u'Succeeded':
                 print("Success - pipelinerun " + pr + " in namespace " + namespace)
@@ -131,11 +168,14 @@ spec:
       if failed > 0:
         gitPRdescription = str(failed) + " pipeline(s) failed!"
         gitPRcode = "failure"
+      if len(runsMissing) > 0:
+        gitPRdescription = "Pipeline(s) missing!"
+        gitPRcode = "failure"
       if len(runsIncomplete) > 0:
-        print("Some pipelineruns had not completed when the monitor reached its timeout")
+        print("Some PipelineRuns had not completed when the monitor reached its timeout")
         gitPRdescription = "timed out monitoring pipeline runs"
         gitPRcode = "error"
-      results = runsPassed + runsFailed + runsIncomplete
+      results = runsPassed + runsFailed + runsIncomplete + runsMissing
       comment = ("## Tekton Status Report \n\n"
                  "Status | Pipeline | PipelineRun | Namespace\n"
                  ":----- | :------- | :--------------- | :--------\n"

@@ -124,6 +124,7 @@ func TestGetParams(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
 			OnTimeoutComment: "ontimeoutcomment1",
+			OnMissingComment: "onmissingcomment1",
 		},
 		{
 			Name:             "name2",
@@ -135,6 +136,7 @@ func TestGetParams(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
 			OnTimeoutComment: "ontimeoutcomment2",
+			OnMissingComment: "onmissingcomment2",
 		},
 		{
 			Name:             "name3",
@@ -178,6 +180,7 @@ func TestCreateEventListener(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
 			OnTimeoutComment: "ontimeoutcomment1",
+			OnMissingComment: "onmissingcomment1",
 		},
 		{
 			Name:             "name2",
@@ -189,6 +192,7 @@ func TestCreateEventListener(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
 			OnTimeoutComment: "ontimeoutcomment2",
+			OnMissingComment: "onmissingcomment2",
 		},
 		{
 			Name:             "name3",
@@ -250,6 +254,7 @@ func TestUpdateEventListenerTriggerListing(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
 			OnTimeoutComment: "ontimeoutcomment1",
+			OnMissingComment: "onmissingcomment1",
 		},
 		{
 			Name:             "name2",
@@ -261,6 +266,7 @@ func TestUpdateEventListenerTriggerListing(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
 			OnTimeoutComment: "ontimeoutcomment2",
+			OnMissingComment: "onmissingcomment2",
 		},
 		{
 			Name:             "name3",
@@ -337,6 +343,7 @@ func TestDeleteFromEventListener(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
 			OnTimeoutComment: "ontimeoutcomment1",
+			OnMissingComment: "onmissingcomment1",
 		},
 		{
 			Name:             "name2",
@@ -348,6 +355,7 @@ func TestDeleteFromEventListener(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
 			OnTimeoutComment: "ontimeoutcomment2",
+			OnMissingComment: "onmissingcomment2",
 		},
 	}
 
@@ -428,6 +436,7 @@ func TestCreateAndDeleteWebhook(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment1",
 			OnFailureComment: "onfailurecomment1",
 			OnTimeoutComment: "ontimeoutcomment1",
+			OnMissingComment: "onmissingcomment1",
 		},
 		{
 			Name:             "name2",
@@ -439,6 +448,7 @@ func TestCreateAndDeleteWebhook(t *testing.T) {
 			OnSuccessComment: "onsuccesscomment2",
 			OnFailureComment: "onfailurecomment2",
 			OnTimeoutComment: "ontimeoutcomment2",
+			OnMissingComment: "onmissingcomment2",
 		},
 		{
 			Name:             "name3",
@@ -594,6 +604,11 @@ func getExpectedParams(hook webhook, r *Resource) (expectedHookParams, expectedM
 		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnTimeoutComment}})
 	} else {
 		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Unknown"}})
+	}
+	if hook.OnMissingComment != "" {
+		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentmissing", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnMissingComment}})
+	} else {
+		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentmissing", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Missing"}})
 	}
 	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.AccessTokenRef}})
 	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretkeyname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}})

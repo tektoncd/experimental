@@ -224,11 +224,16 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 	if onTimeoutComment == "" {
 		onTimeoutComment = "Unknown"
 	}
+	onMissingComment := webhook.OnMissingComment
+	if onMissingComment == "" {
+		onMissingComment = "Missing"
+	}
 
 	prMonitorParams := []pipelinesv1alpha1.Param{
 		{Name: "commentsuccess", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onSuccessComment}},
 		{Name: "commentfailure", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onFailureComment}},
 		{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onTimeoutComment}},
+		{Name: "commentmissing", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onMissingComment}},
 		{Name: "gitsecretname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.AccessTokenRef}},
 		{Name: "gitsecretkeyname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}},
 		{Name: "dashboardurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: r.getDashboardURL(r.Defaults.Namespace)}},
