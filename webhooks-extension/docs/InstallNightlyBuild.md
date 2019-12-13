@@ -34,8 +34,7 @@ Note: If you want to install into an alternative namespace you would need to mod
 
       - Open overlays/plainkube-all/deployment-patch.yaml.
       - Find WEBHOOK_CALLBACK_URL.
-      - Edit the value - this could simply be a case of replacing IPADDRESS with your actual value.  
-
+      - Edit the value - this could simply be a case of replacing IPADDRESS with your actual value.  If the call back URL is not determined yet in Amazon EKS environment, replace IPADDRESS with a dummy address.  It will be replaced in the step in the [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
   3. Apply the yaml
 
       _On Red Hat OpenShift:_

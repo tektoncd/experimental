@@ -116,6 +116,40 @@ Accepted Formats:
 - my.registry/foo
 - image-registry.openshift-image-registry.svc:5000/**existing namespace here** (for OpenShift 4.2)
 
+### Notes for Amazon EKS
+
+After creation of the webhook, the following manual steps are necessary to make the webhook work in Amazon EKS environment.
+
+1. Edit `el-tekton-webhooks-eventlistener` Ingress and add 2 annotations in the `metadata` section.
+
+```
+  metadata:
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      kubernetes.io/ingress.class: alb
+```
+
+2. Edit `tekton-webhooks-eventlistener` EventListener and add `serviceType` `LoadBalancer` in the `spec` section
+
+```
+  spec:
+    serviceType: LoadBalancer
+```
+
+3. Wait for `get ingress el-tekton-webhooks-eventlistener -n tekton-pipelines` showing the ADDRESS for the el-tekton-webhooks-eventlistener ingress
+
+4. Edit `el-tekton-webhooks-eventlistener` Ingress again and update the URL of the `host` with the ADDRESS of the ingress
+
+
+```
+  spec:
+    rules:
+    - host: xxxx.yyy.elb.amazonaws.com
+```
+
+5. Update the `Payload URL` in the webhook in github.com repositry (Settings->Webhoks->"webhook with dummy URL"->Payload URL) to the ADDRESS of the ingress
+
+
 ## Putting it all together: test it's working
 
 Once a webhook is set up, a `git push` or creation of a pull request to the monitored repository should trigger the creation of the correct PipelineRun. This PipelineRun will show up in the Tekton dashboard as usual. A successful webhook will trigger pods to be created as follows:
