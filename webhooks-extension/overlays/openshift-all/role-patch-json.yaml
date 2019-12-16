@@ -1,0 +1,14 @@
+- op: add
+  path: /rules/0
+  value:
+    apiGroups:
+      - route.openshift.io
+    resources:
+      - routes
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - update
+      - patch
