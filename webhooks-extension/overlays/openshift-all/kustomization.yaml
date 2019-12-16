@@ -1,6 +1,19 @@
 bases:
 - ../../base
+patchesJson6902:
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: Role
+    name: tekton-webhooks-extension-minimal
+    namespace: tekton-pipelines
+  path: role-patch-json.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: ClusterRole
+    name: tekton-webhooks-extension-minimal-cluster-powers
+    namespace: tekton-pipelines
+  path: cluster-role-patch-json.yaml
 patches:
-- clusterRole-patch.yaml
-- role-patch.yaml
 - deployment-patch.yaml
