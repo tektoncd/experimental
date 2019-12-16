@@ -1,0 +1,16 @@
+- op: add
+  path: /rules/0
+  value:
+    apiGroups:
+      - extensions
+    resources:
+      - ingresses
+      - ingresses/status
+    verbs:
+      - delete
+      - create
+      - patch
+      - get
+      - list
+      - update
+      - watch
