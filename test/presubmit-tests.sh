@@ -38,3 +38,4 @@ function run() {
 run webhooks-extension $@ || exit 1
 run catalogs $@ || exit 1
 run octant-plugin $@ || exit 1
+run tekdoc  $@ || exit 1
