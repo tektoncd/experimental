@@ -42,7 +42,8 @@ spec:
     - "/workspace/output/bucket/previous/"
   - name: webhooks-extension-run-ko
     # TODO(#639) we should be able to use the image built by an upstream Task here instead of hardcoding
-    image: gcr.io/tekton-nightly/ko-ci
+    image: gcr.io/tekton-releases/dogfooding/ko:gcloud-latest
+    imagePullPolicy: Always
     env:
     - name: KO_DOCKER_REPO
       value: $(inputs.params.imageRegistry)
@@ -50,6 +51,8 @@ spec:
       value: /workspace/go
     - name: CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
       value: /secret/release.json
+    - name: GO111MODULE
+      value: 
     command:
     - /bin/sh
     args:
@@ -70,8 +73,8 @@ spec:
       # Publish images and create release.yaml
       mkdir -p /workspace/output/bucket/latest
       rm -f /workspace/output/bucket/latest/*.yaml
-      ko resolve --preserve-import-paths -f /workspace/go/src/github.com/tektoncd/experimental/webhooks-extension/config/ > /workspace/output/bucket/latest/tekton-webhooks-extension-release.yaml
-      ko resolve --preserve-import-paths -f /workspace/go/src/github.com/tektoncd/experimental/webhooks-extension/config/openshift/openshift-tekton-webhooks-extension-release.yaml > /workspace/output/bucket/latest/openshift-tekton-webhooks-extension-release.yaml
+      kustomize build overlays/development | ko resolve --preserve-import-paths -f - > /workspace/output/bucket/latest/tekton-webhooks-extension-release.yaml
+      kustomize build overlays/openshift-development | ko resolve --preserve-import-paths -f - > /workspace/output/bucket/latest/openshift-tekton-webhooks-extension-release.yaml
 
     volumeMounts:
       - name: gcp-secret
