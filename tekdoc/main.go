@@ -17,15 +17,82 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
+	"io/ioutil"
+	"log"
+	"os"
+	"text/template"
+)
 
-	_ "github.com/tektoncd/pipeline/pkg/pod"
+var (
+	filename = flag.String("f", "", "Name of the file to parse")
 )
 
 func main() {
-	fmt.Println("Hello this is STILL TekDoc")
 
 	// TODO: take a file path, parse it as YAML -> v1alpha1.Task
+	flag.Parse()
+	dat, err := ioutil.ReadFile(*filename)
+	if err != nil {
+		log.Fatalf("error reading file: %v", err)
+	}
+
+	var task v1alpha1.Task
+
+	if _, _, err := scheme.Codecs.UniversalDeserializer().Decode(dat, nil, &task); err != nil {
+		log.Fatal(err)
+	}
+
 	// TODO: use Go templates to print v1alpha1.Task as Markdown
-	// TODO: tests!
+	if task.Spec.Inputs != nil {
+
+		tmpl := template.Must(template.New("test").Parse(`# {{.Name}}
+## Install the Task
+kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Name}}/{{.Name}}.yaml
+### Input:-
+`))
+		if err := tmpl.Execute(os.Stdout, task); err != nil {
+			log.Fatalf("error executing the template: %v", err)
+		}
+
+		if task.Spec.Inputs.Params != nil {
+
+			t := `{{range .}}- {{.Name}}, {{.Description}}
+{{end}}`
+			tmpl := template.Must(template.New("test").Parse(t))
+			if err := tmpl.Execute(os.Stdout, task.Spec.Inputs.Params); err != nil {
+				log.Fatalf("error executing the template: %v", err)
+			}
+		}
+
+		if task.Spec.Inputs.Resources != nil {
+
+			t := `### Resources:-
+{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}	
+{{end}}`
+			tmpl := template.Must(template.New("test").Parse(t))
+			if err := tmpl.Execute(os.Stdout, task.Spec.Inputs.Resources); err != nil {
+				log.Fatalf("error executing the template: %v", err)
+			}
+		}
+
+		if task.Spec.Outputs != nil {
+
+			t := `### Output:-
+{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}	
+{{end}}`
+			tmpl := template.Must(template.New("test").Parse(t))
+			err := tmpl.Execute(os.Stdout, task.Spec.Outputs.Resources)
+			if err != nil {
+				log.Fatalf("error executing the template: %v", err)
+			}
+		}
+	} else {
+		fmt.Println("There is no task input")
+	}
 }
+
+// TODO: tests!

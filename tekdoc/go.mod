@@ -14,6 +14,7 @@ require (
 	github.com/tektoncd/pipeline v0.9.2
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2 // indirect
 	k8s.io/api v0.17.0 // indirect
 	k8s.io/client-go v11.0.0+incompatible // indirect
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a // indirect
