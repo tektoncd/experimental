@@ -71,17 +71,17 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
 
     If looking to install an official release of v0.2.1 or earlier, please navigate to the docs for that release by selecting the branch name matching the version you want to install in the dropdown at the top of this page.  Different prereqs and actions are required for installations of v0.2.1 and earlier.  
     
-    In general, once you have taken all the prereq actions for the release level you want to install, you need to use a similar URL as in the previous commands, but that specifies the version you want to install for example, for version 0.2.0:
+    In general, once you have taken all the prereq actions for the release level you want to install, you need to use a similar URL as in the previous commands, but that specifies the version you want to install for example, for version 0.2.1:
 
     _On Red Hat OpenShift:_
 
-    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/openshift-webhooks-extension.yaml`
+    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.1/openshift-tekton-webhooks-extension-release.yaml`
 
-    Note: As of v0.2.1 the filename became openshift-tekton-webhooks-extension-release.yaml
+    Note: For v0.2.1 the filename was openshift-webhooks-extension.yaml
 
     _On other Kubernetes environments:_
 
-    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/webhooks-extension_release.yaml`
+    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.1/webhooks-extension_release.yaml`
 
 <br/>
 <br/>
