@@ -14,10 +14,9 @@ See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/w
 
 ### Install Webhook Extension
 
-To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.
-The link below does not contain all the information needed at this time - this message can be removed after the 0.3 release occurs.  
+To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.  
 
-~~[Installing Official Release (stable)](./docs/InstallReleaseBuild.md)~~  
+[Installing Official Release (stable)](./docs/InstallReleaseBuild.md)
 
 [Installing Development Build (nightly)](./docs/InstallNightlyBuild.md)
 

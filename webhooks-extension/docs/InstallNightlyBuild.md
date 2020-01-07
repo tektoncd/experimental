@@ -77,6 +77,6 @@ You will be able to access the webhooks section of the dashboard once the pods a
     - http://localhost:8001/api/v1/namespaces/tekton-pipelines/services/tekton-dashboard:http/proxy/#/extensions/webhooks-extension
 <br/>
 
-You are now ready to use the Tekton Dashboard Webhooks Extension - see our [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
+You are now ready to use the Tekton Dashboard Webhooks Extension - see our [Getting Started](./GettingStarted.md) guide.
 
   ![Create webhook page in dashboard](./images/createWebhook.png?raw=true "Create webhook page in dashboard")
