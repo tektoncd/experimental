@@ -16,7 +16,7 @@
 
 ## Install prereqs
 
-1. Install [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) version 0.7  
+1. Install [Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) version 0.8
 
 2. Install [Tekton Dashboard](https://github.com/tektoncd/dashboard)
 
