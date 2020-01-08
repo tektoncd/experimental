@@ -47,6 +47,7 @@ describe('with webhooks', () => {
       name: 'first-test-webhook',
       gitrepositoryurl: 'the-webhook-repo',
       pipeline: 'the-pipeline',
+      serviceaccount: 'the-service-account',
       namespace: 'webhook-namespace'
     }
   ];
@@ -65,6 +66,7 @@ describe('with webhooks', () => {
     await waitForElement(() => getByText(/first-test-webhook/i));
     await waitForElement(() => getByText(/the-webhook-repo/i));
     await waitForElement(() => getByText(/the-pipeline/i));
+    await waitForElement(() => getByText(/the-service-account/i));
     await waitForElement(() => getByText(/webhook-namespace/i));
   });
 

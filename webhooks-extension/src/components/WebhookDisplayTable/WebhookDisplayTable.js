@@ -246,6 +246,10 @@ export class WebhookDisplayTable extends Component {
           {
             key: 'pipeline',
             header: 'Pipeline'
+          },
+          {
+            key: 'serviceaccount',
+            header: 'Service Account'
           }
         ];
 
@@ -258,13 +262,14 @@ export class WebhookDisplayTable extends Component {
 
         let initialRows = [];
         // Populate the data for the rows array from the data from the webhooks get request made on page load
-        this.state.webhooks.forEach(function({ gitrepositoryurl, name, namespace, pipeline}) {
+        this.state.webhooks.forEach(function({ gitrepositoryurl, name, namespace, pipeline, serviceaccount}) {
           if (selectedNamespace === ALL_NAMESPACES || namespace === selectedNamespace) {
             let webhook = {
               id: name + "|" + namespace + "|" + gitrepositoryurl,
               name,
               pipeline: pipeline,
-              repository: gitrepositoryurl
+              repository: gitrepositoryurl,
+              serviceaccount: serviceaccount
             }
 
             if (selectedNamespace === ALL_NAMESPACES) {
@@ -366,8 +371,9 @@ export class WebhookDisplayTable extends Component {
                                             this.viewBranches({
                                               name: row.cells[0].value,
                                               url: row.cells[1].value,
-                                              namespace: selectedNamespace === ALL_NAMESPACES ? row.cells[3].value : selectedNamespace,
-                                              pipeline: row.cells[2].value
+                                              namespace: selectedNamespace === ALL_NAMESPACES ? row.cells[4].value : selectedNamespace,
+                                              pipeline: row.cells[2].value,
+                                              serviceaccount: row.cells[3].value
                                             });
                                           }
                                         : null
