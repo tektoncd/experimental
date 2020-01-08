@@ -192,6 +192,10 @@ export class WebhookBranches extends Component {
             {this.props.webhook.pipeline}
           </p>
           <p>
+            <span>Service Account: </span>
+            {this.props.webhook.serviceaccount}
+          </p>
+          <p>
             <span>Namespace: </span>
             {this.props.webhook.namespace}
           </p>
