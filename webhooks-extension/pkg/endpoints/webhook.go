@@ -977,6 +977,10 @@ func (r Resource) createOpenshiftRoute(serviceName string) error {
 				Kind: "Service",
 				Name: serviceName,
 			},
+			TLS: &routesv1.TLSConfig{
+				Termination:                   "edge",
+				InsecureEdgeTerminationPolicy: "Redirect",
+			},
 		},
 	}
 	_, err := r.RoutesClient.RouteV1().Routes(r.Defaults.Namespace).Create(route)
