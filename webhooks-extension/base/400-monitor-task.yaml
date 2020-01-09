@@ -10,12 +10,15 @@ spec:
       - name: pull-request
         type: pullRequest
     params:
+      - name: statusesurl
+        description: The statuses url
+        type: string
       - name: commentsuccess
         description: The text to use in the situation where a PipelineRun has succeeded.
         default: "Success"
         type: string
       - name: commentfailure
-        description: The text to use in the situation where a PipelineRun has a failed.
+        description: The text to use in the situation where a PipelineRun has failed.
         default: "Failed"
         type: string
       - name: commenttimeout
@@ -59,6 +62,8 @@ spec:
         value: $(inputs.params.commentmissing)
       - name: URL
         value: $(inputs.params.dashboard-url)
+      - name: STATUSES_URL
+        value: $(inputs.params.statusesurl)
       # This can be deleted after any fix to the above mentioned pending status change
       - name: GITHUBTOKEN
         valueFrom:
@@ -74,7 +79,7 @@ spec:
       cat <<EOF | python
       import time, os, json, requests, pprint, shutil
       from kubernetes import client, config
-      
+
       def diff(li1, li2): 
         li_dif = [i for i in li1 + li2 if i not in li1 or i not in li2] 
         return li_dif
@@ -82,26 +87,22 @@ spec:
       config.load_incluster_config()
       api_instance = client.CustomObjectsApi(client.ApiClient(client.Configuration()))
       gitPRcontext = "Tekton"
-      gitPRurl = ""
-      # This is the code thats puts the pullrequest into pending status, this is code to rip out later if there
-      # is a fix to the above mentioned update status to pending issue.
-      with open("/workspace/pull-request/github/pr.json") as fp:
-        rawdata = json.load(fp)
-        statusurl = rawdata['statuses_url']
+      gitPRurl = ""      
+      statusurl = "$STATUSES_URL"
+
       pendingData = {
         "state": "pending",
-        "description": "pipelines in progress",
-        "target_url": "",
-        "context": "Tekton"
+        "Desc": "pipelines in progress",
+        "Label": "Tekton"
       }
-      print("Setting status to pending with URL : " + statusurl)
-      resp = requests.post(statusurl, json.dumps(pendingData), headers = {'Content-Type': 'application/json', 'Authorization': "Bearer $GITHUBTOKEN"})
+      resp = requests.post(statusurl, json.dumps(pendingData), headers = {'Content-Type': 'application/json', 'Authorization': "Token $GITHUBTOKEN"})
       print(resp)
-      # End of code to replace
+
       if not "$URL".startswith("http"):
         pipelineRunURLPrefix = "http://" + "$URL"
       else:
         pipelineRunURLPrefix = "$URL"
+
       labelToCheck = "tekton.dev/triggers-eventid=$EVENTID" 
       runsPassed = []
       runsFailed = []
@@ -189,17 +190,29 @@ spec:
         detailsURL = "http://" + "$URL" + "/#/pipelineruns"
       else:
         detailsURL = "$URL" + "/#/pipelineruns"
-      print("Set details url to: " + detailsURL)
-      status = json.dumps(dict(ID=gitPRcontext,Code=gitPRcode,Description=gitPRdescription,URL=detailsURL))
+      print("Set details url to " + detailsURL)
+      status = json.dumps(dict(Label=gitPRcontext,state=gitPRcode,Desc=gitPRdescription,Target=detailsURL))
+      print("Setting status to " + status)
+      resp = requests.post(statusurl, status, headers = {'Content-Type': 'application/json', 'Authorization': "Token $GITHUBTOKEN"})
+      print(resp)
+
       if not os.path.exists("/workspace/output/pull-request/status"):
         os.makedirs("/workspace/output/pull-request/status")
       handle = open("/workspace/output/pull-request/status/Tekton.json", 'w')
       handle.write(status)
       handle.close()
+
       if not os.path.exists("/workspace/output/pull-request/"):
         os.makedirs("/workspace/output/pull-request/")
       if not os.path.exists("/workspace/output/pull-request/labels"):
         shutil.copytree("/workspace/pull-request/labels","/workspace/output/pull-request/labels")
+
       shutil.copyfile("/workspace/pull-request/base.json","/workspace/output/pull-request/base.json") 
-      shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json") 
+      shutil.copyfile("/workspace/pull-request/head.json","/workspace/output/pull-request/head.json")
+
+      if not os.path.exists("/workspace/output/pull-request"):
+        os.makedirs("/workspace/output/pull-request")
+      if not os.path.exists("/workspace/output/pull-request/labels"):
+        shutil.copytree("/workspace/pull-request/labels","/workspace/output/pull-request/labels")
+
       EOF

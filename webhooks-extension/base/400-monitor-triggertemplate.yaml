@@ -8,6 +8,9 @@ spec:
   - name: pullrequesturl
     description: The pull request url
     type: string
+  - name: statusesurl
+    description: The statuses url
+    type: string
   - name: gitsecretname
     description: The git secret name
     default: github-secrets
@@ -48,7 +51,7 @@ spec:
         - name: url
           value: $(params.pullrequesturl)
       secrets:
-        - fieldName: githubToken
+        - fieldName: authToken
           secretName: $(params.gitsecretname)
           secretKey: $(params.gitsecretkeyname)
   - apiVersion: tekton.dev/v1alpha1
@@ -72,6 +75,8 @@ spec:
           value: $(params.dashboardurl)
         - name: secret
           value: $(params.gitsecretname)
+        - name: statusesurl
+          value: $(params.statusesurl)
         resources:
         - name: pull-request
           resourceRef:
