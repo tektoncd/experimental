@@ -938,6 +938,10 @@ func Test_createOpenshiftRoute(t *testing.T) {
 						Kind: "Service",
 						Name: "route",
 					},
+					TLS: &routesv1.TLSConfig{
+						Termination:                   "edge",
+						InsecureEdgeTerminationPolicy: "Redirect",
+					},
 				},
 			},
 			hasErr: false,
