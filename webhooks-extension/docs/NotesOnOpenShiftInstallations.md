@@ -19,7 +19,11 @@ Run the following command first:
 
 You should specify the following registry location if your namespace is `kabanero`:
 
-`image-registry.openshift-image-registry.svc:5000/kabanero`
+`image-registry.openshift-image-registry.svc:5000/kabanero` (for OpenShift 4.2x)
+
+or
+
+`docker-registry.default.svc:5000/kabanero` (for OpehShift 3.11)
 
 If using a self-signed certificate for the internal RedHat Docker registry, you will need to use a `buildah` task that skips self-signed certificate verifications too, for example by using the Tekton catalog's `buildah` task and setting TLS_VERIFY to default to `false`
 
