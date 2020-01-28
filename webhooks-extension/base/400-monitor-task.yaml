@@ -192,11 +192,21 @@ spec:
         print("Some PipelineRuns had not completed when the monitor reached its timeout")
         gitPRdescription = "timed out monitoring pipeline runs"
         gitPRcode = "error"
+
       results = runsPassed + runsFailed + runsIncomplete + runsMissing
+
+      if (results == []):
+        gitPRdescription = "No PipelineRuns were ever found for my PullRequest!"
+        gitPRcode = "error"
+        data = "**$COMMENT_MISSING** | N/A | No PipelineRuns were ever detected, failing the build | N/A"
+        runsMissing.append(data)
+        results = runsMissing
+
       comment = ("## Tekton Status Report \n\n"
                  "Status | Pipeline | PipelineRun | Namespace\n"
                  ":----- | :------- | :--------------- | :--------\n"
                  ) + "\n".join(results)
+
       shutil.copyfile("/workspace/pull-request/pr.json","/workspace/output/pull-request/pr.json")
       # Preserve existing comments
       shutil.copytree("/workspace/pull-request/comments","/workspace/output/pull-request/comments")
