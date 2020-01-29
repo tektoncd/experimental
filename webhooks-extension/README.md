@@ -14,7 +14,15 @@ See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/w
 
 ### Install Webhook Extension
 
-To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.  
+To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.
+
+Hint: for OpenShift an easy way to retrieve the `CALLBACK_URL` we require you to set, is with:
+
+```bash
+   openshift_master_default_subdomain=$(oc get ingresses.config.openshift.io cluster --output=jsonpath={.spec.domain})
+```
+
+which you can then use in the following steps.
 
 [Installing Official Release (stable)](./docs/InstallReleaseBuild.md)
 
