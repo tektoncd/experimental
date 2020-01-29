@@ -26,19 +26,27 @@
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "github.com/tektoncd/triggers"
-  branch = "master"
+  version = "0.2.0"
+
+[[override]]
+  name = "github.com/openshift/api"
+  revision = "0d921e363e951d89f583292c60d013c318df64dc"
+
+[[override]]
+  name = "github.com/openshift/client-go"
+  revision = "master"
 
 [prune]
   go-tests = true

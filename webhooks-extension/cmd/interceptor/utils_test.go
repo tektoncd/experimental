@@ -16,12 +16,13 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"github.com/google/go-github/github"
-	gitlab "github.com/xanzy/go-gitlab"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/google/go-github/github"
+	gitlab "github.com/xanzy/go-gitlab"
 )
 
 func TestSanitizeGitInput(t *testing.T) {
@@ -68,7 +69,10 @@ func TestAddBranchAndTagGitHubEvents(t *testing.T) {
 				ID: &id,
 			},
 		}
-		payload, _ := addBranchAndTag(ghPushEvent)
+		payload, err := addBranchAndTag(ghPushEvent)
+		if err != nil {
+			t.Errorf("Error: %s", err.Error())
+		}
 		if ghPushEventExpectedResults[ref] != string(payload) {
 			t.Errorf("GitHub push event result unexpected, received %s, expected %s", string(payload), ghPushEventExpectedResults[ref])
 		}
@@ -82,7 +86,10 @@ func TestAddBranchAndTagGitHubEvents(t *testing.T) {
 				},
 			},
 		}
-		payload, _ = addBranchAndTag(ghPullEvent)
+		payload, err = addBranchAndTag(ghPullEvent)
+		if err != nil {
+			t.Errorf("Error: %s", err.Error())
+		}
 		if ghPullEventExpectedResults[ref] != string(payload) {
 			t.Errorf("GitHub pull request event result unexpected, received %s, expected %s", string(payload), ghPullEventExpectedResults[ref])
 		}
@@ -91,7 +98,7 @@ func TestAddBranchAndTagGitHubEvents(t *testing.T) {
 		unsupportedEvent := github.StarEvent{
 			Action: &ref,
 		}
-		payload, err := addBranchAndTag(unsupportedEvent)
+		payload, err = addBranchAndTag(unsupportedEvent)
 		if "" != string(payload) {
 			t.Errorf("Unsupported event result unexpected, received %s, expected \"\"", string(payload))
 		}
@@ -109,7 +116,11 @@ func TestAddBranchAndTagGitLabEvents(t *testing.T) {
 		CheckoutSHA: "12345678901234567890",
 	}
 	glPushEventExpectedResult := "{\"object_kind\":\"\",\"before\":\"\",\"after\":\"\",\"ref\":\"blah/head/foo\",\"checkout_sha\":\"12345678901234567890\",\"user_id\":0,\"user_name\":\"\",\"user_username\":\"\",\"user_email\":\"\",\"user_avatar\":\"\",\"project_id\":0,\"project\":{\"name\":\"\",\"description\":\"\",\"avatar_url\":\"\",\"git_ssh_url\":\"\",\"git_http_url\":\"\",\"namespace\":\"\",\"path_with_namespace\":\"\",\"default_branch\":\"\",\"homepage\":\"\",\"url\":\"\",\"ssh_url\":\"\",\"http_url\":\"\",\"web_url\":\"\",\"visibility\":\"\"},\"repository\":null,\"commits\":null,\"total_commits_count\":0,\"webhooks-tekton-git-branch\":\"foo\",\"webhooks-tekton-image-tag\":\"1234567\"}"
-	payload, _ := addBranchAndTag(&glPushEvent)
+	payload, err := addBranchAndTag(&glPushEvent)
+	if err != nil {
+		t.Errorf("Error: %s", err.Error())
+	}
+
 	if glPushEventExpectedResult != string(payload) {
 		t.Errorf("GitLab push event result unexpected, received %s, expected %s", string(payload), glPushEventExpectedResult)
 	}
@@ -120,86 +131,32 @@ func TestAddBranchAndTagGitLabEvents(t *testing.T) {
 		CheckoutSHA: "12345678901234567890",
 	}
 	glTagEventExpectedResult := "{\"object_kind\":\"\",\"before\":\"\",\"after\":\"\",\"ref\":\"refs/tags/v1.0\",\"checkout_sha\":\"12345678901234567890\",\"user_id\":0,\"user_name\":\"\",\"user_avatar\":\"\",\"project_id\":0,\"message\":\"\",\"project\":{\"name\":\"\",\"description\":\"\",\"avatar_url\":\"\",\"git_ssh_url\":\"\",\"git_http_url\":\"\",\"namespace\":\"\",\"path_with_namespace\":\"\",\"default_branch\":\"\",\"homepage\":\"\",\"url\":\"\",\"ssh_url\":\"\",\"http_url\":\"\",\"web_url\":\"\",\"visibility\":\"\"},\"repository\":null,\"commits\":null,\"total_commits_count\":0,\"webhooks-tekton-git-branch\":\"v1.0\",\"webhooks-tekton-image-tag\":\"v1.0\"}"
-	payload, _ = addBranchAndTag(&glTagEvent)
+	payload, err = addBranchAndTag(&glTagEvent)
+	if err != nil {
+		t.Errorf("Error: %s", err.Error())
+	}
 	if glTagEventExpectedResult != string(payload) {
 		t.Errorf("GitLab tag event result unexpected, received %s, expected %s", string(payload), glTagEventExpectedResult)
 	}
 
-	//We need to mock up more of a struct for gitlab merge requests,
-	//so we have this in a seperate test just for some code clartiy
-	type ObjectAttributes struct {
-		ID                       int                 `json:"id"`
-		TargetBranch             string              `json:"target_branch"`
-		SourceBranch             string              `json:"source_branch"`
-		SourceProjectID          int                 `json:"source_project_id"`
-		AuthorID                 int                 `json:"author_id"`
-		AssigneeID               int                 `json:"assignee_id"`
-		Title                    string              `json:"title"`
-		CreatedAt                string              `json:"created_at"` // Should be *time.Time (see Gitlab issue #21468)
-		UpdatedAt                string              `json:"updated_at"` // Should be *time.Time (see Gitlab issue #21468)
-		StCommits                []*gitlab.Commit    `json:"st_commits"`
-		StDiffs                  []*gitlab.Diff      `json:"st_diffs"`
-		MilestoneID              int                 `json:"milestone_id"`
-		State                    string              `json:"state"`
-		MergeStatus              string              `json:"merge_status"`
-		TargetProjectID          int                 `json:"target_project_id"`
-		IID                      int                 `json:"iid"`
-		Description              string              `json:"description"`
-		Position                 int                 `json:"position"`
-		LockedAt                 string              `json:"locked_at"`
-		UpdatedByID              int                 `json:"updated_by_id"`
-		MergeError               string              `json:"merge_error"`
-		MergeParams              *gitlab.MergeParams `json:"merge_params"`
-		MergeWhenBuildSucceeds   bool                `json:"merge_when_build_succeeds"`
-		MergeUserID              int                 `json:"merge_user_id"`
-		MergeCommitSHA           string              `json:"merge_commit_sha"`
-		DeletedAt                string              `json:"deleted_at"`
-		ApprovalsBeforeMerge     string              `json:"approvals_before_merge"`
-		RebaseCommitSHA          string              `json:"rebase_commit_sha"`
-		InProgressMergeCommitSHA string              `json:"in_progress_merge_commit_sha"`
-		LockVersion              int                 `json:"lock_version"`
-		TimeEstimate             int                 `json:"time_estimate"`
-		Source                   *gitlab.Repository  `json:"source"`
-		Target                   *gitlab.Repository  `json:"target"`
-		LastCommit               struct {
-			ID        string     `json:"id"`
-			Message   string     `json:"message"`
-			Timestamp *time.Time `json:"timestamp"`
-			URL       string     `json:"url"`
-			Author    struct {
-				Name  string `json:"name"`
-				Email string `json:"email"`
-			} `json:"author"`
-		} `json:"last_commit"`
-		WorkInProgress bool                 `json:"work_in_progress"`
-		URL            string               `json:"url"`
-		Action         string               `json:"action"`
-		OldRev         string               `json:"oldrev"`
-		Assignee       gitlab.MergeAssignee `json:"assignee"`
+	hookJSON := getGitlabMergeRequest()
+	parsedEvent, err := gitlab.ParseWebhook("Merge Request Hook", []byte(hookJSON))
+	if err != nil {
+		t.Errorf("Error parsing merge request hook: %s", err)
 	}
 
-	glMergeEvent := gitlab.MergeEvent{
-		ObjectAttributes: ObjectAttributes{
-			TargetBranch: "foo",
-			LastCommit: struct {
-				ID        string     `json:"id"`
-				Message   string     `json:"message"`
-				Timestamp *time.Time `json:"timestamp"`
-				URL       string     `json:"url"`
-				Author    struct {
-					Name  string `json:"name"`
-					Email string `json:"email"`
-				} `json:"author"`
-			}{
-				ID: "12345678901234567890",
-			},
-		},
+	event, ok := parsedEvent.(*gitlab.MergeEvent)
+	if !ok {
+		t.Errorf("Expected MergeEvent, but parsing produced %T", parsedEvent)
 	}
 
-	payload, _ = addBranchAndTag(&glMergeEvent)
+	payload, err = addBranchAndTag(event)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	var glMergeResult glPullRequestPayload
-	err := json.Unmarshal(payload, &glMergeResult)
+	err = json.Unmarshal(payload, &glMergeResult)
 	if err != nil {
 		t.Errorf("Error during unmarshall of payload for gitlab merge request in TestaddBranchAndTagGitLabMergeRequest test")
 	}
@@ -336,4 +293,143 @@ func TestValidate(t *testing.T) {
 			}
 		}
 	}
+}
+
+func getGitlabMergeRequest() string {
+
+	//Example API payload
+	raw := `{
+		"object_kind": "merge_request",
+		"event_type": "merge_request",
+		"user": {
+			"name": "Administrator",
+			"username": "root",
+			"avatar_url": "https://secure.gravatar.com/avatar/e64c7d89f26bd1972efa854d13d7dd61?s=80&d=identicon"
+		},
+		"project": {
+			"id": 2,
+			"name": "project2",
+			"description": "",
+			"web_url": "https://gitlab.apps.domain.com/root/project2",
+			"avatar_url": null,
+			"git_ssh_url": "git@gitlab.apps.domain.com:root/project2.git",
+			"git_http_url": "https://gitlab.apps.domain.com/root/project2.git",
+			"namespace": "Administrator",
+			"visibility_level": 20,
+			"path_with_namespace": "root/project2",
+			"default_branch": "master",
+			"ci_config_path": null,
+			"homepage": "https://gitlab.apps.domain.com/root/project2",
+			"url": "git@gitlab.apps.domain.com:root/project2.git",
+			"ssh_url": "git@gitlab.apps.domain.com:root/project2.git",
+			"http_url": "https://gitlab.apps.domain.com/root/project2.git"
+		},
+		"object_attributes": {
+			"assignee_id": null,
+			"author_id": 1,
+			"created_at": "2020-01-20 10:09:58 UTC",
+			"description": "",
+			"head_pipeline_id": 28,
+			"id": 7,
+			"iid": 4,
+			"last_edited_at": null,
+			"last_edited_by_id": null,
+			"merge_commit_sha": null,
+			"merge_error": null,
+			"merge_params": {
+				"force_remove_source_branch": "1"
+			},
+			"merge_status": "cannot_be_merged",
+			"merge_user_id": null,
+			"merge_when_pipeline_succeeds": false,
+			"milestone_id": null,
+			"source_branch": "test",
+			"source_project_id": 2,
+			"state": "opened",
+			"target_branch": "foo",
+			"target_project_id": 2,
+			"time_estimate": 0,
+			"title": "Test",
+			"updated_at": "2020-01-29 16:32:31 UTC",
+			"updated_by_id": null,
+			"url": "https://gitlab.apps.domain.com/root/project2/merge_requests/4",
+			"source": {
+				"id": 2,
+				"name": "project2",
+				"description": "",
+				"web_url": "https://gitlab.apps.domain.com/root/project2",
+				"avatar_url": null,
+				"git_ssh_url": "git@gitlab.apps.domain.com:root/project2.git",
+				"git_http_url": "https://gitlab.apps.domain.com/root/project2.git",
+				"namespace": "Administrator",
+				"visibility_level": 20,
+				"path_with_namespace": "root/project2",
+				"default_branch": "master",
+				"ci_config_path": null,
+				"homepage": "https://gitlab.apps.domain.com/root/project2",
+				"url": "git@gitlab.apps.domain.com:root/project2.git",
+				"ssh_url": "git@gitlab.apps.domain.com:root/project2.git",
+				"http_url": "https://gitlab.apps.domain.com/root/project2.git"
+			},
+			"target": {
+				"id": 2,
+				"name": "project2",
+				"description": "",
+				"web_url": "https://gitlab.apps.domain.com/root/project2",
+				"avatar_url": null,
+				"git_ssh_url": "git@gitlab.apps.domain.com:root/project2.git",
+				"git_http_url": "https://gitlab.apps.domain.com/root/project2.git",
+				"namespace": "Administrator",
+				"visibility_level": 20,
+				"path_with_namespace": "root/project2",
+				"default_branch": "master",
+				"ci_config_path": null,
+				"homepage": "https://gitlab.apps.domain.com/root/project2",
+				"url": "git@gitlab.apps.domain.com:root/project2.git",
+				"ssh_url": "git@gitlab.apps.domain.com:root/project2.git",
+				"http_url": "https://gitlab.apps.domain.com/root/project2.git"
+			},
+			"last_commit": {
+				"id": "123456747baf002968e375b6d11d4de412af5550",
+				"message": "Update README.md",
+				"timestamp": "2020-01-21T16:18:01Z",
+				"url": "https://gitlab.apps.domain.com/root/project2/commit/123456747baf002968e375b6d11d4de412af5550",
+				"author": {
+					"name": "Administrator",
+					"email": "admin@example.com"
+				}
+			},
+			"work_in_progress": false,
+			"total_time_spent": 0,
+			"human_total_time_spent": null,
+			"human_time_estimate": null,
+			"assignee_ids": [
+	
+			],
+			"action": "reopen"
+		},
+		"labels": [
+	
+		],
+		"changes": {
+			"state": {
+				"previous": "closed",
+				"current": "opened"
+			},
+			"updated_at": {
+				"previous": "2020-01-29 16:32:25 UTC",
+				"current": "2020-01-29 16:32:31 UTC"
+			},
+			"total_time_spent": {
+				"previous": null,
+				"current": 0
+			}
+		},
+		"repository": {
+			"name": "project2",
+			"url": "git@gitlab.apps.domain.com:root/project2.git",
+			"description": "",
+			"homepage": "https://gitlab.apps.domain.com/root/project2"
+		}}`
+	return raw
 }

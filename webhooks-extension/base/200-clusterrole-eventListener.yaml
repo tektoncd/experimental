@@ -21,3 +21,11 @@ rules:
   - taskruns
   verbs:
   - create
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - list
+  - get
+  - watch
