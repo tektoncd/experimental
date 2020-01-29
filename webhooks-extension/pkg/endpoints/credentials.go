@@ -126,8 +126,8 @@ func (r Resource) credentialToSecret(cred credential, response *restful.Response
 	// Create new secret struct
 	secret := corev1.Secret{}
 	secret.Type = corev1.SecretTypeOpaque
-	secret.SetNamespace(r.Defaults.Namespace)
-	secret.SetName(cred.Name)
+	secret.ObjectMeta.Namespace = r.Defaults.Namespace
+	secret.ObjectMeta.Name = cred.Name
 	secret.Data = make(map[string][]byte)
 	secret.Data["accessToken"] = []byte(cred.AccessToken)
 	if cred.SecretToken != "" {
@@ -167,7 +167,7 @@ func secretToCredential(secret *corev1.Secret, mask bool) credential {
 	var cred credential
 	if secret.Data["accessToken"] != nil {
 		cred = credential{
-			Name:        secret.GetName(),
+			Name:        secret.ObjectMeta.Name,
 			AccessToken: string(secret.Data["accessToken"]),
 			SecretToken: string(secret.Data["secretToken"]),
 		}

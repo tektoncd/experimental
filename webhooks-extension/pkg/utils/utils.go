@@ -87,6 +87,10 @@ func GetWebhookSecretTokens(kubeClient k8sclient.Interface, namespace, name stri
 
 // Returns (provider, apiurl, error):
 func GetGitProviderAndAPIURL(inputURL string) (string, string, error) {
+	if inputURL == "" {
+		return "", "", errors.New("no repository URL provided on call to GetGitProviderAndAPIURL")
+	}
+
 	gitURL, err := url.ParseRequestURI(inputURL)
 	if err != nil {
 		return "", "", err

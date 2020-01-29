@@ -14,21 +14,14 @@ limitations under the License.
 package endpoints
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 
 	restful "github.com/emicklei/go-restful"
-	"github.com/mitchellh/mapstructure"
 	fakeroutesclientset "github.com/openshift/client-go/route/clientset/versioned/fake"
-	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	fakeclientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	faketriggerclientset "github.com/tektoncd/triggers/pkg/client/clientset/versioned/fake"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	fakek8sclientset "k8s.io/client-go/kubernetes/fake"
-	k8stesting "k8s.io/client-go/testing"
-	"knative.dev/pkg/apis"
 )
 
 func dummyK8sClientset() *fakek8sclientset.Clientset {
@@ -38,50 +31,6 @@ func dummyK8sClientset() *fakek8sclientset.Clientset {
 
 func dummyClientset() *fakeclientset.Clientset {
 	resultClient := fakeclientset.NewSimpleClientset()
-
-	// Need to intercept the taskrun creation as "GeneratedName" does not generate a name in the fake clients and
-	// we cannot therefore obtain the taskrun with a get call.  Here we store the taskrun into a map and set
-	// the name of the taskrun to tekton-int, where int is the index in the map.
-	taskruns := map[string]pipelinesv1alpha1.TaskRun{}
-	resultClient.Fake.PrependReactor("create", "taskruns", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		// get the runtime.Object
-		obj := action.(k8stesting.CreateAction).GetObject()
-		// convert to unstructured map[string]interface{}
-		unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
-		if err != nil {
-			newErr := fmt.Errorf("ERROR : Problem with taskrun creation in shared-test-funcs.go")
-			return false, nil, newErr
-		}
-		// convert to TaskRun
-		var result pipelinesv1alpha1.TaskRun
-		mapstructure.Decode(unstructuredObj, &result)
-		// store to end of map
-		index := len(taskruns) + 1
-		result.Name = fmt.Sprintf("tekton-%d", index)
-		// HARD CODING TO SUCCESSFUL TASKRUN
-		condition := &apis.Condition{
-			Type:   apis.ConditionSucceeded,
-			Status: "True",
-		}
-		result.Status.SetCondition(condition)
-		taskruns[result.Name] = result
-
-		//In case debug needed, you might want to uncomment this
-		//fmt.Printf("taskruns: %+v", taskruns)
-		return true, &result, nil
-	})
-
-	// Need to intercept calls to get githubsource, so that we can return the githubsource from the map we created
-	// in the above code.
-	resultClient.Fake.PrependReactor("get", "taskruns", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		srcName := action.(k8stesting.GetAction).GetName()
-		if tr, found := taskruns[srcName]; found {
-			return true, &tr, nil
-		}
-
-		return true, &pipelinesv1alpha1.TaskRun{}, errors.New("taskrun not found")
-	})
-
 	return resultClient
 }
 
