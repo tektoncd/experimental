@@ -28,6 +28,15 @@ export TEST_FOLDER=$(pwd)
 
 source $(dirname $0)/../../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
+function get_yq() {
+    echo "Installing yq"
+    curl -O -L https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
+    mkdir -p yq-install
+    mv yq_linux_amd64 yq-install/yq
+    chmod +x yq-install/yq
+    export PATH=$PATH:$(pwd)/yq-install
+}
+
 function get_node() {
     echo "Script is running as $(whoami) on $(hostname)"
     # It's Stretch and https://github.com/tektoncd/dashboard/blob/master/package.json
@@ -46,6 +55,9 @@ function extra_initialization() {
     npm --version
     echo ">> Node.js version"
     node --version
+    get_yq
+    echo ">> yq version"
+    yq --version
 }
 
 function post_build_tests() {
