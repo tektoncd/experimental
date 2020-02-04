@@ -9,11 +9,9 @@ npm uninstall --save-dev react
 
 if [[ $1 ]]
 then
-  rollupOutput=$(rollup -c --dir $1)
-  echo $rollupOutput
+  rollup -c --dir $1
 else 
-  rollupOutput=$(rollup -c)
-  echo $rollupOutput
+  rollup -c
 fi
 
 npm install --save-dev react
@@ -21,14 +19,19 @@ npm install --save-dev react
 thePath=""
 
 kodataPath="cmd/extension/kodata"
-distpath="dist"
+distPath="dist"
 
-if [[ -f $kodataPath ]] ; then
+foundIt=false
+if [[ -e $kodataPath ]] ; then
   thePath=$kodataPath
-elif [[ -f $distpath ]] ; then
-  thePath=$distpath
-else
-  echo "Didn't find the bundle in either $kodatapath or $distpath, can't update anything"
+  foundIt=true
+elif [[ -e $distPath ]] ; then
+  thePath=$distPath
+  foundIt=true
+fi
+
+if [[ ! foundIt ]] ; then
+  echo "Didn't find the bundle in either $kodataPath or $distPath, can't update anything"
   exit -1
 fi
 
