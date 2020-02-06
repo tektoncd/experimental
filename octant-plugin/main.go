@@ -29,6 +29,7 @@ import (
 	"github.com/vmware-tanzu/octant/pkg/plugin/service"
 	"github.com/vmware-tanzu/octant/pkg/store"
 	"github.com/vmware-tanzu/octant/pkg/view/component"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis/duck"
 )
@@ -94,7 +95,7 @@ func handlePrint(request *service.PrintRequest) (plugin.PrintResponse, error) {
 		if err := duck.FromUnstructured(u, &tr); err != nil {
 			return plugin.PrintResponse{}, nil
 		}
-		return printTaskRun(&tr), nil
+		return printTaskRun(request.Context(), &tr, request.DashboardClient)
 
 	case pipelineRunGVK:
 		var pr v1alpha1.PipelineRun
@@ -148,24 +149,28 @@ func resources(ctx context.Context, client service.Dashboard, t v1alpha1.Pipelin
 	return prs, nil
 }
 
-func printTaskRun(tr *v1alpha1.TaskRun) plugin.PrintResponse {
+func printTaskRun(ctx context.Context, tr *v1alpha1.TaskRun, client service.Dashboard) (plugin.PrintResponse, error) {
 	resp := plugin.PrintResponse{}
 	if tr.Status.PodName != "" {
 		// TODO: this 404s for timed-out or cancelled TaskRuns, since we delete the Pod...
 		s := tr.Status.PodName
-		ref := "../../../workloads/pods/" + tr.Status.PodName
+		ref := "../../../../workloads/pods/" + tr.Status.PodName
 		resp.Status = append(resp.Status, component.SummarySection{Header: "Pod", Content: component.NewLink("Pod Name", s, ref)})
 	}
 	if tr.Spec.TaskRef != nil {
 		s := tr.Spec.TaskRef.Name
-		ref := "../../tasks.tekton.dev/" + tr.Spec.TaskRef.Name
+		ref := "../../../tasks.tekton.dev/v1alpha1/" + tr.Spec.TaskRef.Name
 		// TODO: handle ClusterTask
 		resp.Status = append(resp.Status, component.SummarySection{Header: "Task", Content: component.NewLink("Task Name", s, ref)})
 
 	}
 
-	saref := "../../../config-and-storage/service-accounts/" + tr.Spec.ServiceAccountName
-	resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", tr.Spec.ServiceAccountName, saref)})
+	saName := "default"
+	if tr.Spec.ServiceAccountName != "" {
+		saName = tr.Spec.ServiceAccountName
+	}
+	saref := "../../../../config-and-storage/service-accounts/" + saName
+	resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", saName, saref)})
 
 	if !tr.Status.StartTime.Time.IsZero() {
 		d := tr.Status.StartTime.Time.Sub(tr.CreationTimestamp.Time)
@@ -179,17 +184,51 @@ func printTaskRun(tr *v1alpha1.TaskRun) plugin.PrintResponse {
 		d := tr.Spec.Timeout.Duration
 		resp.Status = append(resp.Status, component.SummarySection{Header: "Timeout", Content: component.NewText(d.String())})
 	}
-	return resp
+
+	if tr.Status.PodName != "" {
+		// TODO: handle logs/links for Pods for previous attempts.
+		logsCard := component.NewCard(component.TitleFromString("Pod Logs"))
+
+		up, _, err := client.Get(ctx, store.Key{
+			APIVersion: "v1",
+			Kind:       "Pod",
+			Name:       tr.Status.PodName,
+			Namespace:  tr.Namespace,
+		})
+		if err != nil {
+			return plugin.PrintResponse{}, err
+		}
+		var p corev1.Pod
+		if err := duck.FromUnstructured(up, &p); err != nil {
+			return plugin.PrintResponse{}, err
+		}
+		var containerNames []string
+		for _, p := range p.Spec.Containers {
+			containerNames = append(containerNames, p.Name)
+		}
+
+		logsCard.SetBody(component.NewLogs(tr.Namespace, tr.Status.PodName, containerNames))
+		resp.Items = append(resp.Items, component.FlexLayoutItem{
+			Width: component.WidthFull,
+			View:  logsCard,
+		})
+	}
+
+	return resp, nil
 }
 
 func printPipelineRun(pr *v1alpha1.PipelineRun) plugin.PrintResponse {
 	resp := plugin.PrintResponse{}
 
-	ref := "../../pipelines.tekton.dev/" + pr.Spec.PipelineRef.Name
+	ref := "../../../pipelines.tekton.dev/v1alpha1/" + pr.Spec.PipelineRef.Name
 	resp.Status = append(resp.Status, component.SummarySection{Header: "Pipeline", Content: component.NewLink("Pipeline Name", pr.Spec.PipelineRef.Name, ref)})
 
-	saref := "../../../config-and-storage/service-accounts/" + pr.Spec.ServiceAccountName
-	resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", pr.Spec.ServiceAccountName, saref)})
+	saName := "default"
+	if pr.Spec.ServiceAccountName != "" {
+		saName = pr.Spec.ServiceAccountName
+	}
+	saref := "../../../../config-and-storage/service-accounts/" + saName
+	resp.Status = append(resp.Status, component.SummarySection{Header: "Service Account", Content: component.NewLink("Service Account Name", saName, saref)})
 
 	if !pr.Status.StartTime.Time.IsZero() {
 		d := pr.Status.StartTime.Time.Sub(pr.CreationTimestamp.Time)
@@ -203,6 +242,8 @@ func printPipelineRun(pr *v1alpha1.PipelineRun) plugin.PrintResponse {
 		d := pr.Spec.Timeout.Duration
 		resp.Status = append(resp.Status, component.SummarySection{Header: "Timeout", Content: component.NewText(d.String())})
 	}
+
+	// TODO: print taskRuns and their statuses, links to taskrun page with full logs.
 	return resp
 }
 
@@ -289,6 +330,8 @@ func printTask(ctx context.Context, t *v1alpha1.Task, client service.Dashboard) 
 		Width: component.WidthFull,
 		View:  runCard,
 	})
+
+	// TODO: display or link to list of most recent runs.
 	return resp, nil
 }
 
@@ -353,7 +396,7 @@ func printPipeline(ctx context.Context, p *v1alpha1.Pipeline, client service.Das
 	if len(p.Spec.Tasks) != 0 {
 		var md string
 		for _, t := range p.Spec.Tasks {
-			ref := "/#/content/overview/namespace/default/custom-resources/tasks.tekton.dev/" + t.TaskRef.Name // TODO: handle ClusterTask
+			ref := "/#/overview/namespace/default/custom-resources/tasks.tekton.dev/v1alpha1/" + t.TaskRef.Name // TODO: handle ClusterTask
 			md += fmt.Sprintf("* [`%s`](%s)\n", t.Name, ref)
 		}
 		card := component.NewCard(component.TitleFromString("Tasks"))
@@ -377,6 +420,7 @@ func printPipeline(ctx context.Context, p *v1alpha1.Pipeline, client service.Das
 		Width: component.WidthFull,
 		View:  runCard,
 	})
+	// TODO: display or link to list of most recent runs.
 	return resp, nil
 }
 
