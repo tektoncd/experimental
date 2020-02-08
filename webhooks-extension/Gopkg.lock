@@ -259,7 +259,7 @@
   version = "v0.9.2"
 
 [[projects]]
-  digest = "1:15b628e951ea2db66d8fbcc401a11716eeb8e249bcfe9c7648933d2afa0e649b"
+  digest = "1:8018dd77e5588011502c81df00eaa63e0642cd7621e0bc081a6c19ef5bb8f7d1"
   name = "github.com/tektoncd/triggers"
   packages = [
     "pkg/apis/triggers/v1alpha1",
@@ -270,16 +270,16 @@
     "pkg/client/clientset/versioned/typed/triggers/v1alpha1/fake",
   ]
   pruneopts = "UT"
-  revision = "bc6916baaf6c54f204bfff5713ab869b8f5b898d"
-  version = "v0.2.0"
+  revision = "6fd954437e30a23124d869e0fc24673aad042af7"
+  version = "v0.2.1"
 
 [[projects]]
-  digest = "1:2fc5fe53d391920a649f912d46795193f477ce186821789f478af551b2d77acb"
+  digest = "1:5ce9ee060fd2631f7b8429031d76b52de72a302992ca983f4128a6f0770d5836"
   name = "github.com/xanzy/go-gitlab"
   packages = ["."]
   pruneopts = "UT"
-  revision = "5b044e060c432eff9d5cef41b89fb842d4d99d04"
-  version = "v0.22.3"
+  revision = "7bb993b2bff45de7c174839992d5e7e1344901da"
+  version = "v0.24.0"
 
 [[projects]]
   digest = "1:c708d00d1097e62bf4f3a72f239efa7dafc257581421b0b7d3789e1ff5299f30"
