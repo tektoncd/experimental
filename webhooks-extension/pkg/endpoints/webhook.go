@@ -178,7 +178,7 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 		eventListener.Spec.Triggers = append(eventListener.Spec.Triggers, newMonitor)
 	}
 
-	return r.TriggersClient.TektonV1alpha1().EventListeners(eventListener.GetNamespace()).Update(eventListener)
+	return r.TriggersClient.TektonV1alpha1().EventListeners(eventListener.Namespace).Update(eventListener)
 }
 
 func (r Resource) compareGitRepoNames(url1, url2 string) (bool, error) {
@@ -418,11 +418,11 @@ func (r Resource) createBindings(webhook webhook, monitorTriggerName string, cre
 		actualMonitorBinding, err := r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Create(&monitorBinding)
 		if err != nil {
 			logging.Log.Errorf("failed to create binding %+v, with error %s", monitorBinding, err.Error())
-			return actualHookBinding.GetName(), "", err
+			return actualHookBinding.Name, "", err
 		}
-		return actualHookBinding.GetName(), actualMonitorBinding.GetName(), nil
+		return actualHookBinding.Name, actualMonitorBinding.Name, nil
 	} else {
-		return actualHookBinding.GetName(), "", nil
+		return actualHookBinding.Name, "", nil
 	}
 
 }
@@ -451,7 +451,7 @@ func (r Resource) getDashboardURL(installNs string) string {
 		return toReturn
 	}
 
-	name := services.Items[0].GetName()
+	name := services.Items[0].Name
 	proto := services.Items[0].Spec.Ports[0].Name
 	port := services.Items[0].Spec.Ports[0].Port
 	url := fmt.Sprintf("%s://%s:%d/v1/namespaces/%s/endpoints", proto, name, port, installNs)
@@ -620,7 +620,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	// Single monitor trigger for all triggers on a repo - thus name to use for monitor is
 	monitorTriggerNamePrefix := gitOwner + "." + gitRepo + "-"
 
-	if eventListener != nil && eventListener.GetName() != "" {
+	if eventListener != nil && eventListener.Name != "" {
 		_, err := r.updateEventListener(eventListener, webhook, monitorTriggerNamePrefix)
 		if err != nil {
 			msg := fmt.Sprintf("error creating webhook due to error updating eventlistener: %s", err)
@@ -676,7 +676,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		// // Give the eventlistener a chance to be up and running or webhook ping
 		// // will get a 503 and might confuse people (although resend will work)
 		for i := 0; i < 30; i = i + 1 {
-			a, _ := r.K8sClient.Apps().Deployments(installNs).Get(routeName, metav1.GetOptions{})
+			a, _ := r.K8sClient.AppsV1beta1().Deployments(installNs).Get(routeName, metav1.GetOptions{})
 			replicas := a.Status.ReadyReplicas
 			if replicas > 0 {
 				break
@@ -920,7 +920,7 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePre
 	}
 
 	if len(newTriggers) == 0 {
-		err = r.TriggersClient.TektonV1alpha1().EventListeners(installNS).Delete(el.GetName(), &metav1.DeleteOptions{})
+		err = r.TriggersClient.TektonV1alpha1().EventListeners(installNS).Delete(el.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
@@ -1095,7 +1095,7 @@ func (r Resource) deletePipelineRuns(gitRepoURL, namespace, pipeline string) err
 	found := false
 	for _, pipelineRun := range allPipelineRuns.Items {
 		if pipelineRun.Spec.PipelineRef.Name == pipeline {
-			labels := pipelineRun.GetLabels()
+			labels := pipelineRun.Labels
 			serverURL := labels["webhooks.tekton.dev/gitServer"]
 			orgName := labels["webhooks.tekton.dev/gitOrg"]
 			repoName := labels["webhooks.tekton.dev/gitRepo"]
