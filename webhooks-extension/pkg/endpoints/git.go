@@ -16,10 +16,11 @@ package endpoints
 import (
 	"errors"
 	"fmt"
-	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
-	"github.com/tektoncd/experimental/webhooks-extension/pkg/utils"
 	"os"
 	"strings"
+
+	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
+	"github.com/tektoncd/experimental/webhooks-extension/pkg/utils"
 )
 
 type GitWebhook interface {
@@ -78,7 +79,7 @@ func addOrRemoveWebhook(hook webhook, org, repo, action string, r Resource) (err
 func (r Resource) createGitProviderForWebhook(hook webhook, org, reponame string) (GitProvider, error) {
 	// Get extra git option to skip ssl verification
 	sslVerify := true
-	ssl := os.Getenv("SSL_VERIFICATION_ENABLED")
+	ssl := os.Getenv("WEBHOOK_SSL_VERIFICATION_ENABLED")
 	if strings.ToLower(ssl) == "false" {
 		sslVerify = false
 	}

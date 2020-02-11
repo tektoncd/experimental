@@ -220,7 +220,7 @@ func TestGetParams(t *testing.T) {
 	}
 
 	r := dummyResource()
-	os.Setenv("SSL_VERIFICATION_ENABLED", "true")
+	os.Setenv("GIT_SSL_VERIFICATION_ENABLED", "true")
 	for _, tt := range testcases {
 		hookParams, monitorParams := r.getParams(tt.Webhook)
 		expectedHookParams, expectedMonitorParams := getExpectedParams(tt.Webhook, r, tt.expectedProvider, tt.expectedAPIURL)
@@ -482,7 +482,7 @@ func TestCreateEventListener(t *testing.T) {
 				t.Errorf("trigger %+v unexpected", trigger)
 			}
 			// Check params on monitor
-			os.Setenv("SSL_VERIFICATION_ENABLED", "true")
+			os.Setenv("GIT_SSL_VERIFICATION_ENABLED", "true")
 			_, expectedMonitorParams := getExpectedParams(hook, r, "github", "https://api.github.com/")
 			wextMonitorBindingFound := false
 			for _, monitorBinding := range trigger.Bindings {
@@ -813,7 +813,7 @@ func getExpectedParams(hook webhook, r *Resource, expectedProvider, expectedAPIU
 	org = org[0:strings.Index(org, "/")]
 	repo := url[strings.LastIndex(url, "/")+1:]
 
-	sslverify := os.Getenv("SSL_VERIFICATION_ENABLED")
+	sslverify := os.Getenv("GIT_SSL_VERIFICATION_ENABLED")
 	insecureAsBool, _ := strconv.ParseBool(sslverify)
 	insecureAsString := strconv.FormatBool(!insecureAsBool)
 

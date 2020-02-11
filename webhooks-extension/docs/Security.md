@@ -4,7 +4,7 @@
 
 Webhook SSL verification is enabled by setting the `WEBHOOK_CALLBACK_URL` environment variable to an `https://` endpoint and by setting the `SSL_VERIFICATION_ENABLED` environment variable to `"true"`.  These environment variables are found in the installation yaml file and need setting in advance of install.
 
-The certificate setup is left as an exercise for the reader, but should you wish to have an `https://` connection but with certificate validation disabled, you could set the `WEBHOOK_CALLBACK_URL` environment variable to an `https://` endpoint and set the `SSL_VERIFICATION_ENABLED` environment variable to `"false"`.  Please ensure you understand the security risks of disabling certificate validation.
+The certificate setup is left as an exercise for the reader, but should you wish to have an `https://` connection but with certificate validation disabled, you could set the `WEBHOOK_CALLBACK_URL` environment variable to an `https://` endpoint and set the `WEBHOOK_SSL_VERIFICATION_ENABLED` environment variable to `"false"`.  Please ensure you understand the security risks of disabling certificate validation.
 
 An additional security mechanism which is always enabled, is the validation of the `secret token` associated with the webhook.  This secret token is generated for you when you create the webhook in the UI and automatically checked by an interceptor service running behind the eventlistener.
 
@@ -26,7 +26,7 @@ There are a number of additional places that verify the certificate from the git
 
 ### Disabling Certificate Verification
 
-By setting the environment variable `SSL_VERIFICATION_ENABLED` to `"false"` you will disable certificate validation in the monitor task that udpdates status on your pull requests.  The setting is made available to your trigger templates as the parameters `webhooks-tekton-ssl-verify` and `webhooks-tekton-insecure-skip-tls-verify` which can then be used to set the requisite values on your pipelineresources (or you could hardcode the required values).
+By setting the environment variable `GIT_SSL_VERIFICATION_ENABLED` to `"false"` you will disable certificate validation in the monitor task that udpdates status on your pull requests.  The setting is made available to your trigger templates as the parameters `webhooks-tekton-ssl-verify` and `webhooks-tekton-insecure-skip-tls-verify` which can then be used to set the requisite values on your pipelineresources (or you could hardcode the required values).
 
 - Tekton's Git Pipeline Resource
 

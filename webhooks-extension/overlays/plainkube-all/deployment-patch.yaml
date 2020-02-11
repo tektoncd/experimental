@@ -11,5 +11,12 @@ spec:
       containers:
         - name: webhooks-extension
           env:
+          # WEBHOOK_CALLBACK_URL is the value of the endpoint that Git will deliver webhooks to. 
+          # Exposed via a Route or Ingress; needs to be set at install time. 
           - name: WEBHOOK_CALLBACK_URL
-            value: http://listener.IPADDRESS.nip.io
+            value: "http://listener.IPADDRESS.nip.io"
+
+          # Set WEBHOOK_SSL_VERIFICATION_ENABLED to "true" if the Route or Ingress in front of WEBHOOK_CALLBACK_URL is protected
+          # by an HTTPS endpoint signed by a certificate that your Git server accepts. 
+          - name: WEBHOOK_SSL_VERIFICATION_ENABLED
+            value: "false"

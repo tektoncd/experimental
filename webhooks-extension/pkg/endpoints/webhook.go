@@ -24,6 +24,8 @@ import (
 	"errors"
 	"fmt"
 
+	"math/rand"
+
 	restful "github.com/emicklei/go-restful"
 	routesv1 "github.com/openshift/api/route/v1"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
@@ -38,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/certificate/csr"
-	"math/rand"
 
 	"net/http"
 	"os"
@@ -333,9 +334,9 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 	}
 
 	sslVerify := true
-	ssl := os.Getenv("SSL_VERIFICATION_ENABLED")
+	ssl := os.Getenv("GIT_SSL_VERIFICATION_ENABLED")
 	if strings.ToLower(ssl) == "false" {
-		logging.Log.Warn("SSL_VERIFICATION_ENABLED SET TO FALSE")
+		logging.Log.Warn("GIT_SSL_VERIFICATION_ENABLED SET TO FALSE")
 		sslVerify = false
 	}
 
