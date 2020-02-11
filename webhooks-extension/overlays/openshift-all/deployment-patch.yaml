@@ -11,11 +11,13 @@ spec:
       containers:
         - name: webhooks-extension
           env:
-          # If this endpoint's protocol is https, tls will be enabled on the github webhook
           # openshift_master_default_subdomain usually of the format 'apps.host.company.com'
           - name: WEBHOOK_CALLBACK_URL
             value: https://el-tekton-webhooks-eventlistener-tekton-pipelines.{openshift_master_default_subdomain}
-          # If the WEBHOOK_CALLBACK_URL's protocol is https, should tls verification be enabled/disabled?
-          # See https://github.com/tektoncd/experimental/issues/399
+          # If the WEBHOOK_CALLBACK_URL's protocol is https, should ssl verification be enabled/disabled
+          # Set this to false if your Git server comes with a self-signed https certificate. Be aware that 
+          # this leaves you potentially vulnerable to systems impersonating your Git server :O
+          - name: SSL_VERIFICATION_ENABLED
+            value: true
           - name: PLATFORM
             value: openshift

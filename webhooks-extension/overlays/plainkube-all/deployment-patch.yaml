@@ -13,3 +13,8 @@ spec:
           env:
           - name: WEBHOOK_CALLBACK_URL
             value: http://listener.IPADDRESS.nip.io
+          # If the WEBHOOK_CALLBACK_URL's protocol is https, should ssl verification be enabled/disabled
+          # Set this to false if your Git server comes with a self-signed https certificate. Be aware that 
+          # this leaves you potentially vulnerable to systems impersonating your Git server :O
+          - name: SSL_VERIFICATION_ENABLED
+            value: true
