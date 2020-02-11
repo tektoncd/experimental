@@ -34,8 +34,9 @@ Note: If you want to install into an alternative namespace you would need to mod
 
       - Open overlays/plainkube-all/deployment-patch.yaml.
       - Find WEBHOOK_CALLBACK_URL.
-      - Edit the value - this could simply be a case of replacing IPADDRESS with your actual value.  If the call back URL is not determined yet in Amazon EKS environment, replace IPADDRESS with a dummy address.  It will be replaced in the step in the [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
-  3. Apply the yaml
+      - Edit the value - this could simply be a case of replacing IPADDRESS with your actual value.  If WEBHOOK_CALLBACK_URL protocol is https, ssl verification will be enabled on the github webhook and the TLS certificate secret set in WEBHOOK_TLS_CERTIFICATE is used in the ingress. If WEBHOOK_TLS_CERTIFICATE is not defined or the secret doesn't exit, the certificate signed by the platform certificate is created and used in the ingress.  If the platform certificate is not issued by the certificate authority, the SSL verification option in the github webhook must be disabled manually.  If the call back URL is not determined yet in Amazon EKS environment, replace IPADDRESS with a dummy address.  It will be replaced in the step in the [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
+
+  4. Apply the yaml
 
       _On Red Hat OpenShift:_
 

@@ -165,14 +165,6 @@
   revision = "81af80346b1a01caae0cbc27fd3c1ba5b11e189f"
 
 [[projects]]
-  digest = "1:53bc4cd4914cd7cd52139990d5170d6dc99067ae31c56530621b18b35fc30318"
-  name = "github.com/mitchellh/mapstructure"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
-  version = "v1.1.2"
-
-[[projects]]
   digest = "1:33422d238f147d247752996a26574ac48dcf472976eda7f5134015f06bf16563"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -239,8 +231,8 @@
   name = "github.com/tektoncd/dashboard"
   packages = ["pkg/logging"]
   pruneopts = "UT"
-  revision = "422a0282c2460ae66a9f3e9ca4f95e5ae48b30b4"
-  version = "v0.5.0"
+  revision = "31643951bc8207be7ab0901c2e56ccd8b63fed4d"
+  version = "v0.5.1"
 
 [[projects]]
   digest = "1:a9cf10d8d7b29c2ec35f745361a7679ab14c4efcae2a595af0baa948b088a1c4"
@@ -614,7 +606,7 @@
   version = "kubernetes-1.13.4"
 
 [[projects]]
-  digest = "1:bed5739a1e0698e3b456a40737195c0357f52ba0cc4d84c64fe9031b3ef292bc"
+  digest = "1:48d6d79415e27c7e0ed9863806a10ff5630c8fe151ae114b178a9a3cb3eb30b7"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -774,9 +766,11 @@
     "tools/metrics",
     "tools/pager",
     "tools/reference",
+    "tools/watch",
     "transport",
     "util/buffer",
     "util/cert",
+    "util/certificate/csr",
     "util/connrotation",
     "util/flowcontrol",
     "util/integer",
@@ -835,7 +829,6 @@
     "github.com/emicklei/go-restful",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-github/github",
-    "github.com/mitchellh/mapstructure",
     "github.com/openshift/api/route/v1",
     "github.com/openshift/client-go/route/clientset/versioned",
     "github.com/openshift/client-go/route/clientset/versioned/fake",
@@ -849,17 +842,17 @@
     "github.com/xanzy/go-gitlab",
     "go.uber.org/zap",
     "golang.org/x/oauth2",
+    "k8s.io/api/certificates/v1beta1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
-    "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/rest",
-    "k8s.io/client-go/testing",
-    "knative.dev/pkg/apis",
+    "k8s.io/client-go/util/cert",
+    "k8s.io/client-go/util/certificate/csr",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
