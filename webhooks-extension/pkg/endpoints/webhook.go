@@ -14,21 +14,32 @@ limitations under the License.
 package endpoints
 
 import (
+	"bytes"
+	cryptorand "crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
+
 	restful "github.com/emicklei/go-restful"
 	routesv1 "github.com/openshift/api/route/v1"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
 	"github.com/tektoncd/experimental/webhooks-extension/pkg/utils"
 	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	v1alpha1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
+	certv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/util/cert"
+	"k8s.io/client-go/util/certificate/csr"
 	"math/rand"
+
 	"net/http"
 	"os"
 	"strconv"
@@ -738,6 +749,30 @@ func (r Resource) createDeleteIngress(mode, installNS string) error {
 				},
 			},
 		}
+		// Check if TLS should be added
+		if strings.Index(r.Defaults.CallbackURL, "https://") == 0 {
+			certSecret, exists := os.LookupEnv("WEBHOOK_TLS_CERTIFICATE")
+			if !exists {
+				certSecret = "cert-" + eventListenerName
+			}
+			// check if the secret exists
+			_, err := r.K8sClient.CoreV1().Secrets(installNS).Get(certSecret, metav1.GetOptions{})
+			if err != nil {
+				// create certificate
+				certSecret = r.createCertificate(certSecret, installNS, callback)
+			}
+			if certSecret != "" {
+				// add TLS in the IngressSpec
+				ingressTLS := v1beta1.IngressTLS{
+					Hosts:      []string{callback},
+					SecretName: certSecret,
+				}
+				ingress.Spec.TLS = append(ingress.Spec.TLS, ingressTLS)
+			} else {
+				logging.Log.Error("Failed enabling TLS")
+			}
+		}
+
 		ingress, err := r.K8sClient.ExtensionsV1beta1().Ingresses(installNS).Create(ingress)
 		if err != nil {
 			return err
@@ -847,6 +882,90 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 		return
 	}
 
+}
+
+// create signed certificate and set it into secret
+func (r Resource) createCertificate(secretName, installNS, callback string) string {
+	var key, crt []byte
+
+	priv, _ := rsa.GenerateKey(cryptorand.Reader, 2048)
+	template := x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:   callback,
+			Country:      []string{"Country"},
+			Province:     []string{"Province"},
+			Organization: []string{"Organization"},
+		},
+	}
+	csrdata, err := cert.MakeCSRFromTemplate(priv, &template)
+	if err != nil {
+		logging.Log.Errorf("Failed creating CSR data: %v", err)
+		return ""
+	}
+	logging.Log.Debug(csrdata)
+	client := r.K8sClient.CertificatesV1beta1().CertificateSigningRequests()
+	csrRecord, err := csr.RequestCertificate(client, csrdata, secretName, []certv1beta1.KeyUsage{certv1beta1.UsageDigitalSignature, certv1beta1.UsageKeyEncipherment, certv1beta1.UsageServerAuth}, priv)
+	if err != nil {
+		logging.Log.Errorf("Failed creating CSR record: %v", err)
+		return ""
+	}
+
+	// approve csr manually
+	csrRecord, err = client.Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		logging.Log.Errorf("Failed getting CSR record: %v", err)
+		return ""
+	}
+	csrRecord.Status.Conditions = append(csrRecord.Status.Conditions, certv1beta1.CertificateSigningRequestCondition{
+		Type:    certv1beta1.CertificateApproved,
+		Reason:  "AutoApproved",
+		Message: "Approved by Tekton webhook",
+	})
+	_, err = client.UpdateApproval(csrRecord)
+	if err != nil {
+		logging.Log.Errorf("Failed approving CSR: %v", err)
+		return ""
+	}
+
+	csrdata, err = csr.WaitForCertificate(client, csrRecord, 3600*time.Second)
+	if err != nil {
+		logging.Log.Errorf("Failed waiting for certificate: %v", err)
+		return ""
+	}
+
+	// retrive signed certificate
+	csrRecord, err = client.Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		logging.Log.Errorf("Failed getting certificate: %v", err)
+		return ""
+	}
+	crt = csrRecord.Status.Certificate
+
+	var keyOut bytes.Buffer
+	err = pem.Encode(&keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+	if err != nil {
+		logging.Log.Errorf("Failed encoding private key: %v", err)
+		return ""
+	}
+	key = keyOut.Bytes()
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: installNS,
+		},
+		Type: "kubernetes.io/tls",
+		Data: map[string][]byte{
+			"tls.crt": crt,
+			"tls.key": key,
+		},
+	}
+	_, err = r.K8sClient.CoreV1().Secrets(installNS).Create(secret)
+	if err != nil {
+		logging.Log.Error("Failed creating TLS secret: %v", err)
+		return ""
+	} else {
+		return secretName
+	}
 }
 
 func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePrefix string, webhook webhook) error {

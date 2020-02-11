@@ -30,8 +30,7 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
     _On other Kubernetes environments:_
 
     Use the following command, replacing `YOUR_IP_ADDRESS` with your docker-desktop system's IP address.  Note that in
-    production you should clone the repository and update the WEBHOOK_CALLBACK_URL setting to avoid using nip.io for host resolution.
-    If the call back URL is not determined yet in Amazon EKS environment, replace YOUR_IP_ADDRESS with a dummy address.  It will be replaced in the step in the [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
+    production you should clone the repository and update the WEBHOOK_CALLBACK_URL setting to avoid using nip.io for host resolution.  If WEBHOOK_CALLBACK_URL protocol is https, ssl verification will be enabled on the github webhook and the TLS certificate secret set in WEBHOOK_TLS_CERTIFICATE is used in the ingress. If WEBHOOK_TLS_CERTIFICATE is not defined or the secret doesn't exit, the certificate signed by the platform certificate is created and used in the ingress.  If the platform certificate is not issued by the certificate authority, the SSL verification option in the github webhook must be disabled manually.  If the call back URL is not determined yet in Amazon EKS environment, replace YOUR_IP_ADDRESS with a dummy address.  It will be replaced in the step in the [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
 
     ```bash
     curl -L https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml \
