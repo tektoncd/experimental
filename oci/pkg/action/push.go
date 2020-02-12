@@ -3,7 +3,7 @@ package action
 import (
 	"errors"
 
-	"github.com/tektoncd/experimental/oci/pkg"
+	"github.com/tektoncd/experimental/oci/pkg/oci"
 )
 
 // Push will perform the `push` action by recursively reading all of the
@@ -15,15 +15,15 @@ func Push(ref string, filePaths []string) error {
 		return errors.New("must specify a valid image name and file paths")
 	}
 
-	resources, err := pkg.ReadPaths(filePaths)
+	resources, err := oci.ReadPaths(filePaths)
 	if err != nil {
 		return err
 	}
 
-	name, err := pkg.ValidateImageName(ref)
+	name, err := oci.ValidateImageName(ref)
 	if err != nil {
 		return err
 	}
 
-	return pkg.PushImage(*name, resources)
+	return oci.PushImage(*name, resources)
 }
