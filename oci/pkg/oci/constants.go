@@ -1,4 +1,4 @@
-package pkg
+package oci
 
 const (
 	// TektonCatalogMediaType is the root catalog.

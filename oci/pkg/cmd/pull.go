@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/tektoncd/experimental/oci/action"
+	"github.com/tektoncd/experimental/oci/pkg/action"
 )
 
 // pullCmd represents the push command
