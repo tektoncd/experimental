@@ -45,18 +45,18 @@ func HandleGitLab(request *http.Request, writer http.ResponseWriter, foundTrigge
 		return nil, err
 	}
 
-	var cloneURL, id, action string
+	var projectURL, id, action string
 	switch event := event.(type) {
 	case *gitlab.PushEvent:
-		cloneURL = event.Repository.GitHTTPURL
+		projectURL = event.Repository.GitHTTPURL
 		id = event.CheckoutSHA //cannot obtain webhook event id so will log commit
 		action = ""
 	case *gitlab.MergeEvent:
-		cloneURL = event.ObjectAttributes.Source.GitHTTPURL
+		projectURL = event.ObjectAttributes.Target.GitHTTPURL
 		id = strconv.Itoa(event.ObjectAttributes.ID) //cannot obtain webhook event id so will log commit
 		action = event.ObjectAttributes.State
 	case *gitlab.TagEvent:
-		cloneURL = event.Repository.GitHTTPURL
+		projectURL = event.Repository.GitHTTPURL
 		id = event.CheckoutSHA //cannot obtain webhook event id so will log commit
 		action = ""
 	default:
@@ -65,7 +65,7 @@ func HandleGitLab(request *http.Request, writer http.ResponseWriter, foundTrigge
 		return nil, errors.New(errorString)
 	}
 
-	validationPassed, err := validateGitlab(request, foundTriggerName, cloneURL, id, action)
+	validationPassed, err := validateGitlab(request, foundTriggerName, projectURL, id, action)
 
 	if validationPassed {
 		returnPayload, err := addBranchAndTag(event)
@@ -79,12 +79,12 @@ func HandleGitLab(request *http.Request, writer http.ResponseWriter, foundTrigge
 	return nil, errors.New("Validation Failed")
 }
 
-func validateGitlab(request *http.Request, foundTriggerName, cloneURL, id, action string) (bool, error) {
+func validateGitlab(request *http.Request, foundTriggerName, projectURL, id, action string) (bool, error) {
 
-	log.Printf("[%s] Clone URL coming in as JSON: %s", foundTriggerName, cloneURL)
+	log.Printf("[%s] Project URL coming in as JSON: %s", foundTriggerName, projectURL)
 	log.Printf("[%s] Handling GitLab Event for commit ID: %s", foundTriggerName, id)
 
-	validationPassed, err := Validate(request, cloneURL, "X-Gitlab-Event", action, foundTriggerName)
+	validationPassed, err := Validate(request, projectURL, "X-Gitlab-Event", action, foundTriggerName)
 	if err != nil {
 		if !validationPassed {
 			return false, err
