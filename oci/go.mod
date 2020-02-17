@@ -12,6 +12,7 @@ require (
 	github.com/deislabs/oras v0.8.1
 	github.com/fsouza/go-dockerclient v1.6.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/google/go-containerregistry v0.0.0-20200115214256-379933c9c22b
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07 // indirect
 	github.com/mattn/go-shellwords v1.0.10 // indirect
