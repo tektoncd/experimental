@@ -1,14 +1,17 @@
 package oci
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -66,7 +69,7 @@ func ReadPaths(filePaths []string) ([]ParsedTektonResource, error) {
 		if err != nil {
 			return nil, err
 		}
-		parsedResources = append(parsedResources, *resource)
+		parsedResources = append(parsedResources, resource...)
 	}
 
 	return parsedResources, nil
@@ -74,28 +77,71 @@ func ReadPaths(filePaths []string) ([]ParsedTektonResource, error) {
 
 // readPath will read the contents of the file at filePath and use the K8s deserializer to attempt to marshal the text
 // into a Tekton struct. This will fail if the resource is unparseable or not a Tekton resource.
-func readPath(filePath string) (*ParsedTektonResource, error) {
+func readPath(filePath string) ([]ParsedTektonResource, error) {
 	contents, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	object, kind, err := scheme.Codecs.UniversalDeserializer().Decode(contents, nil, nil)
+	// Try to tease out the type of the file from the extension and load them into a slice (if there are multiple
+	// entities in a single file).
+	var entities []string
+	switch ext := path.Ext(filePath); true {
+	case ext == ".yaml" || ext == ".yml":
+		entities = strings.Split(string(contents), "---")
+	case ext == ".json":
+		var partials []interface{}
+		err = json.Unmarshal(contents, &partials)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not marshal contents to json")
+		}
+		entities = make([]string, 0, len(partials))
+		for _, element := range partials {
+			rawElement, err := json.Marshal(element)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not re-marshal %+v into json", element)
+			}
+			entities = append(entities, string(rawElement))
+		}
+	default:
+		return nil, fmt.Errorf("can't parse resources of type %s", ext)
+	}
+
+	resources := make([]ParsedTektonResource, 0, len(entities))
+	for _, entity := range entities {
+		resource, err := decodeObject(entity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "undecodable resource in %s", filePath)
+		}
+		resources = append(resources, *resource)
+	}
+	return resources, nil
+}
+
+// decodeObject will attempt to decode a yaml or json string into a single Kubernetes or CRD object and return the
+// parsed representation.
+func decodeObject(contents string) (*ParsedTektonResource, error) {
+	object, kind, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(contents), nil, nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Resource at %s is not a valid Kubernetes resource:\n%s", filePath, string(contents))
+		return nil, errors.Wrapf(err, "resource is not a valid Kubernetes resource:\n%s", contents)
 	}
 
 	if kind.GroupVersion().Identifier() != v1alpha1.SchemeGroupVersion.Identifier() {
-		return nil, errors.New(fmt.Sprintf("Resource at %s is not a valid Tekton kind:\n%s", filePath, string(contents)))
+		return nil, errors.Wrapf(err, "resource is not a valid Kubernetes resource:\n%s", contents)
 	}
 
 	resourceName := getResourceName(object, kind.Kind)
+	// Convert the structured data into yaml to get a "clean" copy of the resource.
+	rawContents, err := yaml.Marshal(object)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not marshal %+v to yaml", object)
+	}
 
 	fmt.Printf("Adding %s:%s to image bundle\n", kind.Kind, resourceName)
 	return &ParsedTektonResource{
 		Name:     resourceName,
 		Kind:     kind,
-		Contents: string(contents),
+		Contents: string(rawContents),
 		Object:   object,
 	}, nil
 }

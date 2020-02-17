@@ -33,7 +33,8 @@ require (
 	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
 	google.golang.org/grpc v1.27.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.4.1 // indirect
-	gopkg.in/yaml.v2 v2.2.8 // indirect
+	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.17.2 // indirect
 	k8s.io/apimachinery v0.17.2
 	k8s.io/client-go v0.17.0
