@@ -1,87 +1,90 @@
 package oci
 
 import (
-	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"strings"
 
-	"github.com/containerd/containerd/remotes/docker"
-	orascontent "github.com/deislabs/oras/pkg/content"
-	orascontext "github.com/deislabs/oras/pkg/context"
-	"github.com/deislabs/oras/pkg/oras"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func init() {
-	orascontext.GetLogger(context.Background()).Logger.SetLevel(logrus.ErrorLevel)
-}
-
-// PushImage will publish the given ImageReference and the provided resources in the proper format to an external OCI
-// registry.
-func PushImage(name name.Reference, contents []ParsedTektonResource) error {
-	resolver := docker.NewResolver(docker.ResolverOptions{})
-	memoryStore := orascontent.NewMemoryStore()
-	descriptors := []v1.Descriptor{}
-
-	for _, resource := range contents {
-		descriptor := memoryStore.Add(
-			getLayerName(resource.Kind.Kind, resource.Name),
-			getLayerMediaType(resource),
-			[]byte(resource.Contents),
-		)
-		descriptors = append(descriptors, descriptor)
+// PushImage bundles the Tekton resources and pushes it to an image with the given reference.
+func PushImage(ref name.Reference, resources []ParsedTektonResource) error {
+	img := empty.Image
+	for _, r := range resources {
+		l, err := tarball.LayerFromReader(strings.NewReader(r.Contents))
+		if err != nil {
+			return fmt.Errorf("Error creating layer for resource %s/%s: %w", r.Kind, r.Name, err)
+		}
+		img, err = mutate.Append(img, mutate.Addendum{
+			// TODO: Specify custom layer media type ("application/vnd.cdf.tekton.catalog.v1alpha1+json")
+			Layer: l,
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": getLayerName(r.Kind.Kind, r.Name),
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("Error appending resource %q: %w", r.Name, err)
+		}
 	}
 
-	pushName := name.String()
-	desc, err := oras.Push(
-		context.Background(),
-		resolver,
-		pushName,
-		memoryStore,
-		descriptors,
-		oras.WithConfigMediaType("application/vnd.cdf.tekton.catalog.v1alpha1+json"),
-	)
+	d, err := img.Digest()
 	if err != nil {
-		return errors.Wrap(err, "failed to push to registry")
+		return err
 	}
 
-	fmt.Printf("Pushed %s@%s to remote registry\n", pushName, desc.Digest)
+	if err := remote.Write(ref, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+		return err
+	}
+
+	log.Println("Pushed", ref.Context().Digest(d.String()))
 	return nil
 }
 
-// PullImage will fetch the image and return the Tekton resource specified by the kind and name.
+// PullImage fetches the image and extracts the Tekton resource with the given kind and name.
 func PullImage(ref name.Reference, kind string, name string) ([]byte, error) {
-	resolver := docker.NewResolver(docker.ResolverOptions{})
-	memoryStore := orascontent.NewMemoryStore()
-
-	_, _, err := oras.Pull(
-		context.Background(),
-		resolver,
-		ref.String(),
-		memoryStore,
-		oras.WithPullEmptyNameAllowed(),
-		oras.WithAllowedMediaTypes(TektonMediaTypes()),
-	)
+	// TODO: When this is moved into the Tekton controller, authorize this
+	// pull as a Service Account in the cluster, and don't rely on the
+	// contents of ~/.docker/config.json (which won't exist).
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch image")
+		return nil, fmt.Errorf("Error pulling %q: %w", ref, err)
 	}
 
-	// Attempt to fetch the contents from the store.
-	_, contents, ok := memoryStore.GetByName(getLayerName(kind, name))
-	if !ok {
-		return nil, errors.Errorf("could not find %s/%s in image contents", kind, name)
+	m, err := img.Manifest()
+	if err != nil {
+		return nil, err
 	}
-
-	return contents, nil
+	ls, err := img.Layers()
+	if err != nil {
+		return nil, err
+	}
+	var layer v1.Layer
+	for idx, l := range m.Layers {
+		// TODO: Check for custom media type.
+		if l.Annotations["org.opencontainers.image.title"] == getLayerName(kind, name) {
+			layer = ls[idx]
+			break
+		}
+	}
+	if layer == nil {
+		return nil, fmt.Errorf("Resource %s/%s not found", kind, name)
+	}
+	rc, err := layer.Uncompressed()
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	return ioutil.ReadAll(rc)
 }
 
 func getLayerName(kind string, name string) string {
 	return fmt.Sprintf("%s/%s", strings.ToLower(kind), name)
-}
-
-func getLayerMediaType(resource ParsedTektonResource) string {
-	return fmt.Sprintf("application/vnd.cdf.tekton.catalog.%s.v1alpha1+yaml", strings.ToLower(resource.Kind.Kind))
 }
