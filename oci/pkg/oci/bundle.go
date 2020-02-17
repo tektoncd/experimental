@@ -111,7 +111,9 @@ func readPath(filePath string) ([]ParsedTektonResource, error) {
 	for _, entity := range entities {
 		resource, err := decodeObject(entity)
 		if err != nil {
-			return nil, errors.Wrapf(err, "undecodable resource in %s", filePath)
+			// We are not going to bail if we find an unparseable resource, rather, we will just skip it.
+			fmt.Printf("skipping %s because %s", filePath, err.Error())
+			continue
 		}
 		resources = append(resources, *resource)
 	}
