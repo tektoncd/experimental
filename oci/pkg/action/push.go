@@ -3,15 +3,16 @@ package action
 import (
 	"errors"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/tektoncd/experimental/oci/pkg/oci"
 )
 
 // Push will perform the `push` action by recursively reading all of the
 // Tekton specs passed in, bundling it into an image, and pushing the result
 // to an OCI-compliant repository.
-func Push(ref string, filePaths []string) error {
+func Push(r string, filePaths []string) error {
 	// Validate the parameters.
-	if ref == "" || len(filePaths) == 0 {
+	if r == "" || len(filePaths) == 0 {
 		return errors.New("must specify a valid image name and file paths")
 	}
 
@@ -20,10 +21,10 @@ func Push(ref string, filePaths []string) error {
 		return err
 	}
 
-	name, err := oci.ValidateImageName(ref)
+	ref, err := name.ParseReference(r)
 	if err != nil {
 		return err
 	}
 
-	return oci.PushImage(*name, resources)
+	return oci.PushImage(ref, resources)
 }
