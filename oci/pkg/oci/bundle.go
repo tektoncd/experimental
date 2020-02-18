@@ -109,6 +109,12 @@ func readPath(filePath string) ([]ParsedTektonResource, error) {
 
 	resources := make([]ParsedTektonResource, 0, len(entities))
 	for _, entity := range entities {
+
+		// ignore blank
+		if strings.TrimSpace(entity) == "" {
+			continue
+		}
+
 		resource, err := decodeObject(entity)
 		if err != nil {
 			// We are not going to bail if we find an unparseable resource, rather, we will just skip it.
