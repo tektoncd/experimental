@@ -8,20 +8,20 @@ Use `npm ci` when installing from source to install with a clean set of dependen
 
 If modifying the UI code and wanting to deploy your updated version:
 
-1) Run `npm run build` this will create a new file in the dist directory. Note that this does require `yq`, so grab that too
+1) Run `npm run build_ko` this will create a new file in the dist directory. Note that this does require `yq`, so grab that too
 2) Reinstall the extension. It will automatically be picked up by the running dashboard. Use
 
 ```
 kustomize build overlays/development | ko apply -f -
 ```
 
-if developing on a plain Kubernetes system, or 
+if developing on a plain Kubernetes system, or
 
 ```
 kustomize build overlays/openshift-development | ko apply -f -
 ```
 
-if developing against OpenShift or OKD. 
+if developing against OpenShift or OKD.
 
 ## Linting
 
