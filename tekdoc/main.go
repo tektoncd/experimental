@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -31,22 +32,25 @@ var (
 	filename = flag.String("f", "", "Name of the file to parse")
 )
 
-func main() {
+// TODO: take a file path, parse it as YAML -> v1alpha1.Task
 
-	// TODO: take a file path, parse it as YAML -> v1alpha1.Task
-	flag.Parse()
-	dat, err := ioutil.ReadFile(*filename)
-	if err != nil {
-		log.Fatalf("error reading file: %v", err)
-	}
+func read(name string) (v1alpha1.Task, error) {
 
 	var task v1alpha1.Task
-
+	dat, err := ioutil.ReadFile(name)
+	if err != nil {
+		return task, fmt.Errorf("error reading file: %w", err)
+	}
 	if _, _, err := scheme.Codecs.UniversalDeserializer().Decode(dat, nil, &task); err != nil {
-		log.Fatal(err)
+		return task, fmt.Errorf("error decoding task: %w", err)
 	}
 
-	// TODO: use Go templates to print v1alpha1.Task as Markdown
+	return task, nil
+}
+
+// TODO: use Go templates to print v1alpha1.Task as Markdown
+
+func printTask(w io.Writer, task v1alpha1.Task) error{
 	if task.Spec.Inputs != nil {
 
 		tmpl := template.Must(template.New("test").Parse(`# {{.Name}}
@@ -54,45 +58,59 @@ func main() {
 kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Name}}/{{.Name}}.yaml
 ### Input:-
 `))
-		if err := tmpl.Execute(os.Stdout, task); err != nil {
-			log.Fatalf("error executing the template: %v", err)
+		if err := tmpl.Execute(w, task); err != nil {
+			return fmt.Errorf("error executing the template: %v", err)
 		}
-
-		if task.Spec.Inputs.Params != nil {
-
-			t := `{{range .}}- {{.Name}}, {{.Description}}
-{{end}}`
-			tmpl := template.Must(template.New("test").Parse(t))
-			if err := tmpl.Execute(os.Stdout, task.Spec.Inputs.Params); err != nil {
-				log.Fatalf("error executing the template: %v", err)
-			}
-		}
-
-		if task.Spec.Inputs.Resources != nil {
-
-			t := `### Resources:-
-{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}	
-{{end}}`
-			tmpl := template.Must(template.New("test").Parse(t))
-			if err := tmpl.Execute(os.Stdout, task.Spec.Inputs.Resources); err != nil {
-				log.Fatalf("error executing the template: %v", err)
-			}
-		}
-
-		if task.Spec.Outputs != nil {
-
-			t := `### Output:-
-{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}	
-{{end}}`
-			tmpl := template.Must(template.New("test").Parse(t))
-			err := tmpl.Execute(os.Stdout, task.Spec.Outputs.Resources)
-			if err != nil {
-				log.Fatalf("error executing the template: %v", err)
-			}
-		}
-	} else {
-		fmt.Println("There is no task input")
 	}
+
+	if task.Spec.Inputs.Params != nil {
+
+		t := `{{range .}}- {{.Name}}, {{.Description}}
+{{end}}`
+		tmpl := template.Must(template.New("test").Parse(t))
+		if err := tmpl.Execute(w, task.Spec.Inputs.Params); err != nil {
+			return fmt.Errorf("error executing the template: %v", err)
+		}
+	}
+
+	if task.Spec.Inputs.Resources != nil {
+
+		t := `### Resources:-
+{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}
+{{end}}`
+		tmpl := template.Must(template.New("test").Parse(t))
+		if err := tmpl.Execute(w, task.Spec.Inputs.Resources); err != nil {
+			return fmt.Errorf("error executing the template: %v", err)
+		}
+	}
+
+	if task.Spec.Outputs != nil {
+
+		t := `### Output:-
+{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}
+{{end}}`
+		tmpl := template.Must(template.New("test").Parse(t))
+		err := tmpl.Execute(w, task.Spec.Outputs.Resources)
+		if err != nil {
+			return fmt.Errorf("error executing the template: %v", err)
+		}
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+
+	task, err := read(*filename)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = printTask(os.Stdout, task)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 }
 
 // TODO: tests!
