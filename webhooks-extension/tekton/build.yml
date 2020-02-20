@@ -24,6 +24,13 @@ spec:
     - |
       set -e
       set -x
+      
+      echo "Installing yq"
+      curl -O -L https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64
+      mkdir -p yq-install
+      mv yq_linux_amd64 yq-install/yq
+      chmod +x yq-install/yq
+      export PATH=$PATH:$(pwd)/yq-install
 
       apt-get update
       apt-get install -y curl
