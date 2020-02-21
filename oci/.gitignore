@@ -1,0 +1,4 @@
+# Go vendor directory
+vendor/
+bin/
+tmp/

@@ -46,6 +46,9 @@ Parameters Available:
   - webhooks-tekton-target-namespace
   - webhooks-tekton-service-account
   - webhooks-tekton-docker-registry
+  - webhooks-tekton-ssl-verify
+  - webhooks-tekton-insecure-skip-tls-verify
+
 ```
 
 To use these parameters in the triggertemplate, you simply prefix them with the parameter with `params.` (e.g `params.webhooks-tekton-git-org`).  See example triggertemplate below - note that additional params that are used and not listed above will be obtained from the triggerbinding file:

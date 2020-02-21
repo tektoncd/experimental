@@ -15,12 +15,16 @@ package utils
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
 	restful "github.com/emicklei/go-restful"
 	logging "github.com/tektoncd/dashboard/pkg/logging"
 	"golang.org/x/oauth2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -47,9 +51,25 @@ func RespondMessageAndLogError(response *restful.Response, err error, message st
 }
 
 // createOAuth2Client returns an HTTP client with oauth2 authentication using the provided accessToken
-func CreateOAuth2Client(ctx context.Context, accessToken string) *http.Client {
+func CreateOAuth2Client(ctx context.Context, accessToken string, sslVerify bool) *http.Client {
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
-	return oauth2.NewClient(ctx, ts)
+	client := &http.Client{
+		Transport: &oauth2.Transport{
+			Source: ts,
+			Base: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: !sslVerify},
+			},
+		},
+	}
+	return client
+}
+
+func GetClientAllowsSelfSigned() *http.Client {
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: transport}
+	return client
 }
 
 // getWebhookSecretTokens returns the "secretToken" and "accessToken" stored in the Secret
@@ -63,4 +83,36 @@ func GetWebhookSecretTokens(kubeClient k8sclient.Interface, namespace, name stri
 	accessToken = string(secret.Data["accessToken"])
 	secretToken = string(secret.Data["secretToken"])
 	return accessToken, secretToken, nil
+}
+
+// Returns (provider, apiurl, error):
+func GetGitProviderAndAPIURL(inputURL string) (string, string, error) {
+	if inputURL == "" {
+		return "", "", errors.New("no repository URL provided on call to GetGitProviderAndAPIURL")
+	}
+
+	gitURL, err := url.ParseRequestURI(inputURL)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Determine which GitProvider to use
+	switch {
+	// PUBLIC GITHUB
+	case strings.EqualFold(gitURL.Host, "github.com"):
+		apiURL := "https://api.github.com/"
+		return "github", apiURL, nil
+	// GHE
+	case strings.Contains(gitURL.Host, "github"):
+		apiURL := gitURL.Scheme + "://" + gitURL.Host + "/api/v3/"
+		return "github", apiURL, nil
+	// GITLAB
+	case strings.Contains(gitURL.Host, "gitlab"):
+		apiURL := gitURL.Scheme + "://" + gitURL.Host + "/api/v4"
+		return "gitlab", apiURL, nil
+	default:
+		msg := fmt.Sprintf("Git Provider for project URL: %s not recognized", gitURL)
+		return "", "", errors.New(msg)
+	}
+
 }

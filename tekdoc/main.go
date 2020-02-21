@@ -99,6 +99,7 @@ kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Na
 }
 
 func main() {
+
 	flag.Parse()
 
 	task, err := read(*filename)
@@ -110,7 +111,6 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
 }
 
 // TODO: tests!

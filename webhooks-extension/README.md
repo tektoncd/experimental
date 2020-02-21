@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/kubernetes/experimental/blob/master/LICENSE)
 
-The Webhooks Extension for Tekton allows users to set up GitHub webhooks that will trigger Tekton `PipelineRuns` and associated `TaskRuns`.  This is possible via an extension to the Tekton Dashboard and via REST endpoints.
+The Webhooks Extension for Tekton allows users to set up GitHub or Gitlab webhooks that will trigger Tekton `PipelineRuns` and associated `TaskRuns`.  This is possible via an extension to the Tekton Dashboard and via REST endpoints.
 
 See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide for more on what this extension does, and how to use it.
 
@@ -14,10 +14,9 @@ See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/w
 
 ### Install Webhook Extension
 
-To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.
-The link below does not contain all the information needed at this time - this message can be removed after the 0.3 release occurs.  
+To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.  
 
-~~[Installing Official Release (stable)](./docs/InstallReleaseBuild.md)~~  
+[Installing Official Release (stable)](./docs/InstallReleaseBuild.md)
 
 [Installing Development Build (nightly)](./docs/InstallNightlyBuild.md)
 
@@ -31,7 +30,7 @@ used to install a specified version of the dashboard and the webhook extension.
 [Labelling Pipeline Runs For UI Display](./docs/Labels.md)  
 [Multiple Pipelines](./docs/MultiplePipelines.md)  
 [Pull Request Status Updates](./docs/Monitoring.md)  
-[Webhook Security](./docs/WebhookSecurity.md)
+[Security](./docs/Security.md)
 [Additional Notes If Using Red Hat OpenShift](./docs/NotesOnOpenShiftInstallations.md)  
 [Limitations](./docs/Limitations.md)  
 

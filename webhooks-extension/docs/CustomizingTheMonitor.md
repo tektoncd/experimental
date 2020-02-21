@@ -22,9 +22,9 @@ If you have not installed into the tekton-pipelines namespace, you would need to
 
 ## Overriding The Status Message
 
-To change the "Success", "Failed" and "Unknown" status messages shown in the 'Tekton Status' comment added to the pull request, you can use the REST endpoint for creating your webhooks, rather than the UI.  Note however that the REST endpoints are only advised to be used in development, see [here](../DevelopmentAPIs.md).
+To change the "Success", "Failed", "Unknown" and "Missing" status messages shown in the 'Tekton Status' comment added to the pull request, you can use the REST endpoint for creating your webhooks, rather than the UI.  Note however that the REST endpoints are only advised to be used in development, see [here](../DevelopmentAPIs.md).
 
-The body you POST to the REST endpoint has three properties, `onsuccesscomment`, `onfailurecomment` and `ontimeoutcomment` that define the value used in the Status column.  For example, creating the webhook using the JSON body:
+The body you POST to the REST endpoint has four properties, `onsuccesscomment`, `onfailurecomment`, `ontimeoutcomment`, `onmissingcomment` that define the value used in the Status column.  For example, creating the webhook using the JSON body:
 
 ```
 {
@@ -36,7 +36,8 @@ The body you POST to the REST endpoint has three properties, `onsuccesscomment`,
   "dockerregistry": "FOO",
   "onsuccesscomment": "Erfolg",  <--------------------------------------------
   "onfailurecomment": "Fehler",  <--------------------------------------------
-  "ontimeoutcomment": "Frozen"   <--------------------------------------------
+  "ontimeoutcomment": "Frozen",  <--------------------------------------------
+  "onmissingcomment": "Fehlt"    <--------------------------------------------
 }
 ```
 
@@ -60,6 +61,7 @@ Using the REST endpoint directly, it is also possible to override the Task that 
   "onsuccesscomment": "Erfolg",
   "onfailurecomment": "Fehler",
   "ontimeoutcomment": "Frozen",
+  "onmissingcomment": "Fehlt",
   "pulltask": "my-custom-task"   <--------------------------------------------
 }
 ```
@@ -75,6 +77,8 @@ In this situation, after the webhook is triggered and the PipelineRun created, a
       value: Fehler
     - name: commenttimeout
       value: Frozen
+    - name: commentmissing
+      value: Fehlt
     - name: secret
       value: GITHUBSECRET
 ```

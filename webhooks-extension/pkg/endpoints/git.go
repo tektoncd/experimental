@@ -17,7 +17,7 @@ import (
 	"errors"
 	"fmt"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
-	"net/url"
+	"github.com/tektoncd/experimental/webhooks-extension/pkg/utils"
 	"os"
 	"strings"
 )
@@ -76,11 +76,6 @@ func addOrRemoveWebhook(hook webhook, org, repo, action string, r Resource) (err
 
 // Create the GitProvider for the webhookData
 func (r Resource) createGitProviderForWebhook(hook webhook, org, reponame string) (GitProvider, error) {
-	gitURL, err := url.ParseRequestURI(hook.GitRepositoryURL)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get extra git option to skip ssl verification
 	sslVerify := true
 	ssl := os.Getenv("SSL_VERIFICATION_ENABLED")
@@ -88,24 +83,23 @@ func (r Resource) createGitProviderForWebhook(hook webhook, org, reponame string
 		sslVerify = false
 	}
 
+	logging.Log.Debugf("Webhook SSL verification: %v", sslVerify)
+
+	gitType, api, err := utils.GetGitProviderAndAPIURL(hook.GitRepositoryURL)
 	if err != nil {
 		return nil, err
 	}
-	logging.Log.Debugf("Webhook SSL verification: %v", sslVerify)
 
 	// Determine which GitProvider to use
 	switch {
-	// PUBLIC GITHUB
-	case strings.Contains(gitURL.Host, "github.com"):
-		apiURL := "https://api.github.com/"
-		return r.initGitHub(sslVerify, apiURL, hook.AccessTokenRef, org, reponame)
-	// GHE
-	case strings.Contains(gitURL.Host, "github"):
-		apiURL := gitURL.Scheme + "://" + gitURL.Host + "/api/v3/"
-		return r.initGitHub(sslVerify, apiURL, hook.AccessTokenRef, org, reponame)
-	// NOT RECOGNIZED/SUPPORTED
+	// GITHUB
+	case strings.EqualFold(gitType, "github"):
+		return r.initGitHub(sslVerify, api, hook.AccessTokenRef, org, reponame)
+	// GITLAB
+	case strings.EqualFold(gitType, "gitlab"):
+		return r.initGitLab(sslVerify, api, hook.AccessTokenRef, org, reponame)
 	default:
-		msg := fmt.Sprintf("Git Provider for project URL: %s not recognized", gitURL)
+		msg := fmt.Sprintf("Git Provider for project URL: %s not recognized", hook.GitRepositoryURL)
 		return nil, errors.New(msg)
 	}
 }

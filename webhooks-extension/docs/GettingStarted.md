@@ -2,9 +2,9 @@
 
 ## Introduction
 
-The [Tekton Dashboard](https://github.com/tektoncd/dashboard) is a general purpose, web-based UI for [Tekton Pipelines](https://github.com/tektoncd/pipeline). The Dashboard [Webhooks Extension](https://github.com/tektoncd/experimental/tree/master/webhooks-extension) allows users to set up GitHub webhooks that will trigger Tekton PipelineRuns and associated TaskRuns. This extension is intended to support Continuous Integration and Continuous Delivery (CI/CD) workflows. Git-driven workflow and automation is a common pattern that we expect most of our readers will be comfortable and familiar with.
+The [Tekton Dashboard](https://github.com/tektoncd/dashboard) is a general purpose, web-based UI for [Tekton Pipelines](https://github.com/tektoncd/pipeline). The Dashboard [Webhooks Extension](https://github.com/tektoncd/experimental/tree/master/webhooks-extension) allows users to set up GitHub/Gitlab webhooks that will trigger Tekton PipelineRuns and associated TaskRuns. This extension is intended to support Continuous Integration and Continuous Delivery (CI/CD) workflows. Git-driven workflow and automation is a common pattern that we expect most of our readers will be comfortable and familiar with.
 
-This article aims to help you get webhooks up and running with Tekton. We talk about 'GitHub webhooks' in this article because as of October 2019, that is what the webhooks extension currently supports. Support for GitLab is on our roadmap but not yet implemented. 
+This article aims to help you get webhooks up and running with Tekton. We talk about 'GitHub webhooks' in this article but Gitlab is also supported. 
 
 ## Installation
 
@@ -115,6 +115,40 @@ Accepted Formats:
 - https://my.registry
 - my.registry/foo
 - image-registry.openshift-image-registry.svc:5000/**existing namespace here** (for OpenShift 4.2)
+
+### Notes for Amazon EKS
+
+After creation of the webhook, the following manual steps are necessary to make the webhook work in Amazon EKS environment.
+
+1. Edit `el-tekton-webhooks-eventlistener` Ingress and add 2 annotations in the `metadata` section.
+
+```
+  metadata:
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      kubernetes.io/ingress.class: alb
+```
+
+2. Edit `tekton-webhooks-eventlistener` EventListener and add `serviceType` `LoadBalancer` in the `spec` section
+
+```
+  spec:
+    serviceType: LoadBalancer
+```
+
+3. Wait for `get ingress el-tekton-webhooks-eventlistener -n tekton-pipelines` showing the ADDRESS for the el-tekton-webhooks-eventlistener ingress
+
+4. Edit `el-tekton-webhooks-eventlistener` Ingress again and update the URL of the `host` with the ADDRESS of the ingress
+
+
+```
+  spec:
+    rules:
+    - host: xxxx.yyy.elb.amazonaws.com
+```
+
+5. Update the `Payload URL` in the webhook in github.com repositry (Settings->Webhoks->"webhook with dummy URL"->Payload URL) to the ADDRESS of the ingress
+
 
 ## Putting it all together: test it's working
 

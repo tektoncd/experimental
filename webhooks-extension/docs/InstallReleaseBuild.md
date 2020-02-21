@@ -30,7 +30,7 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
     _On other Kubernetes environments:_
 
     Use the following command, replacing `YOUR_IP_ADDRESS` with your docker-desktop system's IP address.  Note that in
-    production you should clone the repository and update the WEBHOOK_CALLBACK_URL setting to avoid using nip.io for host resolution.
+    production you should clone the repository and update the WEBHOOK_CALLBACK_URL setting to avoid using nip.io for host resolution.  If WEBHOOK_CALLBACK_URL protocol is https, ssl verification will be enabled on the github webhook and the TLS certificate secret set in WEBHOOK_TLS_CERTIFICATE is used in the ingress. If WEBHOOK_TLS_CERTIFICATE is not defined or the secret doesn't exit, the certificate signed by the platform certificate is created and used in the ingress.  If the platform certificate is not issued by the certificate authority, the SSL verification option in the github webhook must be disabled manually.  If the call back URL is not determined yet in Amazon EKS environment, replace YOUR_IP_ADDRESS with a dummy address.  It will be replaced in the step in the [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
 
     ```bash
     curl -L https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml \
@@ -58,6 +58,7 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
 
     Use the following command, replacing `YOUR_IP_ADDRESS` with your docker-desktop system's IP address.  Note that in
     production you should clone the repository and update the WEBHOOK_CALLBACK_URL setting to avoid using nip.io for host resolution.
+    If the call back URL is not determined yet in Amazon EKS environment, replace YOUR_IP_ADDRESS with a dummy address.  It will be replaced in the step in the [Getting Started](https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/GettingStarted.md) guide.
 
     ```bash
     curl -L https://github.com/tektoncd/dashboard/releases/latest/download/webhooks-extension_release.yaml \
@@ -71,17 +72,17 @@ If the Tekton Dashboard has been installed into a namespace other than "tekton-p
 
     If looking to install an official release of v0.2.1 or earlier, please navigate to the docs for that release by selecting the branch name matching the version you want to install in the dropdown at the top of this page.  Different prereqs and actions are required for installations of v0.2.1 and earlier.  
     
-    In general, once you have taken all the prereq actions for the release level you want to install, you need to use a similar URL as in the previous commands, but that specifies the version you want to install for example, for version 0.2.0:
+    In general, once you have taken all the prereq actions for the release level you want to install, you need to use a similar URL as in the previous commands, but that specifies the version you want to install for example, for version 0.2.1:
 
     _On Red Hat OpenShift:_
 
-    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/openshift-webhooks-extension.yaml`
+    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.1/openshift-tekton-webhooks-extension-release.yaml`
 
-    Note: As of v0.2.1 the filename became openshift-tekton-webhooks-extension-release.yaml
+    Note: For v0.2.1 the filename was openshift-webhooks-extension.yaml
 
     _On other Kubernetes environments:_
 
-    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.0/webhooks-extension_release.yaml`
+    `https://github.com/tektoncd/dashboard/releases/previous/v0.2.1/webhooks-extension_release.yaml`
 
 <br/>
 <br/>
