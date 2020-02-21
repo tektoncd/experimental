@@ -32,9 +32,9 @@ var (
 	filename = flag.String("f", "", "Name of the file to parse")
 )
 
-// TODO: take a file path, parse it as YAML -> v1alpha1.Task
+// Take a file path, parse it as YAML -> v1alpha1.Task
 
-func read(name string) (v1alpha1.Task, error) {
+func readTask(name string) (v1alpha1.Task, error) {
 
 	var task v1alpha1.Task
 	dat, err := ioutil.ReadFile(name)
@@ -48,7 +48,7 @@ func read(name string) (v1alpha1.Task, error) {
 	return task, nil
 }
 
-// TODO: use Go templates to print v1alpha1.Task as Markdown
+// Use Go templates to print v1alpha1.Task as Markdown
 
 func printTask(w io.Writer, task v1alpha1.Task) error{
 	if task.Spec.Inputs != nil {
@@ -59,7 +59,7 @@ kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Na
 ### Input:-
 `))
 		if err := tmpl.Execute(w, task); err != nil {
-			return fmt.Errorf("error executing the template: %v", err)
+			return fmt.Errorf("error executing the template: %w", err)
 		}
 	}
 
@@ -69,7 +69,7 @@ kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Na
 {{end}}`
 		tmpl := template.Must(template.New("test").Parse(t))
 		if err := tmpl.Execute(w, task.Spec.Inputs.Params); err != nil {
-			return fmt.Errorf("error executing the template: %v", err)
+			return fmt.Errorf("error executing the template: %w", err)
 		}
 	}
 
@@ -80,7 +80,7 @@ kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Na
 {{end}}`
 		tmpl := template.Must(template.New("test").Parse(t))
 		if err := tmpl.Execute(w, task.Spec.Inputs.Resources); err != nil {
-			return fmt.Errorf("error executing the template: %v", err)
+			return fmt.Errorf("error executing the template: %w", err)
 		}
 	}
 
@@ -90,9 +90,8 @@ kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Na
 {{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}
 {{end}}`
 		tmpl := template.Must(template.New("test").Parse(t))
-		err := tmpl.Execute(w, task.Spec.Outputs.Resources)
-		if err != nil {
-			return fmt.Errorf("error executing the template: %v", err)
+		if err := tmpl.Execute(w, task.Spec.Outputs.Resources); err != nil {
+			return fmt.Errorf("error executing the template: %w", err)
 		}
 	}
 	return nil
@@ -102,14 +101,14 @@ func main() {
 
 	flag.Parse()
 
-	task, err := read(*filename)
+	task, err := readTask(*filename)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("failed to read Task:", err)
 	}
 
 	err = printTask(os.Stdout, task)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("failed to render Task:", err)
 	}
 }
 

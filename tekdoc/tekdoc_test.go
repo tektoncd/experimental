@@ -7,17 +7,16 @@ import (
 )
 
 func TestTekdoc(t *testing.T) {
-	task, err := read("buildkit-daemonless.yaml")
+	task, err := readTask("buildkit-daemonless.yaml")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to read task: %v", err)
 	}
 	if task.Kind != "Task"{
-		t.Error("This is not a task file")
+		t.Errorf("wanted Task file got %v", task.Kind)
 	}
 
 	b := new(bytes.Buffer)
-	err = printTask(b,task)
-	if err != nil {
+	if err = printTask(b,task); err != nil {
 		t.Fatal(err)
 	}
 	v := `# buildkit-daemonless
@@ -32,7 +31,7 @@ kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/build
 - image, image
 `
 	if diff := cmp.Diff(v, b.String()); diff != ""{
-		t.Error(diff)
+		t.Errorf("-want, +got: %s", diff)
 	}
 }
 
