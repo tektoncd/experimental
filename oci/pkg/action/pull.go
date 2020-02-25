@@ -8,7 +8,7 @@ import (
 	"github.com/tektoncd/experimental/oci/pkg/oci"
 )
 
-// Pull will perform the `pull` action by retrieving a specific named Tekton resource from the specified OCI image.
+// Pull retrieves a specific named Tekton resource from the specified OCI image.
 func Pull(r string, kind string, n string) error {
 	// Validate the parameters.
 	if r == "" || kind == "" || n == "" {
