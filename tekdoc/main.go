@@ -50,7 +50,7 @@ func readTask(name string) (v1alpha1.Task, error) {
 
 // Use Go templates to print v1alpha1.Task as Markdown
 
-func printTask(w io.Writer, task v1alpha1.Task) error{
+func printTask(w io.Writer, task v1alpha1.Task) error {
 	if task.Spec.Inputs != nil {
 
 		tmpl := template.Must(template.New("test").Parse(`# {{.Name}}
@@ -106,8 +106,7 @@ func main() {
 		log.Fatalln("failed to read Task:", err)
 	}
 
-	err = printTask(os.Stdout, task)
-	if err != nil {
+	if err := printTask(os.Stdout, task); err != nil {
 		log.Fatalln("failed to render Task:", err)
 	}
 }

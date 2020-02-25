@@ -11,12 +11,12 @@ func TestTekdoc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read task: %v", err)
 	}
-	if task.Kind != "Task"{
+	if task.Kind != "Task" {
 		t.Errorf("wanted Task file got %v", task.Kind)
 	}
 
 	b := new(bytes.Buffer)
-	if err = printTask(b,task); err != nil {
+	if err := printTask(b, task); err != nil {
 		t.Fatal(err)
 	}
 	v := `# buildkit-daemonless
@@ -30,8 +30,7 @@ kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/build
 ### Output:-
 - image, image
 `
-	if diff := cmp.Diff(v, b.String()); diff != ""{
+	if diff := cmp.Diff(v, b.String()); diff != "" {
 		t.Errorf("-want, +got: %s", diff)
 	}
 }
-
