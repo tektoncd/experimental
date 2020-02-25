@@ -19,6 +19,7 @@ import (
 func PushImage(ref name.Reference, resources []ParsedTektonResource) error {
 	img := empty.Image
 	for _, r := range resources {
+		log.Printf("[%s]: adding %s:%s\n", ref.Name(), r.Kind, r.Name)
 		l, err := tarball.LayerFromReader(strings.NewReader(r.Contents))
 		if err != nil {
 			return fmt.Errorf("Error creating layer for resource %s/%s: %w", r.Kind, r.Name, err)

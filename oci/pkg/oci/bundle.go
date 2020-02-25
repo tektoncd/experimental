@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"reflect"
@@ -40,7 +41,7 @@ func ReadPaths(filePaths []string) ([]ParsedTektonResource, error) {
 		// Check both the existence of the file and if it is a directory.
 		info, err := os.Stat(filePath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "No file or directory found at %s", filePath)
+			return nil, errors.Wrapf(err, "No such file or directory: %s", filePath)
 		}
 
 		// If this is a directory, recursively read the subpaths.
@@ -83,8 +84,8 @@ func readPath(filePath string) ([]ParsedTektonResource, error) {
 		return nil, err
 	}
 
-	// Try to tease out the type of the file from the extension and load them into a slice (if there are multiple
-	// entities in a single file).
+	// Try to tease out the type of the file from the extension and load them
+	// into a slice (if there are multiple entities in a single file).
 	var entities []string
 	switch ext := path.Ext(filePath); true {
 	case ext == ".yaml" || ext == ".yml":
@@ -93,18 +94,19 @@ func readPath(filePath string) ([]ParsedTektonResource, error) {
 		var partials []interface{}
 		err = json.Unmarshal(contents, &partials)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not marshal contents to json")
+			return nil, errors.Wrapf(err, "failed to parse file: %q", filePath)
 		}
+
 		entities = make([]string, 0, len(partials))
 		for _, element := range partials {
 			rawElement, err := json.Marshal(element)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not re-marshal %+v into json", element)
+				return nil, errors.Wrapf(err, "failed not marshal %+v  of %q into json", element, filePath)
 			}
 			entities = append(entities, string(rawElement))
 		}
 	default:
-		return nil, fmt.Errorf("can't parse resources of type %s", ext)
+		return nil, fmt.Errorf("cannot parse resources of type %s", ext)
 	}
 
 	resources := make([]ParsedTektonResource, 0, len(entities))
@@ -117,8 +119,9 @@ func readPath(filePath string) ([]ParsedTektonResource, error) {
 
 		resource, err := decodeObject(entity)
 		if err != nil {
-			// We are not going to bail if we find an unparseable resource, rather, we will just skip it.
-			fmt.Printf("skipping %s because %s", filePath, err.Error())
+			// We are not going to bail if we find an unparseable resource, rather,
+			// we will just skip it.
+			log.Printf("skipping %s because %s", filePath, err.Error())
 			continue
 		}
 		resources = append(resources, *resource)
@@ -126,15 +129,11 @@ func readPath(filePath string) ([]ParsedTektonResource, error) {
 	return resources, nil
 }
 
-// decodeObject will attempt to decode a yaml or json string into a single Kubernetes or CRD object and return the
-// parsed representation.
+// decodeObject attempts to decode a yaml or json string into a single Kubernetes or
+// CRD object and return the parsed representation.
 func decodeObject(contents string) (*ParsedTektonResource, error) {
 	object, kind, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(contents), nil, nil)
-	if err != nil {
-		return nil, errors.Wrapf(err, "resource is not a valid Kubernetes resource:\n%s", contents)
-	}
-
-	if kind.GroupVersion().Identifier() != v1alpha1.SchemeGroupVersion.Identifier() {
+	if err != nil || kind.GroupVersion().Identifier() != v1alpha1.SchemeGroupVersion.Identifier() {
 		return nil, errors.Wrapf(err, "resource is not a valid Kubernetes resource:\n%s", contents)
 	}
 
@@ -145,7 +144,6 @@ func decodeObject(contents string) (*ParsedTektonResource, error) {
 		return nil, errors.Wrapf(err, "could not marshal %+v to yaml", object)
 	}
 
-	fmt.Printf("Adding %s:%s to image bundle\n", kind.Kind, resourceName)
 	return &ParsedTektonResource{
 		Name:     resourceName,
 		Kind:     kind,
