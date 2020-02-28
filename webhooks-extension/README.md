@@ -30,8 +30,9 @@ used to install a specified version of the dashboard and the webhook extension.
 [Labelling Pipeline Runs For UI Display](./docs/Labels.md)  
 [Multiple Pipelines](./docs/MultiplePipelines.md)  
 [Pull Request Status Updates](./docs/Monitoring.md)  
-[Security](./docs/Security.md)
+[Security](./docs/Security.md)  
 [Additional Notes If Using Red Hat OpenShift](./docs/NotesOnOpenShiftInstallations.md)  
+[Additional Notes If Using Amazon EKS](./docs/AmazonEKS.md)  
 [Limitations](./docs/Limitations.md)  
 
 ### Architecture Guide
