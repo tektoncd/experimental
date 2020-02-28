@@ -2,31 +2,20 @@
 <br/>
 
 - Only GitHub and Gitlab webhooks are currently supported.
+- Status reporting on Gitlab merge requests does not fully function due to Gitlab architecture.
 - Your git server host URL needs to contain github or gitlab in its name.
-- Webhooks in GitHub are sometimes left behind after deletion (details further below).
 - Only `push` and `pull_request` events are currently supported for GitHub, these are the events defined on the webhook, tag creation shows as a push event and will also trigger pipelines.
-- Only `push` and `tag push` and `merge request` events are currently supported for GitLab, these are the events defined on the webhook.
-- The trigger template needs to be available in the install namespace with the name `<pipeline-name>-template` (details further below).
-- The two trigger bindings need to available in the install namespace with the names `<pipeline-name>-push-binding` and `<pipeline-name>-pullrequest-binding` (details further below).
-- Limited configurable parameters are added to the trigger in the eventlistener through the UI, statics could be added in your trigger binding (details further below).
+- Only `push`, `tag push` and `merge request` events are currently supported for GitLab, these are the events defined on the webhook.
+- The `TriggerTemplate` needs to be available in the install namespace with the name `<pipeline-name>-template` (details further below).
+- The two `TriggerBindings` need to available in the install namespace with the names `<pipeline-name>-push-binding` and `<pipeline-name>-pullrequest-binding` (details further below).
+- Limited configurable parameters are added to the trigger in the `EventListener` through the UI, statics could be added in your `TriggerBinding` (details further below).
 
-## Deleted webhooks can still be rendered until a refresh occurs
-
-The Webhooks Extension component does not currently work with all `Pipelines`, it very specifically creates the following when the webhook is triggered:
-Due to a bug in *our* codebase, a scenario exists whereby deleted webhooks can appear on the webhooks display table. This scenario is known to occur under the following circumstance.
-
-- Create a webhook named `-`
-- Create a webhook named `--`
-- Create a webhook with an appropriate name e.g. `mywebhook`
-- Attempt to delete all three webhooks
-
-An error is displayed mentioning that problems occurred deleting webhooks (the ones named - and -), but `mywebhook` has actually been deleted. It is only until you refresh the page that this webhook will no longer be displayed.
 
 ## Tekton Triggers Information
 
 #### Trigger Template & Trigger Bindings
 
-As the UI does not currently offer the ability to select a trigger template or trigger binding, the current backend code expects to find trigger template and binding with fixed names prefixed with the pipeline name.
+As the UI does not currently offer the ability to select a `TriggerTemplate` or `TriggerBinding`, the current backend code expects to find trigger template and bindings with fixed names prefixed with the pipeline name.
 
 - `<pipeline-name>-template`
 - `<pipeline-name>-push-binding`
@@ -36,9 +25,9 @@ The reason for requesting two bindings is due to the event payload being differe
 
 #### Event Listener Parameters
 
-When a webhook is created through the dashboard UI, a number of parameters are made available to the trigger template through the event listener.  The parameters added to the trigger in the event listener are:
+When a webhook is created through the dashboard UI, a number of parameters are made available to the `TriggerTemplate` through the `EventListener`.  The parameters added to the trigger in the `EventListener` are:
 
-It is important to note the names of the parameters, should you wish to use the extension with your own trigger templates and make use of these values.
+It is important to note the names of the parameters, should you wish to use the extension with your own `TriggerTemplates` and make use of these values.
 
 ```
 params:

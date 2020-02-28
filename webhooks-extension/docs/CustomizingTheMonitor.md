@@ -8,14 +8,14 @@
 
 ## Introduction
 
-If the webhook is triggered due to a pull request being created (or updated with code), a monitor task will be run to track and report on the status of the configured PipelineRun that is started by the webhooks-extension.  Some customization of the default monitor task is possible along with overriding the task altogether.
+If the webhook is triggered due to a pull request being created (or updated with code), a monitor task will be run to track and report on the status of the configured `PipelineRun` that is started by the webhooks-extension.  Some customization of the default monitor task is possible along with overriding the task altogether.
 
 
 ## Changing The Polling Duration
 
-The polling duration of the `monitor-result-task` Task that comes installed with the webhooks-extension, polls the PipelineRun every 10 seconds for up to 30 minutes (1800 seconds).
+The polling duration of the `monitor-result-task` Task that comes installed with the webhooks-extension, polls the `PipelineRun` every 10 seconds for up to 30 minutes (1800 seconds).
 
-To extend the duration allowed for PipelineRun completion, you would currently need to edit the Task, either using `kubectl edit task monitor-result-task -n tekton-pipelines` or by editing a copy of the yaml and reapplying using `kubectl apply -f <path_to_yaml_file> -n tekton-pipelines`.
+To extend the duration allowed for `PipelineRun` completion, you would currently need to edit the Task, either using `kubectl edit task monitor-result-task -n tekton-pipelines` or by editing a copy of the yaml and reapplying using `kubectl apply -f <path_to_yaml_file> -n tekton-pipelines`.
 
 If you have not installed into the tekton-pipelines namespace, you would need to change the value in the command you use to edit/apply the yaml.
 
@@ -41,14 +41,14 @@ The body you POST to the REST endpoint has four properties, `onsuccesscomment`, 
 }
 ```
 
-If the PipelineRun then fails we get "Fehler" as the status.
+If the `PipelineRun` then fails we get "Fehler" as the status.
 
 ![German failure comment](./images/germanComment.png?raw=true "German failure comment on GitHub pull request")
 
 
 ## Custom Monitor Tasks
 
-Using the REST endpoint directly, it is also possible to override the Task that is created after the PipelineRun.  The Task must be specified on the pulltask property in the JSON body, for example:
+Using the REST endpoint directly, it is also possible to override the `Task` that is created after the `PipelineRun`.  The `Task` must be specified on the pulltask property in the JSON body, for example:
 
 ```
 {
@@ -66,7 +66,7 @@ Using the REST endpoint directly, it is also possible to override the Task that 
 }
 ```
 
-In this situation, after the webhook is triggered and the PipelineRun created, a TaskRun for the `my-custom-task` will be created instead of the default `monitor-result-task` Task.  The same set of inputs, output and parameters will be placed on the TaskRun as would have been placed into the TaskRun for the  `monitor-result-task` Task.
+In this situation, after the webhook is triggered and the `PipelineRun` created, a `TaskRun` for the `my-custom-task` will be created instead of the default `monitor-result-task` `Task`.  The same set of inputs, output and parameters will be placed on the `TaskRun` as would have been placed into the `TaskRun` for the  `monitor-result-task` `Task`.
 
 ```
   inputs:
@@ -90,7 +90,7 @@ The params above are populated from the data specified at webhook creation.
       value: germanmessage-1565788339-rjmzv:tekton-pipelines:simple-pipeline
 ```
 
-The `pipelineruns` parameter is currently a comma separated list of pipelinerunname:namespace:pipeline, so where two PipelineRuns were created due to the webhook triggering, this might be the string "germanmessage-1565788339-rjmzv:tekton-pipelines:simple-pipeline,englishmessage-1414141452-uwntd:default:other-pipeline".
+The `pipelineruns` parameter is currently a comma separated list of pipelinerunname:namespace:pipeline, so where two `PipelineRuns` were created due to the webhook triggering, this might be the string "germanmessage-1565788339-rjmzv:tekton-pipelines:simple-pipeline,englishmessage-1414141452-uwntd:default:other-pipeline".
 
 ``` 
     name: dashboard-url
@@ -111,4 +111,4 @@ The `dashboard-url` defaults to `http://localhost:9097/` unless a value can be f
         name: pull-request-n2dfs
 ```
 
-A PipelineResource of type pullRequest is created and added to the TaskRun as both an input and output resource.
+A `PipelineResource` of type pullRequest is created and added to the `TaskRun` as both an input and output resource.

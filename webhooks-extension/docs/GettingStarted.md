@@ -116,39 +116,6 @@ Accepted Formats:
 - my.registry/foo
 - image-registry.openshift-image-registry.svc:5000/**existing namespace here** (for OpenShift 4.2)
 
-### Notes for Amazon EKS
-
-After creation of the webhook, the following manual steps are necessary to make the webhook work in Amazon EKS environment.
-
-1. Edit `el-tekton-webhooks-eventlistener` Ingress and add 2 annotations in the `metadata` section.
-
-```
-  metadata:
-    annotations:
-      alb.ingress.kubernetes.io/scheme: internet-facing
-      kubernetes.io/ingress.class: alb
-```
-
-2. Edit `tekton-webhooks-eventlistener` EventListener and add `serviceType` `LoadBalancer` in the `spec` section
-
-```
-  spec:
-    serviceType: LoadBalancer
-```
-
-3. Wait for `get ingress el-tekton-webhooks-eventlistener -n tekton-pipelines` showing the ADDRESS for the el-tekton-webhooks-eventlistener ingress
-
-4. Edit `el-tekton-webhooks-eventlistener` Ingress again and update the URL of the `host` with the ADDRESS of the ingress
-
-
-```
-  spec:
-    rules:
-    - host: xxxx.yyy.elb.amazonaws.com
-```
-
-5. Update the `Payload URL` in the webhook in github.com repositry (Settings->Webhoks->"webhook with dummy URL"->Payload URL) to the ADDRESS of the ingress
-
 
 ## Putting it all together: test it's working
 
@@ -172,4 +139,4 @@ You can use `kubectl logs [pod-name] --all-containers` to check the output of ea
 
 ### 404 or 503 error in GitHub (red "x" next to your webhook)
 
-Sometimes the sink is not ready in time to receive a webhook event, and GitHub will report a 404 or 503 error. If this happens, you can redeliver the event from the GitHub webpage under the "Settings" > "Hooks" section to fix the problem.
+Sometimes the eventlistener service is not ready in time to receive a webhook event, and GitHub will report a 404 or 503 error. If this happens, you can redeliver the event from the GitHub webpage under the "Settings" > "Hooks" section to fix the problem.

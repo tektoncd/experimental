@@ -1,18 +1,24 @@
 # Pull Request Status Updates 
 
-Note:- The terms and images used in this documentation relate to Github, however the monitor does also updates status and comments on Gitlab merge requests.  
+Note:- The terms and images used in this documentation relate to Github.  
 
-If the webhook is triggered due to a pull request being created or updated with code, a monitor task will be run to track and report on the status of the configured PipelineRun that is started by the webhooks-extension.  The sequence of events are as follows:
+If the webhook is triggered due to a pull request being created or updated with code, a monitor task will be run to track and report on the status of the configured `PipelineRun` that is started by the `EventListener`.
 
-1.  Creation of a PipelineRun by the webhooks-extension's `sink` handler occurs in response to the configured webhook.
+1.  Each webhook created in the webhooks extension console relates to three triggers registered with the webhooks extension's `EventListener`.
 
-2.  When the PipelineRun is created, a TaskRun is also created for the `monitor-result-task` Task.
+2.  The three triggers are conceptually as follows:  
 
-3.  The monitor-result-task updates the pull request, putting its status into pending.
+    - run the relevant `Pipeline` for push events on this repo
+    - run the relevant `Pipeline` for pull_request events on this repo
+    - run a monitor `Task` for pull_request events on this repo
+
+3.  A `PipelineRun` and `TaskRun` are therefore created by the `EventListener` merging together `TriggerTemplates` with `TriggerBindings`.
+
+4.  The monitor-result-task updates the pull request, putting its status into pending.
 
 ![Pending status on pull request](./images/pendingStatus.png?raw=true "Pending status shown on a GitHub pull request")
 
-4.  The monitor-result-task periodically checks the PipelineRun for completion and changes the pull request's status accordingly to one of success, failure or error.
+5.  The monitor-result-task periodically checks the `PipelineRun` for completion and changes the pull request's status accordingly to one of success, failure or error.
 
 ![Success status on pull request](./images/successStatus.png?raw=true "Success status shown on a GitHub pull request")
 
@@ -20,7 +26,7 @@ If the webhook is triggered due to a pull request being created or updated with 
 
 ![Error status on pull request](./images/errorStatus.png?raw=true "Error status shown on a GitHub pull request")
 
-5.  A comment is added to the pull request showing the result of the PipelineRun. The reported status operates as a hyperlink to the specific PipelineRun in the Tekton Dashboard, allowing you to quickly navigate to any relevant log files.  Note that `Unknown` as a status denotes that the PipelineRun had not completed before the monitor Task reached its maximum polling duration (30 mins).  
+6.  A comment is added to the pull request showing the result of the `PipelineRun`. The reported status operates as a hyperlink to the specific `PipelineRun` in the Tekton Dashboard, allowing you to quickly navigate to any relevant log files.  Note that `Unknown` as a status denotes that the `PipelineRun` had not completed before the monitor `TaskRun` reached its maximum polling duration (30 mins).  
 
 ![PipelineRun status reporting](./images/comment.png?raw=true "PipelineRun status report as comment on GitHub pull request")
 
