@@ -253,7 +253,7 @@ export class WebhookBranches extends Component {
         {rows.length === 0 && !loading && (
           <div className="noBranches">
             <p>Unable to identify any PipelineRuns initiated by this webhook.</p>
-            <a href="https://github.com/tektoncd/experimental/webhooks-extension/docs/Labels.md">Click here for help.</a>
+            <a href="https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/Labels.md">Click here for help.</a>
           </div>
         )}
       </Modal>
