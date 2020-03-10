@@ -24,6 +24,8 @@ import (
 	"errors"
 	"fmt"
 
+	"math/rand"
+
 	restful "github.com/emicklei/go-restful"
 	routesv1 "github.com/openshift/api/route/v1"
 	logging "github.com/tektoncd/experimental/webhooks-extension/pkg/logging"
@@ -38,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/certificate/csr"
-	"math/rand"
 
 	"net/http"
 	"os"
@@ -1052,7 +1053,6 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePre
 				return err
 			} else {
 				logging.Log.Debug("Ingress deleted")
-				return nil
 			}
 		} else {
 			if err := r.deleteOpenshiftRoute(routeName); err != nil {
@@ -1072,7 +1072,7 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePre
 		}
 	}
 
-	for _, binding := range bindingsToRemove {
+	for binding := range bindingsToRemove {
 		err = r.TriggersClient.TektonV1alpha1().TriggerBindings(installNS).Delete(binding, &metav1.DeleteOptions{})
 		if err != nil {
 			logging.Log.Errorf("error deleting triggerbinding: %s", binding)
