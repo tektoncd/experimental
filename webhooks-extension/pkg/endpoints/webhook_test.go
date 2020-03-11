@@ -390,12 +390,6 @@ func TestGetMonitorBindingName(t *testing.T) {
 			expectedError: "no repository URL provided on call to GetGitProviderAndAPIURL",
 		},
 		{
-			repoURL:             "http://foo.gitlab.com/wibble/fish",
-			monitorTask:         "",
-			expectedBindingName: "",
-			expectedError:       "no monitor task set on call to getMonitorBindingName",
-		},
-		{
 			repoURL:             "https://hungry.dinosaur.com/wibble/fish",
 			monitorTask:         "monitor-task",
 			expectedBindingName: "",

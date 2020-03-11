@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors
+Copyright 2019-2020 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -259,8 +259,10 @@ func (r Resource) doesMonitorExist(monitorTriggerNamePrefix string, webhook webh
 }
 
 func (r Resource) getMonitorBindingName(repoURL, monitorTask string) (string, error) {
+	logging.Log.Debugf("monitor task name is: %s", monitorTask)
 	if monitorTask == "" {
-		return "", errors.New("no monitor task set on call to getMonitorBindingName")
+		monitorTask = "monitor-task"
+		logging.Log.Debugf("no monitor task specified, assuming name is %s", monitorTask)
 	}
 
 	monitorBindingName := monitorTask + "-binding"
@@ -817,7 +819,8 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 	}
 
 	if namespace == "" || repo == "" {
-		theError := errors.New("bad request information provided, a namespace and a repository must be specified as query parameters")
+		theErrorMessage := fmt.Sprintf("bad request information provided, a namespace and a repository must be specified as query parameters. Namespace: %s, repo: %s", namespace, repo)
+		theError := errors.New(theErrorMessage)
 		logging.Log.Error(theError)
 		RespondError(response, theError, http.StatusBadRequest)
 		return
@@ -867,7 +870,7 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 			err = r.deleteFromEventListener(eventListenerEntryPrefix, r.Defaults.Namespace, monitorTriggerNamePrefix, hook)
 			if err != nil {
 				logging.Log.Error(err)
-				theError := errors.New("error deleting webhook from eventlistener.")
+				theError := errors.New("error deleting webhook from eventlistener")
 				RespondError(response, theError, http.StatusInternalServerError)
 				return
 			}
@@ -1079,7 +1082,6 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePre
 			logging.Log.Errorf("error: %s", err)
 		}
 	}
-
 	return err
 }
 
@@ -1138,18 +1140,18 @@ func (r Resource) getWebhooksFromEventListener() ([]webhook, error) {
 }
 
 func (r Resource) getHookFromTrigger(t v1alpha1.EventListenerTrigger, suffix string) webhook {
-
 	var releaseName, namespace, serviceaccount, pulltask, dockerreg, helmsecret, repo, gitSecret string
 	for _, binding := range t.Bindings {
 		b, err := r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(binding.Name, metav1.GetOptions{})
 		if err != nil {
-			logging.Log.Errorf("Error getting trigger binding %s", binding.Name)
-			return webhook{}
+			logging.Log.Errorf("Error retrieving webhook information in full - could not find required TriggerBinding %s", binding.Name)
+			t.Name = "Broken webhook! Resources not found"
 		}
 		for _, param := range b.Spec.Params {
 			switch param.Name {
 			case "webhooks-tekton-release-name":
 				releaseName = param.Value.StringVal
+				logging.Log.Debugf("Thinking the webhook name is %s", releaseName)
 			case "webhooks-tekton-target-namespace":
 				namespace = param.Value.StringVal
 			case "webhooks-tekton-service-account":
@@ -1176,6 +1178,12 @@ func (r Resource) getHookFromTrigger(t v1alpha1.EventListenerTrigger, suffix str
 		}
 	}
 
+	if namespace == "" {
+		// For the broken webhook case - namespace and repo url is required for a successful delete
+		namespace = r.Defaults.Namespace
+	}
+
+	// This data is what will be displayed via the UI
 	triggerAsHook := webhook{
 		Name:             strings.TrimSuffix(t.Name, "-"+namespace+suffix),
 		Namespace:        namespace,

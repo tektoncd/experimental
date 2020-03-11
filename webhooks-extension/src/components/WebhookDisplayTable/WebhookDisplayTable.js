@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors
+Copyright 2019-2020 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -186,11 +186,11 @@ export class WebhookDisplayTable extends Component {
 
         if (displayTimeoutWarningNotification) {
           notificationStatusToSet = 'warning'
-          notificationMessageToSet = 'Warning - timed out waiting to delete webhooks and potentially PipelineRuns: manually check the resources were deleted.';
+          notificationMessageToSet = 'Warning - timed out waiting to delete webhooks and potentially PipelineRuns: manually check the resources were deleted. See https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/ManagedEventListener.md for more details.';
         } else {
           notificationStatusToSet = 'error'
           notificationMessageToSet =  'An error occurred deleting webhook(s).';
-          notificationFullMessage = 'Check the webhook(s) existed and both the dashboard and extension pods are healthy.';
+          notificationFullMessage = 'Check the webhook(s) existed and both the dashboard and extension pods are healthy. See https://github.com/tektoncd/experimental/blob/master/webhooks-extension/docs/ManagedEventListener.md for more details.';
         }
         this.setState({
           showNotificationOnTable: true,
@@ -225,7 +225,6 @@ export class WebhookDisplayTable extends Component {
   }
 
   render() {
-
       if (this.state.webhooks.length === 0 && this.state.isLoaded) {
         return (
           // There are no webhooks, so redirect to the create panel
