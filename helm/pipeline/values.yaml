@@ -1,0 +1,269 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# version -- Tekton pipelines version used to add labels on deployments, pods and services
+version: v0.11.0
+
+# nameOverride -- Partially override resource generated names
+nameOverride: ""
+
+# fullnameOverride -- Fully override resource generated names
+fullnameOverride: ""
+
+rbac:
+  # rbac.create -- Create RBAC resources
+  create: true
+
+  # rbac.serviceAccountName -- Name of the service account to use when rbac.create is false
+  serviceAccountName:
+
+customResourceDefinitions:
+  # customResourceDefinitions.create -- Create CRDs
+  create: true
+
+podSecurityPolicy:
+  # podSecurityPolicy.enabled -- Enable pod security policy
+  enabled: false
+
+controller:
+  image:
+    # controller.image.repository -- Controller docker image repository
+    repository: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/controller
+
+    # controller.image.tag -- Controller docker image tag
+    tag: v0.11.0
+
+    # controller.image.pullPolicy -- Controller docker image pull policy
+    pullPolicy: IfNotPresent
+
+  # controller.annotations -- Controller pod annotations
+  # @default -- See [values.yaml](./values.yaml)
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
+
+  # controller.nodeSelector -- Controller node selector
+  nodeSelector: {}
+
+  # controller.affinity -- Controller affinity rules
+  affinity: {}
+
+  # controller.tolerations -- Controller tolerations
+  tolerations: []
+
+  # controller.resources -- Controller resource limits and requests
+  resources: {}
+
+  # controller.securityContext -- Controller pods security context
+  securityContext: {}
+
+  # controller.args -- Controller arguments
+  # @default -- See [values.yaml](./values.yaml)
+  args:
+    - -kubeconfig-writer-image
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/kubeconfigwriter:v0.11.0
+    - -creds-image
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/creds-init:v0.11.0
+    - -git-image
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.11.0
+    - -nop-image
+    - tianon/true
+    - -shell-image
+    - busybox
+    - -gsutil-image
+    - google/cloud-sdk
+    - -entrypoint-image
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/entrypoint:v0.11.0
+    - -imagedigest-exporter-image
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/imagedigestexporter:v0.11.0
+    - -pr-image
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/pullrequest-init:v0.11.0
+    - -build-gcs-fetcher-image
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/vendor/github.com/googlecloudplatform/cloud-builders/gcs-fetcher/cmd/gcs-fetcher:v0.11.0
+
+  config:
+    # controller.config.artifactBucket -- Controller configuration for artifact bucket (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
+    # @default -- See [values.yaml](./values.yaml)
+    artifactBucket: {}
+
+    # controller.config.artifactPvc -- Controller configuration for artifact pvc (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
+    # @default -- See [values.yaml](./values.yaml)
+    artifactPvc: {}
+
+    # controller.config.defaults -- Controller configuration for default values (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
+    # @default -- See [values.yaml](./values.yaml)
+    defaults: {}
+
+    # controller.config.featureFlags -- Controller configuration for feature flags
+    # @default -- See [values.yaml](./values.yaml)
+    featureFlags:
+      # Setting this flag to "true" will prevent Tekton overriding your
+      # Task container's $HOME environment variable.
+      #
+      # The default behaviour currently is for Tekton to override the
+      # $HOME environment variable but this will change in an upcoming
+      # release.
+      #
+      # See https://github.com/tektoncd/pipeline/issues/2013 for more
+      # info.
+      disable-home-env-overwrite: "false"
+      # Setting this flag to "true" will prevent Tekton overriding your
+      # Task container's working directory.
+      #
+      # The default behaviour currently is for Tekton to override the
+      # working directory if not set by the user but this will change
+      # in an upcoming release.
+      #
+      # See https://github.com/tektoncd/pipeline/issues/1836 for more
+      # info.
+      disable-working-directory-overwrite: "false"
+
+    # controller.config.leaderElection -- Controller configuration for leader election
+    # @default -- See [values.yaml](./values.yaml)
+    leaderElection:
+      # An inactive but valid configuration follows; see example.
+      resourceLock: "leases"
+      leaseDuration: "15s"
+      renewDeadline: "10s"
+      retryPeriod: "2s"
+
+    # controller.config.logging -- Controller configuration for logging (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
+    # @default -- See [values.yaml](./values.yaml)
+    logging:
+      # Common configuration for all knative codebase
+      zap-logger-config: |
+        {
+          "level": "info",
+          "development": false,
+          "sampling": {
+            "initial": 100,
+            "thereafter": 100
+          },
+          "outputPaths": ["stdout"],
+          "errorOutputPaths": ["stderr"],
+          "encoding": "json",
+          "encoderConfig": {
+            "timeKey": "",
+            "levelKey": "level",
+            "nameKey": "logger",
+            "callerKey": "caller",
+            "messageKey": "msg",
+            "stacktraceKey": "stacktrace",
+            "lineEnding": "",
+            "levelEncoder": "",
+            "timeEncoder": "",
+            "durationEncoder": "",
+            "callerEncoder": ""
+          }
+        }
+      # Log level overrides
+      loglevel.controller: "info"
+      loglevel.webhook: "info"
+
+    # controller.config.observability -- Controller configuration for observability (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
+    # @default -- See [values.yaml](./values.yaml)
+    observability: {}
+
+  service:
+    # controller.service.type -- Controller service type
+    type: ClusterIP
+
+    # controller.service.annotations -- Controller service annotations
+    annotations: {}
+
+  metrics:
+    # controller.metrics.enabled -- Enable controller metrics service
+    enabled: true
+
+    # controller.metrics.port -- Controller metrics service port
+    port: 9090
+
+    # controller.metrics.service.portName -- Controller metrics service port name
+    portName: metrics
+
+webhook:
+  # webhook.enabled -- Enable webhook
+  enabled: true
+
+  image:
+    # webhook.image.repository -- Webhook docker image repository
+    repository: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/webhook
+
+    # webhook.image.tag -- Webhook docker image tag
+    tag: v0.11.0
+
+    # webhook.image.pullPolicy -- Webhook docker image pull policy
+    pullPolicy: IfNotPresent
+
+  # webhook.replicas -- Webhook replicas
+  replicas: 1
+
+  # webhook.annotations -- Webhook pod annotations
+  # @default -- See [values.yaml](./values.yaml)
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
+
+  # webhook.nodeSelector -- Webhook node selector
+  nodeSelector: {}
+
+  # webhook.affinity -- Webhook affinity rules
+  affinity: {}
+
+  # webhook.tolerations -- Webhook tolerations
+  tolerations: []
+
+  # webhook.resources -- Webhook resource limits and requests
+  resources: {}
+
+  # webhook.updateStrategy -- Webhook pods update strategy
+  updateStrategy: {}
+
+  # webhook.securityContext -- Webhook pods security context
+  securityContext: {}
+
+  podDisruptionBudget:
+    # webhook.podDisruptionBudget.enabled -- Enable pod disruption budget for webhook
+    ennabled: false
+
+    # webhook.podDisruptionBudget.minAvailable -- Minimum available webhook pods
+    minAvailable: 1
+
+    # webhook.podDisruptionBudget.maxUnavailable -- Maximum unavailable webhook pods
+    maxUnavailable: 1
+
+  service:
+    # webhook.service.type -- Webhook service type
+    type: ClusterIP
+
+    # webhook.service.annotations -- Webhook service annotations
+    annotations: {}
+
+  metrics:
+    # webhook.metrics.enabled -- Enable webhook metrics service
+    enabled: true
+
+    # webhook.metrics.port -- Webhook metrics service port
+    port: 9090
+
+    # webhook.metrics.portName -- Webhook metrics service port name
+    portName: http-metrics
+
+  profiling:
+    # webhook.profiling.enabled -- Enable pebhook profiling service
+    enabled: true
+
+    # webhook.profiling.port -- Webhook profiling service port
+    port: 8008
+
+    # webhook.profiling.portName -- Webhook profiling service port name
+    portName: http-profiling
