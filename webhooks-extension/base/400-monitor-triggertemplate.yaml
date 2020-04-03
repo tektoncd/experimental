@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1alpha1
+apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerTemplate
 metadata:
   name: monitor-task-template
@@ -68,7 +68,7 @@ spec:
         - fieldName: authToken
           secretName: $(params.gitsecretname)
           secretKey: $(params.gitsecretkeyname)
-  - apiVersion: tekton.dev/v1alpha1
+  - apiVersion: tekton.dev/v1beta1
     kind: TaskRun
     metadata:
       generateName: monitor-taskrun-
@@ -77,8 +77,7 @@ spec:
       serviceAccountName: tekton-webhooks-extension
       taskRef:
         name: monitor-task
-      inputs:
-        params:
+      params:
         - name: commentsuccess
           value: $(params.commentsuccess)
         - name: commentfailure
@@ -97,12 +96,12 @@ spec:
           value: $(params.apiurl)
         - name: insecure-skip-tls-verify
           value: $(params.insecure-skip-tls-verify)
-        resources:
-        - name: pull-request
-          resourceRef:
-            name: pull-request-$(uid)
-      outputs:
-        resources:
-        - name: pull-request
-          resourceRef:
-            name: pull-request-$(uid)
+      resources:
+        inputs:
+          - name: pull-request
+            resourceRef:
+              name: pull-request-$(uid)
+        outputs:
+          - name: pull-request
+            resourceRef:
+              name: pull-request-$(uid)

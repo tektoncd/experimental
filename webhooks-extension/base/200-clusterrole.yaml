@@ -22,3 +22,14 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - triggers.tekton.dev
+  resources:
+  - pipelines
+  - pipelineruns
+  - tasks
+  - taskruns
+  verbs:
+  - get
+  - list
+  - watch

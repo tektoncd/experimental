@@ -1,5 +1,5 @@
 // /*
-// Copyright 2019 The Tekton Authors
+// Copyright 2019-20 The Tekton Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -482,7 +482,7 @@ func TestCreateEventListener(t *testing.T) {
 			for _, monitorBinding := range trigger.Bindings {
 				if strings.HasPrefix(monitorBinding.Name, "wext-") {
 					wextMonitorBindingFound = true
-					binding, err := r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(monitorBinding.Name, metav1.GetOptions{})
+					binding, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(monitorBinding.Name, metav1.GetOptions{})
 					if err != nil {
 						t.Errorf("%s", err.Error())
 					}
@@ -499,7 +499,7 @@ func TestCreateEventListener(t *testing.T) {
 		}
 	}
 
-	err = r.TriggersClient.TektonV1alpha1().EventListeners(r.Defaults.Namespace).Delete(el.Name, &metav1.DeleteOptions{})
+	err = r.TriggersClient.TriggersV1alpha1().EventListeners(r.Defaults.Namespace).Delete(el.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		t.Errorf("Error occurred deleting eventlistener: %s", err.Error())
 	}
@@ -585,7 +585,7 @@ func TestUpdateEventListener(t *testing.T) {
 		t.Errorf("Eventlistener had %d triggers, but expected 8", len(el.Spec.Triggers))
 	}
 
-	err = r.TriggersClient.TektonV1alpha1().EventListeners(r.Defaults.Namespace).Delete(el.Name, &metav1.DeleteOptions{})
+	err = r.TriggersClient.TriggersV1alpha1().EventListeners(r.Defaults.Namespace).Delete(el.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		t.Errorf("Error occurred deleting eventlistener: %s", err.Error())
 	}
@@ -668,7 +668,7 @@ func TestDeleteFromEventListener(t *testing.T) {
 		t.Errorf("Error deleting entry from eventlistener: %s", err)
 	}
 
-	el, err = r.TriggersClient.TektonV1alpha1().EventListeners(r.Defaults.Namespace).Get("", metav1.GetOptions{})
+	el, err = r.TriggersClient.TriggersV1alpha1().EventListeners(r.Defaults.Namespace).Get("", metav1.GetOptions{})
 	if len(el.Spec.Triggers) != 3 {
 		t.Errorf("Eventlistener had %d triggers, but expected 3", len(el.Spec.Triggers))
 	}
@@ -864,12 +864,12 @@ func getExpectedParams(hook webhook, r *Resource, expectedProvider, expectedAPIU
 }
 
 func (r Resource) deleteAllBindings() error {
-	tbs, err := r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).List(metav1.ListOptions{})
+	tbs, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 	for _, tb := range tbs.Items {
-		err = r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Delete(tb.Name, &metav1.DeleteOptions{})
+		err = r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Delete(tb.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
@@ -1067,15 +1067,15 @@ func createTriggerResources(hook webhook, r *Resource) {
 		},
 	}
 
-	_, err := r.TriggersClient.TektonV1alpha1().TriggerTemplates(installNs).Create(&template)
+	_, err := r.TriggersClient.TriggersV1alpha1().TriggerTemplates(installNs).Create(&template)
 	if err != nil {
 		fmt.Printf("Error creating fake triggertemplate %s", template.Name)
 	}
-	_, err = r.TriggersClient.TektonV1alpha1().TriggerBindings(installNs).Create(&pushBinding)
+	_, err = r.TriggersClient.TriggersV1alpha1().TriggerBindings(installNs).Create(&pushBinding)
 	if err != nil {
 		fmt.Printf("Error creating fake triggerbinding %s", pushBinding.Name)
 	}
-	_, err = r.TriggersClient.TektonV1alpha1().TriggerBindings(installNs).Create(&pullBinding)
+	_, err = r.TriggersClient.TriggersV1alpha1().TriggerBindings(installNs).Create(&pullBinding)
 	if err != nil {
 		fmt.Printf("Error creating fake triggerbinding %s", pullBinding.Name)
 	}

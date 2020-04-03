@@ -15,6 +15,7 @@ package endpoints
 
 import (
 	"bytes"
+	"context"
 	cryptorand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -76,7 +77,7 @@ func (r Resource) createEventListener(webhook webhook, namespace, monitorTrigger
 		bindings := []string{hookExtBinding, monitorExtBinding}
 		for _, binding := range bindings {
 			if binding != "" {
-				r.TriggersClient.TektonV1alpha1().TriggerBindings(namespace).Delete(binding, &metav1.DeleteOptions{})
+				r.TriggersClient.TriggersV1alpha1().TriggerBindings(namespace).Delete(binding, &metav1.DeleteOptions{})
 			}
 		}
 		return nil, err
@@ -125,7 +126,7 @@ func (r Resource) createEventListener(webhook webhook, namespace, monitorTrigger
 			Triggers:           triggers,
 		},
 	}
-	return r.TriggersClient.TektonV1alpha1().EventListeners(namespace).Create(&eventListener)
+	return r.TriggersClient.TriggersV1alpha1().EventListeners(namespace).Create(&eventListener)
 }
 
 /*
@@ -150,7 +151,7 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 		bindings := []string{hookExtBinding, monitorExtBinding}
 		for _, binding := range bindings {
 			if binding != "" {
-				r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Delete(binding, &metav1.DeleteOptions{})
+				r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Delete(binding, &metav1.DeleteOptions{})
 			}
 		}
 		return nil, err
@@ -190,7 +191,7 @@ func (r Resource) updateEventListener(eventListener *v1alpha1.EventListener, web
 		eventListener.Spec.Triggers = append(eventListener.Spec.Triggers, newMonitor)
 	}
 
-	return r.TriggersClient.TektonV1alpha1().EventListeners(eventListener.Namespace).Update(eventListener)
+	return r.TriggersClient.TriggersV1alpha1().EventListeners(eventListener.Namespace).Update(eventListener)
 }
 
 func (r Resource) compareGitRepoNames(url1, url2 string) (bool, error) {
@@ -415,7 +416,7 @@ func (r Resource) createBindings(webhook webhook, monitorTriggerName string, cre
 			Params: hookParams,
 		},
 	}
-	actualHookBinding, err := r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Create(&hookBinding)
+	actualHookBinding, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Create(&hookBinding)
 	if err != nil {
 		logging.Log.Errorf("failed to create binding %+v, with error %s", hookBinding, err.Error())
 		return "", "", err
@@ -429,7 +430,7 @@ func (r Resource) createBindings(webhook webhook, monitorTriggerName string, cre
 			},
 		}
 
-		actualMonitorBinding, err := r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Create(&monitorBinding)
+		actualMonitorBinding, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Create(&monitorBinding)
 		if err != nil {
 			logging.Log.Errorf("failed to create binding %+v, with error %s", monitorBinding, err.Error())
 			return actualHookBinding.Name, "", err
@@ -544,7 +545,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 
 	if webhook.Name != "" {
 		if len(webhook.Name) > 57 {
-			tooLongMessage := fmt.Sprintf("requested release name (%s) must be less than 58 characters", webhook.Name)
+			tooLongMessage := fmt.Sprintf("requested webhook name (%s) must be less than 58 characters", webhook.Name)
 			err := errors.New(tooLongMessage)
 			logging.Log.Errorf("error: %s", err.Error())
 			RespondError(response, err, http.StatusBadRequest)
@@ -586,9 +587,10 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 	hooks, err := r.getHooksForRepo(webhook.GitRepositoryURL)
 	if len(hooks) > 0 {
 		for _, hook := range hooks {
-			if hook.Name == webhook.Name && hook.Namespace == webhook.Namespace {
-				logging.Log.Errorf("error creating webhook: A webhook already exists for GitRepositoryURL %+v with the Name %s and Namespace %s.", webhook.GitRepositoryURL, webhook.Name, webhook.Namespace)
-				RespondError(response, errors.New("Webhook already exists for the specified Git repository with the same name, targeting the same namespace"), http.StatusBadRequest)
+
+			if hook.Name == webhook.Name {
+				logging.Log.Errorf("error creating webhook: A webhook already exists with this name: %s", webhook.Name)
+				RespondError(response, errors.New("Webhook already exists with the same name"), http.StatusBadRequest)
 				return
 			}
 			if hook.Pipeline == webhook.Pipeline && hook.Namespace == webhook.Namespace {
@@ -605,9 +607,9 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		}
 	}
 
-	_, templateErr := r.TriggersClient.TektonV1alpha1().TriggerTemplates(installNs).Get(webhook.Pipeline+"-template", metav1.GetOptions{})
-	_, pushErr := r.TriggersClient.TektonV1alpha1().TriggerBindings(installNs).Get(webhook.Pipeline+"-push-binding", metav1.GetOptions{})
-	_, pullrequestErr := r.TriggersClient.TektonV1alpha1().TriggerBindings(installNs).Get(webhook.Pipeline+"-pullrequest-binding", metav1.GetOptions{})
+	_, templateErr := r.TriggersClient.TriggersV1alpha1().TriggerTemplates(installNs).Get(webhook.Pipeline+"-template", metav1.GetOptions{})
+	_, pushErr := r.TriggersClient.TriggersV1alpha1().TriggerBindings(installNs).Get(webhook.Pipeline+"-push-binding", metav1.GetOptions{})
+	_, pullrequestErr := r.TriggersClient.TriggersV1alpha1().TriggerBindings(installNs).Get(webhook.Pipeline+"-pullrequest-binding", metav1.GetOptions{})
 	if templateErr != nil || pushErr != nil || pullrequestErr != nil {
 		msg := fmt.Sprintf("Could not find the required trigger template or trigger bindings in namespace: %s. Expected to find: %s, %s and %s", installNs, webhook.Pipeline+"-template", webhook.Pipeline+"-push-binding", webhook.Pipeline+"-pullrequest-binding")
 		logging.Log.Errorf("%s", msg)
@@ -616,7 +618,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		return
 	}
 
-	eventListener, err := r.TriggersClient.TektonV1alpha1().EventListeners(installNs).Get(eventListenerName, metav1.GetOptions{})
+	eventListener, err := r.TriggersClient.TriggersV1alpha1().EventListeners(installNs).Get(eventListenerName, metav1.GetOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
 		msg := fmt.Sprintf("unable to create webhook due to error listing Tekton eventlistener: %s", err)
 		logging.Log.Errorf("%s", msg)
@@ -659,7 +661,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 				msg := fmt.Sprintf("error creating webhook due to error creating ingress. Error was: %s", err)
 				logging.Log.Errorf("%s", msg)
 				logging.Log.Debugf("Deleting eventlistener as failed creating Ingress")
-				err2 := r.TriggersClient.TektonV1alpha1().EventListeners(installNs).Delete(eventListenerName, &metav1.DeleteOptions{})
+				err2 := r.TriggersClient.TriggersV1alpha1().EventListeners(installNs).Delete(eventListenerName, &metav1.DeleteOptions{})
 				if err2 != nil {
 					updatedMsg := fmt.Sprintf("error creating webhook due to error creating ingress. Also failed to cleanup and delete eventlistener. Errors were: %s and %s", err, err2)
 					RespondError(response, errors.New(updatedMsg), http.StatusInternalServerError)
@@ -673,7 +675,7 @@ func (r Resource) createWebhook(request *restful.Request, response *restful.Resp
 		} else {
 			if err := r.createOpenshiftRoute(routeName); err != nil {
 				logging.Log.Debug("Failed to create Route, deleting EventListener...")
-				err2 := r.TriggersClient.TektonV1alpha1().EventListeners(installNs).Delete(eventListenerName, &metav1.DeleteOptions{})
+				err2 := r.TriggersClient.TriggersV1alpha1().EventListeners(installNs).Delete(eventListenerName, &metav1.DeleteOptions{})
 				if err2 != nil {
 					updatedMsg := fmt.Sprintf("Error creating webhook due to error creating route. Also failed to cleanup and delete eventlistener. Errors were: %s and %s", err, err2)
 					RespondError(response, errors.New(updatedMsg), http.StatusInternalServerError)
@@ -844,7 +846,10 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 
 	_, gitOwner, gitRepo, err := r.getGitValues(repo)
 	if err != nil {
-		//DO SOMETHING HERE
+		err := fmt.Errorf("error getting git values for repo %s", repo)
+		logging.Log.Error(err)
+		RespondError(response, err, http.StatusInternalServerError)
+		return
 	}
 	// Single monitor trigger for all triggers on a repo - thus name to use for monitor is
 	monitorTriggerNamePrefix := gitOwner + "." + gitRepo + "-"
@@ -856,8 +861,10 @@ func (r Resource) deleteWebhook(request *restful.Request, response *restful.Resp
 			if len(webhooks) == 1 {
 				logging.Log.Debug("No other pipelines triggered by this GitHub webhook, deleting webhook")
 				// Delete webhook
+				logging.Log.Debugf("Removing hook %s, owner: %s, repo: %s", hook, gitOwner, gitRepo)
 				err := r.RemoveWebhook(hook, gitOwner, gitRepo)
 				if err != nil {
+					logging.Log.Errorf("error removing webhook: %s", err)
 					RespondError(response, err, http.StatusInternalServerError)
 					return
 				}
@@ -931,7 +938,13 @@ func (r Resource) createCertificate(secretName, installNS, callback string) stri
 		return ""
 	}
 
-	csrdata, err = csr.WaitForCertificate(client, csrRecord, 3600*time.Second)
+	// csrdata, err = csr.WaitForCertificate(client, csrRecord, time.Duration(3600*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3600*time.Second))
+	// Even though ctx will be expired, it is good practice to call its
+	// cancellation function in any case. Failure to do so may keep the
+	// context and its parent alive longer than necessary.
+	defer cancel()
+	csrdata, err = csr.WaitForCertificate(ctx, client, csrRecord)
 	if err != nil {
 		logging.Log.Errorf("Failed waiting for certificate: %v", err)
 		return ""
@@ -974,7 +987,7 @@ func (r Resource) createCertificate(secretName, installNS, callback string) stri
 
 func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePrefix string, webhook webhook) error {
 	logging.Log.Debugf("Deleting triggers for %s from the eventlistener", name)
-	el, err := r.TriggersClient.TektonV1alpha1().EventListeners(installNS).Get(eventListenerName, metav1.GetOptions{})
+	el, err := r.TriggersClient.TriggersV1alpha1().EventListeners(installNS).Get(eventListenerName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -1043,7 +1056,7 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePre
 	}
 
 	if len(newTriggers) == 0 {
-		err = r.TriggersClient.TektonV1alpha1().EventListeners(installNS).Delete(el.Name, &metav1.DeleteOptions{})
+		err = r.TriggersClient.TriggersV1alpha1().EventListeners(installNS).Delete(el.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
@@ -1068,7 +1081,7 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePre
 	} else {
 		el.Spec.Triggers = newTriggers
 		logging.Log.Debugf("Update eventlistener: %+v", el.Spec.Triggers)
-		_, err = r.TriggersClient.TektonV1alpha1().EventListeners(installNS).Update(el)
+		_, err = r.TriggersClient.TriggersV1alpha1().EventListeners(installNS).Update(el)
 		if err != nil {
 			logging.Log.Errorf("error updating eventlistener: %s", err)
 			return err
@@ -1076,7 +1089,7 @@ func (r Resource) deleteFromEventListener(name, installNS, monitorTriggerNamePre
 	}
 
 	for binding := range bindingsToRemove {
-		err = r.TriggersClient.TektonV1alpha1().TriggerBindings(installNS).Delete(binding, &metav1.DeleteOptions{})
+		err = r.TriggersClient.TriggersV1alpha1().TriggerBindings(installNS).Delete(binding, &metav1.DeleteOptions{})
 		if err != nil {
 			logging.Log.Errorf("error deleting triggerbinding: %s", binding)
 			logging.Log.Errorf("error: %s", err)
@@ -1108,13 +1121,13 @@ func (r Resource) getHooksForRepo(gitURL string) ([]webhook, error) {
 			hooksForRepo = append(hooksForRepo, hook)
 		}
 	}
-
+	logging.Log.Debugf("hooks for repo %s: %s", gitURL, hooksForRepo)
 	return hooksForRepo, nil
 }
 
 func (r Resource) getWebhooksFromEventListener() ([]webhook, error) {
 	logging.Log.Debugf("Getting webhooks from eventlistener")
-	el, err := r.TriggersClient.TektonV1alpha1().EventListeners(r.Defaults.Namespace).Get(eventListenerName, metav1.GetOptions{})
+	el, err := r.TriggersClient.TriggersV1alpha1().EventListeners(r.Defaults.Namespace).Get(eventListenerName, metav1.GetOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return []webhook{}, nil
@@ -1142,7 +1155,7 @@ func (r Resource) getWebhooksFromEventListener() ([]webhook, error) {
 func (r Resource) getHookFromTrigger(t v1alpha1.EventListenerTrigger, suffix string) webhook {
 	var releaseName, namespace, serviceaccount, pulltask, dockerreg, helmsecret, repo, gitSecret string
 	for _, binding := range t.Bindings {
-		b, err := r.TriggersClient.TektonV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(binding.Name, metav1.GetOptions{})
+		b, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(binding.Name, metav1.GetOptions{})
 		if err != nil {
 			logging.Log.Errorf("Error retrieving webhook information in full - could not find required TriggerBinding %s", binding.Name)
 			t.Name = "Broken webhook! Resources not found"
