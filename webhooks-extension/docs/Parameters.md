@@ -54,7 +54,7 @@ Parameters Available:
 To use these parameters in the triggertemplate, you simply prefix them with the parameter with `params.` (e.g `params.webhooks-tekton-git-org`).  See example triggertemplate below - note that additional params that are used and not listed above will be obtained from the triggerbinding file:
 
 ```
-apiVersion: tekton.dev/v1alpha1
+apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerTemplate
 metadata:
   name: simple-pipeline-template
@@ -82,7 +82,7 @@ spec:
       params:
       - name: url
         value: $(params.webhooks-tekton-docker-registry)/$(params.docker-tag)
-  - apiVersion: tekton.dev/v1alpha1
+  - apiVersion: tekton.dev/v1beta1
     kind: PipelineRun
     metadata:
       generateName: simple-pipeline-run-

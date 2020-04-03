@@ -8,9 +8,14 @@ rules:
   resources:
   - tasks
   - taskruns
-  - eventlisteners
+  verbs:
+  - get
+- apiGroups:
+  - triggers.tekton.dev
+  resources:
   - triggerbindings
   - triggertemplates
+  - eventlisteners
   verbs:
   - get
 - apiGroups:

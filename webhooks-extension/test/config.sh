@@ -2,8 +2,8 @@
 
 ##### Version specs
 # These defaults are known compatible versions
-export TEKTON_VERSION="0.7.0"
-export TEKTON_TRIGGERS_VERSION="0.1.0"
+export TEKTON_VERSION="0.11.0"
+export TEKTON_TRIGGERS_VERSION="0.4.0"
 
 # To prevent Git Hub rate limiting when pulling images\
 export GITHUB_TOKEN=

@@ -33,7 +33,11 @@ Run `npm run lint:fix` to automatically fix a number of types of problem includi
 
 `GO_ENABLED=0 go test github.com/tektoncd/experimental/webhooks-extension/pkg/endpoints -v -race`
 
-To run a specific test:
+and
+
+`GO_ENABLED=0 go test github.com/tektoncd/experimental/webhooks-extension/cmd/interceptor -v -race`
+
+To run a specific test (replace the package name as appropriate):
 `GO_ENABLED=1 go test github.com/tektoncd/experimental/webhooks-extension/pkg/endpoints -v -race -run [test_name]`
 
 ## API Definitions

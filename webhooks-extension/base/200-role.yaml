@@ -63,10 +63,21 @@ rules:
   - pipelines
   - pipelineruns
   - pipelineresources
+  - conditions
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - triggers.tekton.dev
+  resources:
   - eventlisteners
   - triggerbindings
   - triggertemplates
-  - conditions
   verbs:
   - get
   - list
@@ -80,17 +91,6 @@ rules:
   resources:
   - taskruns/finalizers
   - pipelineruns/finalizers
-  verbs:
-  - get
-  - list
-  - create
-  - update
-  - delete
-  - patch
-  - watch
-- apiGroups:
-  - tekton.dev
-  resources:
   - tasks/status
   - clustertasks/status
   - taskruns/status

@@ -9,6 +9,7 @@
 - The `TriggerTemplate` needs to be available in the install namespace with the name `<pipeline-name>-template` (details further below).
 - The two `TriggerBindings` need to available in the install namespace with the names `<pipeline-name>-push-binding` and `<pipeline-name>-pullrequest-binding` (details further below).
 - Limited configurable parameters are added to the trigger in the `EventListener` through the UI, statics could be added in your `TriggerBinding` (details further below).
+- Webhook names must be unique.
 
 
 ## Tekton Triggers Information

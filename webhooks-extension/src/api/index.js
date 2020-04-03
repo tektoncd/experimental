@@ -66,7 +66,7 @@ export function getNamespaces() {
 }
 
 export function getPipelines(namespace) {
-  const uri = `${dashboardAPIRoot}/proxy/apis/tekton.dev/v1alpha1/namespaces/${namespace}/pipelines`;
+  const uri = `${dashboardAPIRoot}/proxy/apis/tekton.dev/v1beta1/namespaces/${namespace}/pipelines`;
   return get(uri);
 }
 

@@ -1,60 +1,59 @@
 # Monitor the pipelinerun status and update the pull request
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: monitor-task
   namespace: tekton-pipelines
 spec:
-  inputs:
-    resources:
+  resources:
+    inputs:
       - name: pull-request
         type: pullRequest
-    params:
-      - name: statusesurl
-        description: The statuses url
-        type: string
-      - name: commentsuccess
-        description: The text to use in the situation where a PipelineRun has succeeded.
-        default: "Success"
-        type: string
-      - name: commentfailure
-        description: The text to use in the situation where a PipelineRun has failed.
-        default: "Failed"
-        type: string
-      - name: commenttimeout
-        description: The text to use in the situation where a PipelineRun has timed out.
-        default: "Unknown"
-        type: string
-      - name: commentmissing
-        description: The text to use in the situation where a PipelineRun cannot be found.
-        default: "Missing"
-        type: string
-      - name: dashboard-url
-        description: The URL to the pipelineruns page of the dashboard
-        default: "http://localhost:9097/"
-        type: string
-      - name: provider
-        description: The git provider, "github" or "gitlab"
-        default: "github"
-        type: string
-      - name: apiurl
-        description: The git api URL for the repository
-        type: string
-      - name: insecure-skip-tls-verify
-        description: Whether or not to verify SSL Certificates from the git server ("true" or "false")
-        default: "false"
-        type: string
-      # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
-      # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
-      # the git status URL to set the status into pending and use this secret to during that request.  
-      - name: secret
-        description: The secret containing the access token to access the git server
-        type: string
-      # Up to here
-  outputs:
-    resources:
+    outputs:
       - name: pull-request
         type: pullRequest
+  params:
+    - name: statusesurl
+      description: The statuses url
+      type: string
+    - name: commentsuccess
+      description: The text to use in the situation where a PipelineRun has succeeded.
+      default: "Success"
+      type: string
+    - name: commentfailure
+      description: The text to use in the situation where a PipelineRun has failed.
+      default: "Failed"
+      type: string
+    - name: commenttimeout
+      description: The text to use in the situation where a PipelineRun has timed out.
+      default: "Unknown"
+      type: string
+    - name: commentmissing
+      description: The text to use in the situation where a PipelineRun cannot be found.
+      default: "Missing"
+      type: string
+    - name: dashboard-url
+      description: The URL to the PipelineRuns page of the dashboard
+      default: "http://localhost:9097/"
+      type: string
+    - name: provider
+      description: The Git provider ("github" or "gitlab")
+      default: "github"
+      type: string
+    - name: apiurl
+      description: The Git API URL for the repository
+      type: string
+    - name: insecure-skip-tls-verify
+      description: Whether or not to verify SSL Certificates from the git server ("true" or "false")
+      default: "false"
+      type: string
+    # This can be deleted after pending status change issue is resolved, that being that AFAIK the pull request resource only modifies
+    # status once everything is complete, so we can only modify status via the pull request resource once.  To get around this we hit
+    # the git status URL to set the status into pending and use this secret to during that request.  
+    - name: secret
+      description: The secret containing the access token to access the git server
+      type: string
+    # Up to here
   steps:
   - name: check
     image: maiwj/kubernetes-python-client:latest
@@ -62,7 +61,7 @@ spec:
       - name: EVENTID
         valueFrom:
           fieldRef:
-            fieldPath: metadata.labels['tekton.dev/triggers-eventid']
+            fieldPath: metadata.labels['triggers.tekton.dev/triggers-eventid']
       - name: COMMENT_SUCCESS
         value: $(inputs.params.commentsuccess)
       - name: COMMENT_FAILURE
@@ -122,14 +121,14 @@ spec:
         statusurl = "$GITAPIURL" + "/" + "$STATUSES_URL" + "?state=pending&name=Tekton&target_url=" + pipelineRunURLPrefix + "/#/pipelineruns"
         resp = requests.post(statusurl, headers = {'Authorization': "Bearer $GITTOKEN"}, verify=verifySSL)
         print(resp)
-      labelToCheck = "tekton.dev/triggers-eventid=$EVENTID"
+      labelToCheck = "triggers.tekton.dev/triggers-eventid=$EVENTID"
       runsPassed = []
       runsFailed = []
       runsIncomplete = []
       runsMissing = []
       failed = 0
       i = range(180)
-      initial_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)["items"]
+      initial_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1beta1", "pipelineruns", label_selector=labelToCheck)["items"]
       for x in i:
           time.sleep( 10 )
           runsPassed = []
@@ -141,8 +140,8 @@ spec:
           # It's important to delete the PipelineRun only after the monitor task is already running because 
           # the first thing it's going to do is figure out the PipelineRuns to watch over
           failed = 0
-          found_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1alpha1", "pipelineruns", label_selector=labelToCheck)["items"]
           
+          found_runs = api_instance.list_cluster_custom_object("tekton.dev", "v1beta1", "pipelineruns", label_selector=labelToCheck)["items"]
           missingRuns = diff(initial_runs, found_runs)
           if len(missingRuns) > 0:
             for missingRun in missingRuns:
@@ -163,15 +162,15 @@ spec:
               missingLink = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelineruns/"
               missingDataEntry = "[**$COMMENT_MISSING**](" + missingLink + ") | " + pipeline + " | " + pr + " | " + namespace
               if missingDataEntry in runsMissing:
-                runsMissing.remove(data)
-              print("Checking pipelinerun " + pr + " in namespace " + namespace)
+                runsMissing.remove(missingDataEntry)
+              print("Checking PipelineRun " + pr + " in namespace " + namespace)
               if entry["status"]["conditions"][0]["status"] == u'True' and entry["status"]["conditions"][0]["type"] == u'Succeeded':
                 print("Success - pipelinerun " + pr + " in namespace " + namespace)
                 runsPassed.append("[**$COMMENT_SUCCESS**](" + link + ") | " + pipeline + " | " +  pr + " | " + namespace)
                 continue
               if entry["status"]["conditions"][0]["status"] == u'False' and entry["status"]["conditions"][0]["type"] == u'Succeeded':
                 failed =+ 1
-                print("Failed - pipelinerun " + pr + " in namespace " + namespace)
+                print("Failed - PipelineRun " + pr + " in namespace " + namespace)
                 runsFailed.append("[**$COMMENT_FAILURE**](" + link + ") | " + pipeline + " | " + pr + " | " + namespace)
                 continue
               link = pipelineRunURLPrefix + "/#/namespaces/" + namespace + "/pipelineruns/" + pr
@@ -190,7 +189,7 @@ spec:
         gitPRcode = "failure"
       if len(runsIncomplete) > 0:
         print("Some PipelineRuns had not completed when the monitor reached its timeout")
-        gitPRdescription = "timed out monitoring pipeline runs"
+        gitPRdescription = "timed out monitoring PipelineRuns"
         gitPRcode = "error"
 
       results = runsPassed + runsFailed + runsIncomplete + runsMissing
@@ -199,7 +198,8 @@ spec:
         gitPRdescription = "No PipelineRuns were ever found for my PullRequest!"
         gitPRcode = "error"
         data = "**$COMMENT_MISSING** | N/A | No PipelineRuns were ever detected, failing the build | N/A"
-        runsMissing.append(data)
+        runsMissing.append(data)    
+             
         results = runsMissing
 
       comment = ("## Tekton Status Report \n\n"
