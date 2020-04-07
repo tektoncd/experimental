@@ -16,7 +16,6 @@ apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
   name: pipeline0
-  namespace: tekton-pipelines
 spec:
   params:
     - default: /workspace/git-source
@@ -27,7 +26,7 @@ spec:
       description: The directory from which resources are to be applied
       name: apply-directory
       type: string
-    - default: tekton-pipelines
+    - default: {{ .Release.Namespace | quote }}
       description: The namespace in which to create the resources being imported
       name: target-namespace
       type: string
