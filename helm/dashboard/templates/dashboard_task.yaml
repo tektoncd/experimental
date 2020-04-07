@@ -1,0 +1,48 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: pipeline0-task
+  namespace: tekton-pipelines
+spec:
+  params:
+    - default: /workspace/git-source
+      description: The path to the resource files to apply
+      name: pathToResourceFiles
+      type: string
+    - default: .
+      description: The directory from which resources are to be applied
+      name: apply-directory
+      type: string
+    - default: tekton-pipelines
+      description: The namespace where created resources will go
+      name: target-namespace
+      type: string
+  resources:
+    inputs:
+      - name: git-source
+        type: git
+  steps:
+    - args:
+        - apply
+        - -f
+        - $(inputs.params.pathToResourceFiles)/$(inputs.params.apply-directory)
+        - -n
+        - $(inputs.params.target-namespace)
+      command:
+        - kubectl
+      image: lachlanevenson/k8s-kubectl@sha256:95043fa03abd84fe1aed0b72f7991b379fdcd28fa77a1a163ec9ecd04bc33358
+      name: kubectl-apply
