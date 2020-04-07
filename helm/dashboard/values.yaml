@@ -1,0 +1,80 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# version -- Tekton dashboard version used to add labels on deployments, pods and services
+version: v0.6.0
+
+# nameOverride -- Partially override resource generated names
+nameOverride: ""
+
+# fullnameOverride -- Fully override resource generated names
+fullnameOverride: ""
+
+rbac:
+  # rbac.create -- Create RBAC resources
+  create: true
+
+  # rbac.serviceAccountName -- Name of the service account to use when rbac.create is false
+  serviceAccountName:
+
+customResourceDefinitions:
+  # customResourceDefinitions.create -- Create CRDs
+  create: true
+
+dashboard:
+  image:
+    # dashboard.image.repository -- Dashboard docker image repository
+    repository: gcr.io/tekton-releases/github.com/tektoncd/dashboard/cmd/dashboard
+
+    # dashboard.image.tag -- Dashboard docker image tag
+    tag: v0.6.0
+
+    # dashboard.image.pullPolicy -- Dashboard docker image pull policy
+    pullPolicy: IfNotPresent
+
+  # dashboard.readOnly -- Drives running the dashboard in read only mode
+  readOnly: false
+
+  # dashboard.annotations -- Dashboard pod annotations
+  # @default -- See [values.yaml](./values.yaml)
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
+
+  # dashboard.nodeSelector -- Dashboard node selector
+  nodeSelector: {}
+
+  # dashboard.affinity -- Dashboard affinity rules
+  affinity: {}
+
+  # dashboard.tolerations -- Dashboard tolerations
+  tolerations: []
+
+  # dashboard.resources -- Dashboard resource limits and requests
+  resources: {}
+
+  # dashboard.securityContext -- Dashboard pods security context
+  securityContext: {}
+
+  service:
+    # dashboard.service.type -- Dashboard service type
+    type: ClusterIP
+
+    # dashboard.service.annotations -- Dashboard service annotations
+    annotations: {}
+
+    # dashboard.service.port -- Dashboard service port
+    port: 9097
+
+    # dashboard.service.service.portName -- Dashboard service port name
+    portName: http

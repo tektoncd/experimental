@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: pipeline
+name: dashboards
 apiVersion: v1
 version: 0.0.1
-appVersion: 0.11.0
-home: https://github.com/tektoncd/pipeline
+appVersion: 0.6.0
+home: https://github.com/tektoncd/dashboard
 keywords:
   - helm
-  - tekton pipeline
+  - tekton dashboard
 maintainers:
   - name: eddycharly
     email: ceb@agriconomie.com
 description: |
-  This chart bootstraps installation of [tekton pipeline](https://github.com/tektoncd/pipeline).
+  This chart bootstraps installation of [tekton dashboard](https://github.com/tektoncd/dashboard).
