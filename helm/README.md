@@ -21,7 +21,7 @@ The following charts are available, please look in the chart directories for the
 | Tekton chart | Chart link |
 |---|---|
 | Tekton Pipelines | [chart documentation](./pipeline/README.md) |
-| Tekton Dashboard | TODO |
+| Tekton Dashboard | [chart documentation](./dashboard/README.md) |
 | Tekton Triggers | TODO |
 | Tekton Operator | TODO |
 
