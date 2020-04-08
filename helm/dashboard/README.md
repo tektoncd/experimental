@@ -11,10 +11,17 @@ This helm chart is a lightweight way to deploy, configure and run Tekton Dashboa
 * [Helm](https://helm.sh/) v2 or v3
 * Kubernetes >= 1.15 (it's driven by the version of Tekton Pipelines installed)
 * Depending on the configuration you will need admin access to be able to install the CRDs
+* Tekton Pipelines deployed in the target cluster (see [Tekton Pipelines Helm Chart](../pipeline/README.md))
 
 ## Description
 
-TODO
+This chart deploys the Tekton Dashboard. It should run on k8s as well as OpenShift.
+
+It includes various options to create rbac resources, control pods placement and resources, etc...
+
+All options are documented in the [Chart Values](#chart-values) section.
+
+Various configuration examples are document in the [Try it out](#try-it-out) section.
 
 ## Installing
 
@@ -109,7 +116,54 @@ You can look directly at the [values.yaml](./values.yaml) file to look at the op
 
 ## Try it out
 
-TODO
+This chart should deploy correctly with default values.
+
+You will find examples below of how to customize the deployment of a release with various options. The list of examples is by no means exhaustive, it tries to cover the most used cases.
+
+If you feel something is incomplete, missing or incorrect please open an issue and we'll do our best to improve this documentation.
+
+### Deploy Tekton Pipelines
+
+Before deploying Tekton Dashboard you should have Tekton Pipelines deployed.
+
+You can use Helm to deploy Tekton Pipelines on you cluster, see [Installing](../pipeline/README.md#installing) instructions.
+
+### Configure pod resources
+
+Create a yaml file called `pod-resources.yaml` looking like this (the name doesn't really matters):
+
+```yaml
+dashboard:
+  resources:
+    requests:
+      cpu: 0.5
+      memory: 128m
+    limits:
+      cpu: 1
+      memory: 256m
+```
+
+Use the previously created file to pass the values to helm:
+
+```bash
+# This will install Tekton Dashboard in the tekton namespace (with a my-dashboard release name)
+
+# Helm v2
+helm upgrade --install my-dashboard --namespace tekton tekton/dashboard --values pod-resources.yaml
+# Helm v3
+helm upgrade --install my-dashboard --namespace tekton tekton/dashboard --values pod-resources.yaml --set customResourceDefinitions.create=false
+```
+
+### Deploy a read only dashboard
+
+```bash
+# This will install Tekton Dashboard in the tekton namespace (with a my-dashboard release name)
+
+# Helm v2
+helm upgrade --install my-dashboard --namespace tekton tekton/dashboard --set dashboard.readOnly=true
+# Helm v3
+helm upgrade --install my-dashboard --namespace tekton tekton/dashboard --set dashboard.readOnly=true --set customResourceDefinitions.create=false
+```
 
 ---
 
