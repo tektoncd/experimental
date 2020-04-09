@@ -1,17 +1,16 @@
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: build-tekton-webhooks-extension
 spec:
-  inputs:
-    resources:
-    - name: source
-      type: git
-      targetPath: go/src/github.com/tektoncd/experimental
-  outputs:
-    resources:
-    - name: source
-      type: git
+  resources:
+    inputs:
+      - name: source
+        type: git
+        targetPath: go/src/github.com/tektoncd/experimental
+    outputs:
+      - name: source
+        type: git
   steps:
   - name: build-static
     image: gcr.io/tekton-releases/tests/test-runner@sha256:a4a64b2b70f85a618bbbcc6c0b713b313b2e410504dee24c9f90ec6fe3ebf63f
@@ -51,6 +50,6 @@ spec:
     args:
     - |
       # Further to https://github.com/tektoncd/pipeline/pull/1122 it is necessary to copy files into $(outputs.resources.source.path)
-      echo "Input source path=$(inputs.resources.source.path)" 
-      echo "Output source path=$(outputs.resources.source.path)"
-      cp -r $(inputs.resources.source.path)/* $(outputs.resources.source.path)
+      echo "Input source path=$(resources.inputs.source.path)" 
+      echo "Output source path=$(resources.outputs.source.path)"
+      cp -r $(resources.inputs.source.path)/* $(resources.outputs.source.path)
