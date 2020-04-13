@@ -14,7 +14,7 @@
 
 name: dashboard
 apiVersion: v1
-version: 0.0.1
+version: 0.6.0
 appVersion: 0.6.0
 home: https://github.com/tektoncd/dashboard
 keywords:

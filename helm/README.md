@@ -25,6 +25,14 @@ The following charts are available, please look in the chart directories for the
 | Tekton Triggers | [chart documentation](./triggers/README.md) |
 | Tekton Operator | TODO |
 
+## Charts versioning
+
+Charts versions use the same major and minor version as the Tekton target component they bootstrap.
+
+Patch is kept to increment on bug fixes or chart improvements.
+
+In any case, the `appVersion` in the chart description is set to the exact version of the full Tekton target component.
+
 ## Kubernetes Versions
 
 The kubernetes versions compatible with the charts are driven by the version of Tekton to be deployed.
