@@ -236,7 +236,7 @@
   version = "v0.11.0"
 
 [[projects]]
-  digest = "1:6f0a8462160c7a87d9cdb98961b1e1910e6e91d448c8fb3e8923472a2c15e56a"
+  digest = "1:65ea6f76fb07726cf5c8ed73381e06e330152a1ee4f9a36957afdf40499c2280"
   name = "github.com/tektoncd/triggers"
   packages = [
     "pkg/apis/triggers/v1alpha1",
@@ -247,8 +247,8 @@
     "pkg/client/clientset/versioned/typed/triggers/v1alpha1/fake",
   ]
   pruneopts = "UT"
-  revision = "8553105c5d93e9a4a14307f40c53c7ec4dea5383"
-  version = "v0.4.0-rc1"
+  revision = "b85308d5da5af5e13a4f7c01f3c3baef3d1368bd"
+  version = "v0.4.0"
 
 [[projects]]
   digest = "1:4be983745b731611c52a01c36fff692ca62ca7793386c8bf3ade886cce0450a2"
