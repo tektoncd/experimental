@@ -1,0 +1,4 @@
+Tekton triggers have been installed successfully.
+To verify that the controller has started, run:
+
+  kubectl --namespace={{ .Release.Namespace }} get pods -l "app.kubernetes.io/name={{ template "triggers.name" . }},app.kubernetes.io/component=controller,app.kubernetes.io/instance={{ .Release.Name }}"

@@ -22,7 +22,7 @@ The following charts are available, please look in the chart directories for the
 |---|---|
 | Tekton Pipelines | [chart documentation](./pipeline/README.md) |
 | Tekton Dashboard | [chart documentation](./dashboard/README.md) |
-| Tekton Triggers | TODO |
+| Tekton Triggers | [chart documentation](./triggers/README.md) |
 | Tekton Operator | TODO |
 
 ## Kubernetes Versions
