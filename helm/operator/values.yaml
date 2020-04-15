@@ -1,0 +1,67 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# version -- Tekton triggers version used to add labels on deployments, pods and services
+version: v0.0.0
+
+# nameOverride -- Partially override resource generated names
+nameOverride: ""
+
+# fullnameOverride -- Fully override resource generated names
+fullnameOverride: ""
+
+rbac:
+  # rbac.create -- Create RBAC resources
+  create: true
+
+  # rbac.serviceAccountName -- Name of the service account to use when rbac.create is false
+  serviceAccountName:
+
+customResourceDefinitions:
+  # customResourceDefinitions.create -- Create CRDs
+  create: true
+
+controller:
+  image:
+    # controller.image.repository -- Operator docker image repository
+    repository: gcr.io/tekton-releases/github.com/tektoncd/operator/cmd/manager
+
+    # controller.image.tag -- Operator docker image tag
+    tag: v0.6.0
+
+    # controller.image.pullPolicy -- Operator docker image pull policy
+    pullPolicy: IfNotPresent
+
+  # controller.readOnly -- Drives running the Operator in read only mode
+  readOnly: false
+
+  # controller.annotations -- Operator pod annotations
+  # @default -- See [values.yaml](./values.yaml)
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
+
+  # controller.nodeSelector -- Operator node selector
+  nodeSelector: {}
+
+  # controller.affinity -- Operator affinity rules
+  affinity: {}
+
+  # controller.tolerations -- Operator tolerations
+  tolerations: []
+
+  # controller.resources -- Operator resource limits and requests
+  resources: {}
+
+  # controller.securityContext -- Operator pods security context
+  securityContext: {}
