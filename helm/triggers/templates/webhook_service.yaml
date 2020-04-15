@@ -1,0 +1,55 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- if .Values.webhook.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "triggers.fullname" . }}-webhook
+  labels:
+    app.kubernetes.io/name: {{ template "triggers.name" . }}
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ template "triggers.chart" . }}
+    triggers.tekton.dev/release: {{ .Values.version | quote }}
+    version: {{ .Values.version | quote }}
+  {{- with .Values.webhook.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.webhook.service.type }}
+  ports:
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+    {{- if .Values.webhook.metrics.enabled }}
+    - name: {{ .Values.webhook.metrics.portName }}
+      port: {{ .Values.webhook.metrics.port }}
+      protocol: TCP
+      targetPort: 9090
+    {{- end }}
+    {{- if .Values.webhook.profiling.enabled }}
+    - name: {{ .Values.webhook.profiling.portName }}
+      port: {{ .Values.webhook.profiling.port }}
+      protocol: TCP
+      targetPort: 8008
+    {{- end }}
+  selector:
+    app.kubernetes.io/name: {{ template "triggers.name" . }}
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

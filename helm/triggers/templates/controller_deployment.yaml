@@ -1,0 +1,93 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "triggers.fullname" . }}-controller
+  labels:
+    app.kubernetes.io/name: {{ template "triggers.name" . }}
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ template "triggers.chart" . }}
+    triggers.tekton.dev/release: {{ .Values.version | quote }}
+    version: {{ .Values.version | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "triggers.name" . }}
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      {{- with .Values.controller.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/name: {{ template "triggers.name" . }}
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        helm.sh/chart: {{ template "triggers.chart" . }}
+        triggers.tekton.dev/release: {{ .Values.version | quote }}
+        version: {{ .Values.version | quote }}
+    spec:
+      serviceAccountName: {{ template "triggers.serviceAccountName" . }}
+      {{- with .Values.controller.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: controller
+          image: {{ printf "%s:%s" .Values.controller.image.repository .Values.controller.image.tag | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | quote }}
+          args:
+          {{- range .Values.controller.args }}
+            - {{ . | quote }}
+          {{- end }}
+          env:
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: {{ template "triggers.fullname" . }}-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: {{ template "triggers.fullname" . }}-observability
+            - name: METRICS_DOMAIN
+              value: tekton.dev/triggers
+          {{- with .Values.controller.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.controller.metrics.enabled }}
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+          {{- end }}
