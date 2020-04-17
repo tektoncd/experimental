@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package tekton;
+
+option go_package = "./proto";
+
+service Results {
+  rpc InsertTaskRun (InsertTaskRunRequest) returns (TaskRun) {}
+  rpc UpdateTaskRun (UpdateTaskRunRequest) returns (TaskRun) {}
+  rpc GetTaskRun    (GetTaskRunRequest)    returns (TaskRun) {}
+  rpc ListTaskRuns  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
+}
+
+message InsertTaskRunRequest {
+	TaskRun task_run = 1;
+	// TODO: Accept some unique cluster identifier?
+}
+
+message UpdateTaskRunRequest {
+	TaskRun task_run = 1;
+}
+
+message GetTaskRunRequest {
+	string uid = 1;
+}
+
+message ListTaskRunsRequest {
+	// TODO: document query format.
+	string query = 1;
+	// TODO: page_token, etc.
+}
+
+message ListTaskRunsResponse {
+	repeated TaskRun items = 1;
+	// TODO: next_page_token, etc.
+}
+
+message TaskRun {
+	string uid = 1;
+	string name = 2;
+	string namespace = 3;
+	// TODO: Add the rest of the fields. Generate this from Go structs?
+}

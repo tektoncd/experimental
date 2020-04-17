@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tekton-results-api
+  namespace: tekton-pipelines
+  labels:
+    app.kubernetes.io/name: tekton-results
+    app.kubernetes.io/component: api
+    pipeline.tekton.dev/release: "devel"
+    version: "devel"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tekton-results-api
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+      labels:
+        app: tekton-results-api
+        app.kubernetes.io/name: tekton-results
+        app.kubernetes.io/component: api
+        pipeline.tekton.dev/release: "devel"
+        version: "devel"
+    spec:
+      serviceAccountName: tekton-pipelines-controller
+      containers:
+      - name: tekton-results-api
+        image: ko://github.com/tektoncd/experimental/results/cmd/api
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: tekton-results-api-service
+  namespace: tekton-pipelines
+spec:
+  selector:
+    app: tekton-results-api
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 50051
