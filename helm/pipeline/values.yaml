@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # version -- Tekton pipelines version used to add labels on deployments, pods and services
-version: v0.11.1
+version: v0.11.2
 
 # nameOverride -- Partially override resource generated names
 nameOverride: ""
@@ -42,7 +42,7 @@ controller:
     repository: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/controller
 
     # controller.image.tag -- Controller docker image tag
-    tag: v0.11.1
+    tag: v0.11.2
 
     # controller.image.pullPolicy -- Controller docker image pull policy
     pullPolicy: IfNotPresent
@@ -71,11 +71,11 @@ controller:
   # @default -- See [values.yaml](./values.yaml)
   args:
     - -kubeconfig-writer-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/kubeconfigwriter:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/kubeconfigwriter:v0.11.2
     - -creds-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/creds-init:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/creds-init:v0.11.2
     - -git-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.11.2
     - -nop-image
     - tianon/true
     - -shell-image
@@ -83,13 +83,13 @@ controller:
     - -gsutil-image
     - google/cloud-sdk
     - -entrypoint-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/entrypoint:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/entrypoint:v0.11.2
     - -imagedigest-exporter-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/imagedigestexporter:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/imagedigestexporter:v0.11.2
     - -pr-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/pullrequest-init:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/pullrequest-init:v0.11.2
     - -build-gcs-fetcher-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/vendor/github.com/googlecloudplatform/cloud-builders/gcs-fetcher/cmd/gcs-fetcher:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/vendor/github.com/googlecloudplatform/cloud-builders/gcs-fetcher/cmd/gcs-fetcher:v0.11.2
 
   config:
     # controller.config.artifactBucket -- Controller configuration for artifact bucket (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
@@ -200,7 +200,7 @@ webhook:
     repository: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/webhook
 
     # webhook.image.tag -- Webhook docker image tag
-    tag: v0.11.1
+    tag: v0.11.2
 
     # webhook.image.pullPolicy -- Webhook docker image pull policy
     pullPolicy: IfNotPresent
