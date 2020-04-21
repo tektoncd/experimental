@@ -2,6 +2,8 @@
 
 # This script is meant to be run inside a container running jnorwood/helm-docs image
 
+set -euo pipefail
+
 apk add -u git
 
 helm-docs
