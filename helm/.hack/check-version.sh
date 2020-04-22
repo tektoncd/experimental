@@ -7,7 +7,15 @@ set -euo pipefail
 apk add -u git tree
 
 EXIT_CODE=0
-LAST_RELEASE_HASH=$(git merge-base master HEAD)
+
+# LAST_COMMIT_HASH is the current merge commit
+# LAST_RELEASE_HASH is the first parent of the merge commit
+
+LAST_COMMIT_HASH=$(git rev-parse HEAD)
+LAST_RELEASE_HASH=$(git rev-parse $LAST_COMMIT_HASH^)
+
+echo "Last commit: $LAST_COMMIT_HASH"
+echo "Last release: $LAST_RELEASE_HASH"
 
 cd helm
 
@@ -25,14 +33,13 @@ for chart in */; do
 
     ## If no DIFF since LAST_RELEASE_HASH then it has not been modified 
 
-    DIFF=$(git --no-pager diff master...HEAD -- $chart)
+    DIFF=$(git --no-pager diff $LAST_RELEASE_HASH...$LAST_COMMIT_HASH -- $chart)
 
     if [[ -z "$DIFF" ]]; then
         echo "✅ Chart $chart had no changes since the last release"
         continue
     fi
 
-    LAST_COMMIT_HASH=$(git --no-pager log --pretty=tformat:"%H" -- $chart | awk 'FNR <= 1')
     LAST_RELEASE_CHART_VERSION=$(git --no-pager show $LAST_RELEASE_HASH:helm/"$chart"Chart.yaml | grep 'version:' | xargs | cut -d' ' -f2 | tr -d '[:space:]')
     LAST_COMMIT_CHART_VERSION=$(git --no-pager show $LAST_COMMIT_HASH:helm/"$chart"Chart.yaml | grep 'version:' | xargs | cut -d' ' -f2 | tr -d '[:space:]')
 
@@ -45,4 +52,3 @@ for chart in */; do
 done
 
 exit $EXIT_CODE
-
