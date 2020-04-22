@@ -73,23 +73,23 @@ function node_npm_install() {
     return ${failed}
 }
 
-function node_test() { 
+function node_test() {
     local failed=0
     echo "Running node tests from $(pwd)"
     node_npm_install || failed=1
     npm run lint || failed=1
     npm run test ci || failed=1
     echo ""
-    
+
     echo "Checking bundle hash matches"
     npm run build
-  
+
     hash=$(ls -t dist/extension.*.js | head -1 | cut -f 2 -d '.')
     echo "LATEST HASH: $hash"
 
     yaml=$(grep -i "tekton-dashboard-bundle-location:" base/300-extension-service.yaml | cut -f 2 -d ':' | cut -f 2 -d '.')
     echo "YAML HASH in base/300-extension-service.yaml: $yaml"
-    
+
     if [[ $hash != $yaml ]]; then
       echo "######## FAIL/ERROR ########"
       echo "--------------------------------------------------------------------------"
@@ -97,7 +97,7 @@ function node_test() {
       echo "--------------------------------------------------------------------------"
       failed=1
     fi
-    
+
     return ${failed}
 }
 
@@ -129,7 +129,7 @@ function pre_integration_tests() {
 # June 28th 2019: work around https://github.com/tektoncd/plumbing/issues/44
 function unit_tests() {
   local failed=0
-  echo "Using overridden unit_tests"  
+  echo "Using overridden unit_tests"
   go test -v -race ./... || failed=1
   echo "unit_tests returning $@"
   return ${failed}
