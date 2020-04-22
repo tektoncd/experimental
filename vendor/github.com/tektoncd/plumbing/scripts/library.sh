@@ -346,12 +346,7 @@ function update_licenses() {
 # Run dep-collector to check for forbidden liceses.
 # Parameters: $1...$n - directories and files to inspect.
 function check_licenses() {
-  if [ -f "${REPO_ROOT_DIR}/go.mod" ]; then
-    go-licenses check ./...
-  else
-    # Check that we don't have any forbidden licenses in our images.
-    run_go_tool ./vendor/github.com/knative/test-infra/tools/dep-collector dep-collector -check $@
-  fi
+  go-licenses check ./...
 }
 
 # Run the given linter on the given files, checking it exists first.
