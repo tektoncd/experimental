@@ -12,22 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-## TODO
-
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: webhook-certs
-#   namespace: tekton-pipelines
-#   labels:
-#     pipeline.tekton.dev/release: devel
-# # The data is populated at install time.
-# ---
 {{- if .Values.webhook.enabled }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: {{ template "pipeline.fullname" . }}-validation
+  name: validation.webhook.pipeline.tekton.dev
   labels:
     app.kubernetes.io/name: {{ template "pipeline.name" . }}
     app.kubernetes.io/component: admission
@@ -50,7 +39,7 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: {{ template "pipeline.fullname" . }}-webhook
+  name: webhook.pipeline.tekton.dev
   labels:
     app.kubernetes.io/name: {{ template "pipeline.name" . }}
     app.kubernetes.io/component: admission
@@ -73,7 +62,7 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: {{ template "pipeline.fullname" . }}-config
+  name: config.webhook.pipeline.tekton.dev
   labels:
     app.kubernetes.io/name: {{ template "pipeline.name" . }}
     app.kubernetes.io/component: admission

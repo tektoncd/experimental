@@ -84,7 +84,7 @@ helm uninstall my-pipeline --namespace tekton
 
 ## Version
 
-Current chart version is `0.11.1`
+Current chart version is `0.11.3`
 
 ## Chart Values
 
@@ -103,7 +103,7 @@ Current chart version is `0.11.1`
 | `controller.config.observability` | object | Controller configuration for observability (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md) | See [values.yaml](./values.yaml) |
 | `controller.image.pullPolicy` | string | Controller docker image pull policy | `"IfNotPresent"` |
 | `controller.image.repository` | string | Controller docker image repository | `"gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/controller"` |
-| `controller.image.tag` | string | Controller docker image tag | `"v0.11.1"` |
+| `controller.image.tag` | string | Controller docker image tag | `"v0.11.3"` |
 | `controller.metrics.enabled` | bool | Enable controller metrics service | `true` |
 | `controller.metrics.port` | int | Controller metrics service port | `9090` |
 | `controller.metrics.portName` | string |  | `"metrics"` |
@@ -119,13 +119,13 @@ Current chart version is `0.11.1`
 | `podSecurityPolicy.enabled` | bool | Enable pod security policy | `false` |
 | `rbac.create` | bool | Create RBAC resources | `true` |
 | `rbac.serviceAccountName` | string | Name of the service account to use when rbac.create is false | `nil` |
-| `version` | string | Tekton pipelines version used to add labels on deployments, pods and services | `"v0.11.1"` |
+| `version` | string | Tekton pipelines version used to add labels on deployments, pods and services | `"v0.11.3"` |
 | `webhook.affinity` | object | Webhook affinity rules | `{}` |
 | `webhook.annotations` | object | Webhook pod annotations | See [values.yaml](./values.yaml) |
 | `webhook.enabled` | bool | Enable webhook | `true` |
 | `webhook.image.pullPolicy` | string | Webhook docker image pull policy | `"IfNotPresent"` |
 | `webhook.image.repository` | string | Webhook docker image repository | `"gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/webhook"` |
-| `webhook.image.tag` | string | Webhook docker image tag | `"v0.11.1"` |
+| `webhook.image.tag` | string | Webhook docker image tag | `"v0.11.3"` |
 | `webhook.metrics.enabled` | bool | Enable webhook metrics service | `true` |
 | `webhook.metrics.port` | int | Webhook metrics service port | `9090` |
 | `webhook.metrics.portName` | string | Webhook metrics service port name | `"http-metrics"` |
