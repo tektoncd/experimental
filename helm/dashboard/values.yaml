@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # version -- Tekton dashboard version used to add labels on deployments, pods and services
-version: v0.6.0
+version: v0.6.1
 
 # nameOverride -- Partially override resource generated names
 nameOverride: ""
@@ -38,7 +38,7 @@ dashboard:
     repository: gcr.io/tekton-releases/github.com/tektoncd/dashboard/cmd/dashboard
 
     # dashboard.image.tag -- Dashboard docker image tag
-    tag: v0.6.0
+    tag: v0.6.1
 
     # dashboard.image.pullPolicy -- Dashboard docker image pull policy
     pullPolicy: IfNotPresent
@@ -78,3 +78,13 @@ dashboard:
 
     # dashboard.service.service.portName -- Dashboard service port name
     portName: http
+
+  ingress:
+    # dashboard.ingress.enabled -- Enable dashboard ingress
+    enabled: false
+
+    # dashboard.ingress.annotations -- Dashboard ingress annotations
+    annotations: {}
+
+    # dashboard.ingress.hosts -- Dashboard ingress host names
+    hosts: []

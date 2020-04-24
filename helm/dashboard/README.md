@@ -83,7 +83,7 @@ helm uninstall my-dashboard --namespace tekton
 
 ## Version
 
-Current chart version is `0.6.0`
+Current chart version is `0.6.1`
 
 ## Chart Values
 
@@ -95,7 +95,10 @@ Current chart version is `0.6.0`
 | `dashboard.annotations` | object | Dashboard pod annotations | See [values.yaml](./values.yaml) |
 | `dashboard.image.pullPolicy` | string | Dashboard docker image pull policy | `"IfNotPresent"` |
 | `dashboard.image.repository` | string | Dashboard docker image repository | `"gcr.io/tekton-releases/github.com/tektoncd/dashboard/cmd/dashboard"` |
-| `dashboard.image.tag` | string | Dashboard docker image tag | `"v0.6.0"` |
+| `dashboard.image.tag` | string | Dashboard docker image tag | `"v0.6.1"` |
+| `dashboard.ingress.annotations` | object | Dashboard ingress annotations | `{}` |
+| `dashboard.ingress.enabled` | bool | Enable dashboard ingress | `false` |
+| `dashboard.ingress.hosts` | list | Dashboard ingress host names | `[]` |
 | `dashboard.nodeSelector` | object | Dashboard node selector | `{}` |
 | `dashboard.readOnly` | bool | Drives running the dashboard in read only mode | `false` |
 | `dashboard.resources` | object | Dashboard resource limits and requests | `{}` |
@@ -109,7 +112,7 @@ Current chart version is `0.6.0`
 | `nameOverride` | string | Partially override resource generated names | `""` |
 | `rbac.create` | bool | Create RBAC resources | `true` |
 | `rbac.serviceAccountName` | string | Name of the service account to use when rbac.create is false | `nil` |
-| `version` | string | Tekton dashboard version used to add labels on deployments, pods and services | `"v0.6.0"` |
+| `version` | string | Tekton dashboard version used to add labels on deployments, pods and services | `"v0.6.1"` |
 
 
 You can look directly at the [values.yaml](./values.yaml) file to look at the options and their default values.
