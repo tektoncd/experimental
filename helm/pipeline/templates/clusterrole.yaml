@@ -64,7 +64,8 @@ rules:
       - watch
   - apiGroups: 
       - admissionregistration.k8s.io
-    resources: 
+    resources:
+      - validatingwebhookconfigurations
       - mutatingwebhookconfigurations
     verbs: 
       - get

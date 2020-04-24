@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # version -- Tekton pipelines version used to add labels on deployments, pods and services
-version: v0.11.1
+version: v0.11.3
 
 # nameOverride -- Partially override resource generated names
 nameOverride: ""
@@ -42,7 +42,7 @@ controller:
     repository: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/controller
 
     # controller.image.tag -- Controller docker image tag
-    tag: v0.11.1
+    tag: v0.11.3
 
     # controller.image.pullPolicy -- Controller docker image pull policy
     pullPolicy: IfNotPresent
@@ -71,11 +71,11 @@ controller:
   # @default -- See [values.yaml](./values.yaml)
   args:
     - -kubeconfig-writer-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/kubeconfigwriter:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/kubeconfigwriter:v0.11.3
     - -creds-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/creds-init:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/creds-init:v0.11.3
     - -git-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.11.3
     - -nop-image
     - tianon/true
     - -shell-image
@@ -83,13 +83,13 @@ controller:
     - -gsutil-image
     - google/cloud-sdk
     - -entrypoint-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/entrypoint:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/entrypoint:v0.11.3
     - -imagedigest-exporter-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/imagedigestexporter:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/imagedigestexporter:v0.11.3
     - -pr-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/pullrequest-init:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/pullrequest-init:v0.11.3
     - -build-gcs-fetcher-image
-    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/vendor/github.com/googlecloudplatform/cloud-builders/gcs-fetcher/cmd/gcs-fetcher:v0.11.1
+    - gcr.io/tekton-releases/github.com/tektoncd/pipeline/vendor/github.com/googlecloudplatform/cloud-builders/gcs-fetcher/cmd/gcs-fetcher:v0.11.3
 
   config:
     # controller.config.artifactBucket -- Controller configuration for artifact bucket (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
@@ -102,7 +102,41 @@ controller:
 
     # controller.config.defaults -- Controller configuration for default values (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
     # @default -- See [values.yaml](./values.yaml)
-    defaults: {}
+    defaults:
+      _example: |-
+        ################################
+        #                              #
+        #    EXAMPLE CONFIGURATION     #
+        #                              #
+        ################################
+
+        # This block is not actually functional configuration,
+        # but serves to illustrate the available configuration
+        # options and document them in a way that is accessible
+        # to users that `kubectl edit` this config map.
+        #
+        # These sample configuration options may be copied out of
+        # this example block and unindented to be in the data block
+        # to actually change the configuration.
+
+        # default-timeout-minutes contains the default number of
+        # minutes to use for TaskRun and PipelineRun, if none is specified.
+        default-timeout-minutes: "60"  # 60 minutes
+
+        # default-service-account contains the default service account name
+        # to use for TaskRun and PipelineRun, if none is specified.
+        default-service-account: "default"
+
+        # default-managed-by-label-value contains the default value given to the
+        # "app.kubernetes.io/managed-by" label applied to all Pods created for
+        # TaskRuns. If a user's requested TaskRun specifies another value for this
+        # label, the user's request supercedes.
+        default-managed-by-label-value: "tekton-pipelines"
+
+        # default-pod-template contains the default pod template to use
+        # TaskRun and PipelineRun, if none is specified. If a pod template
+        # is specified, the default pod template is ignored.
+        # default-pod-template:
 
     # controller.config.featureFlags -- Controller configuration for feature flags
     # @default -- See [values.yaml](./values.yaml)
@@ -172,7 +206,40 @@ controller:
 
     # controller.config.observability -- Controller configuration for observability (see https://github.com/tektoncd/pipeline/blob/master/docs/install.md)
     # @default -- See [values.yaml](./values.yaml)
-    observability: {}
+    observability:
+      _example: |
+        ################################
+        #                              #
+        #    EXAMPLE CONFIGURATION     #
+        #                              #
+        ################################
+
+        # This block is not actually functional configuration,
+        # but serves to illustrate the available configuration
+        # options and document them in a way that is accessible
+        # to users that `kubectl edit` this config map.
+        #
+        # These sample configuration options may be copied out of
+        # this example block and unindented to be in the data block
+        # to actually change the configuration.
+
+        # metrics.backend-destination field specifies the system metrics destination.
+        # It supports either prometheus (the default) or stackdriver.
+        # Note: Using Stackdriver will incur additional charges.
+        metrics.backend-destination: prometheus
+
+        # metrics.stackdriver-project-id field specifies the Stackdriver project ID. This
+        # field is optional. When running on GCE, application default credentials will be
+        # used and metrics will be sent to the cluster's project if this field is
+        # not provided.
+        metrics.stackdriver-project-id: "<your stackdriver project id>"
+
+        # metrics.allow-stackdriver-custom-metrics indicates whether it is allowed
+        # to send metrics to Stackdriver using "global" resource type and custom
+        # metric type. Setting this flag to "true" could cause extra Stackdriver
+        # charge.  If metrics.backend-destination is not Stackdriver, this is
+        # ignored.
+        metrics.allow-stackdriver-custom-metrics: "false"
 
   service:
     # controller.service.type -- Controller service type
@@ -200,7 +267,7 @@ webhook:
     repository: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/webhook
 
     # webhook.image.tag -- Webhook docker image tag
-    tag: v0.11.1
+    tag: v0.11.3
 
     # webhook.image.pullPolicy -- Webhook docker image pull policy
     pullPolicy: IfNotPresent
