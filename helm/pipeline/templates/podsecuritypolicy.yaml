@@ -18,10 +18,8 @@ kind: PodSecurityPolicy
 metadata:
   name: {{ template "pipeline.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    helm.sh/chart: {{ template "pipeline.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.helmLabels" . | nindent 4 }}
 spec:
   privileged: false
   allowPrivilegeEscalation: false

@@ -17,13 +17,10 @@ kind: Service
 metadata:
   name: {{ template "dashboard.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ template "dashboard.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "dashboard.chart" . }}
-    dashboard.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "dashboard.baseLabels" . | nindent 4 }}
+    {{- include "dashboard.helmLabels" . | nindent 4 }}
+    {{- include "dashboard.versionLabels" . | nindent 4 }}
+    {{- include "dashboard.nameLabels" "dashboard" | nindent 4 }}
   {{- with .Values.dashboard.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -36,6 +33,5 @@ spec:
       protocol: TCP
       targetPort: 9097
   selector:
-    app.kubernetes.io/name: {{ template "dashboard.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "dashboard.baseLabels" . | nindent 4 }}
+    {{- include "dashboard.nameLabels" "dashboard" | nindent 4 }}

@@ -83,7 +83,7 @@ helm uninstall my-triggers --namespace tekton
 
 ## Version
 
-Current chart version is `0.4.0`
+Current chart version is `0.4.1`
 
 ## Chart Values
 

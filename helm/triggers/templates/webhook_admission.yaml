@@ -12,30 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-## TODO
-
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: webhook-certs
-#   namespace: tekton-pipelines
-#   labels:
-#     pipeline.tekton.dev/release: devel
-# # The data is populated at install time.
-# ---
 {{- if .Values.webhook.enabled }}
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: {{ template "triggers.fullname" . }}-validation
   labels:
-    app.kubernetes.io/name: {{ template "triggers.name" . }}
-    app.kubernetes.io/component: admission
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "triggers.chart" . }}
-    triggers.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
+    {{- include "triggers.componentLabels" "webhook" | nindent 4 }}
 webhooks:
   - name: validation.webhook.triggers.tekton.dev
     admissionReviewVersions:
@@ -52,13 +37,9 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: {{ template "triggers.fullname" . }}-webhook
   labels:
-    app.kubernetes.io/name: {{ template "triggers.name" . }}
-    app.kubernetes.io/component: admission
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "triggers.chart" . }}
-    triggers.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
+    {{- include "triggers.componentLabels" "webhook" | nindent 4 }}
 webhooks:
   - name: webhook.triggers.tekton.dev
     admissionReviewVersions:
@@ -75,13 +56,9 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: {{ template "triggers.fullname" . }}-config
   labels:
-    app.kubernetes.io/name: {{ template "triggers.name" . }}
-    app.kubernetes.io/component: admission
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "triggers.chart" . }}
-    triggers.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
+    {{- include "triggers.componentLabels" "webhook" | nindent 4 }}
 webhooks:
   - name: config.webhook.triggers.tekton.dev
     admissionReviewVersions:
@@ -92,8 +69,7 @@ webhooks:
         namespace: {{ .Release.Namespace }}
     failurePolicy: Fail
     sideEffects: None
-    namespaceSelector:
-      matchExpressions:
-        - key: triggers.tekton.dev/release
-          operator: Exists
+    objectSelector:
+      matchLabels:
+        {{- include "triggers.baseLabels" . | nindent 8 }}
 {{- end }}

@@ -17,6 +17,9 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ template "triggers.fullname" . }}
+  labels:
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
 rules:
   - apiGroups:
       - ''
@@ -105,6 +108,8 @@ kind: ClusterRole
 metadata:
   name: {{ template "triggers.fullname" . }}-edit
   labels:
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
     rbac.authorization.k8s.io/aggregate-to-edit: 'true'
     rbac.authorization.k8s.io/aggregate-to-admin: 'true'
 rules:
@@ -130,6 +135,8 @@ kind: ClusterRole
 metadata:
   name: {{ template "triggers.fullname" . }}-view
   labels:
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
     rbac.authorization.k8s.io/aggregate-to-view: 'true'
 rules:
 - apiGroups:

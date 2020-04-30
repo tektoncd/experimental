@@ -16,21 +16,23 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: pipelines.tekton.dev
+  labels:
+    app.kubernetes.io/part-of: tekton-pipelines
 spec:
   group: tekton.dev
   versions:
-  - name: v1alpha1
-    served: true
-    storage: true
-  - name: v1beta1
-    served: true
-    storage: false
+    - name: v1alpha1
+      served: true
+      storage: true
+    - name: v1beta1
+      served: true
+      storage: false
   names:
     kind: Pipeline
     plural: pipelines
     categories:
-    - tekton
-    - tekton-pipelines
+      - tekton
+      - tekton-pipelines
   scope: Namespaced
   # Opt into the status subresource so metadata.generation
   # starts to increment

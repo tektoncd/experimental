@@ -83,7 +83,7 @@ helm uninstall my-dashboard --namespace tekton
 
 ## Version
 
-Current chart version is `0.6.1`
+Current chart version is `0.6.2`
 
 ## Chart Values
 
