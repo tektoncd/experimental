@@ -72,7 +72,13 @@ func TestGetNoServiceDashboardURL(t *testing.T) {
 
 func TestGetServiceDashboardURL(t *testing.T) {
 	r := dummyResource()
-	svc := createDashboardService("fake-dashboard", "tekton-dashboard")
+	labels := map[string]string{
+		"app.kubernetes.io/name":      "dashboard",
+		"app.kubernetes.io/component": "dashboard",
+		"app.kubernetes.io/instance":  "default",
+		"app.kubernetes.io/part-of":   "tekton-dashboard",
+	}
+	svc := createDashboardService("fake-dashboard", labels)
 	_, err := r.K8sClient.CoreV1().Services(installNs).Create(svc)
 	if err != nil {
 		t.Errorf("Error registering service")
@@ -86,7 +92,10 @@ func TestGetServiceDashboardURL(t *testing.T) {
 
 func TestGetOpenshiftServiceDashboardURL(t *testing.T) {
 	r := dummyResource()
-	svc := createDashboardService("fake-openshift-dashboard", "tekton-dashboard-internal")
+	labels := map[string]string{
+		"app": "tekton-dashboard-internal",
+	}
+	svc := createDashboardService("fake-openshift-dashboard", labels)
 	_, err := r.K8sClient.CoreV1().Services(installNs).Create(svc)
 	if err != nil {
 		t.Errorf("Error registering service")
@@ -772,10 +781,7 @@ func TestDeleteByNameNoRepoBadRequest(t *testing.T) {
 
 // //------------------- UTILS -------------------//
 
-func createDashboardService(name, labelValue string) *corev1.Service {
-	labels := make(map[string]string)
-	labels["app"] = labelValue
-
+func createDashboardService(name string, labels map[string]string) *corev1.Service {
 	dashSVC := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,

@@ -4,16 +4,22 @@ metadata:
   name: webhooks-extension
   namespace: tekton-pipelines
   labels:
-    app: webhooks-extension
+    app.kubernetes.io/component: extension
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: webhooks-extension
+      app.kubernetes.io/component: extension
+      app.kubernetes.io/instance: default
+      app.kubernetes.io/part-of: tekton-webhooks-extension
   template:
     metadata:
       labels:
-        app: webhooks-extension
+        app.kubernetes.io/component: extension
+        app.kubernetes.io/instance: default
+        app.kubernetes.io/part-of: tekton-webhooks-extension
     spec:
       serviceAccountName: tekton-webhooks-extension
       containers:

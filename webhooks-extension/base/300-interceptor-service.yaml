@@ -3,10 +3,16 @@ kind: Service
 metadata:
   name: tekton-webhooks-extension-validator
   namespace: tekton-pipelines
+  labels:
+    app.kubernetes.io/component: validator
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
 spec:
   type: ClusterIP
   selector:
-    app: tekton-webhooks-extension-validator
+    app.kubernetes.io/component: validator
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
   ports:
     - protocol: TCP
       port: 80

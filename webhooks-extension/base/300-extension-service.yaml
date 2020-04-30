@@ -4,7 +4,9 @@ metadata:
   name: webhooks-extension
   namespace: tekton-pipelines
   labels:
-    app: webhooks-extension
+    app.kubernetes.io/component: extension
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
     tekton-dashboard-extension: "true"
   annotations:
     tekton-dashboard-display-name: Webhooks
@@ -16,4 +18,6 @@ spec:
   - port: 8080
     targetPort: 8080
   selector:
-    app: webhooks-extension
+    app.kubernetes.io/component: extension
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
