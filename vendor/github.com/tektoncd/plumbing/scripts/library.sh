@@ -332,15 +332,11 @@ function update_licenses() {
   cd ${REPO_ROOT_DIR} || return 1
   local dst=$1
   shift
-  if [ -f "${REPO_ROOT_DIR}/go.mod" ]; then
-    go-licenses save ./... --save_path=${dst} --force
-    # Hack to make sure directories retain write permissions after save. This
-    # can happen if the directory being copied is a Go module.
-    # See https://github.com/google/go-licenses/issues/11
-    chmod +w $(find ${dst} -type d)
-  else
-    run_go_tool ./vendor/github.com/knative/test-infra/tools/dep-collector dep-collector $@ > ./${dst}
-  fi
+  go-licenses save ./... --save_path=${dst} --force
+  # Hack to make sure directories retain write permissions after save. This
+  # can happen if the directory being copied is a Go module.
+  # See https://github.com/google/go-licenses/issues/11
+   chmod +w $(find ${dst} -type d)
 }
 
 # Run dep-collector to check for forbidden liceses.
