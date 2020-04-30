@@ -3,6 +3,9 @@ kind: TriggerTemplate
 metadata:
   name: monitor-task-template
   namespace: tekton-pipelines
+  labels:
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
 spec:
   params:
   - name: pullrequesturl

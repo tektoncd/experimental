@@ -5,6 +5,9 @@ kind: Role
 metadata:
   name: tekton-webhooks-extension-minimal
   namespace: tekton-pipelines
+  labels:
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
 rules:
 - apiGroups:
   - ""

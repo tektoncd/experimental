@@ -3,7 +3,10 @@ kind: Service
 metadata:
   name: tekton-dashboard-service
   labels:
-    app: tekton-dashboard-service
+    app.kubernetes.io/name: dashboard
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-dashboard
 spec:
   type: NodePort
   ports:
@@ -11,4 +14,7 @@ spec:
       nodePort: 31001
       protocol: TCP
   selector:
-    app: tekton-dashboard
+    app.kubernetes.io/name: dashboard
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-dashboard

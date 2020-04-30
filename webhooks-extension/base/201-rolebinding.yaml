@@ -3,6 +3,9 @@ kind: RoleBinding
 metadata:
   namespace: tekton-pipelines
   name: tekton-webhooks-extension-minimal
+  labels:
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

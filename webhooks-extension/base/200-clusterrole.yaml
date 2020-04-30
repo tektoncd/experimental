@@ -4,6 +4,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: tekton-webhooks-extension-minimal-cluster-powers
+  labels:
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-webhooks-extension
 rules:
 - apiGroups:
   - ""
