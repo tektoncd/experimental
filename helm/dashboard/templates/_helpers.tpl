@@ -41,3 +41,36 @@ Create the name of the service account to use
 {{- required "A service account name is required" .Values.rbac.serviceAccountName -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Create base labels
+*/}}
+{{- define "dashboard.baseLabels" -}}
+app.kubernetes.io/component: dashboard
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/part-of: tekton-dashboard
+{{- end -}}
+
+{{/*
+Create helm labels
+*/}}
+{{- define "dashboard.helmLabels" -}}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ template "dashboard.chart" . }}
+{{- end -}}
+
+{{/*
+Create version labels
+*/}}
+{{- define "dashboard.versionLabels" -}}
+app.kubernetes.io/version: {{ .Values.version | quote }}
+dashboard.tekton.dev/release: {{ .Values.version | quote }}
+version: {{ .Values.version | quote }}
+{{- end -}}
+
+{{/*
+Create name labels
+*/}}
+{{- define "dashboard.nameLabels" -}}
+app.kubernetes.io/name: {{ . }}
+{{- end -}}

@@ -17,20 +17,18 @@ kind: Deployment
 metadata:
   name: {{ template "pipeline.fullname" . }}-controller
   labels:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "pipeline.chart" . }}
-    pipeline.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.helmLabels" . | nindent 4 }}
+    {{- include "pipeline.versionLabels" . | nindent 4 }}
+    {{- include "pipeline.componentLabels" "controller" | nindent 4 }}
+    {{- include "pipeline.nameLabels" "controller" | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "pipeline.name" . }}
-      app.kubernetes.io/component: controller
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "pipeline.baseLabels" . | nindent 6 }}
+      {{- include "pipeline.componentLabels" "controller" | nindent 6 }}
+      {{- include "pipeline.nameLabels" "controller" | nindent 6 }}
   template:
     metadata:
       {{- with .Values.controller.annotations }}
@@ -38,13 +36,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app.kubernetes.io/name: {{ template "pipeline.name" . }}
-        app.kubernetes.io/component: controller
-        app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/managed-by: {{ .Release.Service }}
-        helm.sh/chart: {{ template "pipeline.chart" . }}
-        pipeline.tekton.dev/release: {{ .Values.version | quote }}
-        version: {{ .Values.version | quote }}
+        {{- include "pipeline.baseLabels" . | nindent 8 }}
+        {{- include "pipeline.helmLabels" . | nindent 8 }}
+        {{- include "pipeline.versionLabels" . | nindent 8 }}
+        {{- include "pipeline.componentLabels" "controller" | nindent 8 }}
+        {{- include "pipeline.nameLabels" "controller" | nindent 8 }}
     spec:
       serviceAccountName: {{ template "pipeline.serviceAccountName" . }}
       {{- with .Values.controller.securityContext }}

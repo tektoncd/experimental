@@ -17,6 +17,9 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ template "dashboard.fullname" . }}
+  labels:
+    {{- include "dashboard.baseLabels" . | nindent 4 }}
+    {{- include "dashboard.helmLabels" . | nindent 4 }}
 rules:
   {{- if not .Values.dashboard.readOnly }}
   - apiGroups:

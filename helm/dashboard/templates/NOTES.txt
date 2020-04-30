@@ -1,4 +1,4 @@
 Tekton dashboard have been installed successfully.
-To verify that the controller has started, run:
+To verify pods have started, run:
 
-  kubectl --namespace={{ .Release.Namespace }} get pods -l "app.kubernetes.io/name={{ template "dashboard.name" . }},app.kubernetes.io/component=controller,app.kubernetes.io/instance={{ .Release.Name }}"
+  kubectl --namespace={{ .Release.Namespace }} get pods -l "app.kubernetes.io/part-of=tekton-dashboard,app.kubernetes.io/instance={{ .Release.Name }}"

@@ -18,13 +18,9 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: validation.webhook.pipeline.tekton.dev
   labels:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    app.kubernetes.io/component: admission
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "pipeline.chart" . }}
-    pipeline.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.componentLabels" "webhook" | nindent 4 }}
 webhooks:
   - name: validation.webhook.pipeline.tekton.dev
     admissionReviewVersions:
@@ -41,13 +37,9 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: webhook.pipeline.tekton.dev
   labels:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    app.kubernetes.io/component: admission
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "pipeline.chart" . }}
-    pipeline.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.helmLabels" . | nindent 4 }}
+    {{- include "pipeline.componentLabels" "webhook" | nindent 4 }}
 webhooks:
   - name: webhook.pipeline.tekton.dev
     admissionReviewVersions:
@@ -64,13 +56,9 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: config.webhook.pipeline.tekton.dev
   labels:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    app.kubernetes.io/component: admission
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "pipeline.chart" . }}
-    pipeline.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.helmLabels" . | nindent 4 }}
+    {{- include "pipeline.componentLabels" "webhook" | nindent 4 }}
 webhooks:
   - name: config.webhook.pipeline.tekton.dev
     admissionReviewVersions:
@@ -81,8 +69,7 @@ webhooks:
         namespace: {{ .Release.Namespace }}
     failurePolicy: Fail
     sideEffects: None
-    namespaceSelector:
-      matchExpressions:
-        - key: pipeline.tekton.dev/release
-          operator: Exists
+    objectSelector:
+      matchLabels:
+        {{- include "pipeline.baseLabels" . | nindent 8 }}
 {{- end }}

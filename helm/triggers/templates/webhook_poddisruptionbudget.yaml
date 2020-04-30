@@ -19,19 +19,15 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ template "triggers.fullname" . }}-webhook
   labels:
-    app.kubernetes.io/name: {{ template "triggers.name" . }}
-    app.kubernetes.io/component: webhook
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "triggers.chart" . }}
-    triggers.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
+    {{- include "triggers.componentLabels" "webhook" | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "triggers.name" . }}
-      app.kubernetes.io/component: webhook
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "triggers.baseLabels" . | nindent 6 }}
+      {{- include "triggers.componentLabels" "webhook" | nindent 6 }}
+      {{- include "triggers.nameLabels" "webhook" | nindent 6 }}
   {{- if .Values.webhook.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.webhook.podDisruptionBudget.minAvailable }}
   {{- end }}

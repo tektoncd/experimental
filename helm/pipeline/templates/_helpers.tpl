@@ -41,3 +41,42 @@ Create the name of the service account to use
 {{- required "A service account name is required" .Values.rbac.serviceAccountName -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Create base labels
+*/}}
+{{- define "pipeline.baseLabels" -}}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/part-of: tekton-pipelines
+{{- end -}}
+
+{{/*
+Create helm labels
+*/}}
+{{- define "pipeline.helmLabels" -}}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ template "pipeline.chart" . }}
+{{- end -}}
+
+{{/*
+Create version labels
+*/}}
+{{- define "pipeline.versionLabels" -}}
+app.kubernetes.io/version: {{ .Values.version | quote }}
+pipeline.tekton.dev/release: {{ .Values.version | quote }}
+version: {{ .Values.version | quote }}
+{{- end -}}
+
+{{/*
+Create component labels
+*/}}
+{{- define "pipeline.componentLabels" -}}
+app.kubernetes.io/component: {{ . }}
+{{- end -}}
+
+{{/*
+Create name labels
+*/}}
+{{- define "pipeline.nameLabels" -}}
+app.kubernetes.io/name: {{ . }}
+{{- end -}}

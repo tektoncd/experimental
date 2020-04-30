@@ -1,4 +1,4 @@
 Tekton pipelines have been installed successfully.
-To verify that the controller has started, run:
+To verify pods have started, run:
 
-  kubectl --namespace={{ .Release.Namespace }} get pods -l "app.kubernetes.io/name={{ template "pipeline.name" . }},app.kubernetes.io/component=controller,app.kubernetes.io/instance={{ .Release.Name }}"
+  kubectl --namespace={{ .Release.Namespace }} get pods -l "app.kubernetes.io/part-of=tekton-pipelines,app.kubernetes.io/instance={{ .Release.Name }}"

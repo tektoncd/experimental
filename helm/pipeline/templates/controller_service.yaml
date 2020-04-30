@@ -18,13 +18,11 @@ kind: Service
 metadata:
   name: {{ template "pipeline.fullname" . }}-controller
   labels:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "pipeline.chart" . }}
-    pipeline.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.helmLabels" . | nindent 4 }}
+    {{- include "pipeline.versionLabels" . | nindent 4 }}
+    {{- include "pipeline.componentLabels" "controller" | nindent 4 }}
+    {{- include "pipeline.nameLabels" "controller" | nindent 4 }}
   {{- with .Values.controller.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -37,7 +35,7 @@ spec:
       protocol: TCP
       targetPort: 9090
   selector:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.componentLabels" "controller" | nindent 4 }}
+    {{- include "pipeline.nameLabels" "controller" | nindent 4 }}
 {{- end }}

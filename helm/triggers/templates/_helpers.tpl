@@ -41,3 +41,42 @@ Create the name of the service account to use
 {{- required "A service account name is required" .Values.rbac.serviceAccountName -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Create base labels
+*/}}
+{{- define "triggers.baseLabels" -}}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/part-of: tekton-triggers
+{{- end -}}
+
+{{/*
+Create helm labels
+*/}}
+{{- define "triggers.helmLabels" -}}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ template "triggers.chart" . }}
+{{- end -}}
+
+{{/*
+Create version labels
+*/}}
+{{- define "triggers.versionLabels" -}}
+app.kubernetes.io/version: {{ .Values.version | quote }}
+triggers.tekton.dev/release: {{ .Values.version | quote }}
+version: {{ .Values.version | quote }}
+{{- end -}}
+
+{{/*
+Create component labels
+*/}}
+{{- define "triggers.componentLabels" -}}
+app.kubernetes.io/component: {{ . }}
+{{- end -}}
+
+{{/*
+Create name labels
+*/}}
+{{- define "triggers.nameLabels" -}}
+app.kubernetes.io/name: {{ . }}
+{{- end -}}

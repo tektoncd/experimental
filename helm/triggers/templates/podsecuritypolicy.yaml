@@ -18,10 +18,8 @@ kind: PodSecurityPolicy
 metadata:
   name: {{ template "triggers.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ template "triggers.name" . }}
-    helm.sh/chart: {{ template "triggers.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
 spec:
   privileged: false
   allowPrivilegeEscalation: false

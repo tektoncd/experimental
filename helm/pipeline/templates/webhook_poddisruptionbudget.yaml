@@ -19,19 +19,15 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ template "pipeline.fullname" . }}-webhook
   labels:
-    app.kubernetes.io/name: {{ template "pipeline.name" . }}
-    app.kubernetes.io/component: webhook
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "pipeline.chart" . }}
-    pipeline.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "pipeline.baseLabels" . | nindent 4 }}
+    {{- include "pipeline.helmLabels" . | nindent 4 }}
+    {{- include "pipeline.componentLabels" "webhook" | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "pipeline.name" . }}
-      app.kubernetes.io/component: webhook
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "pipeline.baseLabels" . | nindent 6 }}
+      {{- include "pipeline.componentLabels" "webhook" | nindent 6 }}
+      {{- include "pipeline.nameLabels" "webhook" | nindent 6 }}
   {{- if .Values.webhook.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.webhook.podDisruptionBudget.minAvailable }}
   {{- end }}

@@ -17,20 +17,16 @@ kind: Deployment
 metadata:
   name: {{ template "dashboard.fullname" . }}-controller
   labels:
-    app.kubernetes.io/name: {{ template "dashboard.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "dashboard.chart" . }}
-    dashboard.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "dashboard.baseLabels" . | nindent 4 }}
+    {{- include "dashboard.helmLabels" . | nindent 4 }}
+    {{- include "dashboard.versionLabels" . | nindent 4 }}
+    {{- include "dashboard.nameLabels" "dashboard" | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "dashboard.name" . }}
-      app.kubernetes.io/component: controller
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "dashboard.baseLabels" . | nindent 6 }}
+      {{- include "dashboard.nameLabels" "dashboard" | nindent 6 }}
   template:
     metadata:
       {{- with .Values.dashboard.annotations }}
@@ -38,13 +34,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app.kubernetes.io/name: {{ template "dashboard.name" . }}
-        app.kubernetes.io/component: controller
-        app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/managed-by: {{ .Release.Service }}
-        helm.sh/chart: {{ template "dashboard.chart" . }}
-        dashboard.tekton.dev/release: {{ .Values.version | quote }}
-        version: {{ .Values.version | quote }}
+        {{- include "dashboard.baseLabels" . | nindent 8 }}
+        {{- include "dashboard.helmLabels" . | nindent 8 }}
+        {{- include "dashboard.versionLabels" . | nindent 8 }}
+        {{- include "dashboard.nameLabels" "dashboard" | nindent 8 }}
     spec:
       serviceAccountName: {{ template "dashboard.serviceAccountName" . }}
       {{- with .Values.dashboard.securityContext }}

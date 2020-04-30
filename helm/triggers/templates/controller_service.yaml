@@ -18,13 +18,11 @@ kind: Service
 metadata:
   name: {{ template "triggers.fullname" . }}-controller
   labels:
-    app.kubernetes.io/name: {{ template "triggers.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    helm.sh/chart: {{ template "triggers.chart" . }}
-    triggers.tekton.dev/release: {{ .Values.version | quote }}
-    version: {{ .Values.version | quote }}
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.helmLabels" . | nindent 4 }}
+    {{- include "triggers.versionLabels" . | nindent 4 }}
+    {{- include "triggers.componentLabels" "controller" | nindent 4 }}
+    {{- include "triggers.nameLabels" "controller" | nindent 4 }}
   {{- with .Values.controller.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -37,7 +35,7 @@ spec:
       protocol: TCP
       targetPort: 9090
   selector:
-    app.kubernetes.io/name: {{ template "triggers.name" . }}
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "triggers.baseLabels" . | nindent 4 }}
+    {{- include "triggers.componentLabels" "controller" | nindent 4 }}
+    {{- include "triggers.nameLabels" "controller" | nindent 4 }}
 {{- end }}
