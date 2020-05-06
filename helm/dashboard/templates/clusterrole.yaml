@@ -20,6 +20,21 @@ metadata:
   labels:
     {{- include "dashboard.baseLabels" . | nindent 4 }}
     {{- include "dashboard.helmLabels" . | nindent 4 }}
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.dashboard.tekton.dev/aggregate-to-dashboard: "true"
+        {{- include "dashboard.baseLabels" . | nindent 8 }}
+        {{- include "dashboard.helmLabels" . | nindent 8 }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "dashboard.fullname" . }}-core
+  labels:
+    rbac.dashboard.tekton.dev/aggregate-to-dashboard: "true"
+    {{- include "dashboard.baseLabels" . | nindent 4 }}
+    {{- include "dashboard.helmLabels" . | nindent 4 }}
 rules:
   {{- if not .Values.dashboard.readOnly }}
   - apiGroups:
@@ -244,4 +259,24 @@ rules:
       - get
       - list
       - watch
+{{- range .Values.extensions }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "dashboard.fullname" $ }}-{{ .name }}
+  labels:
+    rbac.dashboard.tekton.dev/aggregate-to-dashboard: "true"
+    {{- include "dashboard.baseLabels" $ | nindent 4 }}
+    {{- include "dashboard.helmLabels" $ | nindent 4 }}
+rules:
+  - apiGroups:
+      - {{ .group }}
+    resources:
+      - {{ .name }}
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}
 {{- end }}

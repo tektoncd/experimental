@@ -88,3 +88,10 @@ dashboard:
 
     # dashboard.ingress.hosts -- Dashboard ingress host names
     hosts: []
+
+# extensions -- Kubernetes resources extensions list
+# @default -- See [values.yaml](./values.yaml)
+extensions: []
+  # - group: extensions
+  #   version: v1beta1
+  #   name: deployments
