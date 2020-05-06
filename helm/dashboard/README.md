@@ -83,7 +83,7 @@ helm uninstall my-dashboard --namespace tekton
 
 ## Version
 
-Current chart version is `0.6.2`
+Current chart version is `0.6.3`
 
 ## Chart Values
 
@@ -108,6 +108,7 @@ Current chart version is `0.6.2`
 | `dashboard.service.portName` | string |  | `"http"` |
 | `dashboard.service.type` | string | Dashboard service type | `"ClusterIP"` |
 | `dashboard.tolerations` | list | Dashboard tolerations | `[]` |
+| `extensions` | list | Kubernetes resources extensions list | See [values.yaml](./values.yaml) |
 | `fullnameOverride` | string | Fully override resource generated names | `""` |
 | `nameOverride` | string | Partially override resource generated names | `""` |
 | `rbac.create` | bool | Create RBAC resources | `true` |
