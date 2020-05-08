@@ -2,16 +2,17 @@ syntax = "proto3";
 
 package tekton;
 
+import "taskrun.proto";
+
 option go_package = "./proto";
 
 service Results {
-  rpc InsertTaskRun (InsertTaskRunRequest) returns (TaskRun) {}
   rpc UpdateTaskRun (UpdateTaskRunRequest) returns (TaskRun) {}
   rpc GetTaskRun    (GetTaskRunRequest)    returns (TaskRun) {}
   rpc ListTaskRuns  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
 }
 
-message InsertTaskRunRequest {
+message CreateTaskRunRequest {
 	TaskRun task_run = 1;
 	// TODO: Accept some unique cluster identifier?
 }
@@ -33,11 +34,4 @@ message ListTaskRunsRequest {
 message ListTaskRunsResponse {
 	repeated TaskRun items = 1;
 	// TODO: next_page_token, etc.
-}
-
-message TaskRun {
-	string uid = 1;
-	string name = 2;
-	string namespace = 3;
-	// TODO: Add the rest of the fields. Generate this from Go structs?
 }
