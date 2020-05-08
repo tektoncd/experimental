@@ -1,3 +1,19 @@
+/*
+Copyright 2020 The Tekton Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -5,10 +21,11 @@ import (
 	"flag"
 	"log"
 
+	"github.com/tektoncd/experimental/results/pkg/convert"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
-	taskruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1alpha1/taskrun"
-	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1alpha1"
+	taskruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/taskrun"
+	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
@@ -87,13 +104,13 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 	r.logger.Infof("Sending update for %s/%s (uid %s)", namespace, name, tr.UID)
 
 	// Send the new status of the TaskRun to the API server.
+	p, err := convert.ToProto(tr)
+	if err != nil {
+		r.logger.Errorf("Error converting to proto: %v", err)
+		return err
+	}
 	if _, err := r.client.UpdateTaskRun(ctx, &pb.UpdateTaskRunRequest{
-		TaskRun: &pb.TaskRun{
-			Uid:       string(tr.UID),
-			Name:      tr.Name,
-			Namespace: tr.Namespace,
-			// TODO: More robust/scalable translation.
-		},
+		TaskRun: p,
 	}); err != nil {
 		r.logger.Error("Error updating TaskRun %s: %v", name, err)
 		return err
