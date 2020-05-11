@@ -121,8 +121,9 @@ rules:
       - delete
       - patch
   - apiGroups:
-      - tekton.dev
+      - triggers.tekton.dev
     resources:
+      - clustertriggerbindings
       - eventlisteners
       - triggerbindings
       - triggertemplates
@@ -250,8 +251,9 @@ rules:
       - list
       - watch
   - apiGroups:
-      - tekton.dev
+      - triggers.tekton.dev
     resources:
+      - clustertriggerbindings
       - eventlisteners
       - triggerbindings
       - triggertemplates
