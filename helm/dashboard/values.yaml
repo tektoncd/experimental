@@ -28,6 +28,9 @@ rbac:
   # rbac.serviceAccountName -- Name of the service account to use when rbac.create is false
   serviceAccountName:
 
+  # rbac.namespaces -- List of namespaces to be accessible from the dashboard backend (leave empty to allow cluster-wide access)
+  namespaces:
+
 customResourceDefinitions:
   # customResourceDefinitions.create -- Create CRDs
   create: true

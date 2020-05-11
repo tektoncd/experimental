@@ -15,7 +15,7 @@
 name: dashboard
 icon: https://tekton.dev/images/tekton-horizontal-color.png
 apiVersion: v1
-version: 0.6.3
+version: 0.6.4
 appVersion: 0.6.1
 home: https://github.com/tektoncd/dashboard
 keywords:

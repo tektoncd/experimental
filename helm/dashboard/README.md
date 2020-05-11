@@ -83,7 +83,7 @@ helm uninstall my-dashboard --namespace tekton
 
 ## Version
 
-Current chart version is `0.6.3`
+Current chart version is `0.6.4`
 
 ## Chart Values
 
@@ -112,6 +112,7 @@ Current chart version is `0.6.3`
 | `fullnameOverride` | string | Fully override resource generated names | `""` |
 | `nameOverride` | string | Partially override resource generated names | `""` |
 | `rbac.create` | bool | Create RBAC resources | `true` |
+| `rbac.namespaces` | string | List of namespaces to be accessible from the dashboard backend (leave empty to allow cluster-wide access) | `nil` |
 | `rbac.serviceAccountName` | string | Name of the service account to use when rbac.create is false | `nil` |
 | `version` | string | Tekton dashboard version used to add labels on deployments, pods and services | `"v0.6.1"` |
 
