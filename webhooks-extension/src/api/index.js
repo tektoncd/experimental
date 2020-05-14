@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors
+Copyright 2019-2020 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { get, post, deleteRequest } from './comms';
+import { get, getDashboardAPIRoot, post, deleteRequest } from './comms';
 
 const apiRoot = getAPIRoot();
 const dashboardAPIRoot = getDashboardAPIRoot();
@@ -20,15 +20,6 @@ export function getAPIRoot() {
   const { href, hash } = window.location;
   let realHash = 'v1/extensions/webhooks-extension';
   let baseURL = href.replace(hash, realHash);
-  if (baseURL.endsWith('/')) {
-    baseURL = baseURL.slice(0, -1);
-  }
-  return baseURL;
-}
-
-export function getDashboardAPIRoot() {
-  const { href, hash } = window.location;
-  let baseURL = href.replace(hash, '');
   if (baseURL.endsWith('/')) {
     baseURL = baseURL.slice(0, -1);
   }
