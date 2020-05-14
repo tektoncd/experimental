@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors
+Copyright 2019-2020 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,6 +15,11 @@ import React from 'react';
 import { Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import { render } from 'react-testing-library';
+import fetchMock from 'fetch-mock';
+
+import { getDashboardAPIRoot } from '../../api/comms';
+
+const apiRoot = getDashboardAPIRoot();
 
 export function renderWithRouter(
   ui,
@@ -30,4 +35,12 @@ export function renderWithRouter(
     // this to test implementation details).
     history
   };
+}
+
+export function mockCSRFToken() {
+  fetchMock.get(`${apiRoot}/v1/token`, () => ({
+    headers: {
+      'X-CSRF-Token': 'fake_token'
+    }
+  }));
 }

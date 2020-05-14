@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors
+Copyright 2019-2020 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,6 +14,7 @@ limitations under the License.
 import fetchMock from 'fetch-mock';
 
 import { checkStatus, get, getHeaders, post, request, put } from '../comms';
+import { mockCSRFToken } from '../../test/utils/test';
 
 const uri = 'http://example.com';
 
@@ -102,6 +103,7 @@ describe('post', () => {
     const data = {
       fake: 'data'
     };
+    mockCSRFToken();
     fetchMock.post(uri, data);
     return post(uri, data).then(() => {
       const options = fetchMock.lastOptions();
@@ -116,6 +118,7 @@ describe('put', () => {
     const data = {
       fake: 'data'
     };
+    mockCSRFToken();
     fetchMock.put(uri, data);
     return put(uri, data).then(() => {
       const options = fetchMock.lastOptions();
