@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Tekton Authors
+Copyright 2019-2020 The Tekton Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -13,7 +13,7 @@ limitations under the License.
 
 import React, { Component } from 'react';
 import { Modal } from 'carbon-components-react';
-import { getDashboardAPIRoot } from '../../api';
+import { getDashboardAPIRoot } from '../../api/comms';
 
 import './WebhookBranches.scss';
 
@@ -49,7 +49,7 @@ export class WebhookBranches extends Component {
       .toLowerCase()
       .replace(/https?:\/\//, "")
       .split("/");
-    
+
     if (repo != undefined && repo.endsWith(".git")) {
       repo = repo.substring(0, repo.length - 4);
     }
