@@ -32,6 +32,5 @@
 4. Install a LoadBalancer if one is not present on your cluster.  For Docker Desktop you could consider using nginx as per the following instructions:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud-generic.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/cloud/deploy.yaml
 ```
