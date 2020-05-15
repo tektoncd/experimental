@@ -4,7 +4,7 @@ metadata:
   labels:
     app: webhooks-extension
   name: webhooks-extension
-  namespace: tekton-pipelines
+  namespace: tekton-pipelines  # this is fine, gets replaced on openshift by kustomize
 spec:
   template:
     spec:
@@ -14,7 +14,7 @@ spec:
           # If this endpoint's protocol is https, tls will be enabled on the github webhook
           # openshift_master_default_subdomain usually of the format 'apps.host.company.com'
           - name: WEBHOOK_CALLBACK_URL
-            value: https://el-tekton-webhooks-eventlistener-tekton-pipelines.{openshift_master_default_subdomain}
+            value: https://el-tekton-webhooks-eventlistener-openshift-pipelines.{openshift_master_default_subdomain}
           # If the WEBHOOK_CALLBACK_URL's protocol is https, should tls verification be enabled/disabled?
           # See https://github.com/tektoncd/experimental/issues/399
           - name: PLATFORM
