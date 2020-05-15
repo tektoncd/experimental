@@ -139,8 +139,7 @@ function install_webhooks_extension() {
 
 function install_nginx() {
   echo "Installing Nginx"
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud-generic.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/cloud/deploy.yaml
 }
 
 # Wait until all pods in a namespace are Running or Complete
