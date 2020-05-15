@@ -6,14 +6,15 @@ patchesJson6902:
     version: v1
     kind: Role
     name: tekton-webhooks-extension-minimal
-    namespace: tekton-pipelines
+    namespace: openshift-pipelines
   path: role-patch-json.yaml
 - target:
     group: rbac.authorization.k8s.io
     version: v1
     kind: ClusterRole
     name: tekton-webhooks-extension-minimal-cluster-powers
-    namespace: tekton-pipelines
+    namespace: openshift-pipelines
   path: cluster-role-patch-json.yaml
 patches:
 - deployment-patch.yaml
+namespace: openshift-pipelines
