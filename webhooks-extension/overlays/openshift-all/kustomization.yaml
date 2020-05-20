@@ -17,3 +17,4 @@ patchesJson6902:
   path: cluster-role-patch-json.yaml
 patches:
 - deployment-patch.yaml
+namespace: openshift-pipelines
