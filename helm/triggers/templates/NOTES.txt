@@ -1,4 +1,0 @@
-Tekton triggers have been installed successfully.
-To verify pods have started, run:
-
-  kubectl --namespace={{ .Release.Namespace }} get pods -l "app.kubernetes.io/part-of=tekton-triggers,app.kubernetes.io/instance={{ .Release.Name }}"
