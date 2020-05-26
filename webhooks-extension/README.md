@@ -14,7 +14,18 @@ See our [Getting Started](https://github.com/tektoncd/experimental/blob/master/w
 
 ### Install Webhook Extension
 
-To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install.  
+To install an official release please navigate to the docs for that release. In the branches dropdown at the top of this page, simply select the branch name matching the version you want to install. 
+
+Note that if you're going from Triggers 0.4 to Triggers 0.5 (for example, as part of upgrading the webhooks extension), you must:
+
+1) delete any existing TriggerTemplates with `type:` in them, to avoid
+
+```
+for: "STDIN": admission webhook "webhook.triggers.tekton.dev" denied the request: mutation failed: cannot decode incoming new object: json: unknown field "type"
+```
+errors.
+
+2) `kubectl delete deployment webhooks-extension` (which will be in either the `tekton-pipelines` or `openshift-pipelines` namespace depending on your platform). This is to prevent an immutable field type error.
 
 [Installing Official Release (stable)](./docs/InstallReleaseBuild.md)
 
