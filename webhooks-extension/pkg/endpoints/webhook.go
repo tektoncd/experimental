@@ -450,12 +450,8 @@ func (r Resource) getDashboardURL(installNs string) string {
 
 	toReturn := "http://localhost:9097/"
 
-	// TODO: app.kubernetes.io/part-of should be configurable (in case of multiple deployments)
+	// TODO: app.kubernetes.io/instance should be configurable (in case of multiple deployments)
 	labelLookup := "app.kubernetes.io/part-of=tekton-dashboard,app.kubernetes.io/component=dashboard,app.kubernetes.io/name=dashboard"
-	if "openshift" == os.Getenv("PLATFORM") {
-		// TODO: selector for openshift ?
-		labelLookup = "app=tekton-dashboard-internal"
-	}
 
 	services, err := r.K8sClient.CoreV1().Services(installNs).List(metav1.ListOptions{LabelSelector: labelLookup})
 	if err != nil {
