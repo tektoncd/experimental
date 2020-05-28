@@ -93,7 +93,10 @@ func TestGetServiceDashboardURL(t *testing.T) {
 func TestGetOpenshiftServiceDashboardURL(t *testing.T) {
 	r := dummyResource()
 	labels := map[string]string{
-		"app": "tekton-dashboard-internal",
+		"app.kubernetes.io/name":      "dashboard",
+		"app.kubernetes.io/component": "dashboard",
+		"app.kubernetes.io/instance":  "default",
+		"app.kubernetes.io/part-of":   "tekton-dashboard",
 	}
 	svc := createDashboardService("fake-openshift-dashboard", labels)
 	_, err := r.K8sClient.CoreV1().Services(installNs).Create(svc)
@@ -104,7 +107,7 @@ func TestGetOpenshiftServiceDashboardURL(t *testing.T) {
 	dashboard := r.getDashboardURL(installNs)
 
 	if dashboard != "http://fake-openshift-dashboard:1234/v1/namespaces/default/endpoints" {
-		t.Errorf("Dashboard URL not http://fake-dashboard:1234/v1/namespaces/default/endpoints.  URL was %s", dashboard)
+		t.Errorf("Dashboard URL not http://fake-openshift-dashboard:1234/v1/namespaces/default/endpoints.  URL was %s", dashboard)
 	}
 }
 
