@@ -47,7 +47,6 @@ spec:
     kind: PipelineResource
     metadata:
       name: pull-request-$(uid)
-      namespace: tekton-pipelines
     spec:
       type: pullRequest
       params:
@@ -63,7 +62,6 @@ spec:
     kind: TaskRun
     metadata:
       generateName: monitor-taskrun-
-      namespace: tekton-pipelines
     spec:
       serviceAccountName: tekton-webhooks-extension
       taskRef:
