@@ -15,28 +15,37 @@
 package pipelinerun
 
 import (
-	"context"
+	"fmt"
+	"testing"
 
 	"github.com/jenkins-x/go-scm/scm"
 	"github.com/jenkins-x/go-scm/scm/driver/github"
 	"github.com/jenkins-x/go-scm/scm/driver/gitlab"
-	"golang.org/x/oauth2"
 )
 
-type scmClientFactory func(string, string) *scm.Client
-
-func createClient(token, repoType string) *scm.Client {
-	var client *scm.Client
-	if repoType == "github" {
-		client = github.NewDefault()
-	} else if repoType == "gitlab" {
-		client = gitlab.NewDefault()
-	} else {
-		return nil
+func TestCreateClient(t *testing.T) {
+	tests := []struct {
+		desc     string
+		repoType string
+		want     *scm.Client
+	}{
+		{"github repository", "github", github.NewDefault()},
+		{"gitlab repository", "gitlab", gitlab.NewDefault()},
+		{"unsupported repository", "abcd", nil},
 	}
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	client.Client = oauth2.NewClient(context.Background(), ts)
-	return client
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test %d", i), func(rt *testing.T) {
+			got := createClient("123", tt.repoType)
+			if tt.want == nil || got == nil {
+				if tt.want != got {
+					rt.Fatalf("expected no client but got %v", got)
+				}
+			} else {
+				if tt.want.Driver.String() != got.Driver.String() {
+					rt.Fatalf("createClient() failed: got client %v, want %v", tt.want.Driver.String(), got.Driver.String())
+				}
+			}
+		})
+	}
+
 }

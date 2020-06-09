@@ -61,12 +61,7 @@ func getRepoAndSHA(p *pipelinev1.PipelineResourceSpec) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to find param revision in getRepoAndSHA: %w", err)
 	}
-	repo, err := extractRepoFromGitHubURL(u)
-	if err != nil {
-		return "", "", fmt.Errorf("getRepoAndSHA failed: %w", err)
-	}
-
-	return strings.TrimSuffix(repo, ".git"), rev, nil
+	return strings.TrimSuffix(u, ".git"), rev, nil
 }
 
 func getResourceParamByName(params []pipelinev1.ResourceParam, name string) (string, error) {
@@ -78,14 +73,31 @@ func getResourceParamByName(params []pipelinev1.ResourceParam, name string) (str
 	return "", fmt.Errorf("no resource parameter with name %s", name)
 }
 
-func extractRepoFromGitHubURL(s string) (string, error) {
+func extractRepoPath(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse repo URL %s: %w", s, err)
 	}
 	parts := strings.Split(u.Path, "/")
-	if len(parts) != 3 {
+	components := []string{}
+	for i := 1; i < len(parts); i++ {
+		if parts[i] != "" {
+			components = append(components, parts[i])
+		}
+	}
+	if len(components) < 2 {
 		return "", fmt.Errorf("could not determine repo from URL: %v", u)
 	}
-	return fmt.Sprintf("%s/%s", parts[1], parts[2]), nil
+	return strings.Join(components, "/"), nil
+}
+
+func getDriverName(rawURL string) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	if s := strings.TrimSuffix(u.Host, ".com"); s != u.Host {
+		return strings.ToLower(s), nil
+	}
+	return "", fmt.Errorf("unable to determine type of Git host from: %s", rawURL)
 }

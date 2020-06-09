@@ -15,6 +15,7 @@
 package pipelinerun
 
 import (
+	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -96,8 +97,8 @@ func TestGetRepoAndSHA(t *testing.T) {
 		{"non-git resource", pipelinev1.PipelineResourceTypeImage, "", "", "", "", "non-git resource"},
 		{"git resource with no url", pipelinev1.PipelineResourceTypeGit, "", "master", "", "", "failed to find param url"},
 		{"git resource with no revision", pipelinev1.PipelineResourceTypeGit, repoURL, "", "", "", "failed to find param revision"},
-		{"git resource", pipelinev1.PipelineResourceTypeGit, repoURL, "master", "test/repo", "master", ""},
-		{"git resource with .git", pipelinev1.PipelineResourceTypeGit, repoURL + ".git", "master", "test/repo", "master", ""},
+		{"git resource", pipelinev1.PipelineResourceTypeGit, repoURL, "master", repoURL, "master", ""},
+		{"git resource with .git", pipelinev1.PipelineResourceTypeGit, repoURL + ".git", "master", repoURL, "master", ""},
 	}
 
 	for _, tt := range resourceTests {
@@ -119,7 +120,36 @@ func TestGetRepoAndSHA(t *testing.T) {
 	}
 }
 
-func TestExtractRepoFromGitHubURL(t *testing.T) {
+func TestGetDriverName(t *testing.T) {
+
+	tests := []struct {
+		url    string
+		driver string
+		errMsg string
+	}{
+		{"http://github.com/", "github", ""},
+		{"http://github.com/foo/bar", "github", ""},
+		{"https://githuB.com/foo/bar.git", "github", ""},
+		{"http://gitlab.com/foo/bar.git2", "gitlab", ""},
+		{"http://gitlab/foo/bar/", "", "unable to determine type of Git host from: http://gitlab/foo/bar/"},
+		{"https://gitlab.a.b/foo/bar/bar", "", "unable to determine type of Git host from: https://gitlab.a.b/foo/bar/bar"},
+		{"https://gitlab.org2/f.b/bar.git", "", "unable to determine type of Git host from: https://gitlab.org2/f.b/bar.git"},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test %d", i), func(rt *testing.T) {
+			gotDriver, err := getDriverName(tt.url)
+			if !matchError(t, tt.errMsg, err) {
+				rt.Errorf("driver errMsg mismatch: got error %v, want %v", err, tt.errMsg)
+			}
+			if tt.driver != gotDriver {
+				rt.Errorf("driver mismatch: got %v, want %v", gotDriver, tt.driver)
+			}
+		})
+	}
+}
+
+func TestExtractRepoPath(t *testing.T) {
 	repoURLTests := []struct {
 		name    string
 		url     string
@@ -129,12 +159,13 @@ func TestExtractRepoFromGitHubURL(t *testing.T) {
 		{"standard URL", "https://github.com/tektoncd/triggers", "tektoncd/triggers", ""},
 		{"invalid URL", "http://192.168.0.%31/test/repo", "", "failed to parse repo URL.*invalid URL escape"},
 		{"url with no repo path", "https://github.com/", "", "could not determine repo from URL"},
+		{"gitlab URL path", "https://gitlab.com/org/group/repo", "org/group/repo", ""},
 	}
 
 	for _, tt := range repoURLTests {
-		repo, err := extractRepoFromGitHubURL(tt.url)
+		repo, err := extractRepoPath(tt.url)
 		if !matchError(t, tt.wantErr, err) {
-			t.Errorf("extractRepoFromGitHubURL() %s: got error %v, want %s", tt.name, err, tt.wantErr)
+			t.Errorf("extractRepoPath() %s: got error %v, want %s", tt.name, err, tt.wantErr)
 			continue
 		}
 

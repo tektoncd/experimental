@@ -58,7 +58,7 @@ func TestPipelineRunControllerPendingState(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "github", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -95,8 +95,7 @@ func TestPipelineRunReconcileWithPreviousPending(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "github", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -141,7 +140,7 @@ func TestPipelineRunControllerSuccessState(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "github", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -178,7 +177,7 @@ func TestPipelineRunControllerFailedState(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "github", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -212,7 +211,7 @@ func TestPipelineRunReconcileNonNotifiable(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "github", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -244,7 +243,7 @@ func TestPipelineRunReconcileWithNoGitRepository(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -278,7 +277,7 @@ func TestPipelineRunReconcileWithGitRepositories(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -309,7 +308,7 @@ func TestPipelineRunReconcileWithNoGitCredentials(t *testing.T) {
 		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
 	objs := []runtime.Object{pipelineRun}
-	r, data := makeReconciler(pipelineRun, objs...)
+	r, data := makeReconciler(t, "", pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -349,12 +348,16 @@ func applyOpts(pr *pipelinev1.PipelineRun, opts ...tb.PipelineRunOp) {
 	}
 }
 
-func makeReconciler(pr *pipelinev1.PipelineRun, objs ...runtime.Object) (*ReconcilePipelineRun, *fakescm.Data) {
+func makeReconciler(t *testing.T, wantType string, pr *pipelinev1.PipelineRun, objs ...runtime.Object) (*ReconcilePipelineRun, *fakescm.Data) {
+	t.Helper()
 	s := scheme.Scheme
 	s.AddKnownTypes(pipelinev1.SchemeGroupVersion, pr)
 	cl := fake.NewFakeClient(objs...)
 	client, data := fakescm.NewDefault()
-	fakeClientFactory := func(s string) *scm.Client {
+	fakeClientFactory := func(s, gotType string) *scm.Client {
+		if wantType != gotType {
+			t.Fatalf("repository type mismatch: got type %s, want %s", gotType, wantType)
+		}
 		return client
 	}
 	return &ReconcilePipelineRun{
@@ -366,6 +369,7 @@ func makeReconciler(pr *pipelinev1.PipelineRun, objs ...runtime.Object) (*Reconc
 }
 
 func fatalIfError(t *testing.T, err error, format string, a ...interface{}) {
+	t.Helper()
 	if err != nil {
 		t.Fatalf(format, a...)
 	}

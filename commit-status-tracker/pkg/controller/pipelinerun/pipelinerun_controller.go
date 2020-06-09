@@ -99,12 +99,17 @@ func (r *ReconcilePipelineRun) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.Error(err, "failed to find a git resource")
 		return reconcile.Result{}, nil
 	}
-	repo, sha, err := getRepoAndSHA(res)
+	repoURL, sha, err := getRepoAndSHA(res)
 	if err != nil {
 		reqLogger.Error(err, "failed to parse the URL and SHA correctly")
 		return reconcile.Result{}, nil
 	}
 
+	repo, err := extractRepoPath(repoURL)
+	if err != nil {
+		reqLogger.Error(err, "failed to extract repository path")
+		return reconcile.Result{}, nil
+	}
 	key := keyForCommit(repo, sha)
 	status := getPipelineRunState(pipelineRun)
 	last, ok := r.pipelineRuns[key]
@@ -122,7 +127,16 @@ func (r *ReconcilePipelineRun) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	client := r.scmFactory(secret)
+	repoType, err := getDriverName(repoURL)
+	if err != nil {
+		reqLogger.Error(err, fmt.Sprintf("unable to determine type of Git host from: %s", repo))
+		return reconcile.Result{}, nil
+	}
+	client := r.scmFactory(secret, repoType)
+	if client == nil {
+		reqLogger.Info(fmt.Sprintf("unsupported Git repository type: %s", repoType))
+		return reconcile.Result{}, nil
+	}
 	commitStatusInput := getCommitStatusInput(pipelineRun)
 	reqLogger.Info("creating a commit status for", "resource", res, "repo", repo, "sha", sha, "status", commitStatusInput)
 	_, _, err = client.Repositories.CreateStatus(ctx, repo, sha, commitStatusInput)
