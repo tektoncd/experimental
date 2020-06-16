@@ -11,6 +11,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -100,6 +102,7 @@ func TestGetTaskRun(t *testing.T) {
 		t.Fatalf("could not get the same taskrun: %v", diff)
 	}
 }
+
 func TestUpdateTaskRun(t *testing.T) {
 	// Create a temporary database
 	srv, err := setupTestDB("testdb", t)
@@ -138,5 +141,45 @@ func TestUpdateTaskRun(t *testing.T) {
 		if diff := cmp.Diff(taskrun.String(), r.String()); diff != "" {
 			t.Fatalf("Update Function not properly implemented: %v", diff)
 		}
+	}
+}
+
+func TestDeleteTaskRun(t *testing.T) {
+	// Create a temporay database
+	srv, err := setupTestDB("testdb", t)
+	if err != nil {
+		t.Fatalf("failed to create temp file for db: %v", err)
+	}
+
+	// Connect to fake server and insert a new taskrun
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := srv.CreateTaskRun(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{
+		ApiVersion: "1",
+		Metadata: &pb.ObjectMeta{
+			Uid:       "123459",
+			Name:      "mytaskrun",
+			Namespace: "default"}}})
+	if err != nil {
+		t.Fatalf("could not create taskrun: %v", err)
+	}
+
+	// Delete inserted taskrun
+	if _, err := srv.DeleteTaskRun(ctx, &pb.DeleteTaskRunRequest{Uid: r.GetMetadata().GetUid()}); err != nil {
+		t.Fatalf("could not delete taskrun: %v", err)
+	}
+
+	// Check if the taskrun is deleted
+	rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE uid = ?", r.GetMetadata().GetUid())
+	if err != nil {
+		t.Fatalf("failed to query on database: %v", err)
+	}
+	if rows.Next() {
+		t.Fatalf("failed to delete taskrun: %v", r.String())
+	}
+
+	// Check if a deleted taskrun can be delete again
+	if _, err := srv.DeleteTaskRun(ctx, &pb.DeleteTaskRunRequest{Uid: r.GetMetadata().GetUid()}); status.Code(err) != codes.NotFound {
+		t.Fatalf("same taskrun not supposed to be deleted again: %v", r.String())
 	}
 }

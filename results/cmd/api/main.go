@@ -24,9 +24,12 @@ import (
 	"net"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/empty"
 	_ "github.com/mattn/go-sqlite3"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const port = ":50051"
@@ -126,4 +129,27 @@ func (s *server) UpdateTaskRun(ctx context.Context, req *pb.UpdateTaskRunRequest
 		return nil, fmt.Errorf("failed to execute update of a new taskrun: %w", err)
 	}
 	return taskrunFromClient, nil
+}
+
+// DeleteTaskRun receives DeleteTaskRun request from users and delete TaskRun in local Sqlite Server.
+func (s *server) DeleteTaskRun(ctx context.Context, req *pb.DeleteTaskRunRequest) (*empty.Empty, error) {
+	statement, err := s.db.Prepare("DELETE FROM taskrun WHERE uid = ?")
+	if err != nil {
+		log.Fatalf("failed to create delete statement: %v", err)
+		return nil, fmt.Errorf("failed to create delete statement: %w", err)
+	}
+	results, err := statement.Exec(req.GetUid())
+	if err != nil {
+		log.Fatalf("failed to execute delete statement: %v", err)
+		return nil, fmt.Errorf("failed to execute delete statement: %w", err)
+	}
+	affect, err := results.RowsAffected()
+	if err != nil {
+		log.Fatalf("failed to retrieve results: %v", err)
+		return nil, fmt.Errorf("failed to retrieve results: %w", err)
+	}
+	if affect == 0 {
+		return nil, status.Errorf(codes.NotFound, "TaskRun not found")
+	}
+	return nil, nil
 }
