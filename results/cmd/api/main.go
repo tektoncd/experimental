@@ -63,7 +63,7 @@ func (s *server) CreateTaskRun(ctx context.Context, req *pb.CreateTaskRunRequest
 	statement, err := database.Prepare("INSERT INTO taskrun (taskrunlog, uid, name, namespace) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("failed to insert a new taskrun: %v\n", err)
-		return nil, fmt.Errorf("failed to insert a new taskrun: %v", err)
+		return nil, fmt.Errorf("failed to insert a new taskrun: %w", err)
 	}
 
 	// serialize data and insert it into database.
@@ -71,13 +71,38 @@ func (s *server) CreateTaskRun(ctx context.Context, req *pb.CreateTaskRunRequest
 	blobData, err := proto.Marshal(taskrunFromClient)
 	if err != nil {
 		log.Println("taskrun marshaling error: ", err)
-		return nil, fmt.Errorf("failed to marshal taskrun: %v", err)
+		return nil, fmt.Errorf("failed to marshal taskrun: %w", err)
 	}
 	taskrunMeta := taskrunFromClient.GetMetadata()
 	if _, err := statement.Exec(blobData, taskrunMeta.GetUid(), taskrunMeta.GetName(), taskrunMeta.GetNamespace()); err != nil {
 		log.Printf("failed to execute insertion of a new taskrun: %v\n", err)
-		return nil, fmt.Errorf("failed to excute insertion a new taskrun: %v", err)
+		return nil, fmt.Errorf("failed to excute insertion a new taskrun: %w", err)
 
 	}
 	return taskrunFromClient, nil
+}
+
+// Get TaskRun from database and send it to watcher
+func (s *server) GetTaskRun(ctx context.Context, req *pb.GetTaskRunRequest) (*pb.TaskRun, error) {
+	rows, err := s.db.Query("SELECT taskrunlog FROM taskrun WHERE uid = ?", req.GetUid())
+	if err != nil {
+		log.Fatalf("failed to query on database: %v", err)
+		return nil, fmt.Errorf("failed to query on a taskrun: %w", err)
+	}
+	taskrun := &pb.TaskRun{}
+	rowNum := 0
+	for rows.Next() {
+		var taskrunblob []byte
+		rowNum++
+		if rowNum >= 2 {
+			log.Println("Warning: multiple rows found")
+			break
+		}
+		rows.Scan(&taskrunblob)
+		if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
+			log.Fatal("unmarshaling error: ", err)
+			return nil, fmt.Errorf("failed to unmarshal taskrun: %w", err)
+		}
+	}
+	return taskrun, nil
 }
