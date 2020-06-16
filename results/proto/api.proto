@@ -3,6 +3,7 @@ syntax = "proto3";
 package tekton;
 
 import "taskrun.proto";
+import "google/protobuf/empty.proto";
 
 option go_package = "./proto";
 
@@ -10,12 +11,17 @@ service Results {
   rpc CreateTaskRun (CreateTaskRunRequest) returns (TaskRun) {}
   rpc UpdateTaskRun (UpdateTaskRunRequest) returns (TaskRun) {}
   rpc GetTaskRun    (GetTaskRunRequest)    returns (TaskRun) {}
+  rpc DeleteTaskRun (DeleteTaskRunRequest) returns (google.protobuf.Empty) {}  
   rpc ListTaskRuns  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
 }
 
 message CreateTaskRunRequest {
 	TaskRun task_run = 1;
 	// TODO: Accept some unique cluster identifier?
+}
+
+message DeleteTaskRunRequest {
+	string uid = 1;
 }
 
 message UpdateTaskRunRequest {
