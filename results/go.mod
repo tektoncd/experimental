@@ -10,6 +10,7 @@ require (
 	github.com/prometheus/procfs v0.0.8 // indirect
 	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/tektoncd/pipeline v0.12.0
+	github.com/yuege01/experimental v0.7.0 // indirect
 	go.uber.org/zap v1.13.0
 	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
 	google.golang.org/grpc v1.27.0
