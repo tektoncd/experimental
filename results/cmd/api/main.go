@@ -59,8 +59,7 @@ type server struct {
 
 // CreateTaskRun receives TaskRun from Watcher and save it to local Sqlite Server.
 func (s *server) CreateTaskRun(ctx context.Context, req *pb.CreateTaskRunRequest) (*pb.TaskRun, error) {
-	database := s.db
-	statement, err := database.Prepare("INSERT INTO taskrun (taskrunlog, uid, name, namespace) VALUES (?, ?, ?, ?)")
+	statement, err := s.db.Prepare("INSERT INTO taskrun (taskrunlog, uid, name, namespace) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("failed to insert a new taskrun: %v\n", err)
 		return nil, fmt.Errorf("failed to insert a new taskrun: %w", err)
@@ -105,4 +104,26 @@ func (s *server) GetTaskRun(ctx context.Context, req *pb.GetTaskRunRequest) (*pb
 		}
 	}
 	return taskrun, nil
+}
+
+// UpdateTaskRun receives TaskRun and FieldMask from client and uses them to update records in local Sqlite Server.
+func (s *server) UpdateTaskRun(ctx context.Context, req *pb.UpdateTaskRunRequest) (*pb.TaskRun, error) {
+	// Update the entire row in database based on uid of taskrun.
+	statement, err := s.db.Prepare("UPDATE taskrun SET name = ?, namespace = ?, taskrunlog = ? WHERE uid = ?")
+	if err != nil {
+		log.Printf("failed to update a existing taskrun: %v\n", err)
+		return nil, fmt.Errorf("failed to update a exsiting taskrun: %w", err)
+	}
+	taskrunFromClient := req.GetTaskRun()
+	blobData, err := proto.Marshal(taskrunFromClient)
+	if err != nil {
+		log.Println("taskrun marshaling error: ", err)
+		return nil, fmt.Errorf("taskrun marshaling error: %w", err)
+	}
+	taskrunMeta := taskrunFromClient.GetMetadata()
+	if _, err := statement.Exec(taskrunMeta.GetName(), taskrunMeta.GetNamespace(), blobData, taskrunMeta.GetUid()); err != nil {
+		log.Printf("failed to execute update of a new taskrun: %v\n", err)
+		return nil, fmt.Errorf("failed to execute update of a new taskrun: %w", err)
+	}
+	return taskrunFromClient, nil
 }

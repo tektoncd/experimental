@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
-	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/google/go-cmp/cmp"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 )
 
@@ -97,5 +98,45 @@ func TestGetTaskRun(t *testing.T) {
 	}
 	if diff := cmp.Diff(r.String(), res.String()); diff != "" {
 		t.Fatalf("could not get the same taskrun: %v", diff)
+	}
+}
+func TestUpdateTaskRun(t *testing.T) {
+	// Create a temporary database
+	srv, err := setupTestDB("testdb", t)
+	if err != nil {
+		t.Fatalf("failed to create temp file for db: %v", err)
+	}
+
+	// Connect to fake server and create a taskrun
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	objectmeta := &pb.ObjectMeta{Uid: "123459", Name: "mytaskrun", Namespace: "default"}
+	r, err := srv.CreateTaskRun(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{ApiVersion: "1", Metadata: objectmeta}})
+	if err != nil {
+		t.Fatalf("could not create taskrun: %v", err)
+	}
+
+	// Update the created taskrun
+	objectmeta = &pb.ObjectMeta{Uid: "123459", Name: "ziweifan", Namespace: "tomorrow"}
+	r, err = srv.UpdateTaskRun(ctx, &pb.UpdateTaskRunRequest{TaskRun: &pb.TaskRun{ApiVersion: "v1alpha1", Metadata: objectmeta}})
+	if err != nil {
+		t.Fatalf("could not update taskrun: %v", err)
+	}
+
+	// Validate by checking if we can get the updated taskrun
+	rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE uid = ?", r.GetMetadata().GetUid())
+	if err != nil {
+		t.Fatalf("failed to query on database: %v", err)
+	}
+	for rows.Next() {
+		var taskrunblob []byte
+		taskrun := &pb.TaskRun{}
+		rows.Scan(&taskrunblob)
+		if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
+			t.Fatal("unmarshaling error: ", err)
+		}
+		if diff := cmp.Diff(taskrun.String(), r.String()); diff != "" {
+			t.Fatalf("Update Function not properly implemented: %v", diff)
+		}
 	}
 }

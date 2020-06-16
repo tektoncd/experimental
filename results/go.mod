@@ -8,6 +8,8 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/tektoncd/pipeline v0.12.0
 	go.uber.org/zap v1.13.0
+	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
+	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03
 	google.golang.org/grpc v1.27.0
 	google.golang.org/protobuf v1.21.0
 	k8s.io/api v0.17.3
