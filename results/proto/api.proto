@@ -7,6 +7,7 @@ import "taskrun.proto";
 option go_package = "./proto";
 
 service Results {
+  rpc CreateTaskRun (CreateTaskRunRequest) returns (TaskRun) {}
   rpc UpdateTaskRun (UpdateTaskRunRequest) returns (TaskRun) {}
   rpc GetTaskRun    (GetTaskRunRequest)    returns (TaskRun) {}
   rpc ListTaskRuns  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
@@ -23,6 +24,7 @@ message UpdateTaskRunRequest {
 
 message GetTaskRunRequest {
 	string uid = 1;
+
 }
 
 message ListTaskRunsRequest {
@@ -35,3 +37,4 @@ message ListTaskRunsResponse {
 	repeated TaskRun items = 1;
 	// TODO: next_page_token, etc.
 }
+
