@@ -26,10 +26,12 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	taskruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/taskrun"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
+
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -54,11 +56,9 @@ func main() {
 	}
 	defer conn.Close()
 	client := pb.NewResultsClient(conn)
-
 	sharedmain.MainWithContext(injection.WithNamespaceScope(signals.NewContext(), *namespace), "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 		logger := logging.FromContext(ctx)
 		taskRunInformer := taskruninformer.Get(ctx)
-
 		c := &reconciler{
 			logger:        logger,
 			taskRunLister: taskRunInformer.Lister(),
@@ -70,7 +70,6 @@ func main() {
 			AddFunc:    impl.EnqueueControllerOf,
 			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
 		})
-
 		return impl
 	})
 }
@@ -83,7 +82,6 @@ type reconciler struct {
 
 func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 	r.logger.Infof("reconciling resource key: %s", key)
-
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		r.logger.Errorf("invalid resource key: %s", key)
@@ -101,7 +99,7 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	r.logger.Infof("Sending update for %s/%s (uid %s)", namespace, name, tr.UID)
+	r.logger.Infof("Sending update for %s/%s (uid %s)", namespace, tr.Name, tr.UID)
 
 	// Send the new status of the TaskRun to the API server.
 	p, err := convert.ToProto(tr)
