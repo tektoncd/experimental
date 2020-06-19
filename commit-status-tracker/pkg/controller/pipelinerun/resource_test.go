@@ -20,10 +20,11 @@ import (
 	"reflect"
 	"testing"
 
-	tb "github.com/tektoncd/pipeline/test/builder"
+	tb "github.com/tektoncd/experimental/commit-status-tracker/test/builder"
 	"knative.dev/pkg/apis"
 
-	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 func TestFindGitResourceWithNoRepository(t *testing.T) {
@@ -39,7 +40,7 @@ func TestFindGitResourceWithRepository(t *testing.T) {
 	pipelineRun := makePipelineRunWithResources(
 		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"))
 
-	want := &pipelinev1.PipelineResourceSpec{
+	want := &pipelinev1alpha1.PipelineResourceSpec{
 		Type: "git",
 		Params: []pipelinev1.ResourceParam{
 			pipelinev1.ResourceParam{
@@ -188,7 +189,7 @@ func makePipelineRunWithResources(opts ...tb.PipelineRunSpecOp) *pipelinev1.Pipe
 
 func makeGitResourceBinding(url, rev string) tb.PipelineRunSpecOp {
 	return tb.PipelineRunResourceBinding("some-resource"+randomSuffix(),
-		tb.PipelineResourceBindingResourceSpec(&pipelinev1.PipelineResourceSpec{
+		tb.PipelineResourceBindingResourceSpec(&pipelinev1alpha1.PipelineResourceSpec{
 			Type: pipelinev1.PipelineResourceTypeGit,
 			Params: []pipelinev1.ResourceParam{{
 				Name:  "url",
@@ -201,7 +202,7 @@ func makeGitResourceBinding(url, rev string) tb.PipelineRunSpecOp {
 
 func makeImageResourceBinding(url string) tb.PipelineRunSpecOp {
 	return tb.PipelineRunResourceBinding("some-resource"+randomSuffix(),
-		tb.PipelineResourceBindingResourceSpec(&pipelinev1.PipelineResourceSpec{
+		tb.PipelineResourceBindingResourceSpec(&pipelinev1alpha1.PipelineResourceSpec{
 			Type: pipelinev1.PipelineResourceTypeImage,
 			Params: []pipelinev1.ResourceParam{{
 				Name:  "url",
@@ -210,8 +211,8 @@ func makeImageResourceBinding(url string) tb.PipelineRunSpecOp {
 			}}))
 }
 
-func makePipelineResource(resType pipelinev1.PipelineResourceType, url, rev string) *pipelinev1.PipelineResourceSpec {
-	spec := &pipelinev1.PipelineResourceSpec{
+func makePipelineResource(resType pipelinev1.PipelineResourceType, url, rev string) *pipelinev1alpha1.PipelineResourceSpec {
+	spec := &pipelinev1alpha1.PipelineResourceSpec{
 		Type: resType,
 	}
 	if url != "" {

@@ -20,8 +20,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 
-	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	tb "github.com/tektoncd/pipeline/test/builder"
+	tb "github.com/tektoncd/experimental/commit-status-tracker/test/builder"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 func TestGetPipelineRunState(t *testing.T) {

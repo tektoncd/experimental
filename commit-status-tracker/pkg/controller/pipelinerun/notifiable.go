@@ -15,7 +15,7 @@
 package pipelinerun
 
 import (
-	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 // isNotifiablePipelineRun returns true if this PipelineRun should report its

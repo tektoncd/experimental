@@ -17,7 +17,7 @@ package pipelinerun
 import (
 	"testing"
 
-	tb "github.com/tektoncd/pipeline/test/builder"
+	tb "github.com/tektoncd/experimental/commit-status-tracker/test/builder"
 )
 
 func TestIsNotifiablePipelineRun(t *testing.T) {

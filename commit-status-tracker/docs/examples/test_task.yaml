@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: test-task
 spec:
-  inputs:
-    resources:
-      - name: source
-        type: git
-    params:
-    - name: message
-      description: the message to echo
-      default: hello
+  resources:
+    inputs:
+    - name: source
+      type: git
+  params:
+  - name: message
+    description: the message to echo
+    default: hello
   steps:
   - image: ubuntu
     script: |
