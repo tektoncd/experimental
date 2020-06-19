@@ -17,7 +17,7 @@ package pipelinerun
 import (
 	"github.com/jenkins-x/go-scm/scm"
 
-	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 // getCommitStatusInput extracts the various bits from a PipelineRun and

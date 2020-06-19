@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelinesv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 var log = logf.Log.WithName("controller_pipelinerun")

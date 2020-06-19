@@ -19,15 +19,16 @@ import (
 	"net/url"
 	"strings"
 
-	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 // findGitResource locates a Git PipelineResource in a PipelineRun.
 //
 // If no Git resources are found, an error is returned.
 // If more than one Git resource is found, an error is returned.
-func findGitResource(p *pipelinev1.PipelineRun) (*pipelinev1.PipelineResourceSpec, error) {
-	var spec *pipelinev1.PipelineResourceSpec
+func findGitResource(p *pipelinev1.PipelineRun) (*pipelinev1alpha1.PipelineResourceSpec, error) {
+	var spec *pipelinev1alpha1.PipelineResourceSpec
 	for _, r := range p.Spec.Resources {
 		if r.ResourceSpec == nil {
 			continue
@@ -48,7 +49,7 @@ func findGitResource(p *pipelinev1.PipelineRun) (*pipelinev1.PipelineResourceSpe
 
 // TODO This only parses GitHub repo paths, would need work to parse GitLab repo
 // paths too (can have more components).
-func getRepoAndSHA(p *pipelinev1.PipelineResourceSpec) (string, string, error) {
+func getRepoAndSHA(p *pipelinev1alpha1.PipelineResourceSpec) (string, string, error) {
 	if p.Type != pipelinev1.PipelineResourceTypeGit {
 		return "", "", fmt.Errorf("failed to get repo and SHA from non-git resource: %s", p)
 	}

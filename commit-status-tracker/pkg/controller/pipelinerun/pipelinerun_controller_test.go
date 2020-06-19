@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	tb "github.com/tektoncd/pipeline/test/builder"
+	tb "github.com/tektoncd/experimental/commit-status-tracker/test/builder"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 var (
@@ -54,6 +54,7 @@ func TestPipelineRunControllerPendingState(t *testing.T) {
 		tb.PipelineRunAnnotation(statusDescriptionName, "testing"),
 		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
+
 	objs := []runtime.Object{
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),

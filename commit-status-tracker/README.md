@@ -161,7 +161,7 @@ $ sed -i "" 's|REPLACE_IMAGE|quay.io/example-inc/commit-status-tracker:v0.0.1|g'
 You *must* have Tekton [Pipeline](https://github.com/tektoncd/pipeline/) installed before installing this operator:
 
 ```shell
-$ kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.10.1/release.yaml
+$ kubectl apply -f kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.13.2/release.yaml
 ```
 
 And then you can install the statuses operator with:
