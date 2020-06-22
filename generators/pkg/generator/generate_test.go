@@ -31,12 +31,8 @@ func TestGenerateTask(t *testing.T) {
 				"--destination=gcr.io/wlynch-test/kaniko-test",
 				"--verbosity=debug"},
 		}}}}
-	got, err := GenerateTask(spec)
-	if err != nil {
-		t.Fatalf("error from 'GenerateTask': %v", err)
-	}
-
-	if diff := cmp.Diff(got, want); diff != "" {
+	got := GenerateTask(spec)
+	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Tasks mismatch (-want +got):\n %s", diff)
 	}
 }

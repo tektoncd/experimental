@@ -3,24 +3,26 @@
 package parser
 
 import (
+	"fmt"
+	"generators/pkg/generator"
 	"io"
+	"io/ioutil"
 
-	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/yaml"
 )
 
-type products struct {
-	Items []int    `json:"items,omitempty"`
-	Names []string `json:"names,omitempty"`
-}
-
 // Parse parses a yaml file from io.Reader and stores the
-// result in the products struct
-func Parse(r io.Reader) (products, error) {
-	reader := yaml.NewYAMLToJSONDecoder(r)
-	res := products{}
-	err := reader.Decode(&res)
+// result in the GitHubSpec struct
+func Parse(r io.Reader) (generator.GitHubSpec, error) {
+	spec, err := ioutil.ReadAll(r)
+
 	if err != nil {
-		return res, err
+		return generator.GitHubSpec{}, fmt.Errorf("fail to read from the input: %w", err)
 	}
+	res := generator.GitHubSpec{}
+	if err := yaml.Unmarshal(spec, &res); err != nil {
+		return res, fmt.Errorf("fail to unmarshal from the input: %w", err)
+	}
+
 	return res, nil
 }

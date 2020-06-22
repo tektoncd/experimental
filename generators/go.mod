@@ -4,9 +4,11 @@ go 1.14
 
 require (
 	github.com/google/go-cmp v0.4.1
+	github.com/spf13/cobra v0.0.6
 	github.com/tektoncd/pipeline v0.13.2
 	k8s.io/api v0.17.6
 	k8s.io/apimachinery v0.17.6
+	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (
