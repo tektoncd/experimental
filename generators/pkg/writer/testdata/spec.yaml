@@ -1,0 +1,10 @@
+url: "https://github.com/wlynch/test"
+steps:
+  - name: build
+    image: gcr.io/kaniko-project/executor:latest
+    command:
+      - /kaniko/executor
+    args:
+      - --context=dir://$(workspaces.input.path)/src
+      - --destination=gcr.io/wlynch-test/kaniko-test
+      - --verbosity=debug

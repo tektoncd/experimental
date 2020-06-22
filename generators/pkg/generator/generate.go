@@ -14,7 +14,7 @@ type GitHubSpec struct {
 
 // GenerateTask generates Tekton Task spec
 // from simplified GithubSpec configs.
-func GenerateTask(spec GitHubSpec) (v1beta1.Task, error) {
+func GenerateTask(spec GitHubSpec) v1beta1.Task {
 	var task v1beta1.Task
 	task.Spec.Steps = spec.Steps
 	task.Spec.Workspaces = append(task.Spec.Workspaces,
@@ -23,5 +23,5 @@ func GenerateTask(spec GitHubSpec) (v1beta1.Task, error) {
 			MountPath: "/input",
 		},
 	)
-	return task, nil
+	return task
 }

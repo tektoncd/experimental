@@ -1,19 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"log"
-	"os"
-
-	"generators/pkg/parser"
-)
+import "generators/cmd/cli/cmd"
 
 func main() {
-	fmt.Println("Yaml Parser Demo:")
-	products, err := parser.Parse(os.Stdin)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(products)
+	cmd.Execute()
 }

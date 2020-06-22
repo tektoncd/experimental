@@ -1,0 +1,16 @@
+metadata:
+  creationTimestamp: null
+spec:
+  steps:
+  - args:
+    - --context=dir://$(workspaces.input.path)/src
+    - --destination=gcr.io/wlynch-test/kaniko-test
+    - --verbosity=debug
+    command:
+    - /kaniko/executor
+    image: gcr.io/kaniko-project/executor:latest
+    name: build
+    resources: {}
+  workspaces:
+  - mountPath: /input
+    name: input
