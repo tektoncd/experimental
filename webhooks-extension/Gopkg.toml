@@ -1,10 +1,10 @@
 [[override]]
   name = "github.com/tektoncd/triggers"
-  version = "v0.4.0"
+  branch = "master"
 
 [[override]]
   name = "knative.dev/pkg"
-  branch = "release-0.12"
+  branch = "release-0.13"
 
 [[override]]
   name = "k8s.io/api"
@@ -28,7 +28,7 @@
 
 [[override]]
   name = "github.com/tektoncd/pipeline"
-  version = "v0.11.0"
+  version = "v0.13.2"
 
 [prune]
   go-tests = true
