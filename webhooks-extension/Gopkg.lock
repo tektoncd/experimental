@@ -147,14 +147,6 @@
   version = "v1.1.9"
 
 [[projects]]
-  branch = "master"
-  digest = "1:fc2b04b0069d6b10bdef96d278fe20c345794009685ed3c8c7f1a6dc023eefec"
-  name = "github.com/mattbaird/jsonpatch"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "81af80346b1a01caae0cbc27fd3c1ba5b11e189f"
-
-[[projects]]
   digest = "1:33422d238f147d247752996a26574ac48dcf472976eda7f5134015f06bf16563"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -209,7 +201,7 @@
   version = "v0.6.0"
 
 [[projects]]
-  digest = "1:6f8b2b01578ba0c46c1a7447a7b48de1807a6b73bb6f1351fd55f4da5f254e4a"
+  digest = "1:100f1af1da5c451d8579f62c9b6da7a39e096f48975f93bee8661bf2f468e883"
   name = "github.com/tektoncd/pipeline"
   packages = [
     "pkg/apis/config",
@@ -232,11 +224,12 @@
     "pkg/substitution",
   ]
   pruneopts = "UT"
-  revision = "6303ce9f8db0366e4da1c94c311974d83bab715a"
-  version = "v0.11.0"
+  revision = "3a0cdba56ecb64069b12cbf12936223ab0f67e38"
+  version = "v0.13.2"
 
 [[projects]]
-  digest = "1:65ea6f76fb07726cf5c8ed73381e06e330152a1ee4f9a36957afdf40499c2280"
+  branch = "master"
+  digest = "1:0a6eaa3221986621239de60aeca60e2d813c559350553f5d3ca69df440aedea9"
   name = "github.com/tektoncd/triggers"
   packages = [
     "pkg/apis/triggers/v1alpha1",
@@ -247,8 +240,7 @@
     "pkg/client/clientset/versioned/typed/triggers/v1alpha1/fake",
   ]
   pruneopts = "UT"
-  revision = "b85308d5da5af5e13a4f7c01f3c3baef3d1368bd"
-  version = "v0.4.0"
+  revision = "03e6e3244690325b44c0cd7f16a44d26e4723bf2"
 
 [[projects]]
   digest = "1:4be983745b731611c52a01c36fff692ca62ca7793386c8bf3ade886cce0450a2"
@@ -375,6 +367,14 @@
   packages = ["rate"]
   pruneopts = "UT"
   revision = "555d28b269f0569763d25dbe1a237ae74c6bcc82"
+
+[[projects]]
+  digest = "1:a4e6161ffbea6b872a122961fff978f81af9c064f1757c559e21d2d322f13958"
+  name = "gomodules.xyz/jsonpatch"
+  packages = ["v2"]
+  pruneopts = "UT"
+  revision = "1c2a0262323edc27502942d9727c95646b1c3cbe"
+  version = "v2.1.0"
 
 [[projects]]
   digest = "1:e0a1881f9e0564bebdeac98c75e59f07acdde6ed3a5396e0e613eaad31194866"
@@ -738,8 +738,8 @@
   revision = "6496210b90e852b26b227eaedea39b286063fae6"
 
 [[projects]]
-  branch = "release-0.12"
-  digest = "1:4ecc5e9f190d67bdeb742b80973cca931d740aaae1ca862f9f08f29e0fda43c5"
+  branch = "release-0.13"
+  digest = "1:cebd2855b2f658231dc561423689d11335a36387f973cc25313c2040c2c9c175"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -753,7 +753,7 @@
     "tracker",
   ]
   pruneopts = "UT"
-  revision = "b8dc5fbc6d2f4717a69d15382921a51f93ab4cbb"
+  revision = "87426b54db6f1200e2cb9086055fdf7fe90307dc"
 
 [[projects]]
   digest = "1:36d2b2cb1fa6e4a731e38c3582c203213cdbc52c5f202af07db6dc6eeaec88dc"

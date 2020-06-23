@@ -282,11 +282,11 @@ func (r Resource) newTrigger(name, bindingName, templateName, repoURL, event, se
 		Name: name,
 		Bindings: []*v1alpha1.EventListenerBinding{
 			{
-				Name:       bindingName,
+				Ref:        bindingName,
 				APIVersion: "v1alpha1",
 			},
 			{
-				Name:       extraBindingName,
+				Ref:        extraBindingName,
 				APIVersion: "v1alpha1",
 			},
 		},
@@ -314,7 +314,7 @@ func (r Resource) newTrigger(name, bindingName, templateName, repoURL, event, se
 	}
 }
 
-func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pipelinesv1alpha1.Param) {
+func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []v1alpha1.Param) {
 	saName := webhook.ServiceAccount
 	requestedReleaseName := webhook.ReleaseName
 	if saName == "" {
@@ -348,23 +348,23 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 		logging.Log.Errorf("error returned from GetGitProviderAndAPIURL: %s", err)
 	}
 
-	hookParams := []pipelinesv1alpha1.Param{
-		{Name: "webhooks-tekton-release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: releaseName}},
-		{Name: "webhooks-tekton-target-namespace", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.Namespace}},
-		{Name: "webhooks-tekton-service-account", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.ServiceAccount}},
-		{Name: "webhooks-tekton-git-server", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: server}},
-		{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}},
-		{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}},
-		{Name: "webhooks-tekton-pull-task", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.PullTask}},
-		{Name: "webhooks-tekton-ssl-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: strconv.FormatBool(sslVerify)}},
-		{Name: "webhooks-tekton-insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: strconv.FormatBool(!sslVerify)}},
+	hookParams := []v1alpha1.Param{
+		{Name: "webhooks-tekton-release-name", Value: releaseName},
+		{Name: "webhooks-tekton-target-namespace", Value: webhook.Namespace},
+		{Name: "webhooks-tekton-service-account", Value: webhook.ServiceAccount},
+		{Name: "webhooks-tekton-git-server", Value: server},
+		{Name: "webhooks-tekton-git-org", Value: org},
+		{Name: "webhooks-tekton-git-repo", Value: repo},
+		{Name: "webhooks-tekton-pull-task", Value: webhook.PullTask},
+		{Name: "webhooks-tekton-ssl-verify", Value: strconv.FormatBool(sslVerify)},
+		{Name: "webhooks-tekton-insecure-skip-tls-verify", Value: strconv.FormatBool(!sslVerify)},
 	}
 
 	if webhook.DockerRegistry != "" {
-		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.DockerRegistry}})
+		hookParams = append(hookParams, v1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: webhook.DockerRegistry})
 	}
 	if webhook.HelmSecret != "" {
-		hookParams = append(hookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-helm-secret", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.HelmSecret}})
+		hookParams = append(hookParams, v1alpha1.Param{Name: "webhooks-tekton-helm-secret", Value: webhook.HelmSecret})
 	}
 
 	onSuccessComment := webhook.OnSuccessComment
@@ -384,17 +384,17 @@ func (r Resource) getParams(webhook webhook) (webhookParams, monitorParams []pip
 		onMissingComment = "Missing"
 	}
 
-	prMonitorParams := []pipelinesv1alpha1.Param{
-		{Name: "commentsuccess", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onSuccessComment}},
-		{Name: "commentfailure", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onFailureComment}},
-		{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onTimeoutComment}},
-		{Name: "commentmissing", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: onMissingComment}},
-		{Name: "gitsecretname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: webhook.AccessTokenRef}},
-		{Name: "gitsecretkeyname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}},
-		{Name: "dashboardurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: r.getDashboardURL(r.Defaults.Namespace)}},
-		{Name: "insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: strconv.FormatBool(!sslVerify)}},
-		{Name: "provider", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: provider}},
-		{Name: "apiurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: apiURL}},
+	prMonitorParams := []v1alpha1.Param{
+		{Name: "commentsuccess", Value: onSuccessComment},
+		{Name: "commentfailure", Value: onFailureComment},
+		{Name: "commenttimeout", Value: onTimeoutComment},
+		{Name: "commentmissing", Value: onMissingComment},
+		{Name: "gitsecretname", Value: webhook.AccessTokenRef},
+		{Name: "gitsecretkeyname", Value: "accessToken"},
+		{Name: "dashboardurl", Value: r.getDashboardURL(r.Defaults.Namespace)},
+		{Name: "insecure-skip-tls-verify", Value: strconv.FormatBool(!sslVerify)},
+		{Name: "provider", Value: provider},
+		{Name: "apiurl", Value: apiURL},
 	}
 
 	return hookParams, prMonitorParams
@@ -1153,26 +1153,26 @@ func (r Resource) getWebhooksFromEventListener() ([]webhook, error) {
 func (r Resource) getHookFromTrigger(t v1alpha1.EventListenerTrigger, suffix string) webhook {
 	var releaseName, namespace, serviceaccount, pulltask, dockerreg, helmsecret, repo, gitSecret string
 	for _, binding := range t.Bindings {
-		b, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(binding.Name, metav1.GetOptions{})
+		b, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(binding.Ref, metav1.GetOptions{})
 		if err != nil {
-			logging.Log.Errorf("Error retrieving webhook information in full - could not find required TriggerBinding %s", binding.Name)
+			logging.Log.Errorf("Error retrieving webhook information in full - could not find required TriggerBinding %s", binding.Ref)
 			t.Name = "Broken webhook! Resources not found"
 		}
 		for _, param := range b.Spec.Params {
 			switch param.Name {
 			case "webhooks-tekton-release-name":
-				releaseName = param.Value.StringVal
+				releaseName = param.Value
 				logging.Log.Debugf("Thinking the webhook name is %s", releaseName)
 			case "webhooks-tekton-target-namespace":
-				namespace = param.Value.StringVal
+				namespace = param.Value
 			case "webhooks-tekton-service-account":
-				serviceaccount = param.Value.StringVal
+				serviceaccount = param.Value
 			case "webhooks-tekton-pull-task":
-				pulltask = param.Value.StringVal
+				pulltask = param.Value
 			case "webhooks-tekton-docker-registry":
-				dockerreg = param.Value.StringVal
+				dockerreg = param.Value
 			case "webhooks-tekton-helm-secret":
-				helmsecret = param.Value.StringVal
+				helmsecret = param.Value
 			}
 		}
 	}

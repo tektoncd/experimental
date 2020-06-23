@@ -118,11 +118,11 @@ func TestNewTrigger(t *testing.T) {
 		Name: "myName",
 		Bindings: []*v1alpha1.EventListenerBinding{
 			{
-				Name:       "myBindingName",
+				Ref:        "myBindingName",
 				APIVersion: "v1alpha1",
 			},
 			{
-				Name:       "foo1234",
+				Ref:        "foo1234",
 				APIVersion: "v1alpha1",
 			},
 		},
@@ -492,9 +492,9 @@ func TestCreateEventListener(t *testing.T) {
 			_, expectedMonitorParams := getExpectedParams(hook, r, "github", "https://api.github.com/")
 			wextMonitorBindingFound := false
 			for _, monitorBinding := range trigger.Bindings {
-				if strings.HasPrefix(monitorBinding.Name, "wext-") {
+				if strings.HasPrefix(monitorBinding.Ref, "wext-") {
 					wextMonitorBindingFound = true
-					binding, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(monitorBinding.Name, metav1.GetOptions{})
+					binding, err := r.TriggersClient.TriggersV1alpha1().TriggerBindings(r.Defaults.Namespace).Get(monitorBinding.Ref, metav1.GetOptions{})
 					if err != nil {
 						t.Errorf("%s", err.Error())
 					}
@@ -807,7 +807,7 @@ func createDashboardService(name string, labels map[string]string) *corev1.Servi
 	return dashSVC
 }
 
-func getExpectedParams(hook webhook, r *Resource, expectedProvider, expectedAPIURL string) (expectedHookParams, expectedMonitorParams []pipelinesv1alpha1.Param) {
+func getExpectedParams(hook webhook, r *Resource, expectedProvider, expectedAPIURL string) (expectedHookParams, expectedMonitorParams []v1alpha1.Param) {
 	url := strings.TrimPrefix(hook.GitRepositoryURL, "https://")
 	url = strings.TrimPrefix(url, "http://")
 
@@ -820,54 +820,54 @@ func getExpectedParams(hook webhook, r *Resource, expectedProvider, expectedAPIU
 	insecureAsBool, _ := strconv.ParseBool(sslverify)
 	insecureAsString := strconv.FormatBool(!insecureAsBool)
 
-	expectedHookParams = []pipelinesv1alpha1.Param{}
+	expectedHookParams = []v1alpha1.Param{}
 	if hook.ReleaseName != "" {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.ReleaseName}})
+		expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-release-name", Value: hook.ReleaseName})
 	} else {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-release-name", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.GitRepositoryURL[strings.LastIndex(hook.GitRepositoryURL, "/")+1:]}})
+		expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-release-name", Value: hook.GitRepositoryURL[strings.LastIndex(hook.GitRepositoryURL, "/")+1:]})
 	}
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-target-namespace", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.Namespace}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-service-account", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.ServiceAccount}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-server", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: server}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-org", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: org}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-git-repo", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: repo}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-pull-task", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.PullTask}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-ssl-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: sslverify}})
-	expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: insecureAsString}})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-target-namespace", Value: hook.Namespace})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-service-account", Value: hook.ServiceAccount})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-git-server", Value: server})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-git-org", Value: org})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-git-repo", Value: repo})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-pull-task", Value: hook.PullTask})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-ssl-verify", Value: sslverify})
+	expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-insecure-skip-tls-verify", Value: insecureAsString})
 	if hook.DockerRegistry != "" {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.DockerRegistry}})
+		expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-docker-registry", Value: hook.DockerRegistry})
 	}
 	if hook.HelmSecret != "" {
-		expectedHookParams = append(expectedHookParams, pipelinesv1alpha1.Param{Name: "webhooks-tekton-helm-secret", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.HelmSecret}})
+		expectedHookParams = append(expectedHookParams, v1alpha1.Param{Name: "webhooks-tekton-helm-secret", Value: hook.HelmSecret})
 	}
 
-	expectedMonitorParams = []pipelinesv1alpha1.Param{}
+	expectedMonitorParams = []v1alpha1.Param{}
 	if hook.OnSuccessComment != "" {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentsuccess", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnSuccessComment}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commentsuccess", Value: hook.OnSuccessComment})
 	} else {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentsuccess", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Success"}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commentsuccess", Value: "Success"})
 	}
 	if hook.OnFailureComment != "" {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentfailure", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnFailureComment}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commentfailure", Value: hook.OnFailureComment})
 	} else {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentfailure", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Failed"}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commentfailure", Value: "Failed"})
 	}
 	if hook.OnTimeoutComment != "" {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnTimeoutComment}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commenttimeout", Value: hook.OnTimeoutComment})
 	} else {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commenttimeout", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Unknown"}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commenttimeout", Value: "Unknown"})
 	}
 	if hook.OnMissingComment != "" {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentmissing", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.OnMissingComment}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commentmissing", Value: hook.OnMissingComment})
 	} else {
-		expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "commentmissing", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "Missing"}})
+		expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "commentmissing", Value: "Missing"})
 	}
-	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: hook.AccessTokenRef}})
-	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "gitsecretkeyname", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: "accessToken"}})
-	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "dashboardurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: r.getDashboardURL(r.Defaults.Namespace)}})
-	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "insecure-skip-tls-verify", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: insecureAsString}})
-	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "provider", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: expectedProvider}})
-	expectedMonitorParams = append(expectedMonitorParams, pipelinesv1alpha1.Param{Name: "apiurl", Value: pipelinesv1alpha1.ArrayOrString{Type: pipelinesv1alpha1.ParamTypeString, StringVal: expectedAPIURL}})
+	expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "gitsecretname", Value: hook.AccessTokenRef})
+	expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "gitsecretkeyname", Value: "accessToken"})
+	expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "dashboardurl", Value: r.getDashboardURL(r.Defaults.Namespace)})
+	expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "insecure-skip-tls-verify", Value: insecureAsString})
+	expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "provider", Value: expectedProvider})
+	expectedMonitorParams = append(expectedMonitorParams, v1alpha1.Param{Name: "apiurl", Value: expectedAPIURL})
 
 	return
 }
@@ -893,13 +893,13 @@ func (r Resource) getExpectedPushAndPullRequestTriggersForWebhook(webhook webhoo
 			Name: webhook.Name + "-" + webhook.Namespace + "-push-event",
 			Bindings: []*v1alpha1.EventListenerBinding{
 				{
-					Name:       webhook.Pipeline + "-push-binding",
+					Ref:        webhook.Pipeline + "-push-binding",
 					APIVersion: "v1alpha1",
 				},
 				{
 					// This name is not as it would be in the product, as
 					// GenerateName is used.
-					Name:       "wext-" + webhook.Name + "-",
+					Ref:        "wext-" + webhook.Name + "-",
 					APIVersion: "v1alpha1",
 				},
 			},
@@ -929,13 +929,13 @@ func (r Resource) getExpectedPushAndPullRequestTriggersForWebhook(webhook webhoo
 			Name: webhook.Name + "-" + webhook.Namespace + "-pullrequest-event",
 			Bindings: []*v1alpha1.EventListenerBinding{
 				{
-					Name:       webhook.Pipeline + "-pullrequest-binding",
+					Ref:        webhook.Pipeline + "-pullrequest-binding",
 					APIVersion: "v1alpha1",
 				},
 				{
 					// This name is not as it would be in the product, as
 					// GenerateName is used.
-					Name:       "wext-" + webhook.Name + "-",
+					Ref:        "wext-" + webhook.Name + "-",
 					APIVersion: "v1alpha1",
 				},
 			},
