@@ -1,0 +1,137 @@
+  .task-data {
+    margin: 1em;
+  }
+  .modaltext{
+    margin-top: 1em;
+    margin-bottom: 1em;
+  }
+
+  .task-heading {
+    font-size: 1.5em;
+    margin: 0;
+    text-align: justified;
+
+  }
+
+
+  .basic-data {
+    margin-top: 1em;
+    margin-bottom: 2em;
+    margin-left: 1em;
+  }
+
+  .img {
+
+    float: left;
+    margin-left: 2em;
+    margin-top: 2em;
+
+  }
+
+  .dwnld {
+    float: right;
+    margin-right: 2em;
+  }
+
+  .avatar {
+    margin-top: 1em;
+    margin-left: 2.5em;
+  }
+
+
+  .downloadIcon {
+    margin-right: 1em;
+    margin-bottom: 1.5em;
+  }
+
+  .downloadNumber {
+    margin-left: 2.5em;
+    margin-bottom: 1em;
+  }
+
+  .download {
+    margin-top: 2em;
+    margin-bottom: 2em;
+    margin-right: 4em;
+  }
+
+  .heading {
+    font-size: 2em;
+  }
+
+  .data {
+    margin-left: 2em;
+    margin-top: 2em;
+    text-align: justify;
+    margin-bottom: 0.5em;
+  }
+
+  .button  {
+    width: 10em;
+  
+   
+  }
+
+  .star {
+    margin-left: 3em;
+  }
+
+  @media screen and (max-width: 750px){
+    .avatar{
+      margin-top: 2em;
+      margin-bottom: 0.5em;
+    }
+    .data{
+      margin-left: 2em;
+      margin-top: 0em;
+      margin-bottom: 0em;
+    }
+    .download{
+      margin-left: 1em;
+    }
+    .badge{
+      padding-right: '0.5em';
+      padding-top: '0.5em';
+    }  
+  } 
+
+
+
+
+/*      ------ moal   */
+
+.modal {
+  font-size: 20px;
+}
+.modal > .header {
+  width: 100%;
+  border-bottom: 1px solid gray;
+  font-size: 30px;
+  color: blue;
+  text-align: left;
+  padding-left: 0.5em;
+  padding-top : 0.5em;
+}
+.modal > .content {
+  width: 100%;
+  padding: 10px 5px;
+}
+.modal > .actions {
+  width: 100%;
+  padding: 10px 5px;
+  margin: auto;
+  text-align: center;
+}
+.modal > .close {
+  cursor: pointer;
+  position: absolute;
+  display: block;
+  padding: 2px 5px;
+  line-height: 20px;
+  right: 10px;
+  top: 10px;
+  font-size: 24px;
+  background: #ffffff;
+  /* border-radius: 18px; */
+  border: 1px solid #cfcece;
+}
