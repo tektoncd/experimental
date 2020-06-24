@@ -1,0 +1,66 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: tekton-hub
+spec:
+  selector:
+    matchLabels:
+      app: api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: github.com/tektoncd/hub/api/cmd/api
+          ports:
+            - containerPort: 5000
+          env:
+            - name: POSTGRESQL_HOST
+              value: db
+            - name: POSTGRESQL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: POSTGRESQL_PORT
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: POSTGRESQL_DATABASE
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: POSTGRESQL_USER
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: POSTGRESQL_PASSWORD
+            - name: VALIDATION_API
+              value: http://validation:5001
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: api
+                  key: GITHUB_TOKEN
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: api
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api
+                  key: CLIENT_SECRET
+            - name: JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api
+                  key: JWT_SIGNING_KEY

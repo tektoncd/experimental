@@ -1,0 +1,23 @@
+.description{
+    margin: 1em;
+}
+
+.example{
+    margin: 1em;
+}
+
+.tabContent{
+    margin:1em;
+}
+
+.readme > h2:first-child, .readme > h1:first-child  {
+    font-weight: bold;
+    font-size: 1.3em;
+}
+.readme > h2 {
+    font-weight: bold;
+}
+
+.yaml > p {
+    text-align: center;
+}

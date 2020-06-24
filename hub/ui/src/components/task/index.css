@@ -1,0 +1,72 @@
+.card {
+    /* border-left:0.1em solid rgb(30,102,204); */
+}
+
+.box:hover {
+    box-shadow: 0 0 11px rgba(33, 33, 33, .2);
+}
+
+.exampleBorder {
+    margin: 1em;
+}
+
+.downloads {
+    margin-right: 1em;
+}
+
+.task-heading {
+    font-size: 1.5em;
+    margin: 0;
+}
+
+.task-data {
+    margin: 1em;
+}
+
+.task-numbers {
+    margin-left: 1em;
+}
+
+.flex-numbers {
+    margin-right: 1em;
+}
+
+.version {
+    margin-right: 1em;
+}
+
+.badge {
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    /* width: 4em */
+    padding-right: 0.5em;
+
+}
+
+.download {
+    margin-bottom: 0.1em;
+}
+
+.text {
+    margin-bottom: -0.3em;
+    margin-right: 0.5em;
+}
+
+.cardActions {
+    margin-bottom: 0.3em;
+}
+
+.card {
+    height: 23em;
+    width: 18.5em;
+}
+
+.vtask {
+    text-align: right;
+    margin-right: .3em;
+    margin-top: 0.3em;
+}
+
+a {
+    text-decoration: none;
+}

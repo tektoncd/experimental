@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+  labels:
+    app: db
+  name: db
+  namespace: tekton-hub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+        name: db
+    spec:
+      containers:
+        - name: db
+          image: registry.redhat.io/rhscl/postgresql-12-rhel7
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: POSTGRESQL_DATABASE
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: POSTGRESQL_USER
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: POSTGRESQL_PASSWORD
+          livenessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+                - --live
+            failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /var/lib/pgsql/data
+              name: db-data
+      restartPolicy: Always
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: db
