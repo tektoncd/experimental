@@ -49,6 +49,7 @@ stringData:
   GITHUB_TOKEN: My Personal access token
   CLIENT_ID: Oauth client id
   CLIENT_SECRET: Oauth secret
+  JWT_SIGNING_KEY: a-long-signing-key
 ```
 
 **NOTE:** DO NOT MODIFY `config/20-api-secret.yaml` commit and push
@@ -115,27 +116,6 @@ db-748f56cb8c-rwqjc    1/1     Running   1          72s
 ```
 curl -k -X GET -I $(oc get routes api --template='https://{{ .spec.host }}/resources')
 ```
-
-### Deploy Validation Service
-
-Generating validation release yaml follows the same instructions as the [Api
-Service][] above
-
-
-```
-cd backend/validation
-```
-
-1. Export `KO_DOCKER_REPO` for ko to publish image
-1. `ko` resolve and apply the `validation.yaml`
-  ```
-    cd backend/validation
-    ko resolve -f config > validation.yaml
-  ```
-1. Ensure the `validation` image is public
-1. `oc apply -f validation.yaml`
-1. Watch for valiation pod to be running
-
 
 ### Deploy UI
 
