@@ -55,6 +55,5 @@ $ apt-get install sqlite3
 5. Create results.db and taskrun table under the cmd/api folder
 
 ```
-$ sqlite3
-$ sqilte> .read results.sql
+$ sqlite3 results.db < results.sql
 ```
