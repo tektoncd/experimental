@@ -22,7 +22,7 @@ const (
 // Test functionality of Server code
 func TestCreateTaskRun(t *testing.T) {
 	// Create a temporay database
-	srv, err := setupTestDB("testdb", t)
+	srv, err := setupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
@@ -41,12 +41,17 @@ func TestCreateTaskRun(t *testing.T) {
 }
 
 // setupTestDB set up a temporary database for testing
-func setupTestDB(dbName string, t *testing.T) (*server, error) {
+func setupTestDB(t *testing.T) (*server, error) {
+	t.Helper()
+
 	// Create a temporary file
 	tmpfile, err := ioutil.TempFile("", "testdb")
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
+	t.Cleanup(func() {
+		os.Remove(tmpfile.Name())
+	})
 
 	// Connect to sqlite DB.
 	db, err := sql.Open("sqlite3", tmpfile.Name())
@@ -56,11 +61,14 @@ func setupTestDB(dbName string, t *testing.T) (*server, error) {
 	}
 	t.Cleanup(func() {
 		db.Close()
-		os.Remove(tmpfile.Name())
 	})
 
+	schema, err := ioutil.ReadFile("results.sql")
+	if err != nil {
+		t.Fatalf("failed to read schema file: %v", err)
+	}
 	// Create taskrun table
-	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS taskrun (results_id binary(16) PRIMARY KEY, taskrunlog BLOB, name TEXT, namespace TEXT)")
+	statement, err := db.Prepare(string(schema))
 	if err != nil {
 		t.Fatalf("failed to create taskrun table: %v", err)
 	}
@@ -72,7 +80,7 @@ func setupTestDB(dbName string, t *testing.T) (*server, error) {
 
 func TestGetTaskRun(t *testing.T) {
 	// Create a temporary database
-	srv, err := setupTestDB("testdb", t)
+	srv, err := setupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to setup db: %v", err)
 	}
@@ -105,7 +113,7 @@ func TestGetTaskRun(t *testing.T) {
 
 func TestUpdateTaskRun(t *testing.T) {
 	// Create a temporary database
-	srv, err := setupTestDB("testdb", t)
+	srv, err := setupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
@@ -146,7 +154,7 @@ func TestUpdateTaskRun(t *testing.T) {
 
 func TestDeleteTaskRun(t *testing.T) {
 	// Create a temporay database
-	srv, err := setupTestDB("testdb", t)
+	srv, err := setupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
