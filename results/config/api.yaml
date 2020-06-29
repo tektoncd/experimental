@@ -28,50 +28,9 @@ spec:
       containers:
       - name: tekton-results-api
         image: ko://github.com/tektoncd/experimental/results/cmd/api
-        # Uncomment to use CloudSQL proxy defined below.
-        # args:
-        # - "-db_addr=127.0.0.1:3306"
-        env:
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql-db-creds
-              key: mysql-db-user
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-db-creds
-              key: mysql-db-password
 
-      # Uncomment to configure CloudSQL proxy.
-      # See https://cloud.google.com/sql/docs/mysql/connect-kubernetes-engine
-      # Change <INSTANCE_CONNECTION_NAME> here to include your GCP project, the
-      # region of your Cloud SQL instance and the name of your Cloud SQL
-      # instance. The format is $PROJECT:$REGION:$INSTANCE.
-      # Also make sure to set the instance's root user's password to the
-      # password defined in the mysql-db-creds secret.
-      # - name: cloudsql-proxy
-      #   image: gcr.io/cloudsql-docker/gce-proxy:1.16
-      #   command: 
-      #   - "/cloud_sql_proxy"
-      #   - "-instances=<INSTANCE_CONNECTION_NAME>=tcp:3306"
-      #   # If running on a VPC, the Cloud SQL proxy can connect via Private IP. See:
-      #   # https://cloud.google.com/sql/docs/mysql/private-ip for more info.
-      #   # - "-ip_address_types=PRIVATE"
-      #   - "-credential_file=/secrets/cloudsql/credentials.json"
-      #   securityContext:
-      #     runAsUser: 2  # non-root user
-      #     allowPrivilegeEscalation: false
-      #   volumeMounts:
-      #   - name: cloudsql-instance-credentials
-      #     mountPath: /secrets/cloudsql
-      #     readOnly: true
-      # volumes:
-      # - name: cloudsql-instance-credentials
-      #   secret:
-      #     secretName: cloudsql-instance-credentials
-      
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
