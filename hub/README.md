@@ -8,7 +8,7 @@ without understanding too much implementation details of tasks and pipelines.
 Tekton Hub also features tasks from different catalogs thereby making it a
 one-stop-shop for reusable Tekton resources.
 
-![HomePage](/images/home.png?raw=true)
+## **Deployed application link : [Hub](https://ui-tekton-hub.apps.openshift-web.p0s5.p1.openshiftapps.com/)**
 
 Tekton Hub provides the following features:
 
@@ -17,14 +17,11 @@ Tekton Hub provides the following features:
 User gets detailed information such as description, YAML, tags, rating, and
 number of downloads of tasks and pipelines.
 
-![Task](/images/task.png)
 
 2. Filter by  tags :
 
 This helps the user to get a particular resource by just knowing tags
 associated with task or pipeline.
-
-![Filter](/images/filter.png?raw=true)
 
 3. Search tasks and pipelines
 
@@ -36,12 +33,5 @@ associated with task or pipeline.
 
 5. Sort on the basis of name, rating, and download.
 
-6. Upload
-
-   - User can rate a resource based on the experience
-   - Developers can upload their tasks and pipelines directly from the GitHub repository
-
-7. Install task and pipeline on cluster
+6. Install task and pipeline on cluster
    - The Tekton Hub provides cluster installation commands for tasks or pipelines.
-
-![Install Commands](/images/install-steps.png)
