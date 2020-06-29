@@ -5,18 +5,12 @@ go 1.13
 require (
 	github.com/golang/protobuf v1.4.0-rc.4.0.20200313231945-b860323f09d0
 	github.com/google/go-cmp v0.4.0
-	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/prometheus/procfs v0.0.8 // indirect
-	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/tektoncd/pipeline v0.12.0
-	github.com/yuege01/experimental v0.7.0 // indirect
 	go.uber.org/zap v1.13.0
-	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
 	google.golang.org/grpc v1.27.0
 	google.golang.org/protobuf v1.21.0
 	k8s.io/api v0.17.3
-	k8s.io/apiextensions-apiserver v0.17.3 // indirect
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3
 	knative.dev/pkg v0.0.0-20200306230727-a56a6ea3fa56

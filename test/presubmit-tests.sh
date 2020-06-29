@@ -41,3 +41,5 @@ run webhooks-extension $@ || exit 1
 run catalogs $@ || exit 1
 run octant-plugin $@ || exit 1
 run tekdoc  $@ || exit 1
+run results $@ || exit 1
+run generators $@ || exit 1
