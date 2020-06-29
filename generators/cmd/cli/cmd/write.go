@@ -30,6 +30,6 @@ var writeCmd = &cobra.Command{
 
 func init() {
 	writeCmd.Flags().StringVarP(&specFilename, "filename", "f", "", "input spec file")
-	writeCmd.Flags().StringVarP(&outputFilename, "output", "o", "gen-task.yaml", "generated config file")
+	writeCmd.Flags().StringVarP(&outputFilename, "output", "o", "gen-config.yaml", "generated config file")
 	rootCmd.AddCommand(writeCmd)
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"generators/pkg/writer"
 	"os"
 
@@ -13,8 +14,7 @@ var showCmd = &cobra.Command{
 	Short: "Show generated configuration.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(filename) == 0 {
-			cmd.Help()
-			return nil
+			return errors.New("No input file specified")
 		}
 
 		if err := writer.WriteToDisk(filename, os.Stdout); err != nil {

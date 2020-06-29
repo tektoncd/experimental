@@ -6,6 +6,6 @@ steps:
       - /kaniko/executor
     args:
       - --context=dir://$(workspaces.input.path)/src
-      - --destination=gcr.io/wlynch-test/kaniko-test
+      - --destination=gcr.io/<use your project>/kaniko-test
       - --verbosity=debug
   

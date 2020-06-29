@@ -12,17 +12,17 @@ import (
 )
 
 // Parse parses a yaml file from io.Reader and stores the
-// result in the GitHubSpec struct
-func Parse(r io.Reader) (generator.GitHubSpec, error) {
-	spec, err := ioutil.ReadAll(r)
+// result in the GitHub struct
+func Parse(r io.Reader) (*generator.GitHub, error) {
+	github, err := ioutil.ReadAll(r)
 
 	if err != nil {
-		return generator.GitHubSpec{}, fmt.Errorf("fail to read from the input: %w", err)
+		return nil, fmt.Errorf("fail to read from the input: %w", err)
 	}
-	res := generator.GitHubSpec{}
-	if err := yaml.Unmarshal(spec, &res); err != nil {
-		return res, fmt.Errorf("fail to unmarshal from the input: %w", err)
+	res := generator.GitHub{}
+	if err := yaml.Unmarshal(github, &res); err != nil {
+		return &res, fmt.Errorf("fail to unmarshal from the input: %w", err)
 	}
 
-	return res, nil
+	return &res, nil
 }
