@@ -188,7 +188,23 @@ Wait till the migration log shows
 Migration did run successfully !!
 ```
 
+This will create all the tables and populate the categories & tags tables.
+
 #### Verify if api route is accessible
+
+```
+curl -k -X GET -I $(oc get routes api --template='https://{{ .spec.host }}/categories')
+```
+
+Now, to fetch data from catalog, call the `/resources/sync` API
+
+```
+curl -k -X POST -I $(oc get routes api --template='https://{{ .spec.host }}/resources/sync')
+```
+
+Wait for API to return status code 200.
+
+You can verify by calling `/resources` API which will return resources from db.
 
 ```
 curl -k -X GET -I $(oc get routes api --template='https://{{ .spec.host }}/resources')
@@ -346,6 +362,15 @@ Watch the pods until new `api` pod is running.
 ```
 oc get pods -o wide -w
 ```
+
+Now, to update data from catalog, call the `/resources/sync` API
+
+```
+curl -k -X POST -I $(oc get routes api --template='https://{{ .spec.host }}/resources/sync')
+```
+
+This will sync the updates from catalog in DB.
+
 
 ### Step 3: Deploy UI
 
