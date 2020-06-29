@@ -7,31 +7,9 @@ The full proposal is here: https://docs.google.com/document/d/1-XBYQ4kBlCHIHSVoY
 
 The main components of this design are a **queryable indexed API server** backed by persistent storage, and an **in-cluster watcher** to report updates to the API server.
 
-The API server interface is defined in `./proto/api.proto`, and a reference
-implementation backed by MySQL lives in `./cmd/api`. A reference implementation
-of the in-cluster watcher lives in `./cmd/watcher`.
+The API server interface is defined in `./proto/api.proto`, and a reference implementation backed by Sqlite will live in `./cmd/api`. A reference implementation of the in-cluster watcher will live in `./cmd/watcher`.
 
 ## Development
-
-### One-Time Setup
-
-Create a random secret password for the `root` user on the database:
-
-```
-kubectl create secret generic mysql-db-creds \
-    -n tekton-pipelines \
-    --from-literal=mysql-db-user=root \
-    --from-literal=mysql-db-password=$(head -c 20 /dev/urandom | base64)
-```
-
-This creates a random password which will be used by both the mysql instance,
-and the API server that connects to it. Its value doesn't matter, but if you
-need to see it for some reason, you can run:
-
-```
-kubectl get secret mysql-db-creds -n tekton-pipelines -ojsonpath='{.data.mysql-db-password}' | base64 -D
-```
-
 
 ### Deploying
 
@@ -68,18 +46,15 @@ $ go get -u github.com/golang/protobuf/protoc-gen-go
 ```
 $ go generate ./proto/
 ```
-
-### Teardown
-
-To delete associated resources:
+4. Install the sqlite3
 
 ```
-kubectl delete -f config/
+$ apt-get install sqlite3
 ```
 
-And don't forget to delete the secret:
+5. Create results.db and taskrun table under the cmd/api folder
 
 ```
-kubectl delete secret mysql-db-creds -n tekton-pipelines
+$ sqlite3
+$ sqilte> .read results.sql
 ```
->>>>>>> Connect to a local MySQL instance to store results

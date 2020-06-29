@@ -67,8 +67,8 @@ func main() {
 		impl := controller.NewImpl(c, c.logger, pipeline.PipelineRunControllerName)
 
 		taskRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    impl.Enqueue,
-			UpdateFunc: controller.PassNew(impl.Enqueue),
+			AddFunc:    impl.EnqueueControllerOf,
+			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
 		})
 
 		return impl
