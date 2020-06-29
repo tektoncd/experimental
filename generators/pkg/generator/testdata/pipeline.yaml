@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: build-from-git-repo
+  name: build-from-git-repo
+spec:
+  finally:
+  - name: final-set-status
+    params:
+    - name: REPO_FULL_NAME
+      value: /wlynch/test
+    taskRef:
+      name: set-status
+  tasks:
+  - name: fetch-git-repo
+    params:
+    - name: url
+      value: https://github.com/wlynch/test
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: source
+  - name: build-from-repo
+    runAfter:
+    - fetch-git-repo
+    taskRef:
+      name: github-build
+    workspaces:
+    - name: input
+      workspace: source
+  workspaces:
+  - name: source

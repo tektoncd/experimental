@@ -5,9 +5,12 @@ go 1.14
 require (
 	github.com/google/go-cmp v0.4.1
 	github.com/spf13/cobra v0.0.6
-	github.com/tektoncd/pipeline v0.13.2
-	k8s.io/api v0.17.6
-	k8s.io/apimachinery v0.17.6
+	github.com/tektoncd/pipeline v0.13.1-0.20200629123701-851a266d38d3
+	k8s.io/api v0.18.2
+	k8s.io/apimachinery v0.18.2
+	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
+	knative.dev/caching v0.0.0-20200521155757-e78d17bc250e // indirect
+	sigs.k8s.io/controller-runtime v0.6.0
 	sigs.k8s.io/yaml v1.2.0
 )
 

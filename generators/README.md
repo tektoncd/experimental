@@ -4,9 +4,22 @@ This project contains experimental code to create a tool for generating Tekton s
 
 See [tektoncd/pipeline/#2590](https://github.com/tektoncd/pipeline/issues/2590) information and background.
 
+## Dependent Tasks
+The generated config would expect to use the tasks already on the cluster adding to the pipeline. The tasks include [`git-clone`](https://github.com/tektoncd/catalog/blob/master/git/git-clone.yaml) and [`github-set-status`](https://github.com/tektoncd/catalog/blob/master/github/set_status.yaml). The `git-clone` task is used to help clone a repo into the workspace. The `status-task` is used to help allow external services to mark GitHub commits with a state. 
+### Install the Task
+You can install the tasks with the specified revision(commit SHA) on the command line like this:
+```
+kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/<revision>/github/set_status.yaml
+kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/<revision>/git/git-clone.yaml
+```
+
 ## Features
 
 This experimental project has been broken down into the features as follows:
 
 1. Parse the yaml file with io.Reader and store the result in the self-defined struct
 2. Create tool that given an input spec with steps, generates the resulting Tekton resources for the particular type.
+- Create binary that invokes another binary on the path based on the type.
+- Read input steps and generate resulting pipeline config that mounts GitHub workspace and configures steps accordingly.
+3. Add support for writing output to disk.
+4. Add support for tasks and pipelines.

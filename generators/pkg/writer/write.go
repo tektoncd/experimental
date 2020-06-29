@@ -4,11 +4,10 @@ package writer
 
 import (
 	"fmt"
-	"io"
-	"os"
-
 	"generators/pkg/generator"
 	"generators/pkg/parser"
+	"io"
+	"os"
 
 	"sigs.k8s.io/yaml"
 )
@@ -22,17 +21,34 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	}
 	defer file.Close()
 
-	spec, err := parser.Parse(file)
+	github, err := parser.Parse(file)
 	if err != nil {
 		return fmt.Errorf("unable to parse the file from %s: %w", filename, err)
 	}
 
-	task := generator.GenerateTask(spec)
+	task := generator.GenerateTask(github)
+	pipeline, err := generator.GeneratePipeline(github)
+
+	// write task
+	if _, err := writer.Write([]byte("---\n")); err != nil {
+		return err
+	}
 	data, err := yaml.Marshal(&task)
 	if err != nil {
-		return fmt.Errorf("unable to marshal the file from %s: %w", filename, err)
+		return fmt.Errorf("unable to marshal the task %s: %w", task.Name, err)
+	}
+	if _, err := writer.Write(data); err != nil {
+		return err
 	}
 
+	// write pipeline
+	if _, err := writer.Write([]byte("---\n")); err != nil {
+		return err
+	}
+	data, err = yaml.Marshal(&pipeline)
+	if err != nil {
+		return fmt.Errorf("unable to marshal the pipeline %s: %w", pipeline.Name, err)
+	}
 	_, err = writer.Write(data)
 	return err
 }
