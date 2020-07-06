@@ -1,8 +1,6 @@
 import React from 'react';
 import {
   Card,
-  CardHead,
-  CardActions,
   CardFooter,
   TextContent,
   Text,
@@ -18,110 +16,74 @@ const Footer: React.FC = () => {
   return (
 
     <div>
-      <Card style={{height: '20em', backgroundColor: '#EDEDED'}}></Card>
-      <Card style={{backgroundColor: '#151515'}}>
-        <CardHead>
-          <img src={tekton} alt="Task"
-            style={{height: '7em', marginLeft: '5em'}}
-          />
-          <TextContent style={{marginLeft: '2em', color: 'white'}}>
-            <Text component={TextVariants.h1}>
-              Tekton
-            </Text>
-            <Grid>
-              <GridItem span={6}>
-                <Text style={{color: 'white'}}>
-                  The Tekton Pipelines project
-                  provides k8s-style resources for declaring
-                  CI/CD-style pipelines.Click here to learn more about
-                  <a href="https://github.com/tektoncd/pipeline" target="_">Tekton</a>
-                </Text>
-              </GridItem>
-            </Grid>
-          </TextContent>
+      <Card style={{ height: '20em', backgroundColor: '#EDEDED' }}></Card>
+      <Card style={{ backgroundColor: '#151515', marginTop: '1em' }}>
 
-          <CardActions style={{marginTop: '1.5em'}}>
-            <Flex breakpointMods={[{modifier: 'nowrap', breakpoint: 'lg'}]}>
+        <Grid>
+          <GridItem span={4}>
 
-              <FlexItem style={{marginRight: '5em'}}>
-                <Flex breakpointMods
-                  ={[{modifier: 'column', breakpoint: 'lg'}]}>
-
-                  <FlexItem >
-                    <TextContent>
-                      <Text style={{color: 'white', marginTop: '1.5em'}}
-                        component={TextVariants.h1}>
-                        Links
-                      </Text>
-
-                      <Text>
-                        <a href="/"
-                          style={{color: 'white', marginTop: '1.5em'}} >
-                          About
-                        </a>
-                      </Text>
-
-                      <Text>
-                        <a href="/"
-                          style={{color: 'white', marginTop: '1.5em'}}>
-                          Contribute
-                        </a>
-                      </Text>
-
-                      <Text>
-                        <a href="/"
-                          style={{color: 'white', marginTop: '1.5em'}}>
-                          Tekton
-                        </a>
-                      </Text>
-
-                    </TextContent>
-                  </FlexItem>
-                </Flex>
-              </FlexItem>
-
-              <FlexItem style={{marginRight: '10em'}}>
-                <TextContent>
-                  <Text style={{color: 'white', marginTop: '1.5em'}}
-                    component={TextVariants.h1}>
-                    Contribute
-                  </Text>
-                  <Text>
-                    <a href="/"
-                      style={{color: 'white', marginTop: '1.5em'}}>
-                      About
-                    </a>
-                  </Text>
-
-                  <Text>
-                    <a href="/"
-                      style={{color: 'white', marginTop: '1.5em'}}>
-                      Contribute
-                    </a>
-                  </Text>
-
-                  <Text>
-                    <a href="/"
-                      style={{color: 'white', marginTop: '1.5em'}}>
-                      Tekton
-                    </a>
-                  </Text>
-
-                </TextContent>
+          </GridItem>
+          <GridItem span={4} rowSpan={12}>
+            <Flex>
+              <FlexItem>
+                <a href="https://cd.foundation">
+                  <img src="https://tekton.dev/partner-logos/cdf.png"
+                    alt="tekton.dev" />
+                </a>
               </FlexItem>
             </Flex>
+            <Flex style={{ justifyContent: 'center' }}>
+              <TextContent>
+                <Text component={TextVariants.h1}
+                  style={{ color: 'white' }}>
+                  Tekton is a{' '}
+                  <Text component={TextVariants.a} href="https://cd.foundation">
+                    Continuous Delivery Foundation
+                   </Text>{' '}project.
+                </Text>
+              </TextContent>
+            </Flex>
+            <Flex style={{ justifyContent: 'center' }}>
+              <FlexItem>
+                <img src={tekton} alt="Tekton"
+                  style={{ height: '6em', marginBottom: '-1em' }} />
+              </FlexItem>
+            </Flex>
+            <Flex>
+              <CardFooter>
+                <Text style={{ color: 'white', textAlign: 'center' }}>
+                  © 2020 The Linux Foundation®. All rights reserved.
+                  The Linux Foundation has registered trademarks and
+                  uses trademarks. For a list of trademarks of
+                  The Linux Foundation, please see our {' '}
+                  <Text component={TextVariants.a}
+                    href="https://www.linuxfoundation.org/trademark-usage/">
+                    Trademark Usage page
+                  </Text>
+                  .{' '}Linux is a registered trademark of Linus Torvalds.
+                   {' '}
+                  <Text component={TextVariants.a}
+                    href="https://www.linuxfoundation.org/privacy/" >
+                    Privacy Policy
+                   </Text>
+                  {' '} and {' '}
+                  <Text component={TextVariants.a}
+                    href="https://www.linuxfoundation.org/terms/">
+                    Terms of Use
+                  </Text>
+                  {' '}.
+                </Text>
+              </CardFooter>
+            </Flex>
 
-          </CardActions>
-        </CardHead>
+          </GridItem>
 
-        <CardFooter style={{marginLeft: '45%'}}>
-          <Text style={{color: 'white'}}>
-            Copyright © 2019 Red Hat, Inc.
-          </Text>
-        </CardFooter>
+          <GridItem span={4}>
 
+          </GridItem>
+        </Grid>
       </Card>
-    </div>
+    </div >
   );
 };
 
