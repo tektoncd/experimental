@@ -28,7 +28,7 @@ const Footer: React.FC = () => {
               <FlexItem>
                 <a href="https://cd.foundation">
                   <img src="https://tekton.dev/partner-logos/cdf.png"
-                    alt="tekton.dev" />
+                    alt="tekton.dev" style={{ maxWidth: '60%', marginLeft: '20%' }} />
                 </a>
               </FlexItem>
             </Flex>
