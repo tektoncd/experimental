@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: github.com/tektoncd/hub/api/cmd/api
+          image: ko://github.com/tektoncd/hub/api/cmd/api
           ports:
             - containerPort: 5000
           env:

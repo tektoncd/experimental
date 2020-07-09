@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
       - name: db-migration
-        image: github.com/tektoncd/hub/api/cmd/db
+        image: ko://github.com/tektoncd/hub/api/cmd/db
         env:
             - name: POSTGRESQL_HOST
               value: db
