@@ -173,13 +173,13 @@ func (r Repo) parseResourceVersion(filePath string, kind string) (*TekonResource
 	}
 
 	annotations := res.GetAnnotations()
-	displayName, ok := annotations["displayName"]
+	displayName, ok := annotations["tekton.dev/displayName"]
 	if !ok {
 		log.With("action", "ignore").Infof(
 			"Resource %s name: %s has no display name", res.GroupVersionKind(), res.GetName())
 	}
 
-	tags := annotations["tags"]
+	tags := annotations["tekton.dev/tags"]
 
 	// first line
 	description, found, err := unstructured.NestedString(res.Object, "spec", "description")
