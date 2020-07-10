@@ -1,0 +1,149 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: github-build
+  name: github-build
+spec:
+  steps:
+  - args:
+    - --context=dir://$(workspaces.input.path)/src
+    - --destination=gcr.io/<use your project>/kaniko-test
+    - --verbosity=debug
+    command:
+    - /kaniko/executor
+    image: gcr.io/kaniko-project/executor:latest
+    name: build
+    resources: {}
+  workspaces:
+  - mountPath: /input
+    name: input
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: build-from-git-repo
+  name: build-from-git-repo
+spec:
+  finally:
+  - name: final-set-status
+    params:
+    - name: REPO_FULL_NAME
+      value: /wlynch/test
+    taskRef:
+      name: set-status
+  tasks:
+  - name: fetch-git-repo
+    params:
+    - name: url
+      value: https://github.com/wlynch/test
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: source
+  - name: build-from-repo
+    runAfter:
+    - fetch-git-repo
+    taskRef:
+      name: github-build
+    workspaces:
+    - name: input
+      workspace: source
+  workspaces:
+  - name: source
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: build-from-git-repo
+  name: github-binding
+  namespace: default
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.head_commit.id)
+  - name: gitrepositoryurl
+    value: $(body.repository.url)
+status: {}
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: build-from-git-repo
+  name: github-template
+  namespace: default
+spec:
+  params:
+  - description: The git revision
+    name: gitrevision
+  - description: The git repository url
+    name: gitrepositoryurl
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      creationTimestamp: null
+      generateName: build-from-git-repo-run-
+      labels:
+        generator.tekton.dev: build-from-git-repo
+      name: build-from-git-repo
+      namespace: default
+    spec:
+      params:
+      - name: gitrepositoryurl
+        value: $(params.gitrepositoryurl)
+      - name: gitrevision
+        value: $(params.gitrevision)
+      pipelineRef:
+        name: build-from-git-repo
+      workspaces:
+      - name: source
+        volumeClaimTemplate:
+          metadata:
+            creationTimestamp: null
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+          status: {}
+    status: {}
+status: {}
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: build-from-git-repo
+  name: github-listener
+  namespace: default
+spec:
+  podTemplate: {}
+  serviceAccountName: ""
+  triggers:
+  - bindings:
+    - ref: github-binding
+    interceptors:
+    - github:
+        eventTypes:
+        - push
+        secretRef:
+          secretKey: secretToken
+          secretName: github-secret
+    name: github-listener
+    template:
+      name: github-template
+status:
+  configuration:
+    generatedName: ""

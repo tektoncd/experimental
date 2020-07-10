@@ -15,7 +15,7 @@ func TestWriteToDisk(t *testing.T) {
 	}
 	got := buf.Bytes()
 
-	path := "./testdata/pipeline.yaml"
+	path := "./testdata/config.yaml"
 	want, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatalf("fail to read file %s: %v", path, err)

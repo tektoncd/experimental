@@ -33,7 +33,7 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	if _, err := writer.Write([]byte("---\n")); err != nil {
 		return err
 	}
-	data, err := yaml.Marshal(&task)
+	data, err := yaml.Marshal(task)
 	if err != nil {
 		return fmt.Errorf("unable to marshal the task %s: %w", task.Name, err)
 	}
@@ -45,10 +45,48 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	if _, err := writer.Write([]byte("---\n")); err != nil {
 		return err
 	}
-	data, err = yaml.Marshal(&pipeline)
+	data, err = yaml.Marshal(pipeline)
 	if err != nil {
 		return fmt.Errorf("unable to marshal the pipeline %s: %w", pipeline.Name, err)
 	}
+	if _, err := writer.Write(data); err != nil {
+		return err
+	}
+
+	trigger := generator.GenerateTrigger(pipeline)
+	// write TriggerBinding
+	if _, err := writer.Write([]byte("---\n")); err != nil {
+		return err
+	}
+	data, err = yaml.Marshal(trigger.TriggerBinding)
+	if err != nil {
+		return fmt.Errorf("unable to marshal the TriggerBinding %s: %w", trigger.TriggerBinding.Name, err)
+	}
+	if _, err := writer.Write(data); err != nil {
+		return err
+	}
+
+	// write TriggerTemplate
+	if _, err := writer.Write([]byte("---\n")); err != nil {
+		return err
+	}
+	data, err = yaml.Marshal(trigger.TriggerTemplate)
+	if err != nil {
+		return fmt.Errorf("unable to marshal the TriggerTemplate %s: %w", trigger.TriggerTemplate.Name, err)
+	}
+	if _, err := writer.Write(data); err != nil {
+		return err
+	}
+
+	// write EventListener
+	if _, err := writer.Write([]byte("---\n")); err != nil {
+		return err
+	}
+	data, err = yaml.Marshal(trigger.EventListener)
+	if err != nil {
+		return fmt.Errorf("unable to marshal the EventListener %s: %w", trigger.EventListener.Name, err)
+	}
 	_, err = writer.Write(data)
 	return err
+
 }
