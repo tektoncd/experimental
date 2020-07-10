@@ -3,9 +3,10 @@ module generators
 go 1.14
 
 require (
-	github.com/google/go-cmp v0.4.1
+	github.com/google/go-cmp v0.5.0
 	github.com/spf13/cobra v0.0.6
 	github.com/tektoncd/pipeline v0.13.1-0.20200629123701-851a266d38d3
+	github.com/tektoncd/triggers v0.6.1
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
