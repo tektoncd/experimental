@@ -1,0 +1,25 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: github-pipeline
+  generateName: github-pipeline-run-
+  namespace: default
+  labels: 
+    generator.tekton.dev: github-pipeline
+spec:
+  pipelineRef:
+    name: github-pipeline
+  params:
+  - name: gitrepositoryurl
+    value: $(params.gitrepositoryurl)
+  - name: gitrevision
+    value: $(params.gitrevision)
+  workspaces:
+  - name: source
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

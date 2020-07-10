@@ -7,7 +7,11 @@ import (
 	"net/url"
 
 	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // GitHub defines Github fields
@@ -21,6 +25,13 @@ type GitHub struct {
 type GitHubSpec struct {
 	URL   string         `json:"url,omitempty"`
 	Steps []v1beta1.Step `json:"steps,omitempty"`
+}
+
+// Trigger includes the Tekton trigger resources
+type Trigger struct {
+	TriggerBinding  *v1alpha1.TriggerBinding
+	TriggerTemplate *v1alpha1.TriggerTemplate
+	EventListener   *v1alpha1.EventListener
 }
 
 // GenerateTask generates Tekton Task
@@ -143,4 +154,164 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 	}
 
 	return pipeline, nil
+}
+
+// Generate the trigger with the given generated pipeline
+func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
+	if p.Namespace == "" {
+		p.Namespace = "default"
+	}
+
+	// create pipelinerun in the triggertemplate
+	pr := &v1beta1.PipelineRun{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1beta1.SchemeGroupVersion.String(),
+			Kind:       "PipelineRun",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    p.Namespace,
+			Name:         p.Name,
+			GenerateName: p.Name + "-run-",
+			Labels:       p.Labels,
+		},
+		Spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{
+				Name: p.Name,
+			},
+			Params: []v1beta1.Param{
+				{
+					Name: "gitrepositoryurl",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "$(params.gitrepositoryurl)",
+					},
+				},
+				{
+					Name: "gitrevision",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "$(params.gitrevision)",
+					},
+				},
+			},
+			Workspaces: []v1beta1.WorkspaceBinding{
+				{
+					Name: p.Spec.Workspaces[0].Name,
+					VolumeClaimTemplate: &corev1.PersistentVolumeClaim{
+						Spec: corev1.PersistentVolumeClaimSpec{
+							AccessModes: []corev1.PersistentVolumeAccessMode{
+								corev1.ReadWriteOnce,
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									"storage": *resource.NewQuantity(1*1024*1024*1024, resource.BinarySI),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// create the triggertemplate
+	tt := &v1alpha1.TriggerTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: p.Namespace,
+			Name:      "github-template",
+			Labels:    p.Labels,
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			Kind:       "TriggerTemplate",
+		},
+		Spec: v1alpha1.TriggerTemplateSpec{
+			Params: []v1alpha1.ParamSpec{
+				{
+					Name:        "gitrevision",
+					Description: "The git revision",
+				},
+				{
+					Name:        "gitrepositoryurl",
+					Description: "The git repository url",
+				},
+			},
+			ResourceTemplates: []v1alpha1.TriggerResourceTemplate{
+				{
+					runtime.RawExtension{Object: pr},
+				},
+			},
+		},
+	}
+
+	// create the triggerbinding
+	tb := &v1alpha1.TriggerBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: p.Namespace,
+			Name:      "github-binding",
+			Labels:    p.Labels,
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			Kind:       "TriggerBinding",
+		},
+		Spec: v1alpha1.TriggerBindingSpec{
+			Params: []v1alpha1.Param{
+				{
+					Name:  "gitrevision",
+					Value: "$(body.head_commit.id)",
+				},
+				{
+					Name:  "gitrepositoryurl",
+					Value: "$(body.repository.url)",
+				},
+			},
+		},
+	}
+
+	// create the eventlistener
+	el := &v1alpha1.EventListener{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: p.Namespace,
+			Name:      "github-listener",
+			Labels:    p.Labels,
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			Kind:       "EventListener",
+		},
+		Spec: v1alpha1.EventListenerSpec{
+			Triggers: []v1alpha1.EventListenerTrigger{
+				{
+					Name: "github-listener",
+					Interceptors: []*v1alpha1.EventInterceptor{
+						{
+							GitHub: &v1alpha1.GitHubInterceptor{
+								EventTypes: []string{"push"},
+								SecretRef: &v1alpha1.SecretRef{
+									SecretKey:  "secretToken",
+									SecretName: "github-secret",
+								},
+							},
+						},
+					},
+					Bindings: []*v1alpha1.EventListenerBinding{
+						{
+							Ref: tb.Name,
+						},
+					},
+					Template: v1alpha1.EventListenerTemplate{
+						Name: tt.Name,
+					},
+				},
+			},
+		},
+	}
+
+	trigger := &Trigger{
+		TriggerBinding:  tb,
+		TriggerTemplate: tt,
+		EventListener:   el,
+	}
+	return trigger
 }
