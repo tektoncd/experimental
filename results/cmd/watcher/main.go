@@ -107,7 +107,7 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 		r.logger.Errorf("Error converting to proto: %v", err)
 		return err
 	}
-	if _, err := r.client.UpdateTaskRun(ctx, &pb.UpdateTaskRunRequest{
+	if _, err := r.client.UpdateTaskRunResult(ctx, &pb.UpdateTaskRunRequest{
 		TaskRun: p,
 	}); err != nil {
 		r.logger.Error("Error updating TaskRun %s: %v", name, err)

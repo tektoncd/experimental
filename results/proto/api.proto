@@ -8,11 +8,16 @@ import "google/protobuf/empty.proto";
 option go_package = "./proto";
 
 service Results {
-  rpc CreateTaskRun (CreateTaskRunRequest) returns (TaskRun) {}
-  rpc UpdateTaskRun (UpdateTaskRunRequest) returns (TaskRun) {}
-  rpc GetTaskRun    (GetTaskRunRequest)    returns (TaskRun) {}
-  rpc DeleteTaskRun (DeleteTaskRunRequest) returns (google.protobuf.Empty) {}  
+  rpc CreateTaskRunResult (CreateTaskRunRequest) returns (TaskRunResult) {}
+  rpc UpdateTaskRunResult (UpdateTaskRunRequest) returns (TaskRunResult) {}
+  rpc GetTaskRunResultResult    (GetTaskRunRequest)    returns (TaskRunResult) {}
+  rpc DeleteTaskRunResult (DeleteTaskRunRequest) returns (google.protobuf.Empty) {}  
   rpc ListTaskRuns  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
+}
+
+message TaskRunResult {
+	TaskRun task_run = 1;
+	string results_id = 2;
 }
 
 message CreateTaskRunRequest {
@@ -21,16 +26,16 @@ message CreateTaskRunRequest {
 }
 
 message DeleteTaskRunRequest {
-	string uid = 1;
+	string results_id = 1;
 }
 
 message UpdateTaskRunRequest {
 	TaskRun task_run = 1;
+	string results_id = 2;
 }
 
 message GetTaskRunRequest {
-	string uid = 1;
-
+	string results_id = 1;
 }
 
 message ListTaskRunsRequest {

@@ -30,7 +30,7 @@ func TestCreateTaskRun(t *testing.T) {
 	// connect to fake server and do testing
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	if _, err := srv.CreateTaskRun(ctx, &pb.CreateTaskRunRequest{
+	if _, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
 		TaskRun: &pb.TaskRun{ApiVersion: "1",
 			Metadata: &pb.ObjectMeta{
 				Uid:       "123459",
@@ -60,7 +60,7 @@ func setupTestDB(dbName string, t *testing.T) (*server, error) {
 	})
 
 	// Create taskrun table
-	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS taskrun (logid binary(16) PRIMARY KEY, taskrunlog BLOB, uid TEXT, name TEXT, namespace TEXT)")
+	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS taskrun (results_id binary(16) PRIMARY KEY, taskrunlog BLOB, name TEXT, namespace TEXT)")
 	if err != nil {
 		t.Fatalf("failed to create taskrun table: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestGetTaskRun(t *testing.T) {
 	// Connect to fake server and create a new taskrun
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := srv.CreateTaskRun(ctx, &pb.CreateTaskRunRequest{
+	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
 		TaskRun: &pb.TaskRun{
 			ApiVersion: "v1beta1",
 			Metadata: &pb.ObjectMeta{
@@ -94,7 +94,7 @@ func TestGetTaskRun(t *testing.T) {
 	t.Logf("Created taskrun: %s", r.String())
 
 	// Test if we can find inserted taskrun
-	res, err := srv.GetTaskRun(ctx, &pb.GetTaskRunRequest{Uid: r.GetMetadata().GetUid()})
+	res, err := srv.GetTaskRunResult(ctx, &pb.GetTaskRunRequest{ResultsId: r.GetResultsId()})
 	if err != nil {
 		t.Fatalf("could not get taskrun: %v", err)
 	}
@@ -114,20 +114,20 @@ func TestUpdateTaskRun(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	objectmeta := &pb.ObjectMeta{Uid: "123459", Name: "mytaskrun", Namespace: "default"}
-	r, err := srv.CreateTaskRun(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{ApiVersion: "1", Metadata: objectmeta}})
+	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{ApiVersion: "1", Metadata: objectmeta}})
 	if err != nil {
 		t.Fatalf("could not create taskrun: %v", err)
 	}
 
 	// Update the created taskrun
 	objectmeta = &pb.ObjectMeta{Uid: "123459", Name: "ziweifan", Namespace: "tomorrow"}
-	r, err = srv.UpdateTaskRun(ctx, &pb.UpdateTaskRunRequest{TaskRun: &pb.TaskRun{ApiVersion: "v1alpha1", Metadata: objectmeta}})
+	r, err = srv.UpdateTaskRunResult(ctx, &pb.UpdateTaskRunRequest{TaskRun: &pb.TaskRun{ApiVersion: "v1alpha1", Metadata: objectmeta}, ResultsId: r.GetResultsId()})
 	if err != nil {
 		t.Fatalf("could not update taskrun: %v", err)
 	}
 
 	// Validate by checking if we can get the updated taskrun
-	rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE uid = ?", r.GetMetadata().GetUid())
+	rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", r.GetResultsId())
 	if err != nil {
 		t.Fatalf("failed to query on database: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestUpdateTaskRun(t *testing.T) {
 		if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
 			t.Fatal("unmarshaling error: ", err)
 		}
-		if diff := cmp.Diff(taskrun.String(), r.String()); diff != "" {
+		if diff := cmp.Diff(taskrun.String(), r.GetTaskRun().String()); diff != "" {
 			t.Fatalf("Update Function not properly implemented: %v", diff)
 		}
 	}
@@ -154,7 +154,7 @@ func TestDeleteTaskRun(t *testing.T) {
 	// Connect to fake server and insert a new taskrun
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := srv.CreateTaskRun(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{
+	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{
 		ApiVersion: "1",
 		Metadata: &pb.ObjectMeta{
 			Uid:       "123459",
@@ -165,12 +165,12 @@ func TestDeleteTaskRun(t *testing.T) {
 	}
 
 	// Delete inserted taskrun
-	if _, err := srv.DeleteTaskRun(ctx, &pb.DeleteTaskRunRequest{Uid: r.GetMetadata().GetUid()}); err != nil {
+	if _, err := srv.DeleteTaskRunResult(ctx, &pb.DeleteTaskRunRequest{ResultsId: r.GetResultsId()}); err != nil {
 		t.Fatalf("could not delete taskrun: %v", err)
 	}
 
 	// Check if the taskrun is deleted
-	rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE uid = ?", r.GetMetadata().GetUid())
+	rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", r.GetResultsId())
 	if err != nil {
 		t.Fatalf("failed to query on database: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestDeleteTaskRun(t *testing.T) {
 	}
 
 	// Check if a deleted taskrun can be delete again
-	if _, err := srv.DeleteTaskRun(ctx, &pb.DeleteTaskRunRequest{Uid: r.GetMetadata().GetUid()}); status.Code(err) != codes.NotFound {
+	if _, err := srv.DeleteTaskRunResult(ctx, &pb.DeleteTaskRunRequest{ResultsId: r.GetResultsId()}); status.Code(err) != codes.NotFound {
 		t.Fatalf("same taskrun not supposed to be deleted again: %v", r.String())
 	}
 }
