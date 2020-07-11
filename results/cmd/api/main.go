@@ -25,6 +25,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"google.golang.org/grpc"
@@ -60,33 +61,40 @@ type server struct {
 	db *sql.DB
 }
 
-// CreateTaskRun receives TaskRun from Watcher and save it to local Sqlite Server.
-func (s *server) CreateTaskRun(ctx context.Context, req *pb.CreateTaskRunRequest) (*pb.TaskRun, error) {
-	statement, err := s.db.Prepare("INSERT INTO taskrun (taskrunlog, uid, name, namespace) VALUES (?, ?, ?, ?)")
+// CreateTaskRunResult receives CreateTaskRunRequest from clients and save it to local Sqlite Server.
+func (s *server) CreateTaskRunResult(ctx context.Context, req *pb.CreateTaskRunRequest) (*pb.TaskRunResult, error) {
+	database := s.db
+	statement, err := database.Prepare("INSERT INTO taskrun (taskrunlog, results_id, name, namespace) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		log.Printf("failed to insert a new taskrun: %v\n", err)
 		return nil, fmt.Errorf("failed to insert a new taskrun: %w", err)
 	}
+	resultsID := uuid.New()
 
 	// serialize data and insert it into database.
 	taskrunFromClient := req.GetTaskRun()
+	taskrunRes := pb.TaskRunResult{TaskRun: taskrunFromClient, ResultsId: resultsID.String()}
 	blobData, err := proto.Marshal(taskrunFromClient)
 	if err != nil {
 		log.Println("taskrun marshaling error: ", err)
 		return nil, fmt.Errorf("failed to marshal taskrun: %w", err)
 	}
 	taskrunMeta := taskrunFromClient.GetMetadata()
-	if _, err := statement.Exec(blobData, taskrunMeta.GetUid(), taskrunMeta.GetName(), taskrunMeta.GetNamespace()); err != nil {
+	if _, err := statement.Exec(blobData, resultsID, taskrunMeta.GetName(), taskrunMeta.GetNamespace()); err != nil {
 		log.Printf("failed to execute insertion of a new taskrun: %v\n", err)
-		return nil, fmt.Errorf("failed to excute insertion a new taskrun: %w", err)
-
+		return nil, status.Errorf(codes.AlreadyExists, "Try to create taskrun again")
 	}
-	return taskrunFromClient, nil
+	return &taskrunRes, nil
 }
 
-// Get TaskRun from database and send it to watcher
-func (s *server) GetTaskRun(ctx context.Context, req *pb.GetTaskRunRequest) (*pb.TaskRun, error) {
-	rows, err := s.db.Query("SELECT taskrunlog FROM taskrun WHERE uid = ?", req.GetUid())
+// GetTaskRun received GetTaskRunRequest from users and return TaskRunResult back to users
+func (s *server) GetTaskRunResult(ctx context.Context, req *pb.GetTaskRunRequest) (*pb.TaskRunResult, error) {
+	resultsID, err := uuid.Parse(req.GetResultsId())
+	if err != nil {
+		log.Fatal("failed to parse resultID string into resultsID UUID", err)
+		return nil, fmt.Errorf("failed to find a taskrun: %w", err)
+	}
+	rows, err := s.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", resultsID)
 	if err != nil {
 		log.Fatalf("failed to query on database: %v", err)
 		return nil, fmt.Errorf("failed to query on a taskrun: %w", err)
@@ -106,13 +114,13 @@ func (s *server) GetTaskRun(ctx context.Context, req *pb.GetTaskRunRequest) (*pb
 			return nil, fmt.Errorf("failed to unmarshal taskrun: %w", err)
 		}
 	}
-	return taskrun, nil
+	return &pb.TaskRunResult{TaskRun: taskrun, ResultsId: req.GetResultsId()}, nil
 }
 
 // UpdateTaskRun receives TaskRun and FieldMask from client and uses them to update records in local Sqlite Server.
-func (s *server) UpdateTaskRun(ctx context.Context, req *pb.UpdateTaskRunRequest) (*pb.TaskRun, error) {
+func (s *server) UpdateTaskRunResult(ctx context.Context, req *pb.UpdateTaskRunRequest) (*pb.TaskRunResult, error) {
 	// Update the entire row in database based on uid of taskrun.
-	statement, err := s.db.Prepare("UPDATE taskrun SET name = ?, namespace = ?, taskrunlog = ? WHERE uid = ?")
+	statement, err := s.db.Prepare("UPDATE taskrun SET name = ?, namespace = ?, taskrunlog = ? WHERE results_id = ?")
 	if err != nil {
 		log.Printf("failed to update a existing taskrun: %v\n", err)
 		return nil, fmt.Errorf("failed to update a exsiting taskrun: %w", err)
@@ -124,21 +132,21 @@ func (s *server) UpdateTaskRun(ctx context.Context, req *pb.UpdateTaskRunRequest
 		return nil, fmt.Errorf("taskrun marshaling error: %w", err)
 	}
 	taskrunMeta := taskrunFromClient.GetMetadata()
-	if _, err := statement.Exec(taskrunMeta.GetName(), taskrunMeta.GetNamespace(), blobData, taskrunMeta.GetUid()); err != nil {
+	if _, err := statement.Exec(taskrunMeta.GetName(), taskrunMeta.GetNamespace(), blobData, req.GetResultsId()); err != nil {
 		log.Printf("failed to execute update of a new taskrun: %v\n", err)
 		return nil, fmt.Errorf("failed to execute update of a new taskrun: %w", err)
 	}
-	return taskrunFromClient, nil
+	return &pb.TaskRunResult{TaskRun: taskrunFromClient, ResultsId: req.GetResultsId()}, nil
 }
 
 // DeleteTaskRun receives DeleteTaskRun request from users and delete TaskRun in local Sqlite Server.
-func (s *server) DeleteTaskRun(ctx context.Context, req *pb.DeleteTaskRunRequest) (*empty.Empty, error) {
-	statement, err := s.db.Prepare("DELETE FROM taskrun WHERE uid = ?")
+func (s *server) DeleteTaskRunResult(ctx context.Context, req *pb.DeleteTaskRunRequest) (*empty.Empty, error) {
+	statement, err := s.db.Prepare("DELETE FROM taskrun WHERE results_id = ?")
 	if err != nil {
 		log.Fatalf("failed to create delete statement: %v", err)
 		return nil, fmt.Errorf("failed to create delete statement: %w", err)
 	}
-	results, err := statement.Exec(req.GetUid())
+	results, err := statement.Exec(req.GetResultsId())
 	if err != nil {
 		log.Fatalf("failed to execute delete statement: %v", err)
 		return nil, fmt.Errorf("failed to execute delete statement: %w", err)
