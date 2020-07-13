@@ -39,6 +39,7 @@ import (
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
+	_ "knative.dev/pkg/system/testing"
 )
 
 var (
@@ -67,8 +68,8 @@ func main() {
 		impl := controller.NewImpl(c, c.logger, pipeline.PipelineRunControllerName)
 
 		taskRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    impl.EnqueueControllerOf,
-			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
+			AddFunc:    impl.Enqueue,
+			UpdateFunc: controller.PassNew(impl.Enqueue),
 		})
 		return impl
 	})
@@ -107,7 +108,7 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 		r.logger.Errorf("Error converting to proto: %v", err)
 		return err
 	}
-	if _, err := r.client.UpdateTaskRunResult(ctx, &pb.UpdateTaskRunRequest{
+	if _, err := r.client.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
 		TaskRun: p,
 	}); err != nil {
 		r.logger.Error("Error updating TaskRun %s: %v", name, err)
