@@ -1,13 +1,13 @@
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: EventListener
 metadata:
-  name: github-listener
+  name: github-pipeline-eventlistener
   namespace: default
   labels: 
     generator.tekton.dev: github-pipeline
 spec:
   triggers:
-    - name: github-listener
+    - name: github-push
       interceptors:
         - github:
             secretRef:
@@ -16,6 +16,6 @@ spec:
             eventTypes:
               - push
       bindings:
-        - ref: github-binding
+        - ref: github-pipeline-triggerbinding
       template:
-        name: github-template
+        name: github-pipeline-triggertemplate

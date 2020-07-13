@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: github-pipeline
+  name: github-pipelinerun
   generateName: github-pipeline-run-
   namespace: default
   labels: 

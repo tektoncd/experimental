@@ -1,7 +1,7 @@
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerTemplate
 metadata:
-  name: github-template
+  name: github-pipeline-triggertemplate
   namespace: default
   labels: 
     generator.tekton.dev: github-pipeline

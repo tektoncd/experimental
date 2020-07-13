@@ -26,8 +26,9 @@ kind: Pipeline
 metadata:
   creationTimestamp: null
   labels:
-    generator.tekton.dev: build-from-git-repo
-  name: build-from-git-repo
+    generator.tekton.dev: github-build-pipeline
+  name: github-build-pipeline
+  namespace: default
 spec:
   finally:
   - name: final-set-status
@@ -62,8 +63,8 @@ kind: TriggerBinding
 metadata:
   creationTimestamp: null
   labels:
-    generator.tekton.dev: build-from-git-repo
-  name: github-binding
+    generator.tekton.dev: github-build-pipeline
+  name: github-build-pipeline-triggerbinding
   namespace: default
 spec:
   params:
@@ -78,8 +79,8 @@ kind: TriggerTemplate
 metadata:
   creationTimestamp: null
   labels:
-    generator.tekton.dev: build-from-git-repo
-  name: github-template
+    generator.tekton.dev: github-build-pipeline
+  name: github-build-pipeline-triggertemplate
   namespace: default
 spec:
   params:
@@ -92,10 +93,10 @@ spec:
     kind: PipelineRun
     metadata:
       creationTimestamp: null
-      generateName: build-from-git-repo-run-
+      generateName: github-build-pipeline-run-
       labels:
-        generator.tekton.dev: build-from-git-repo
-      name: build-from-git-repo
+        generator.tekton.dev: github-build-pipeline
+      name: github-build-pipelinerun
       namespace: default
     spec:
       params:
@@ -104,7 +105,7 @@ spec:
       - name: gitrevision
         value: $(params.gitrevision)
       pipelineRef:
-        name: build-from-git-repo
+        name: github-build-pipeline
       workspaces:
       - name: source
         volumeClaimTemplate:
@@ -125,15 +126,15 @@ kind: EventListener
 metadata:
   creationTimestamp: null
   labels:
-    generator.tekton.dev: build-from-git-repo
-  name: github-listener
+    generator.tekton.dev: github-build-pipeline
+  name: github-build-pipeline-eventlistener
   namespace: default
 spec:
   podTemplate: {}
   serviceAccountName: ""
   triggers:
   - bindings:
-    - ref: github-binding
+    - ref: github-build-pipeline-triggerbinding
     interceptors:
     - github:
         eventTypes:
@@ -141,9 +142,9 @@ spec:
         secretRef:
           secretKey: secretToken
           secretName: github-secret
-    name: github-listener
+    name: github-push
     template:
-      name: github-template
+      name: github-build-pipeline-triggertemplate
 status:
   configuration:
     generatedName: ""

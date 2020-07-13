@@ -159,7 +159,7 @@ func TestGenerateTrigger(t *testing.T) {
 		t.Fatalf("fail to unmarshal from the input: %v", err)
 	}
 
-	want := &Trigger{
+	want := &trigger{
 		TriggerBinding:  tb,
 		TriggerTemplate: tt,
 		EventListener:   el,
