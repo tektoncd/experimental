@@ -1,7 +1,7 @@
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerBinding
 metadata:
-  name: github-binding
+  name: github-pipeline-triggerbinding
   namespace: default
   labels: 
     generator.tekton.dev: github-pipeline

@@ -26,67 +26,33 @@ func WriteToDisk(filename string, writer io.Writer) error {
 		return fmt.Errorf("unable to parse the file from %s: %w", filename, err)
 	}
 
+	// resrouces needed to write to disk
 	task := generator.GenerateTask(github)
 	pipeline, err := generator.GeneratePipeline(github)
-
-	// write task
-	if _, err := writer.Write([]byte("---\n")); err != nil {
-		return err
-	}
-	data, err := yaml.Marshal(task)
 	if err != nil {
-		return fmt.Errorf("unable to marshal the task %s: %w", task.Name, err)
+		return fmt.Errorf("unable to get the pipeline: %w", err)
 	}
-	if _, err := writer.Write(data); err != nil {
-		return err
-	}
-
-	// write pipeline
-	if _, err := writer.Write([]byte("---\n")); err != nil {
-		return err
-	}
-	data, err = yaml.Marshal(pipeline)
-	if err != nil {
-		return fmt.Errorf("unable to marshal the pipeline %s: %w", pipeline.Name, err)
-	}
-	if _, err := writer.Write(data); err != nil {
-		return err
-	}
-
 	trigger := generator.GenerateTrigger(pipeline)
-	// write TriggerBinding
-	if _, err := writer.Write([]byte("---\n")); err != nil {
-		return err
-	}
-	data, err = yaml.Marshal(trigger.TriggerBinding)
-	if err != nil {
-		return fmt.Errorf("unable to marshal the TriggerBinding %s: %w", trigger.TriggerBinding.Name, err)
-	}
-	if _, err := writer.Write(data); err != nil {
-		return err
-	}
 
-	// write TriggerTemplate
-	if _, err := writer.Write([]byte("---\n")); err != nil {
-		return err
-	}
-	data, err = yaml.Marshal(trigger.TriggerTemplate)
-	if err != nil {
-		return fmt.Errorf("unable to marshal the TriggerTemplate %s: %w", trigger.TriggerTemplate.Name, err)
-	}
-	if _, err := writer.Write(data); err != nil {
-		return err
-	}
+	// pack up all the objects
+	pac := []interface{}{task, pipeline, trigger.TriggerBinding, trigger.TriggerTemplate, trigger.EventListener}
 
-	// write EventListener
+	for _, o := range pac {
+		if err := wirteYaml(o, writer); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func wirteYaml(o interface{}, writer io.Writer) error {
 	if _, err := writer.Write([]byte("---\n")); err != nil {
 		return err
 	}
-	data, err = yaml.Marshal(trigger.EventListener)
+	data, err := yaml.Marshal(o)
 	if err != nil {
-		return fmt.Errorf("unable to marshal the EventListener %s: %w", trigger.EventListener.Name, err)
+		return fmt.Errorf("unable to marshal the object: %w", err)
 	}
 	_, err = writer.Write(data)
 	return err
-
 }

@@ -27,8 +27,7 @@ type GitHubSpec struct {
 	Steps []v1beta1.Step `json:"steps,omitempty"`
 }
 
-// Trigger includes the Tekton trigger resources
-type Trigger struct {
+type trigger struct {
 	TriggerBinding  *v1alpha1.TriggerBinding
 	TriggerTemplate *v1alpha1.TriggerTemplate
 	EventListener   *v1alpha1.EventListener
@@ -68,7 +67,7 @@ func GenerateTask(github *GitHub) *v1beta1.Task {
 // from simplified Github configs.
 func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 	ws := "source"
-	name := "build-from-git-repo"
+	name := github.Name + "-pipeline"
 	tasksName := []string{"fetch-git-repo", "build-from-repo", "final-set-status"}
 
 	u, err := url.Parse(github.Spec.URL)
@@ -157,7 +156,7 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 }
 
 // Generate the trigger with the given generated pipeline
-func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
+func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 	if p.Namespace == "" {
 		p.Namespace = "default"
 	}
@@ -170,7 +169,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    p.Namespace,
-			Name:         p.Name,
+			Name:         p.Name + "run",
 			GenerateName: p.Name + "-run-",
 			Labels:       p.Labels,
 		},
@@ -218,7 +217,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
 	tt := &v1alpha1.TriggerTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
-			Name:      "github-template",
+			Name:      p.Name + "-triggertemplate",
 			Labels:    p.Labels,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -248,7 +247,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
 	tb := &v1alpha1.TriggerBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
-			Name:      "github-binding",
+			Name:      p.Name + "-triggerbinding",
 			Labels:    p.Labels,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -273,7 +272,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
 	el := &v1alpha1.EventListener{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
-			Name:      "github-listener",
+			Name:      p.Name + "-eventlistener",
 			Labels:    p.Labels,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -283,7 +282,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
 		Spec: v1alpha1.EventListenerSpec{
 			Triggers: []v1alpha1.EventListenerTrigger{
 				{
-					Name: "github-listener",
+					Name: "github-push",
 					Interceptors: []*v1alpha1.EventInterceptor{
 						{
 							GitHub: &v1alpha1.GitHubInterceptor{
@@ -308,7 +307,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *Trigger {
 		},
 	}
 
-	trigger := &Trigger{
+	trigger := &trigger{
 		TriggerBinding:  tb,
 		TriggerTemplate: tt,
 		EventListener:   el,
