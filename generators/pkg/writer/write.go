@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -35,8 +36,7 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	trigger := generator.GenerateTrigger(pipeline)
 
 	// pack up all the objects
-	pac := []interface{}{task, pipeline, trigger.TriggerBinding, trigger.TriggerTemplate, trigger.EventListener}
-
+	pac := []runtime.Object{task, pipeline, trigger.TriggerBinding, trigger.TriggerTemplate, trigger.EventListener}
 	for _, o := range pac {
 		if err := wirteYaml(o, writer); err != nil {
 			return err
@@ -45,13 +45,13 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	return nil
 }
 
-func wirteYaml(o interface{}, writer io.Writer) error {
+func wirteYaml(o runtime.Object, writer io.Writer) error {
 	if _, err := writer.Write([]byte("---\n")); err != nil {
 		return err
 	}
 	data, err := yaml.Marshal(o)
 	if err != nil {
-		return fmt.Errorf("unable to marshal the object: %w", err)
+		return fmt.Errorf("unable to marshal the %s: %w", o.GetObjectKind().GroupVersionKind().Kind, err)
 	}
 	_, err = writer.Write(data)
 	return err
