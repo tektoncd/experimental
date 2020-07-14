@@ -116,9 +116,9 @@ func initialiseTables(db *gorm.DB) {
 
 	cat := &Catalog{
 		Name:     "Tekton",
-		Type:     "official",
+		Type:     "community",
 		Owner:    "tektoncd",
-		URL:      "https://github.com/Pipelines-Marketplace/catalog",
+		URL:      "https://github.com/tektoncd/catalog",
 		Revision: "master",
 	}
 	db.Create(cat)
