@@ -169,7 +169,6 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    p.Namespace,
-			Name:         p.Name + "run",
 			GenerateName: p.Name + "-run-",
 			Labels:       p.Labels,
 		},

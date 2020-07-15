@@ -35,24 +35,22 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	}
 	trigger := generator.GenerateTrigger(pipeline)
 
-	// pack up all the objects
-	pac := []runtime.Object{task, pipeline, trigger.TriggerBinding, trigger.TriggerTemplate, trigger.EventListener}
-	for _, o := range pac {
-		if err := wirteYaml(o, writer); err != nil {
+	// write into the disk
+	return writeYaml(writer, task, pipeline, trigger.TriggerBinding, trigger.TriggerTemplate, trigger.EventListener)
+}
+
+func writeYaml(writer io.Writer, objs ...runtime.Object) error {
+	for _, o := range objs {
+		if _, err := writer.Write([]byte("---\n")); err != nil {
+			return err
+		}
+		data, err := yaml.Marshal(o)
+		if err != nil {
+			return fmt.Errorf("unable to marshal the %s: %w", o.GetObjectKind().GroupVersionKind().Kind, err)
+		}
+		if _, err = writer.Write(data); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func wirteYaml(o runtime.Object, writer io.Writer) error {
-	if _, err := writer.Write([]byte("---\n")); err != nil {
-		return err
-	}
-	data, err := yaml.Marshal(o)
-	if err != nil {
-		return fmt.Errorf("unable to marshal the %s: %w", o.GetObjectKind().GroupVersionKind().Kind, err)
-	}
-	_, err = writer.Write(data)
-	return err
 }

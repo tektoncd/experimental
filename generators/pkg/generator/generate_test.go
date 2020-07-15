@@ -66,17 +66,9 @@ func TestGenerateTask(t *testing.T) {
 }
 
 func TestGeneratePipeline(t *testing.T) {
-	path := "./testdata/pipeline.yaml"
-	pipeline, err := ioutil.ReadFile(path)
-
-	if err != nil {
-		t.Fatalf("fail to read file %s: %v", path, err)
-	}
-
 	want := &v1beta1.Pipeline{}
-	if err := yaml.Unmarshal(pipeline, want); err != nil {
-		t.Fatalf("fail to unmarshal from the input: %v", err)
-	}
+	unmarshal(t, "./testdata/pipeline.yaml", want)
+
 	github := &GitHub{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "github-build",
@@ -108,56 +100,24 @@ func TestGeneratePipeline(t *testing.T) {
 
 func TestGenerateTrigger(t *testing.T) {
 	// read the want TriggerBinding
-	path := "./testdata/triggerbinding.yaml"
-	file, err := ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatalf("fail to read file %s: %v", path, err)
-	}
-
 	tb := &v1alpha1.TriggerBinding{}
-	if err := yaml.Unmarshal(file, tb); err != nil {
-		t.Fatalf("fail to unmarshal from the input: %v", err)
-	}
+	unmarshal(t, "./testdata/triggerbinding.yaml", tb)
 
 	// read the Trigger's resourcetemplate
-	path = "./testdata/pipelinerun.yaml"
-	file, err = ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatalf("fail to read file %s: %v", path, err)
-	}
-
 	pr := &v1beta1.PipelineRun{}
-	if err := yaml.Unmarshal(file, pr); err != nil {
-		t.Fatalf("fail to unmarshal from the input: %v", err)
-	}
+	unmarshal(t, "./testdata/pipelinerun.yaml", pr)
 
 	// read the want TriggerTemplate
-	path = "./testdata/triggertemplate.yaml"
-	file, err = ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatalf("fail to read file %s: %v", path, err)
-	}
-
 	tt := &v1alpha1.TriggerTemplate{}
-	if err := yaml.Unmarshal(file, tt); err != nil {
-		t.Fatalf("fail to unmarshal from the input: %v", err)
-	}
+	unmarshal(t, "./testdata/triggertemplate.yaml", tt)
 
 	tt.Spec.ResourceTemplates = []v1alpha1.TriggerResourceTemplate{
 		{runtime.RawExtension{Object: pr}},
 	}
 
 	// read the want EventListener
-	path = "./testdata/eventlistener.yaml"
-	file, err = ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatalf("fail to read file %s: %v", path, err)
-	}
-
 	el := &v1alpha1.EventListener{}
-	if err := yaml.Unmarshal(file, el); err != nil {
-		t.Fatalf("fail to unmarshal from the input: %v", err)
-	}
+	unmarshal(t, "./testdata/eventlistener.yaml", el)
 
 	want := &trigger{
 		TriggerBinding:  tb,
@@ -185,5 +145,18 @@ func TestGenerateTrigger(t *testing.T) {
 	got := GenerateTrigger(pipeline)
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Trigger mismatch (-want +got):\n %s", diff)
+	}
+}
+
+func unmarshal(t *testing.T, path string, i interface{}) {
+	t.Helper()
+
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf("fail to read file %s: %v", path, err)
+	}
+
+	if err := yaml.Unmarshal(file, i); err != nil {
+		t.Fatalf("fail to unmarshal from the input: %v", err)
 	}
 }
