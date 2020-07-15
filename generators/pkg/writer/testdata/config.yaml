@@ -96,7 +96,6 @@ spec:
       generateName: github-build-pipeline-run-
       labels:
         generator.tekton.dev: github-build-pipeline
-      name: github-build-pipelinerun
       namespace: default
     spec:
       params:
