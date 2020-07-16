@@ -85,6 +85,17 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 			Labels: map[string]string{"generator.tekton.dev": name},
 		},
 		Spec: v1beta1.PipelineSpec{
+			Params: []v1beta1.ParamSpec{
+				{
+					Name: "gitrepositoryurl",
+					Type: v1beta1.ParamTypeString,
+				},
+
+				{
+					Name: "gitrevision",
+					Type: v1beta1.ParamTypeString,
+				},
+			},
 			Tasks: []v1beta1.PipelineTask{
 				{
 					Name: tasksName[0],
@@ -97,6 +108,13 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 							Value: v1beta1.ArrayOrString{
 								Type:      v1beta1.ParamTypeString,
 								StringVal: github.Spec.URL,
+							},
+						},
+						{
+							Name: "revision",
+							Value: v1beta1.ArrayOrString{
+								Type:      v1beta1.ParamTypeString,
+								StringVal: "$(params.gitrevision)",
 							},
 						},
 					},
@@ -140,6 +158,13 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 								StringVal: u.Path,
 							},
 						},
+						{
+							Name: "SHA",
+							Value: v1beta1.ArrayOrString{
+								Type:      v1beta1.ParamTypeString,
+								StringVal: "$(params.gitrevision)",
+							},
+						},
 					},
 				},
 			},
@@ -181,14 +206,14 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 					Name: "gitrepositoryurl",
 					Value: v1beta1.ArrayOrString{
 						Type:      v1beta1.ParamTypeString,
-						StringVal: "$(params.gitrepositoryurl)",
+						StringVal: "$(tt.params.gitrepositoryurl)",
 					},
 				},
 				{
 					Name: "gitrevision",
 					Value: v1beta1.ArrayOrString{
 						Type:      v1beta1.ParamTypeString,
-						StringVal: "$(params.gitrevision)",
+						StringVal: "$(tt.params.gitrevision)",
 					},
 				},
 			},
@@ -286,6 +311,28 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 						{
 							GitHub: &v1alpha1.GitHubInterceptor{
 								EventTypes: []string{"push"},
+								SecretRef: &v1alpha1.SecretRef{
+									SecretKey:  "secretToken",
+									SecretName: "github-secret",
+								},
+							},
+						},
+					},
+					Bindings: []*v1alpha1.EventListenerBinding{
+						{
+							Ref: tb.Name,
+						},
+					},
+					Template: v1alpha1.EventListenerTemplate{
+						Name: tt.Name,
+					},
+				},
+				{
+					Name: "github-pull-request",
+					Interceptors: []*v1alpha1.EventInterceptor{
+						{
+							GitHub: &v1alpha1.GitHubInterceptor{
+								EventTypes: []string{"pull_request"},
 								SecretRef: &v1alpha1.SecretRef{
 									SecretKey:  "secretToken",
 									SecretName: "github-secret",

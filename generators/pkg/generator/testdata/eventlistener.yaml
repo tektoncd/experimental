@@ -19,3 +19,15 @@ spec:
         - ref: github-pipeline-triggerbinding
       template:
         name: github-pipeline-triggertemplate
+    - name: github-pull-request
+      interceptors:
+        - github:
+            secretRef:
+              secretName: github-secret
+              secretKey: secretToken
+            eventTypes:
+              - pull_request
+      bindings:
+        - ref: github-pipeline-triggerbinding
+      template:
+        name: github-pipeline-triggertemplate
