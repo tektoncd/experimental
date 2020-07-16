@@ -11,6 +11,8 @@ spec:
     params:
     - name: REPO_FULL_NAME
       value: /wlynch/test
+    - name: SHA
+      value: $(params.gitrevision)
     taskRef:
       name: set-status
   tasks:
@@ -18,6 +20,8 @@ spec:
     params:
     - name: url
       value: https://github.com/wlynch/test
+    - name: revision
+      value: $(params.gitrevision)
     taskRef:
       name: git-clone
     workspaces:
@@ -31,5 +35,10 @@ spec:
     workspaces:
     - name: input
       workspace: source
+  params:
+  - name: gitrepositoryurl
+    type: string
+  - name: gitrevision
+    type: string
   workspaces:
   - name: source

@@ -10,9 +10,9 @@ spec:
     name: github-pipeline
   params:
   - name: gitrepositoryurl
-    value: $(params.gitrepositoryurl)
+    value: $(tt.params.gitrepositoryurl)
   - name: gitrevision
-    value: $(params.gitrevision)
+    value: $(tt.params.gitrevision)
   workspaces:
   - name: source
     volumeClaimTemplate:
