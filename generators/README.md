@@ -4,22 +4,23 @@ This project contains experimental code to create a tool for generating Tekton s
 
 See [tektoncd/pipeline/#2590](https://github.com/tektoncd/pipeline/issues/2590) information and background.
 
-## GitHub Token
-You would expect to have a [GitHub Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token#creating-a-token) set in the kubernetes secret with a GitHub token like this :
+## Webhook secret
+You would expect to create a [Webhook secret token](https://developer.github.com/webhooks/securing/#setting-your-secret-token) and configure the GitHub webhook to use this value.
+You can contain this value in the Kubernetes secret like this :
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: github-secret
+  name: webhook-secret
   type: Opaque
 stringData:
-  secretToken: "YOUR-GITHUB-ACCESS-TOKEN"
+  secretToken: "YOUR-WEBHOOK-SECRET-TOKEN"
 ```
 Then you can create it on the command line with `kubectl` like this :
 ```
 kubectl apply -f secret.yaml
 ```
-
+Now it can be passed as a reference to the GitHub interceptor.
 ## Dependent Tasks
 The generated config would expect to use the tasks already on the cluster adding to the pipeline. The tasks include [`git-clone`](https://github.com/tektoncd/catalog/blob/master/git/git-clone.yaml) and [`github-set-status`](https://github.com/tektoncd/catalog/blob/master/github/set_status.yaml). The `git-clone` task is used to help clone a repo into the workspace. The `status-task` is used to help allow external services to mark GitHub commits with a state. 
 **Please Note: this git-clone Task is only able to fetch code from the public repo for the time being.**

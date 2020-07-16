@@ -35,13 +35,22 @@ spec:
     params:
     - name: REPO_FULL_NAME
       value: /wlynch/test
+    - name: SHA
+      value: $(params.gitrevision)
     taskRef:
       name: set-status
+  params:
+  - name: gitrepositoryurl
+    type: string
+  - name: gitrevision
+    type: string
   tasks:
   - name: fetch-git-repo
     params:
     - name: url
       value: https://github.com/wlynch/test
+    - name: revision
+      value: $(params.gitrevision)
     taskRef:
       name: git-clone
     workspaces:
@@ -100,9 +109,9 @@ spec:
     spec:
       params:
       - name: gitrepositoryurl
-        value: $(params.gitrepositoryurl)
+        value: $(tt.params.gitrepositoryurl)
       - name: gitrevision
-        value: $(params.gitrevision)
+        value: $(tt.params.gitrevision)
       pipelineRef:
         name: github-build-pipeline
       workspaces:
@@ -142,6 +151,18 @@ spec:
           secretKey: secretToken
           secretName: github-secret
     name: github-push
+    template:
+      name: github-build-pipeline-triggertemplate
+  - bindings:
+    - ref: github-build-pipeline-triggerbinding
+    interceptors:
+    - github:
+        eventTypes:
+        - pull_request
+        secretRef:
+          secretKey: secretToken
+          secretName: github-secret
+    name: github-pull-request
     template:
       name: github-build-pipeline-triggertemplate
 status:
