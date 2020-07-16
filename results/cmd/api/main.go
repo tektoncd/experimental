@@ -28,6 +28,7 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
+	mask "go.chromium.org/luci/common/proto/mask"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -89,53 +90,60 @@ func (s *server) CreateTaskRunResult(ctx context.Context, req *pb.CreateTaskRunR
 
 // GetTaskRun received GetTaskRunRequest from users and return TaskRunResult back to users
 func (s *server) GetTaskRunResult(ctx context.Context, req *pb.GetTaskRunRequest) (*pb.TaskRunResult, error) {
-	resultsID, err := uuid.Parse(req.GetResultsId())
+	taskrun, err := s.getTaskRunByID(req.GetResultsId())
 	if err != nil {
-		log.Fatal("failed to parse resultID string into resultsID UUID", err)
 		return nil, fmt.Errorf("failed to find a taskrun: %w", err)
-	}
-	rows, err := s.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", resultsID)
-	if err != nil {
-		log.Fatalf("failed to query on database: %v", err)
-		return nil, fmt.Errorf("failed to query on a taskrun: %w", err)
-	}
-	taskrun := &pb.TaskRun{}
-	rowNum := 0
-	for rows.Next() {
-		var taskrunblob []byte
-		rowNum++
-		if rowNum >= 2 {
-			log.Println("Warning: multiple rows found")
-			break
-		}
-		rows.Scan(&taskrunblob)
-		if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
-			log.Fatal("unmarshaling error: ", err)
-			return nil, fmt.Errorf("failed to unmarshal taskrun: %w", err)
-		}
 	}
 	return &pb.TaskRunResult{TaskRun: taskrun, ResultsId: req.GetResultsId()}, nil
 }
 
 // UpdateTaskRun receives TaskRun and FieldMask from client and uses them to update records in local Sqlite Server.
 func (s *server) UpdateTaskRunResult(ctx context.Context, req *pb.UpdateTaskRunRequest) (*pb.TaskRunResult, error) {
-	// Update the entire row in database based on uid of taskrun.
+	// Find corresponding TaskRun in the database according to results_id.
+	tx, err := s.db.Begin()
+	if err != nil {
+		log.Println("failed to begin a transaction: ", err)
+		return nil, fmt.Errorf("failed to update a taskrun: %w", err)
+	}
+	updateTaskRun, err := s.getTaskRunByID(req.GetResultsId())
+	if err != nil {
+		return nil, fmt.Errorf("failed to find a taskrun: %w", err)
+	}
+	// Merge TaskRun from client into existing TaskRun based on fieldmask.
+	taskrunFromClient := req.GetTaskRun()
+	fieldMask := req.GetUpdateMask()
+	// Update entire taskrun if user do not specify paths
+	if fieldMask == nil {
+		updateTaskRun = taskrunFromClient
+	} else {
+		msk, err := mask.FromFieldMask(fieldMask, updateTaskRun, false, true)
+		// Return NotFound error to client field is invalid
+		if err != nil {
+			log.Println("failed to convert fieldmask to mask: ", err)
+			return nil, status.Errorf(codes.NotFound, "field in fieldmask not found in taskrun")
+		}
+		if err := msk.Merge(taskrunFromClient, updateTaskRun); err != nil {
+			log.Println("failed to merge new taskrun into old taskrun: ", err)
+			return nil, fmt.Errorf("failed to update taskrun: %w", err)
+		}
+	}
+	blobData, err := proto.Marshal(updateTaskRun)
+	if err != nil {
+		log.Println("taskrun marshaling error: ", err)
+		return nil, fmt.Errorf("taskrun marshaling error: %w", err)
+	}
 	statement, err := s.db.Prepare("UPDATE taskrun SET name = ?, namespace = ?, taskrunlog = ? WHERE results_id = ?")
 	if err != nil {
 		log.Printf("failed to update a existing taskrun: %v\n", err)
 		return nil, fmt.Errorf("failed to update a exsiting taskrun: %w", err)
 	}
-	taskrunFromClient := req.GetTaskRun()
-	blobData, err := proto.Marshal(taskrunFromClient)
-	if err != nil {
-		log.Println("taskrun marshaling error: ", err)
-		return nil, fmt.Errorf("taskrun marshaling error: %w", err)
-	}
-	taskrunMeta := taskrunFromClient.GetMetadata()
+	taskrunMeta := updateTaskRun.GetMetadata()
 	if _, err := statement.Exec(taskrunMeta.GetName(), taskrunMeta.GetNamespace(), blobData, req.GetResultsId()); err != nil {
+		tx.Rollback()
 		log.Printf("failed to execute update of a new taskrun: %v\n", err)
 		return nil, fmt.Errorf("failed to execute update of a new taskrun: %w", err)
 	}
+	tx.Commit()
 	return &pb.TaskRunResult{TaskRun: taskrunFromClient, ResultsId: req.GetResultsId()}, nil
 }
 
@@ -160,4 +168,35 @@ func (s *server) DeleteTaskRunResult(ctx context.Context, req *pb.DeleteTaskRunR
 		return nil, status.Errorf(codes.NotFound, "TaskRun not found")
 	}
 	return nil, nil
+}
+
+// GetTaskRunByID is the helper function to get a TaskRun by results_id
+func (s *server) getTaskRunByID(id string) (*pb.TaskRun, error) {
+	resultsID, err := uuid.Parse(id)
+	if err != nil {
+		log.Fatalf("failed to parse resultID string into resultsID UUID: %v", err)
+		return nil, fmt.Errorf("failed to find a taskrun: %w", err)
+	}
+	rows, err := s.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", resultsID)
+	if err != nil {
+		log.Fatalf("failed to query on database: %v", err)
+		return nil, fmt.Errorf("failed to query on a taskrun: %w", err)
+	}
+	taskrun := &pb.TaskRun{}
+	rowNum := 0
+	for rows.Next() {
+		var taskrunblob []byte
+		rowNum++
+		if rowNum >= 2 {
+			log.Println("Warning: multiple rows found")
+			break
+		}
+		rows.Scan(&taskrunblob)
+		if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
+			log.Fatal("unmarshaling error: ", err)
+			return nil, fmt.Errorf("failed to unmarshal taskrun: %w", err)
+		}
+	}
+	return taskrun, nil
+
 }
