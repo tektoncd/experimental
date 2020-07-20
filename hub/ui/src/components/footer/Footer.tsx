@@ -16,8 +16,8 @@ const Footer: React.FC = () => {
   return (
 
     <div>
-      <Card style={{ height: '20em', backgroundColor: '#EDEDED' }}></Card>
-      <Card style={{ backgroundColor: '#151515', marginTop: '1em' }}>
+      <Card style={{height: '20em', backgroundColor: '#EDEDED'}}></Card>
+      <Card style={{backgroundColor: '#151515', marginTop: '1em'}}>
 
         <Grid>
           <GridItem span={4}>
@@ -28,30 +28,31 @@ const Footer: React.FC = () => {
               <FlexItem>
                 <a href="https://cd.foundation">
                   <img src="https://tekton.dev/partner-logos/cdf.png"
-                    alt="tekton.dev" style={{ maxWidth: '60%', marginLeft: '20%' }} />
+                    alt="tekton.dev"
+                    style={{maxWidth: '60%', marginLeft: '20%'}} />
                 </a>
               </FlexItem>
             </Flex>
-            <Flex style={{ justifyContent: 'center' }}>
+            <Flex style={{justifyContent: 'center'}}>
               <TextContent>
                 <Text component={TextVariants.h1}
-                  style={{ color: 'white' }}>
+                  style={{color: 'white'}}>
                   Tekton is a{' '}
                   <Text component={TextVariants.a} href="https://cd.foundation">
                     Continuous Delivery Foundation
-                   </Text>{' '}project.
+                  </Text>{' '}project.
                 </Text>
               </TextContent>
             </Flex>
-            <Flex style={{ justifyContent: 'center' }}>
+            <Flex style={{justifyContent: 'center'}}>
               <FlexItem>
                 <img src={tekton} alt="Tekton"
-                  style={{ height: '6em', marginBottom: '-1em' }} />
+                  style={{height: '6em', marginBottom: '-1em'}} />
               </FlexItem>
             </Flex>
             <Flex>
               <CardFooter>
-                <Text style={{ color: 'white', textAlign: 'center' }}>
+                <Text style={{color: 'white', textAlign: 'center'}}>
                   © 2020 The Linux Foundation®. All rights reserved.
                   The Linux Foundation has registered trademarks and
                   uses trademarks. For a list of trademarks of
@@ -61,11 +62,11 @@ const Footer: React.FC = () => {
                     Trademark Usage page
                   </Text>
                   .{' '}Linux is a registered trademark of Linus Torvalds.
-                   {' '}
+                  {' '}
                   <Text component={TextVariants.a}
                     href="https://www.linuxfoundation.org/privacy/" >
                     Privacy Policy
-                   </Text>
+                  </Text>
                   {' '} and {' '}
                   <Text component={TextVariants.a}
                     href="https://www.linuxfoundation.org/terms/">
