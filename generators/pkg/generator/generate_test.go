@@ -13,6 +13,33 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+var github = &GitHub{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "github-build",
+	},
+	Spec: GitHubSpec{
+		URL:                "https://github.com/wlynch/test",
+		Revision:           "df5b1b84c23c6c4f41a4e51ba02da0095acf59e7",
+		Branch:             "master",
+		ServiceAccountName: "tekton-generators-demo",
+		Storage:            "1Gi",
+		SecretName:         "github-secret",
+		SecretKey:          "secretToken",
+		Steps: []v1beta1.Step{
+			{
+				Container: corev1.Container{
+					Name:    "build",
+					Image:   "gcr.io/kaniko-project/executor:latest",
+					Command: []string{"/kaniko/executor"},
+					Args: []string{"--context=dir://$(workspaces.input.path)/src",
+						"--destination=gcr.io/tekton-yolandadu/kaniko-test",
+						"--verbosity=debug"},
+				},
+			},
+		},
+	},
+}
+
 func TestGenerateTask(t *testing.T) {
 	want := &v1beta1.Task{
 		TypeMeta: metav1.TypeMeta{
@@ -37,28 +64,13 @@ func TestGenerateTask(t *testing.T) {
 						Image:   "gcr.io/kaniko-project/executor:latest",
 						Command: []string{"/kaniko/executor"},
 						Args: []string{"--context=dir://$(workspaces.input.path)/src",
-							"--destination=gcr.io/wlynch-test/kaniko-test",
+							"--destination=gcr.io/tekton-yolandadu/kaniko-test",
 							"--verbosity=debug"},
 					},
 				},
 			},
 		},
 	}
-	github := &GitHub{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "github-build",
-		},
-		Spec: GitHubSpec{
-			URL: "https://github.com/wlynch/test",
-			Steps: []v1beta1.Step{{Container: corev1.Container{
-				Name:    "build",
-				Image:   "gcr.io/kaniko-project/executor:latest",
-				Command: []string{"/kaniko/executor"},
-				Args: []string{"--context=dir://$(workspaces.input.path)/src",
-					"--destination=gcr.io/wlynch-test/kaniko-test",
-					"--verbosity=debug"},
-			},
-			}}}}
 	got := GenerateTask(github)
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Tasks mismatch (-want +got):\n %s", diff)
@@ -69,26 +81,6 @@ func TestGeneratePipeline(t *testing.T) {
 	want := &v1beta1.Pipeline{}
 	unmarshal(t, "./testdata/pipeline.yaml", want)
 
-	github := &GitHub{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "github-build",
-		},
-		Spec: GitHubSpec{
-			URL: "https://github.com/wlynch/test",
-			Steps: []v1beta1.Step{
-				{
-					Container: corev1.Container{
-						Name:    "build",
-						Image:   "gcr.io/kaniko-project/executor:latest",
-						Command: []string{"/kaniko/executor"},
-						Args: []string{"--context=dir://$(workspaces.input.path)/src",
-							"--destination=gcr.io/<use your project>/kaniko-test",
-							"--verbosity=debug"},
-					},
-				},
-			},
-		},
-	}
 	got, err := GeneratePipeline(github)
 	if err != nil {
 		t.Fatalf("error from 'GeneratePipeline': %v", err)
@@ -99,9 +91,13 @@ func TestGeneratePipeline(t *testing.T) {
 }
 
 func TestGenerateTrigger(t *testing.T) {
-	// read the want TriggerBinding
-	tb := &v1alpha1.TriggerBinding{}
-	unmarshal(t, "./testdata/triggerbinding.yaml", tb)
+	// read the want TriggerBinding for push events
+	tbPush := &v1alpha1.TriggerBinding{}
+	unmarshal(t, "./testdata/triggerbinding.yaml", tbPush)
+
+	// read the want TriggerBinding for pull request events
+	tbPr := &v1alpha1.TriggerBinding{}
+	unmarshal(t, "./testdata/triggerbinding-pr.yaml", tbPr)
 
 	// read the Trigger's resourcetemplate
 	pr := &v1beta1.PipelineRun{}
@@ -120,7 +116,7 @@ func TestGenerateTrigger(t *testing.T) {
 	unmarshal(t, "./testdata/eventlistener.yaml", el)
 
 	want := &trigger{
-		TriggerBinding:  tb,
+		TriggerBinding:  []*v1alpha1.TriggerBinding{tbPush, tbPr},
 		TriggerTemplate: tt,
 		EventListener:   el,
 	}
@@ -142,7 +138,7 @@ func TestGenerateTrigger(t *testing.T) {
 			},
 		},
 	}
-	got := GenerateTrigger(pipeline)
+	got := GenerateTrigger(pipeline, github)
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Trigger mismatch (-want +got):\n %s", diff)
 	}

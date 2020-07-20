@@ -30,7 +30,13 @@ func TestParse(t *testing.T) {
 			Name: "github-build",
 		},
 		Spec: generator.GitHubSpec{
-			URL: "https://github.com/wlynch/test",
+			URL:                "https://github.com/wlynch/test",
+			Revision:           "df5b1b84c23c6c4f41a4e51ba02da0095acf59e7",
+			Branch:             "master",
+			Storage:            "1Gi",
+			SecretName:         "github-secret",
+			SecretKey:          "secretToken",
+			ServiceAccountName: "tekton-generators-demo",
 			Steps: []v1beta1.Step{
 				{
 					Container: corev1.Container{
