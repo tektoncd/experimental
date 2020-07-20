@@ -20,7 +20,8 @@ import {
   CardActions,
   FlexItem,
   Flex,
-  FlexModifiers,
+  Grid,
+  GridItem,
 } from '@patternfly/react-core';
 import {
   StarIcon,
@@ -79,12 +80,14 @@ const Task: React.FC<TaskProp> = (props: any) => {
     }
     if (props.task.catalog.type.toLowerCase() === 'verified') {
       verifiedStatus = <div className="vtask" >
-        <CertificateIcon size="md" color='#484848' />
+        <CertificateIcon size="md" color='#484848'
+          style={{width: '2em', height: '2em'}} />
       </div>;
     }
     if (props.task.catalog.type.toLowerCase() === 'community') {
       verifiedStatus = <div className="vtask" >
-        <UserIcon size="md" color='#484848' />
+        <UserIcon size="md" color='#484848'
+          style={{width: '2em', height: '2em'}} />
       </div>;
     }
   }
@@ -118,6 +121,23 @@ const Task: React.FC<TaskProp> = (props: any) => {
       return str.toUpperCase();
     }));
   }
+  // resource summary
+  let resourceSummary = '';
+  if (props.task.description.length > 120) {
+    resourceSummary = props.task.description.indexOf('\n') > 120 ?
+      props.task.description.substring(0, 120) :
+      props.task.description.substring(0,
+        props.task.description.indexOf('\n') !== -1 ?
+          props.task.description.indexOf('\n') : 120);
+    if (props.task.description.indexOf('\n') > 120 ||
+     props.task.description.indexOf('\n') === -1) {
+      resourceSummary += '...';
+    }
+  } else {
+    resourceSummary = props.task.description.indexOf('\n') !== -1 ?
+      props.task.description.substring(0, props.task.description.indexOf('\n')) :
+      props.task.description;
+  }
 
   return (
     <GalleryItem>
@@ -150,27 +170,27 @@ const Task: React.FC<TaskProp> = (props: any) => {
           </CardHead>
           <CardHeader className="catalog-tile-pf-header">
 
-            <Flex>
-              <FlexItem>
+            <Grid>
+              <GridItem span={9}>
                 <span className="task-heading">
                   {displayName}
                   {/* {props.task.name[0].toUpperCase() + props.task.name.slice(1)} */}
                 </span>
-              </FlexItem>
-              <FlexItem
-                breakpointMods={[{modifier: FlexModifiers['align-right']}]}
-                style={{marginBottom: '0.5em'}}>
-                <span>
+              </GridItem>
+              <GridItem span={1}>
+
+              </GridItem>
+              <GridItem span={2}>
+                <span style={{marginLeft: '0.4em'}}>
                   v{props.task.latestVersion}
                 </span>
-              </FlexItem>
-            </Flex>
+              </GridItem>
+            </Grid>
           </CardHeader>
           <CardBody className="catalog-tile-pf-body">
             <div className="catalog-tile-pf-description">
               <span>
-                {`${props.task.description.substring(0,
-                  props.task.description.indexOf('\n'))}`}
+                {resourceSummary}
               </span>
             </div>
 
