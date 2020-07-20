@@ -13,8 +13,10 @@ spec:
       value: /wlynch/test
     - name: SHA
       value: $(params.gitrevision)
+    - name: STATE
+      value: success
     taskRef:
-      name: set-status
+      name: github-set-status
   tasks:
   - name: fetch-git-repo
     params:

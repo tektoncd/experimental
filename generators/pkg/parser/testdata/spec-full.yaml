@@ -3,6 +3,12 @@ metadata:
   name: github-build
 spec:
   url: "https://github.com/wlynch/test"
+  revision: df5b1b84c23c6c4f41a4e51ba02da0095acf59e7
+  branch: "master"
+  storage: 1Gi
+  secretName: github-secret
+  secretKey: secretToken
+  serviceAccountName: tekton-generators-demo
   steps:
     - name: build
       image: gcr.io/kaniko-project/executor:latest

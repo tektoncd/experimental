@@ -6,6 +6,7 @@ metadata:
   labels: 
     generator.tekton.dev: github-pipeline
 spec:
+  serviceAccountName: "tekton-generators-demo"
   triggers:
     - name: github-push
       interceptors:
@@ -15,8 +16,10 @@ spec:
               secretKey: secretToken
             eventTypes:
               - push
+        - cel:
+            filter: "body.ref.split('/')[2] == master"
       bindings:
-        - ref: github-pipeline-triggerbinding
+        - ref: github-pipeline-push-triggerbinding
       template:
         name: github-pipeline-triggertemplate
     - name: github-pull-request
@@ -27,7 +30,9 @@ spec:
               secretKey: secretToken
             eventTypes:
               - pull_request
+        - cel:
+            filter: "body.base.ref == master"
       bindings:
-        - ref: github-pipeline-triggerbinding
+        - ref: github-pipeline-pr-triggerbinding
       template:
         name: github-pipeline-triggertemplate

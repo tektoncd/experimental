@@ -10,7 +10,7 @@ spec:
   steps:
   - args:
     - --context=dir://$(workspaces.input.path)/src
-    - --destination=gcr.io/<use your project>/kaniko-test
+    - --destination=gcr.io/tekton-yolandadu/kaniko-test
     - --verbosity=debug
     command:
     - /kaniko/executor
@@ -37,8 +37,10 @@ spec:
       value: /wlynch/test
     - name: SHA
       value: $(params.gitrevision)
+    - name: STATE
+      value: success
     taskRef:
-      name: set-status
+      name: github-set-status
   params:
   - name: gitrepositoryurl
     type: string
@@ -73,12 +75,28 @@ metadata:
   creationTimestamp: null
   labels:
     generator.tekton.dev: github-build-pipeline
-  name: github-build-pipeline-triggerbinding
+  name: github-build-pipeline-push-triggerbinding
   namespace: default
 spec:
   params:
   - name: gitrevision
-    value: $(body.head_commit.id)
+    value: $(body.after)
+  - name: gitrepositoryurl
+    value: $(body.repository.url)
+status: {}
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: github-build-pipeline
+  name: github-build-pipeline-pr-triggerbinding
+  namespace: default
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.head.sha)
   - name: gitrepositoryurl
     value: $(body.repository.url)
 status: {}
@@ -139,10 +157,10 @@ metadata:
   namespace: default
 spec:
   podTemplate: {}
-  serviceAccountName: ""
+  serviceAccountName: tekton-generators-demo
   triggers:
   - bindings:
-    - ref: github-build-pipeline-triggerbinding
+    - ref: github-build-pipeline-push-triggerbinding
     interceptors:
     - github:
         eventTypes:
@@ -150,11 +168,13 @@ spec:
         secretRef:
           secretKey: secretToken
           secretName: github-secret
+    - cel:
+        filter: body.ref.split('/')[2] == master
     name: github-push
     template:
       name: github-build-pipeline-triggertemplate
   - bindings:
-    - ref: github-build-pipeline-triggerbinding
+    - ref: github-build-pipeline-pr-triggerbinding
     interceptors:
     - github:
         eventTypes:
@@ -162,6 +182,8 @@ spec:
         secretRef:
           secretKey: secretToken
           secretName: github-secret
+    - cel:
+        filter: body.base.ref == master
     name: github-pull-request
     template:
       name: github-build-pipeline-triggertemplate

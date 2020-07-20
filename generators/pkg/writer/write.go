@@ -33,10 +33,10 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("unable to get the pipeline: %w", err)
 	}
-	trigger := generator.GenerateTrigger(pipeline)
+	trigger := generator.GenerateTrigger(pipeline, github)
 
 	// write into the disk
-	return writeYaml(writer, task, pipeline, trigger.TriggerBinding, trigger.TriggerTemplate, trigger.EventListener)
+	return writeYaml(writer, task, pipeline, trigger.TriggerBinding[0], trigger.TriggerBinding[1], trigger.TriggerTemplate, trigger.EventListener)
 }
 
 func writeYaml(writer io.Writer, objs ...runtime.Object) error {

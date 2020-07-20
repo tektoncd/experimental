@@ -23,12 +23,18 @@ type GitHub struct {
 
 // GithubSpec defines Github spec
 type GitHubSpec struct {
-	URL   string         `json:"url,omitempty"`
-	Steps []v1beta1.Step `json:"steps,omitempty"`
+	URL                string         `json:"url,omitempty"`
+	Revision           string         `json:"revision,omitempty"`
+	Branch             string         `json:"branch,omitempty"`
+	Storage            string         `json:"storage,omitempty"`
+	SecretName         string         `json:"secretName,omitempty"`
+	SecretKey          string         `json:"secretKey,omitempty"`
+	ServiceAccountName string         `json:"serviceAccountName,omitempty"`
+	Steps              []v1beta1.Step `json:"steps,omitempty"`
 }
 
 type trigger struct {
-	TriggerBinding  *v1alpha1.TriggerBinding
+	TriggerBinding  []*v1alpha1.TriggerBinding
 	TriggerTemplate *v1alpha1.TriggerTemplate
 	EventListener   *v1alpha1.EventListener
 }
@@ -41,6 +47,7 @@ func GenerateTask(github *GitHub) *v1beta1.Task {
 		labels = make(map[string]string)
 	}
 	labels["generator.tekton.dev"] = github.Name
+
 	return &v1beta1.Task{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1beta1.SchemeGroupVersion.String(),
@@ -148,7 +155,7 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 				{
 					Name: tasksName[2],
 					TaskRef: &v1beta1.TaskRef{
-						Name: "set-status",
+						Name: "github-set-status",
 					},
 					Params: []v1beta1.Param{
 						{
@@ -163,6 +170,13 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 							Value: v1beta1.ArrayOrString{
 								Type:      v1beta1.ParamTypeString,
 								StringVal: "$(params.gitrevision)",
+							},
+						},
+						{
+							Name: "STATE",
+							Value: v1beta1.ArrayOrString{
+								Type:      v1beta1.ParamTypeString,
+								StringVal: "success",
 							},
 						},
 					},
@@ -181,9 +195,24 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 }
 
 // Generate the trigger with the given generated pipeline
-func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
+func GenerateTrigger(p *v1beta1.Pipeline, g *GitHub) *trigger {
 	if p.Namespace == "" {
 		p.Namespace = "default"
+	}
+
+	var value int64
+	var format resource.Format
+	if g.Spec.Storage != "" {
+		diskSize := resource.MustParse(g.Spec.Storage)
+		value = diskSize.Value()
+		format = diskSize.Format
+	} else {
+		value = 1024 * 1024 * 1024
+		format = resource.BinarySI
+	}
+
+	if g.Spec.Branch == "" {
+		g.Spec.Branch = "master"
 	}
 
 	// create pipelinerun in the triggertemplate
@@ -227,7 +256,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									"storage": *resource.NewQuantity(1*1024*1024*1024, resource.BinarySI),
+									"storage": *resource.NewQuantity(value, format),
 								},
 							},
 						},
@@ -267,11 +296,11 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 		},
 	}
 
-	// create the triggerbinding
-	tb := &v1alpha1.TriggerBinding{
+	// create the triggerbinding for pull request events
+	tbPr := &v1alpha1.TriggerBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
-			Name:      p.Name + "-triggerbinding",
+			Name:      p.Name + "-pr-triggerbinding",
 			Labels:    p.Labels,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -282,7 +311,32 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 			Params: []v1alpha1.Param{
 				{
 					Name:  "gitrevision",
-					Value: "$(body.head_commit.id)",
+					Value: "$(body.head.sha)",
+				},
+				{
+					Name:  "gitrepositoryurl",
+					Value: "$(body.repository.url)",
+				},
+			},
+		},
+	}
+
+	// create the triggerbinding for pushes events
+	tbPush := &v1alpha1.TriggerBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: p.Namespace,
+			Name:      p.Name + "-push-triggerbinding",
+			Labels:    p.Labels,
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			Kind:       "TriggerBinding",
+		},
+		Spec: v1alpha1.TriggerBindingSpec{
+			Params: []v1alpha1.Param{
+				{
+					Name:  "gitrevision",
+					Value: "$(body.after)",
 				},
 				{
 					Name:  "gitrepositoryurl",
@@ -304,6 +358,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 			Kind:       "EventListener",
 		},
 		Spec: v1alpha1.EventListenerSpec{
+			ServiceAccountName: g.Spec.ServiceAccountName,
 			Triggers: []v1alpha1.EventListenerTrigger{
 				{
 					Name: "github-push",
@@ -312,15 +367,20 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 							GitHub: &v1alpha1.GitHubInterceptor{
 								EventTypes: []string{"push"},
 								SecretRef: &v1alpha1.SecretRef{
-									SecretKey:  "secretToken",
-									SecretName: "github-secret",
+									SecretKey:  g.Spec.SecretKey,
+									SecretName: g.Spec.SecretName,
 								},
+							},
+						},
+						{
+							CEL: &v1alpha1.CELInterceptor{
+								Filter: "body.ref.split('/')[2] == " + g.Spec.Branch,
 							},
 						},
 					},
 					Bindings: []*v1alpha1.EventListenerBinding{
 						{
-							Ref: tb.Name,
+							Ref: tbPush.Name,
 						},
 					},
 					Template: v1alpha1.EventListenerTemplate{
@@ -334,15 +394,20 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 							GitHub: &v1alpha1.GitHubInterceptor{
 								EventTypes: []string{"pull_request"},
 								SecretRef: &v1alpha1.SecretRef{
-									SecretKey:  "secretToken",
-									SecretName: "github-secret",
+									SecretKey:  g.Spec.SecretKey,
+									SecretName: g.Spec.SecretName,
 								},
+							},
+						},
+						{
+							CEL: &v1alpha1.CELInterceptor{
+								Filter: "body.base.ref == " + g.Spec.Branch,
 							},
 						},
 					},
 					Bindings: []*v1alpha1.EventListenerBinding{
 						{
-							Ref: tb.Name,
+							Ref: tbPr.Name,
 						},
 					},
 					Template: v1alpha1.EventListenerTemplate{
@@ -354,7 +419,7 @@ func GenerateTrigger(p *v1beta1.Pipeline) *trigger {
 	}
 
 	trigger := &trigger{
-		TriggerBinding:  tb,
+		TriggerBinding:  []*v1alpha1.TriggerBinding{tbPush, tbPr},
 		TriggerTemplate: tt,
 		EventListener:   el,
 	}
