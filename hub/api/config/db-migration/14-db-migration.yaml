@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: db-migration
-  namespace: tekton-hub
+  namespace: tekton-hub-preview
 spec:
   template:
     spec:
