@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    acme.cert-manager.io/http01-edit-in-place: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  name: api
+  namespace: tekton-hub-preview
+spec:
+  tls:
+    - secretName: api-hub-preview-tekton-dev-tls
+      hosts: [api.hub-preview.tekton.dev]
+  rules:
+    - http:
+        paths:
+          - path: /*
+            backend:
+              serviceName: api
+              servicePort: 5000
