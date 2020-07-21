@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: ui
-          image: quay.io/sthaha/tekton-hub-ui
+          image: quay.io/tekton-hub/ui
           env:
             - name: API_URL
               valueFrom:
