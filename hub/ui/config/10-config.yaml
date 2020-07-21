@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ui
-  namespace: tekton-hub
+  namespace: tekton-hub-preview
 data:
   API_URL: 'https://api-tekton-hub.apps-crc.testing'
   GH_CLIENT_ID: ''
