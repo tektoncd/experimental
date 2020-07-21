@@ -104,6 +104,18 @@ func errorResponse(w http.ResponseWriter, err *ResponseError) {
 	json.NewEncoder(w).Encode(res)
 }
 
+// Ok writes json encoded resources to ResponseWriter
+func (api *Api) Ok(w http.ResponseWriter, r *http.Request) {
+	res := struct {
+		Status string `json:"status"`
+	}{
+		Status: "ok",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
+}
+
 // GetAllResources writes json encoded resources to ResponseWriter
 func (api *Api) GetAllResources(w http.ResponseWriter, r *http.Request) {
 	limit, err := intQueryVar(r, "limit", 100)

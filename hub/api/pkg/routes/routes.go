@@ -17,5 +17,6 @@ func Register(r *mux.Router, conf app.Config) {
 	r.HandleFunc("/resource/{resourceID}/rating", api.UpdateResourceRating).Methods("PUT")  //
 	r.HandleFunc("/oauth/redirect", api.GithubAuth).Methods("POST")                         //
 	r.HandleFunc("/resources/sync", api.SyncResources).Methods("POST")                      //
+	r.HandleFunc("/", api.Ok).Methods("GET")                                                //
 
 }
