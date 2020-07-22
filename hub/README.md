@@ -8,7 +8,7 @@ without understanding too much implementation details of tasks and pipelines.
 Tekton Hub also features tasks from different catalogs thereby making it a
 one-stop-shop for reusable Tekton resources.
 
-## **Deployed application link : [Hub](https://ui-tekton-hub.apps.openshift-web.p0s5.p1.openshiftapps.com/)**
+## **Deployed application link : [Hub](https://hub-preview.tekton.dev)**
 
 Tekton Hub provides the following features:
 
