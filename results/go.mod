@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/golang/protobuf v1.4.1
+	github.com/google/cel-go v0.5.1
 	github.com/google/go-cmp v0.5.0
 	github.com/google/uuid v1.1.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
@@ -11,7 +12,7 @@ require (
 	go.chromium.org/luci v0.0.0-20200716065131-1f7c6da65cb2
 	go.uber.org/zap v1.13.0
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	google.golang.org/grpc v1.27.0
+	google.golang.org/grpc v1.27.1
 	google.golang.org/protobuf v1.25.0
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3

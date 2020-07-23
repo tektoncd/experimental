@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"io/ioutil"
 	"os"
+	"sort"
 	"testing"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
@@ -14,6 +14,7 @@ import (
 	"google.golang.org/genproto/protobuf/field_mask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 const (
@@ -29,8 +30,7 @@ func TestCreateTaskRun(t *testing.T) {
 	}
 
 	// connect to fake server and do testing
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	ctx := context.Background()
 	if _, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
 		TaskRun: &pb.TaskRun{ApiVersion: "1",
 			Metadata: &pb.ObjectMeta{
@@ -56,14 +56,12 @@ func setupTestDB(t *testing.T) (*server, error) {
 
 	// Connect to sqlite DB.
 	db, err := sql.Open("sqlite3", tmpfile.Name())
-	srv := &server{db: db}
 	if err != nil {
 		t.Fatalf("failed to open the results.db: %v", err)
 	}
 	t.Cleanup(func() {
 		db.Close()
 	})
-
 	schema, err := ioutil.ReadFile("results.sql")
 	if err != nil {
 		t.Fatalf("failed to read schema file: %v", err)
@@ -76,7 +74,7 @@ func setupTestDB(t *testing.T) (*server, error) {
 	if _, err := statement.Exec(); err != nil {
 		t.Fatalf("failed to execute the taskrun table creation statement statement: %v", err)
 	}
-	return srv, nil
+	return new(db)
 }
 
 func TestGetTaskRun(t *testing.T) {
@@ -85,10 +83,8 @@ func TestGetTaskRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to setup db: %v", err)
 	}
-
+	ctx := context.Background()
 	// Connect to fake server and create a new taskrun
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
 		TaskRun: &pb.TaskRun{
 			ApiVersion: "v1beta1",
@@ -100,7 +96,6 @@ func TestGetTaskRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create taskrun: %v", err)
 	}
-	t.Logf("Created taskrun: %s", r.String())
 
 	// Test if we can find inserted taskrun
 	res, err := srv.GetTaskRunResult(ctx, &pb.GetTaskRunRequest{ResultsId: r.GetResultsId()})
@@ -118,10 +113,7 @@ func TestUpdateTaskRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
-
-	// Connect to fake server
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	// Validate by checking if ouput equlas expected TaskRun
 	tt := []struct {
@@ -406,8 +398,7 @@ func TestDeleteTaskRun(t *testing.T) {
 	}
 
 	// Connect to fake server and insert a new taskrun
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	ctx := context.Background()
 	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{
 		ApiVersion: "1",
 		Metadata: &pb.ObjectMeta{
@@ -435,5 +426,145 @@ func TestDeleteTaskRun(t *testing.T) {
 	// Check if a deleted taskrun can be deleted again
 	if _, err := srv.DeleteTaskRunResult(ctx, &pb.DeleteTaskRunRequest{ResultsId: r.GetResultsId()}); status.Code(err) != codes.NotFound {
 		t.Fatalf("same taskrun not supposed to be deleted again: %v", r.String())
+	}
+}
+func TestListTaskRuns(t *testing.T) {
+	// Create a temporary database
+	srv, err := setupTestDB(t)
+	if err != nil {
+		t.Fatalf("failed to setup db: %v", err)
+	}
+	ctx := context.Background()
+
+	// Create a bunch of taskruns for testing
+	t1 := &pb.TaskRun{
+		ApiVersion: "v1beta1",
+		Metadata: &pb.ObjectMeta{
+			Uid:       "31415926",
+			Name:      "taskrun",
+			Namespace: "default",
+		},
+	}
+	t2 := &pb.TaskRun{
+		ApiVersion: "v1alpha1",
+		Metadata: &pb.ObjectMeta{
+			Uid:       "43245243",
+			Name:      "task",
+			Namespace: "default",
+		},
+	}
+	t3 := &pb.TaskRun{
+		ApiVersion: "v1beta1",
+		Metadata: &pb.ObjectMeta{
+			Uid:       "1234556",
+			Name:      "mytaskrun",
+			Namespace: "demo",
+		},
+	}
+	t4 := &pb.TaskRun{
+		ApiVersion: "v1beta1",
+		Metadata: &pb.ObjectMeta{
+			Uid:       "543535",
+			Name:      "newtaskrun",
+			Namespace: "demo",
+		},
+	}
+	t5 := &pb.TaskRun{
+		ApiVersion: "v1alpha1",
+		Metadata: &pb.ObjectMeta{
+			Uid:       "543535",
+			Name:      "newtaskrun",
+			Namespace: "official",
+		},
+	}
+	taskruns := []*pb.TaskRun{t1, t2, t3, t4, t5}
+	for _, ts := range taskruns {
+		if _, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
+			TaskRun: ts,
+		}); err != nil {
+			t.Fatalf("could not create taskrun: %v", err)
+		}
+	}
+	tt := []struct {
+		name         string
+		filter       string
+		expect       []*pb.TaskRun
+		expectStatus codes.Code
+	}{
+		{
+			name:         "test simple query",
+			filter:       `taskrun.api_version=="v1beta1"`,
+			expect:       []*pb.TaskRun{t1, t3, t4},
+			expectStatus: codes.OK,
+		},
+		{
+			name:         "test query with simple function",
+			filter:       `taskrun.metadata.name.endsWith("run")`,
+			expect:       []*pb.TaskRun{t1, t3, t4, t5},
+			expectStatus: codes.OK,
+		},
+		{
+			name:         "test empty filter",
+			filter:       "",
+			expect:       taskruns,
+			expectStatus: codes.OK,
+		},
+		{
+			name:         "test invalid field",
+			filter:       `task.name=="newtaskrun"`,
+			expectStatus: codes.InvalidArgument,
+		},
+		{
+			name:         "test invalid value type with no double quotes around value",
+			filter:       `taskrun.name==newtaskrun`,
+			expectStatus: codes.InvalidArgument,
+		},
+		{
+			name:         "test value not existing in the server record",
+			filter:       `taskrun.metadata.name=="notaskrun"`,
+			expect:       nil,
+			expectStatus: codes.OK,
+		},
+		{
+			name:         "test invalid field outside of our defined top level field",
+			filter:       `taskrun.unexistfield=="notaskrun"`,
+			expectStatus: codes.InvalidArgument,
+		},
+		{
+			name:         "test valid field but not boolean experssion",
+			filter:       `taskrun.api_version"`,
+			expectStatus: codes.InvalidArgument,
+		},
+		{
+			name:         "test random word input",
+			filter:       `tekton`,
+			expectStatus: codes.InvalidArgument,
+		},
+		{
+			name:         "test if field is case sensitive",
+			filter:       `taskrun.MetaData.name=="notaskrun"`,
+			expectStatus: codes.InvalidArgument,
+		},
+	}
+	// Test if we can find inserted taskruns
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := srv.ListTaskRunsResult(ctx, &pb.ListTaskRunsRequest{
+				Filter: tc.filter,
+			})
+			if tc.expectStatus != status.Code(err) {
+				t.Fatalf("failed on test %v: %v", tc.name, err)
+			}
+			gotList := res.GetItems()
+			sort.SliceStable(gotList, func(i, j int) bool {
+				return gotList[i].String() < gotList[j].String()
+			})
+			sort.SliceStable(tc.expect, func(i, j int) bool {
+				return tc.expect[i].String() < tc.expect[j].String()
+			})
+			if diff := cmp.Diff(gotList, tc.expect, protocmp.Transform()); diff != "" {
+				t.Fatalf("could not get the same taskrun: %v", diff)
+			}
+		})
 	}
 }
