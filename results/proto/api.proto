@@ -13,7 +13,7 @@ service Results {
   rpc UpdateTaskRunResult (UpdateTaskRunRequest) returns (TaskRunResult) {}
   rpc GetTaskRunResultResult    (GetTaskRunRequest)    returns (TaskRunResult) {}
   rpc DeleteTaskRunResult (DeleteTaskRunRequest) returns (google.protobuf.Empty) {}  
-  rpc ListTaskRuns  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
+  rpc ListTaskRunsResult  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
 }
 
 message TaskRunResult {
@@ -42,8 +42,7 @@ message GetTaskRunRequest {
 
 message ListTaskRunsRequest {
 	// TODO: document query format.
-	string query = 1;
-	// TODO: page_token, etc.
+	string filter = 1;
 }
 
 message ListTaskRunsResponse {
