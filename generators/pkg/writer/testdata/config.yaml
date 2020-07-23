@@ -34,9 +34,9 @@ spec:
   - name: final-set-status
     params:
     - name: REPO_FULL_NAME
-      value: /wlynch/test
+      value: wlynch/test
     - name: SHA
-      value: $(params.gitrevision)
+      value: master
     - name: STATE
       value: success
     taskRef:
