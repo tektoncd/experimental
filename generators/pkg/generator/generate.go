@@ -5,6 +5,7 @@ package generator
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
@@ -41,7 +42,12 @@ type trigger struct {
 
 // GenerateTask generates Tekton Task
 // from simplified Github configs.
-func GenerateTask(github *GitHub) *v1beta1.Task {
+func GenerateTask(github *GitHub) (*v1beta1.Task, error) {
+	// check input validation
+	if github == nil {
+		return nil, fmt.Errorf("invalid github configuration")
+	}
+
 	labels := github.Labels
 	if labels == nil {
 		labels = make(map[string]string)
@@ -66,13 +72,18 @@ func GenerateTask(github *GitHub) *v1beta1.Task {
 			},
 			Steps: github.Spec.Steps,
 		},
-	}
+	}, nil
 
 }
 
 // GeneratePipeline generates Tekton Pipeline
 // from simplified Github configs.
 func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
+	// check input validation
+	if github == nil {
+		return nil, fmt.Errorf("invalid github configuration")
+	}
+
 	ws := "source"
 	name := github.Name + "-pipeline"
 	tasksName := []string{"fetch-git-repo", "build-from-repo", "final-set-status"}
@@ -80,6 +91,9 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 	u, err := url.Parse(github.Spec.URL)
 	if err != nil {
 		return nil, fmt.Errorf("fail to parse the url %s: %w", github.Spec.URL, err)
+	}
+	if github.Spec.Revision == "" {
+		github.Spec.Revision = "master"
 	}
 
 	pipeline := &v1beta1.Pipeline{
@@ -162,14 +176,18 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 							Name: "REPO_FULL_NAME",
 							Value: v1beta1.ArrayOrString{
 								Type:      v1beta1.ParamTypeString,
-								StringVal: u.Path,
+								StringVal: strings.TrimPrefix(u.Path, "/"),
 							},
 						},
 						{
 							Name: "SHA",
 							Value: v1beta1.ArrayOrString{
-								Type:      v1beta1.ParamTypeString,
-								StringVal: "$(params.gitrevision)",
+								Type: v1beta1.ParamTypeString,
+								// TODO: because for the time being, param substitution isn't working properly with finally,
+								// see the issue here: https://github.com/tektoncd/pipeline/issues/2906
+								// StringVal here should be changed to "$(params.gitrevision)" in the future
+								// when this param substitution bug is fixed in the future
+								StringVal: github.Spec.Revision,
 							},
 						},
 						{
@@ -194,27 +212,94 @@ func GeneratePipeline(github *GitHub) (*v1beta1.Pipeline, error) {
 	return pipeline, nil
 }
 
-// Generate the trigger with the given generated pipeline
-func GenerateTrigger(p *v1beta1.Pipeline, g *GitHub) *trigger {
+// Generate the pipelinerun with the given generated pipeline
+func GeneratePipelineRun(p *v1beta1.Pipeline, g *GitHub) (*v1beta1.PipelineRun, error) {
+	// check input validation
+	if p == nil {
+		return nil, fmt.Errorf("invalid pipeline configuration")
+	}
+	if g == nil {
+		return nil, fmt.Errorf("invalid github configuration")
+	}
+	if p.Spec.Workspaces == nil {
+		return nil, fmt.Errorf("invalid workspaces")
+	}
+
 	if p.Namespace == "" {
 		p.Namespace = "default"
 	}
+	if g.Spec.Revision == "" {
+		g.Spec.Revision = "master"
+	}
+	value, format := getVolumeInfo(g)
+	return &v1beta1.PipelineRun{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1beta1.SchemeGroupVersion.String(),
+			Kind:       "PipelineRun",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: p.Namespace,
+			Name:      p.Name + "-run",
+			Labels:    p.Labels,
+		},
+		Spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{
+				Name: p.Name,
+			},
+			Params: []v1beta1.Param{
+				{
+					Name: "gitrepositoryurl",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: g.Spec.URL,
+					},
+				},
+				{
+					Name: "gitrevision",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: g.Spec.Revision,
+					},
+				},
+			},
+			Workspaces: []v1beta1.WorkspaceBinding{
+				{
+					Name: p.Spec.Workspaces[0].Name,
+					VolumeClaimTemplate: &corev1.PersistentVolumeClaim{
+						Spec: corev1.PersistentVolumeClaimSpec{
+							AccessModes: []corev1.PersistentVolumeAccessMode{
+								corev1.ReadWriteOnce,
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									"storage": *resource.NewQuantity(value, format),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
 
-	var value int64
-	var format resource.Format
-	if g.Spec.Storage != "" {
-		diskSize := resource.MustParse(g.Spec.Storage)
-		value = diskSize.Value()
-		format = diskSize.Format
-	} else {
-		value = 1024 * 1024 * 1024
-		format = resource.BinarySI
+// Generate the trigger with the given generated pipeline
+func GenerateTrigger(p *v1beta1.Pipeline, g *GitHub) (*trigger, error) {
+	// check input validation
+	if p == nil {
+		return nil, fmt.Errorf("invalid pipeline configuration")
+	}
+	if g == nil {
+		return nil, fmt.Errorf("invalid github configuration")
+	}
+	if p.Spec.Workspaces == nil {
+		return nil, fmt.Errorf("invalid workspaces")
 	}
 
-	if g.Spec.Branch == "" {
-		g.Spec.Branch = "master"
+	if p.Namespace == "" {
+		p.Namespace = "default"
 	}
-
+	value, format := getVolumeInfo(g)
 	// create pipelinerun in the triggertemplate
 	pr := &v1beta1.PipelineRun{
 		TypeMeta: metav1.TypeMeta{
@@ -423,5 +508,19 @@ func GenerateTrigger(p *v1beta1.Pipeline, g *GitHub) *trigger {
 		TriggerTemplate: tt,
 		EventListener:   el,
 	}
-	return trigger
+	return trigger, nil
+}
+
+func getVolumeInfo(g *GitHub) (int64, resource.Format) {
+	var value int64
+	var format resource.Format
+	if g.Spec.Storage != "" {
+		diskSize := resource.MustParse(g.Spec.Storage)
+		value = diskSize.Value()
+		format = diskSize.Format
+	} else {
+		value = 1024 * 1024 * 1024
+		format = resource.BinarySI
+	}
+	return value, format
 }

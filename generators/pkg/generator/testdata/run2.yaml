@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: github-build-pipeline-run
+  namespace: default
+  labels: 
+    generator.tekton.dev: github-build-pipeline
+spec:
+  pipelineRef:
+    name: github-build-pipeline
+  params:
+  - name: gitrepositoryurl
+    value: https://github.com/wlynch/test
+  - name: gitrevision
+    value: master
+  workspaces:
+  - name: source
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

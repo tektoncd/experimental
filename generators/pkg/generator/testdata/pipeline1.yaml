@@ -5,6 +5,7 @@ metadata:
   labels:
     generator.tekton.dev: github-build-pipeline
   name: github-build-pipeline
+  namespace: mynamespace
 spec:
   finally:
   - name: final-set-status

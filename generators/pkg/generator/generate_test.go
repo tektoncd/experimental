@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// testdata
 var github = &GitHub{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "github-build",
@@ -71,7 +72,10 @@ func TestGenerateTask(t *testing.T) {
 			},
 		},
 	}
-	got := GenerateTask(github)
+	got, err := GenerateTask(github)
+	if err != nil {
+		t.Fatalf("error from 'GenerateTask': %v", err)
+	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Tasks mismatch (-want +got):\n %s", diff)
 	}
@@ -87,6 +91,67 @@ func TestGeneratePipeline(t *testing.T) {
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Pipeline mismatch (-want +got):\n %s", diff)
+	}
+}
+
+func TestGeneratePipelineRun(t *testing.T) {
+	tables := []struct {
+		name     string
+		pipeline string
+		config   *GitHub
+		path     string
+	}{
+		{
+			name:     "TestWithAllDefinedFields",
+			pipeline: "./testdata/pipeline.yaml",
+			config:   github,
+			path:     "./testdata/run.yaml",
+		},
+		{
+			name:     "TestWithNonDefaultNamespace",
+			pipeline: "./testdata/pipeline1.yaml",
+			config:   github,
+			path:     "./testdata/run1.yaml",
+		},
+		{
+			name:     "TestWithoutOptionalFields",
+			pipeline: "./testdata/pipeline.yaml",
+			config: &GitHub{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "github-build",
+				},
+				Spec: GitHubSpec{
+					URL: "https://github.com/wlynch/test",
+					Steps: []v1beta1.Step{
+						{
+							Container: corev1.Container{
+								Name:    "build",
+								Image:   "gcr.io/kaniko-project/executor:latest",
+								Command: []string{"/kaniko/executor"},
+							},
+						},
+					},
+				},
+			},
+			path: "./testdata/run2.yaml",
+		},
+	}
+
+	for _, table := range tables {
+		t.Run(table.name, func(t *testing.T) {
+			p := &v1beta1.Pipeline{}
+			unmarshal(t, table.pipeline, p)
+			got, err := GeneratePipelineRun(p, table.config)
+			if err != nil {
+				t.Fatalf("error from 'GeneratePipelineRun': %v", err)
+			}
+			want := &v1beta1.PipelineRun{}
+			unmarshal(t, table.path, want)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("PipelineRun mismatch (-want +got):\n %s", diff)
+
+			}
+		})
 	}
 }
 
@@ -138,7 +203,10 @@ func TestGenerateTrigger(t *testing.T) {
 			},
 		},
 	}
-	got := GenerateTrigger(pipeline, github)
+	got, err := GenerateTrigger(pipeline, github)
+	if err != nil {
+		t.Fatalf("error from 'GenerateTrigger': %v", err)
+	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Trigger mismatch (-want +got):\n %s", diff)
 	}

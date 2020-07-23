@@ -28,12 +28,20 @@ func WriteToDisk(filename string, writer io.Writer) error {
 	}
 
 	// resrouces needed to write to disk
-	task := generator.GenerateTask(github)
+	task, err := generator.GenerateTask(github)
+	if err != nil {
+		return fmt.Errorf("unable to get the task: %w", err)
+	}
+
 	pipeline, err := generator.GeneratePipeline(github)
 	if err != nil {
 		return fmt.Errorf("unable to get the pipeline: %w", err)
 	}
-	trigger := generator.GenerateTrigger(pipeline, github)
+
+	trigger, err := generator.GenerateTrigger(pipeline, github)
+	if err != nil {
+		return fmt.Errorf("unable to get the trigger: %w", err)
+	}
 
 	// write into the disk
 	return writeYaml(writer, task, pipeline, trigger.TriggerBinding[0], trigger.TriggerBinding[1], trigger.TriggerTemplate, trigger.EventListener)
