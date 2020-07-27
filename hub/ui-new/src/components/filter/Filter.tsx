@@ -63,7 +63,7 @@ const Filter: React.FC = (props: any) => {
     categoryData.map((categoryName: string, index: number) =>
       filterItem.push(
         {
-          id: `${ categoryName['id'] }`,
+          id: `${categoryName['id']}`,
           value: categoryName['name'], isChecked: false,
         },
       ));
@@ -93,19 +93,19 @@ const Filter: React.FC = (props: any) => {
     switch (idx) {
       case 0:
         return <BuildIcon size="sm" color="black"
-          style={{marginLeft: '-0.5em'}} />;
+          style={{marginLeft: '-0.5em', verticalAlign: '-0.15em'}} />;
       case 1:
         return <DomainIcon size="sm" color="black"
-          style={{marginLeft: '-0.5em'}} />;
+          style={{marginLeft: '-0.5em', verticalAlign: '-0.15em'}} />;
       case 2:
         return <CatIcon size="sm" color="#484848"
-          style={{marginLeft: '-0.5em'}} />;
+          style={{marginLeft: '-0.5em', verticalAlign: '-0.15em'}} />;
       case 3:
         return <CertificateIcon size="sm" color="#484848"
-          style={{marginLeft: '-0.5em'}} />;
+          style={{marginLeft: '-0.5em', verticalAlign: '-0.15em'}} />;
       case 4:
         return <UserIcon size="sm" color="#484848"
-          style={{marginLeft: '-0.5em'}} />;
+          style={{marginLeft: '-0.5em', verticalAlign: '-0.15em'}} />;
       default:
         return;
     }
@@ -312,7 +312,7 @@ const Filter: React.FC = (props: any) => {
   if (status !== undefined && checkBoxStatus !== undefined) {
     const verifiedtask = status.checklist.slice(2, 5);
     showverifiedtask = verifiedtask.map((it: any, idx: number) => (
-      <div key={`task-${ idx }`} style={{marginBottom: '0.5em'}}>
+      <div key={`task-${idx}`} style={{marginBottom: '0.5em'}}>
         <Checkbox
           onClick={filterApi}
           isChecked={checkBoxStatus[it.value]}
