@@ -84,15 +84,14 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   const [href, setHref] = useState(`${props.version.webUrl.substring(0,
     props.version.webUrl.lastIndexOf('/') + 1)}`);
 
-  // Display Name
-  let displayName = '';
-  if (props.task.displayName === '') {
-    displayName = props.task.name;
-  } else {
-    displayName = props.task.displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
-      return str.toUpperCase();
-    })) + ' (' + (props.task.name) + ')';
-  }
+  // resource name
+  let resourceName = props.task.displayName === '' ?
+    <span style={{fontFamily: 'courier, monospace'}}>
+      {props.task.name}</span> :
+    <p >{props.task.displayName}
+      {<span style={{fontFamily: 'courier, monospace'}}>
+        {`(${props.task.name})`}</span>}
+    </p>;
 
   // Dropdown menu to show versions
   const [isOpen, set] = useState(false);
@@ -128,13 +127,12 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
       if (event.target.name === item.version) {
         props.fetchTaskDescription(item.rawUrl);
 
-        if (props.task.displayName === '') {
-          displayName = item.name;
-        } else {
-          displayName = item.displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
-            return str.toUpperCase();
-          }));
-        }
+        resourceName = props.task.displayName === '' ?
+          <span style={{fontFamily: 'courier, monospace'}}>{item.name}</span> :
+          <p >{item.displayName}
+            {<span style={{fontFamily: 'courier, monospace'}}>
+              {`(${item.name})`}</span>}
+          </p>;
 
         setHref(`${item.webUrl.substring(0,
           item.webUrl.lastIndexOf('/') + 1)}`);
@@ -214,9 +212,7 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
 
               <FlexItem>
                 <Text style={{fontSize: '2em'}}>
-                  {/* {props.task.name.charAt(0).toUpperCase() +
-                    props.task.name.slice(1)} */}
-                  {displayName}
+                  {resourceName}
                 </Text>
               </FlexItem>
 

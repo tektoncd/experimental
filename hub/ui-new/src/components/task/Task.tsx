@@ -21,6 +21,7 @@ import {
   FlexItem,
   Flex,
   FlexModifiers,
+  Tooltip,
 } from '@patternfly/react-core';
 import {
   StarIcon,
@@ -89,20 +90,28 @@ const Task: React.FC<TaskProp> = (props: any) => {
   let verifiedStatus: any;
   if (props.task) {
     if (props.task.catalog.type.toLowerCase() === 'official') {
-      verifiedStatus = <div className="vtask" >
-        <CatIcon size="md" color='#484848'
-          style={{width: '2em', height: '2em'}} />
-      </div>;
+      verifiedStatus = <Tooltip content={<b>Official</b>}>
+        <div className="vtask" >
+          <CatIcon size="md" color='#484848'
+            style={{width: '2em', height: '2em'}} />
+        </div>
+      </Tooltip>;
     }
     if (props.task.catalog.type.toLowerCase() === 'verified') {
-      verifiedStatus = <div className="vtask" >
-        <CertificateIcon size="md" color='#484848' />
-      </div>;
+      verifiedStatus = <Tooltip content={<b>Verified</b>}>
+        <div className="vtask" >
+          <CertificateIcon size="md" color='#484848'
+            style={{width: '2em', height: '2em'}} />
+        </div>
+      </Tooltip>;
     }
     if (props.task.catalog.type.toLowerCase() === 'community') {
-      verifiedStatus = <div className="vtask" >
-        <UserIcon size="md" color='#484848' />
-      </div>;
+      verifiedStatus = <Tooltip content={<b>Community</b>}>
+        <div className="vtask" >
+          <UserIcon size="md" color='#484848'
+            style={{width: '2em', height: '2em'}} />
+        </div>
+      </Tooltip>;
     }
   }
 
@@ -110,31 +119,28 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // for adding icon to task and pipeline
   let resourceIcon: React.ReactNode;
   if (props.task.type.toLowerCase() === 'task') {
-    resourceIcon = <BuildIcon
-      style={{
-        width: '2em', height: '2em',
-        verticalAlign: '-0.2em',
-      }} color="#484848" />;
+    resourceIcon = <Tooltip content={<b>Task</b>}>
+      <BuildIcon
+        style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
+        color="#484848"
+      />
+    </Tooltip>;
   } else {
-    resourceIcon = <DomainIcon
-      style={{
-        width: '2em',
-        height: '2em', verticalAlign: '-0.2em',
-      }}
-      color="#484848"
-    />;
+    resourceIcon = <Tooltip content={<b>Pipeline</b>}>
+      <DomainIcon
+        style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
+        color="#484848"
+      />
+    </Tooltip>;
   };
 
 
   // Display name
-  let displayName = '';
-  if (props.task.latestVersion.displayName === '') {
-    displayName = props.task.name;
-  } else {
-    displayName = props.task.latestVersion.displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
-      return str.toUpperCase();
-    }));
-  }
+
+  const resourceName = props.task.latestVersion.displayName === '' ?
+    <span style={{fontFamily: 'courier, monospace'}}>
+      {props.task.name}</span> : <span>
+      {props.task.latestVersion.displayName}</span>;
 
   return (
     <GalleryItem>
@@ -170,7 +176,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
             <Flex>
               <FlexItem>
                 <span className="task-heading">
-                  {displayName}
+                  {resourceName}
                   {/* {props.task.name[0].toUpperCase() + props.task.name.slice(1)} */}
                 </span>
               </FlexItem>
@@ -186,9 +192,9 @@ const Task: React.FC<TaskProp> = (props: any) => {
           <CardBody className="catalog-tile-pf-body">
             <div className="catalog-tile-pf-description">
               <span>
-                {`${ props.task.latestVersion.description.substring(0,
-                  props.task.latestVersion.description.indexOf('\n')) }` ||
-                  `${ props.task.latestVersion.description }`}
+                {`${props.task.latestVersion.description.substring(0,
+                  props.task.latestVersion.description.indexOf('\n'))}` ||
+                  `${props.task.latestVersion.description}`}
               </span>
             </div>
 
@@ -197,19 +203,24 @@ const Task: React.FC<TaskProp> = (props: any) => {
 
 
             <TextContent className="text"
-              style={{marginBottom: '1em', marginLeft: '0.2em'}}>
+              style={{
+                marginBottom: '0.5em', marginTop:
+                  '-1em', marginLeft: '0em',
+              }}>
               Updated {diffDays}
             </TextContent>
 
             <div style={{height: '2em'}}>
               {
-                tempArr.map((tag: any) => {
-                  return (
-                    <Badge style={{
-                      marginLeft: '0.2em',
-                      marginBottom: '1em',
-                    }} key={`badge-${tag}`} className="badge">{tag}</Badge>
-                  );
+                tempArr.map((tag: any, index: number) => {
+                  if (index < 3) {
+                    return (
+                      <Badge style={{
+                        marginRight: '0.3em',
+                        marginBottom: '0.5em',
+                      }} key={`badge-${tag}`} className="badge">{tag}</Badge>
+                    );
+                  }
                 })
               }
             </div>

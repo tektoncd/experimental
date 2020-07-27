@@ -102,22 +102,20 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   const [versions, setVersion] =
     useState(props.task.latestVersion.version + ' (latest) ');
   const [taskLink, setTaskLink] =
-    useState(`kubectl apply -f ${ props.task.latestVersion.rawURL }`);
+    useState(`kubectl apply -f ${props.task.latestVersion.rawURL}`);
 
   const [href, setHref] = useState(`${
     props.task.latestVersion.webURL.substring(0,
-      props.task.latestVersion.webURL.lastIndexOf('/') + 1) }`);
+      props.task.latestVersion.webURL.lastIndexOf('/') + 1)}`);
 
-  // Display Name for resource
-  let displayName = '';
-  if (props.task.latestVersion.displayName === '') {
-    displayName = props.task.name;
-  } else {
-    displayName = props.task.latestVersion.displayName.replace(
-      /(^\w|\s+\w){1}/g, ((str) => {
-        return str.toUpperCase();
-      })) + ' (' + (props.task.name) + ')';
-  }
+  //  Resource name
+  let resourceName = props.task.latestVersion.displayName === '' ?
+    <span style={{fontFamily: 'courier, monospace'}}>
+      {props.task.name}</span> :
+    <p >{props.task.latestVersion.displayName}
+      {<span style={{fontFamily: 'courier, monospace'}}>
+        {`(${props.task.name})`}</span>}
+    </p>;
 
   // Dropdown menu to show versions
   const [isOpen, set] = useState(false);
@@ -129,13 +127,13 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
     tempTaskData.forEach((item: any, index: any) => {
       if (props.task.latestVersion.version === item.version) {
         dropdownItems.push(<DropdownItem
-          key={`res-${ item.version }`} name={item.id.toString()}
+          key={`res-${item.version}`} name={item.id.toString()}
           onClick={getVersionDetail} >
           {item.version + ' (latest) '}
         </DropdownItem>);
       } else {
         dropdownItems.push(<DropdownItem
-          key={`res-${ item.version }`} name={item.id.toString()}
+          key={`res-${item.version}`} name={item.id.toString()}
           onClick={getVersionDetail} >
           {item.version}
         </DropdownItem>);
@@ -145,15 +143,15 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
 
   // versions details of a perticular version
   function getVersionDetail(event: any) {
-    fetch(`${ API_URL }/resource/version/${ event.target.name }`)
+    fetch(`${API_URL}/resource/version/${event.target.name}`)
       .then((response) => response.json())
       .then((data) => {
         props.fetchTaskDescription(data.rawURL);
 
-        setHref(`${ data.webURL.substring(0,
-          data.webURL.lastIndexOf('/') + 1) }`);
+        setHref(`${data.webURL.substring(0,
+          data.webURL.lastIndexOf('/') + 1)}`);
 
-        setTaskLink(`kubectl apply -f ${ data.rawURL }`);
+        setTaskLink(`kubectl apply -f ${data.rawURL}`);
 
         setSummary(data.description.substring(0,
           data.description.indexOf('\n')) ||
@@ -166,10 +164,13 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
               1).trim() : ' ',
         );
 
-        displayName = data.dsiplayName === ' ' ? data.resource.name :
-          displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
-            return str.toUpperCase();
-          }));
+        resourceName = data.displayName === '' ?
+          <span style={{fontFamily: 'courier, monospace'}}>
+            {data.resource.name}</span> :
+          <p >{data.displayName}
+            {<span style={{fontFamily: 'courier, monospace'}}>
+              {`(${data.resource.name})`}</span>}
+          </p>;
       });
     setVersion(event.target.text);
   }
@@ -239,7 +240,7 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
                 <Text style={{fontSize: '2em'}}>
                   {/* {props.task.name.charAt(0).toUpperCase() +
                     props.task.name.slice(1)} */}
-                  {displayName}
+                  {resourceName}
                 </Text>
               </FlexItem>
 
