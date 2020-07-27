@@ -56,7 +56,7 @@ const Description: React.FC<DescriptionProp> = (props: any) => {
 
   return (
     <Grid>
-      <GridItem span={11} className="pf-u-ml-sm-on-lg">
+      <GridItem span={11} >
         <Card style={{marginLeft: '9em', marginRight: '2em'}}>
           <CardHead style={{paddingTop: '2em'}}>
             <Grid style={{width: '90em'}}>

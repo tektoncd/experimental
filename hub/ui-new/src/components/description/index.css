@@ -16,7 +16,31 @@
 }
 .readme > h2 {
     font-weight: bold;
+    padding-top: 1em;
+    padding-bottom: 0.5em;
 }
+.readme > h2:first-child {
+    padding-top: 0em;
+}
+.readme > ul {
+    list-style-type: disc;
+    padding-left: 2em;
+}
+
+code {
+    font-family: Consolas,"courier new";
+    font-weight: bold;
+    color: crimson;
+    background-color: #f1f1f1;
+    padding: 2px;
+    font-size: 100%;
+}
+
+.a > code {
+    background-color: #f1f1f1;
+    padding: 2px;
+    font-size: 90%;
+  }
 
 .yaml > p {
     text-align: center;

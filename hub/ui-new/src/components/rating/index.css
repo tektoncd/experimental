@@ -43,7 +43,7 @@
   font-size: 250%;
   line-height: 1.2;
   color: lightgrey;
-  text-shadow: 1px 1px #bbb;
+  text-shadow: 1px 1px #484848;
 }
 
 .rate-area:not(:checked)>label:before {
@@ -51,14 +51,14 @@
 }
 
 .rate-area>input:checked~label {
-  color: gold;
-  text-shadow: 1px 1px #c60;
+  color:#484848;
+  text-shadow: 1px 1px #484848;
   font-size: 250% !important;
 }
 
 .rate-area:not(:checked)>label:hover,
 .rate-area:not(:checked)>label:hover~label {
-  color: gold;
+  color:#484848;
 }
 
 .rate-area>input:checked+label:hover,
@@ -66,8 +66,8 @@
 .rate-area>input:checked~label:hover,
 .rate-area>input:checked~label:hover~label,
 .rate-area>label:hover~input:checked~label {
-  color: gold;
-  text-shadow: 1px 1px goldenrod;
+  color:#484848;
+  text-shadow: 1px 1px #484848;
 }
 
 .rate-area>label:active {
