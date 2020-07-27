@@ -1,0 +1,19 @@
+.filter {
+    /* border-bottom: 0.2em solid blue; */
+    background-color: white;
+
+}
+
+.search {
+    margin-bottom: 4.5em;
+    height: 2em;
+}
+
+li:hover {
+    background-color: lightgray
+}
+
+::placeholder {
+    font-size: 1em;
+    font-family: sans-serif;
+}

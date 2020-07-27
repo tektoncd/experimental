@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+  namespace: tekton-hub
+  labels:
+    app: ui
+spec:
+  selector:
+    app: ui
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
