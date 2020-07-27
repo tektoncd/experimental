@@ -7,6 +7,7 @@ import {
   BrowserRouter as Router,
   Route,
 } from 'react-router-dom';
+import {GithubIcon} from '@patternfly/react-icons';
 import SearchBar from '../search-bar/SearchBar';
 import TaskContainer from '../task-container/TaskContainer';
 // import UploadTask from '../upload-task/UploadTask';
@@ -85,6 +86,7 @@ const App: React.FC<mainProps> = () => {
       style={{
         width: '1.5em',
         height: '1.5em',
+        marginRight: '2em',
       }}
       src={imgAvatar} alt="" />;
   }
@@ -111,6 +113,16 @@ const App: React.FC<mainProps> = () => {
           </ToolbarItem>
           <ToolbarItem>
             {userimage}
+          </ToolbarItem>
+
+          <ToolbarItem>
+            <span>
+              <a href="https://github.com/tektoncd/hub" target="_">
+                <GithubIcon size="md"
+                  style={{color: 'white'}}
+                />
+              </a>
+            </span>
           </ToolbarItem>
         </ToolbarGroup>
       </Toolbar>
