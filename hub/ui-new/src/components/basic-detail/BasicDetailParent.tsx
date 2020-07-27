@@ -10,36 +10,26 @@ import {API_URL} from '../../constants';
 
 
 const Detail: React.FC = (props: any) => {
-  const [newversion, setNewversion] = React.useState();
+  const [allversion, setAllversion] = React.useState();
   const {taskId} = useParams();
   React.useEffect(() => {
     props.fetchTaskSuccess();
     fetch(`${ API_URL }/resource/${ taskId }/versions`)
       .then((response) => response.json())
-      .then((TaskName) => setNewversion(TaskName));
+      .then((data) => setAllversion(data.versions));
     // eslint-disable-next-line
   }, []);
 
 
-  if (props.TaskData && newversion !== undefined) {
-    let temp: any = [];
+  if (props.TaskData) {
+    // let temp string;
     for (let i = 0; i < props.TaskData.length; i++) {
       if (props.TaskData[i].id === Number(taskId)) {
-        if (props.TaskName) {
-          (props.TaskData[i]).data = newversion.data;
-          temp = newversion.data[newversion.data.length - 1];
-        }
-        if (temp.length === 0) {
-          return (
-            <div></div>
-          );
-        } else {
-          return (
-            < BasicDetail task={props.TaskData[i]}
-              version={temp}
-            />
-          );
-        }
+        return (
+          < BasicDetail task={props.TaskData[i]}
+            version={allversion}
+          />
+        );
       }
     }
   }
@@ -54,4 +44,3 @@ const mapStateToProps = (state: any) => ({
 });
 export default connect(mapStateToProps,
   {fetchTaskName, fetchTaskSuccess})(Detail);
-

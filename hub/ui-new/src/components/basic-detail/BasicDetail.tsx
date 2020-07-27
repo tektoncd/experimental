@@ -32,123 +32,146 @@ import './basicdetail.css';
 import {fetchTaskDescription} from '../redux/Actions/TaskActionDescription';
 import {connect} from 'react-redux';
 import Rating from '../rating/Rating';
+import {API_URL} from '../../constants';
+
+
+export interface LatestVersionInfo {
+  id: number,
+  version: string,
+  displayName: string,
+  description: string,
+  minPipelinesVersion: string,
+  rawURL: string,
+  webURL: string,
+  updatedAt: string,
+}
+export interface CatalogInfo {
+  id: number,
+  type: string,
+}
+export interface TagInfo {
+  id: number,
+  name: string,
+}
 export interface BasicDetailPropObject {
   id: any
   name: string;
-  description: string;
-  rating: number;
-  latestVersion: string,
-  tags: [],
   type: string,
-  data: [],
-  displayName: string
+  catalog: CatalogInfo,
+  latestVersion: LatestVersionInfo,
+  tags: Array<TagInfo>,
+  rating: number;
 }
 
 export interface Version {
+  id: number,
   version: string,
-  description: string,
-  rawUrl: string,
-  webUrl: string,
-  displayName: string
+  rawURL: string,
+  webURL: string,
 }
 
 export interface BasicDetailProp {
   task: BasicDetailPropObject
-  version: Version
+  version: Array<Version>
 }
 
 
 const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   React.useEffect(() => {
-    props.fetchTaskDescription(props.version.rawUrl);
+    props.fetchTaskDescription(props.task.latestVersion.rawURL);
     // eslint-disable-next-line
   }, [])
+
 
   const taskArr: any = [];
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [summary, setSummary] = useState(props.task.description.substring(0,
-    props.task.description.indexOf('\n')));
+  const [summary, setSummary] = useState(
+    props.task.latestVersion.description.substring(0,
+      props.task.latestVersion.description.indexOf('\n')) ||
+    props.task.latestVersion.description,
+  );
 
   const [descrption, setDescription] =
     useState(
-      props.task.description.substring(props.task.description.indexOf('\n') +
-        1).trim());
+      props.task.latestVersion.description.indexOf('\n') !== -1 ?
+        props.task.latestVersion.description.substring(
+          props.task.latestVersion.description.indexOf('\n') +
+          1).trim() : ' ');
 
   const [versions, setVersion] =
-    useState(props.task.latestVersion + ' (latest) ');
-
+    useState(props.task.latestVersion.version + ' (latest) ');
   const [taskLink, setTaskLink] =
-    useState(`kubectl apply -f ${props.version.rawUrl}`);
+    useState(`kubectl apply -f ${ props.task.latestVersion.rawURL }`);
 
-  const [href, setHref] = useState(`${props.version.webUrl.substring(0,
-    props.version.webUrl.lastIndexOf('/') + 1)}`);
+  const [href, setHref] = useState(`${
+    props.task.latestVersion.webURL.substring(0,
+      props.task.latestVersion.webURL.lastIndexOf('/') + 1) }`);
 
-  // Display Name
+  // Display Name for resource
   let displayName = '';
-  if (props.task.displayName === '') {
+  if (props.task.latestVersion.displayName === '') {
     displayName = props.task.name;
   } else {
-    displayName = props.task.displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
-      return str.toUpperCase();
-    })) + ' (' + (props.task.name) + ')';
+    displayName = props.task.latestVersion.displayName.replace(
+      /(^\w|\s+\w){1}/g, ((str) => {
+        return str.toUpperCase();
+      })) + ' (' + (props.task.name) + ')';
   }
 
   // Dropdown menu to show versions
   const [isOpen, set] = useState(false);
   const dropdownItems: any = [];
 
-  if (props.task.data) {
-    fetchTaskDescription(props.version.rawUrl);
-    const tempTaskData = props.task.data.reverse();
+  if (props.version) {
+    fetchTaskDescription(props.task.latestVersion.rawURL);
+    const tempTaskData = props.version.reverse();
     tempTaskData.forEach((item: any, index: any) => {
-      if (props.task.latestVersion === item.version) {
+      if (props.task.latestVersion.version === item.version) {
         dropdownItems.push(<DropdownItem
-          key={`res-${item.version}`} name={item.version}
-          onClick={version} >
+          key={`res-${ item.version }`} name={item.id.toString()}
+          onClick={getVersionDetail} >
           {item.version + ' (latest) '}
         </DropdownItem>);
       } else {
         dropdownItems.push(<DropdownItem
-          key={`res-${item.version}`} name={item.version}
-          onClick={version} >
+          key={`res-${ item.version }`} name={item.id.toString()}
+          onClick={getVersionDetail} >
           {item.version}
         </DropdownItem>);
       }
     });
   }
 
-  // Version for resource
-  function version(event: any) {
-    props.task.data.forEach((item: any) => {
-      // if (event.target.id === props.task.latestVersion) {
-      //   setVersion(props.task.latestVersion + ' (latest) ');
-      // } else {
-      setVersion(event.target.text);
-      if (event.target.name === item.version) {
-        props.fetchTaskDescription(item.rawUrl);
+  // versions details of a perticular version
+  function getVersionDetail(event: any) {
+    fetch(`${ API_URL }/resource/version/${ event.target.name }`)
+      .then((response) => response.json())
+      .then((data) => {
+        props.fetchTaskDescription(data.rawURL);
 
-        if (props.task.displayName === '') {
-          displayName = item.name;
-        } else {
-          displayName = item.displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
-            return str.toUpperCase();
-          }));
-        }
+        setHref(`${ data.webURL.substring(0,
+          data.webURL.lastIndexOf('/') + 1) }`);
 
-        setHref(`${item.webUrl.substring(0,
-          item.webUrl.lastIndexOf('/') + 1)}`);
+        setTaskLink(`kubectl apply -f ${ data.rawURL }`);
 
-        setTaskLink(`kubectl apply -f ${item.rawUrl}`);
-
-        setSummary(item.description.substring(0,
-          item.description.indexOf('\n')));
+        setSummary(data.description.substring(0,
+          data.description.indexOf('\n')) ||
+          props.task.latestVersion.description);
 
         setDescription(
-          item.description.substring(item.description.indexOf('\n') + 1).trim(),
+          props.task.latestVersion.description.indexOf('\n') !== -1 ?
+            props.task.latestVersion.description.substring(
+              props.task.latestVersion.description.indexOf('\n') +
+              1).trim() : ' ',
         );
-      }
-    });
+
+        displayName = data.dsiplayName === ' ' ? data.resource.name :
+          displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
+            return str.toUpperCase();
+          }));
+      });
+    setVersion(event.target.text);
   }
 
   const ontoggle = (isOpen: React.SetStateAction<boolean>) => set(isOpen);
@@ -163,7 +186,7 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
     taskArr.push([]);
   }
 
-  // ading icon for details page
+  //  ading icon for details page
   let resourceIcon: React.ReactNode;
   if (props.task.type.toLowerCase() === 'task') {
     resourceIcon = <BuildIcon
@@ -353,4 +376,3 @@ const mapStateToProps = (state: any) => {
 
 export default connect(mapStateToProps,
   {fetchTaskDescription})(BasicDetail);
-
