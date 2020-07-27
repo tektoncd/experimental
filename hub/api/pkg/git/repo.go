@@ -58,7 +58,16 @@ func (r Repo) ParseTektonResources() ([]TektonResource, error) {
 	// TODO(sthaha): may be in parallel
 	// TODO(sthaha): replace it by channels and stream and write?
 	// TODO(sthaha): get task kind from scheme ?
-	return r.findResourcesByKind("Task")
+	kinds := []string{"Task", "Pipeline"}
+	resources := []TektonResource{}
+	for _, k := range kinds {
+		ret, err := r.findResourcesByKind(k)
+		if err != nil {
+			return []TektonResource{}, err
+		}
+		resources = append(resources, ret...)
+	}
+	return resources, nil
 }
 
 func ignoreNotExists(err error) error {
