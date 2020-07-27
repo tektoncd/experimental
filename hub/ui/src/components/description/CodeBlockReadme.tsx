@@ -6,7 +6,7 @@ import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 const CodeBlockReadme = (props:any) => {
   const {value} = props;
   return (
-    <SyntaxHighlighter language="readme"
+    <SyntaxHighlighter language="markdown"
       showLineNumbers={true} wrapLines={true}
     >
       {value}
