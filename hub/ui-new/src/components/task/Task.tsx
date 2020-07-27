@@ -30,17 +30,34 @@ import {
   CertificateIcon,
   UserIcon,
 } from '@patternfly/react-icons';
+
+
+export interface LatestVersionInfo {
+  id: number,
+  version: string,
+  displayName: string,
+  description: string,
+  minPipelinesVersion: string,
+  rawURL: string,
+  webURL: string,
+  updatedAt: string,
+}
+export interface CatalogInfo {
+  id: number,
+  type: string,
+}
+export interface TagInfo {
+  id: number,
+  name: string,
+}
 export interface TaskPropObject {
+  id: number,
   name: string;
-  description: string;
+  type: string;
+  catalog: CatalogInfo;
+  latestVersion: LatestVersionInfo,
+  tags: Array<TagInfo>,
   rating: number;
-  catalog: string;
-  downloads: number;
-  yaml: string;
-  tags: [];
-  lastUpdatedAt: string;
-  latestVersion: string;
-  displayName: string
 }
 
 export interface TaskProp {
@@ -63,7 +80,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // Create relative date/time formatter.
   const timeAgo = new TimeAgo('en-US');
 
-  const catalogDate = new Date(props.task.lastUpdatedAt);
+  const catalogDate = new Date(props.task.latestVersion.updatedAt);
 
   const diffDays = timeAgo.format(catalogDate.getTime() - 60 * 1000);
 
@@ -111,10 +128,10 @@ const Task: React.FC<TaskProp> = (props: any) => {
 
   // Display name
   let displayName = '';
-  if (props.task.displayName === '') {
+  if (props.task.latestVersion.displayName === '') {
     displayName = props.task.name;
   } else {
-    displayName = props.task.displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
+    displayName = props.task.latestVersion.displayName.replace(/(^\w|\s+\w){1}/g, ((str) => {
       return str.toUpperCase();
     }));
   }
@@ -161,7 +178,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
                 breakpointMods={[{modifier: FlexModifiers['align-right']}]}
                 style={{marginBottom: '0.5em'}}>
                 <span>
-                  v{props.task.latestVersion}
+                  v{props.task.latestVersion.version}
                 </span>
               </FlexItem>
             </Flex>
@@ -169,8 +186,9 @@ const Task: React.FC<TaskProp> = (props: any) => {
           <CardBody className="catalog-tile-pf-body">
             <div className="catalog-tile-pf-description">
               <span>
-                {`${props.task.description.substring(0,
-                  props.task.description.indexOf('\n'))}`}
+                {`${ props.task.latestVersion.description.substring(0,
+                  props.task.latestVersion.description.indexOf('\n')) }` ||
+                  `${ props.task.latestVersion.description }`}
               </span>
             </div>
 

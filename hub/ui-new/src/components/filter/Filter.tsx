@@ -63,7 +63,7 @@ const Filter: React.FC = (props: any) => {
     categoryData.map((categoryName: string, index: number) =>
       filterItem.push(
         {
-          id: `${categoryName['id']}`,
+          id: `${ categoryName['id'] }`,
           value: categoryName['name'], isChecked: false,
         },
       ));
@@ -76,7 +76,7 @@ const Filter: React.FC = (props: any) => {
     fetch(`${API_URL}/categories`)
       .then((res) => res.json())
       .then((categoryData) =>
-        setCategoriesList(addCategory(categoryData.data)));
+        setCategoriesList(addCategory(categoryData)));
     if (categoriesList) {
       (Object.keys(categoriesList)).map((category) => {
         return tempObj.category = false;
@@ -312,7 +312,7 @@ const Filter: React.FC = (props: any) => {
   if (status !== undefined && checkBoxStatus !== undefined) {
     const verifiedtask = status.checklist.slice(2, 5);
     showverifiedtask = verifiedtask.map((it: any, idx: number) => (
-      <div key={`task-${idx}`} style={{marginBottom: '0.5em'}}>
+      <div key={`task-${ idx }`} style={{marginBottom: '0.5em'}}>
         <Checkbox
           onClick={filterApi}
           isChecked={checkBoxStatus[it.value]}

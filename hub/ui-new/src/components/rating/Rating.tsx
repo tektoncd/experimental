@@ -42,14 +42,14 @@ const Rating: React.FC = (props: any) => {
 
   // Display rating for particular user
   if (count === 0) {
-    fetch(`${API_URL}/resource/${Number(taskId)}/rating`, {
+    fetch(`${ API_URL }/resource/${ Number(taskId) }/rating`, {
       method: 'GET',
       headers: new Headers({
         'Accept': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${ localStorage.getItem('token') }`,
       }),
     }).then((res) => res.json()).then((response) => {
-      setStars(Number(response.data.rating));
+      setStars(Number(response.rating));
     });
     setCount((count) => count + 1);
   }
@@ -74,18 +74,17 @@ const Rating: React.FC = (props: any) => {
   }
   let login: any = '';
   const putData = (ratingData: any) => {
-    fetch(`${API_URL}/resource/${taskId}/rating`, {
+    fetch(`${API_URL}/resource/${ taskId }/rating`, {
       method: 'PUT',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${ localStorage.getItem('token') }`,
       },
       body: JSON.stringify(ratingData),
     }).then((res) => res.json())
       .then((response) => {
-        console.log(response);
-        setAvgRating(response.data.avgRating);
+        setAvgRating(response.avgRating);
       });
   };
 
