@@ -1,0 +1,19 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hub-sync-db
+  namespace: tekton-hub-preview
+  labels:
+    app: api
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: sync-db
+              image: curlimages/curl:7.71.1
+              args: ["-s", "-q", "-X", "POST", "api:5000/resources/sync"]
+          restartPolicy: OnFailure
