@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"generators/cmd/cli/cmd/trigger"
 	"os"
 	"path/filepath"
 
@@ -25,6 +26,9 @@ func init() {
 	} else {
 		rootCmd.PersistentFlags().StringVarP(&kubeconfig, "kubeconfig", "k", "", "absolute path to the kubeconfig file")
 	}
+	rootCmd.AddCommand(
+		trigger.Command(kubeconfig),
+	)
 }
 
 func Execute() {

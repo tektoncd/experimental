@@ -1,4 +1,4 @@
-package cmd
+package trigger
 
 import (
 	"errors"
@@ -31,5 +31,4 @@ var writeCmd = &cobra.Command{
 func init() {
 	writeCmd.Flags().StringVarP(&specFilename, "filename", "f", "", "input spec file")
 	writeCmd.Flags().StringVarP(&outputFilename, "output", "o", "gen-config.yaml", "generated config file")
-	rootCmd.AddCommand(writeCmd)
 }
