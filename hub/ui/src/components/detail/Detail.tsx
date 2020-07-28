@@ -33,7 +33,8 @@ const Detail: React.FC = (props: any) => {
         <Flex breakpointMods={[{modifier: 'row', breakpoint: 'lg'}, {
           modifier:
             'column', breakpoint: 'sm',
-        }]}>
+        }]}
+        style={{alignItems: 'center', justifyContent: 'center'}}>
           <FlexItem>
             <Description
               Description={catalogTaskDescription}
