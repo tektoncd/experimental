@@ -1,4 +1,4 @@
-package cmd
+package trigger
 
 import (
 	"errors"
@@ -26,5 +26,4 @@ var showCmd = &cobra.Command{
 
 func init() {
 	showCmd.Flags().StringVarP(&filename, "filename", "f", "", "spec file")
-	rootCmd.AddCommand(showCmd)
 }
