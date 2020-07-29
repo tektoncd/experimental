@@ -109,6 +109,42 @@ It looks for a single `PipelineResource` of type `git` and pulls the *url* and *
 If no suitable `PipelineResource` is found, then this will be logged as an
 error, and _not_ retried.
 
+
+## Private Git repository hosts
+
+You'll need to configure the deployment:
+
+```yaml
+env:
+  - name: WATCH_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+  - name: POD_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+  - name: OPERATOR_NAME
+    value: "commit-status-tracker"
+  - name: GIT_DRIVERS
+    value: "gl.example.com=gitlab"
+```
+
+
+If you are running with an untrusted SSL certificate, then you'll need to
+slightly tweak the command:
+
+```
+containers:
+  - name: commit-status-tracker
+    command:
+    - commit-status-tracker
+    - --insecure
+```
+
+This `--insecure` is the same as curl's `-k/--insecure` in that it disables TLS
+certificate verification, do not use this if you don't need to.
+
 ## Prerequisites
 
 - [go][go_tool] version v1.13+.

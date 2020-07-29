@@ -3,16 +3,17 @@ module github.com/tektoncd/experimental/commit-status-tracker
 go 1.14
 
 require (
-	github.com/jenkins-x/go-scm v1.5.142
+	github.com/jenkins-x/go-scm v1.5.151
 	github.com/operator-framework/operator-sdk v0.17.1
 	github.com/spf13/pflag v1.0.5
-	github.com/tektoncd/pipeline v0.13.2
+	github.com/tektoncd/pipeline v0.15.1
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2
 	k8s.io/client-go v12.0.0+incompatible
-	knative.dev/pkg v0.0.0-20200528142800-1c6815d7e4c9
+	knative.dev/pkg v0.0.0-20200702222342-ea4d6e985ba0
 	sigs.k8s.io/controller-runtime v0.5.2
+	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 // Knative deps (release-0.15)

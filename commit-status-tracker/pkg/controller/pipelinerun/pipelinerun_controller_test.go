@@ -37,6 +37,7 @@ var (
 	testNamespace   = "test-namespace"
 	pipelineRunName = "test-pipeline-run"
 	testToken       = "abcdefghijklmnopqrstuvwxyz12345678901234"
+	testRepoURL     = "https://github.com/tektoncd/triggers"
 )
 
 var _ reconcile.Reconciler = &ReconcilePipelineRun{}
@@ -46,7 +47,7 @@ var _ reconcile.Reconciler = &ReconcilePipelineRun{}
 func TestPipelineRunControllerPendingState(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	pipelineRun := makePipelineRunWithResources(
-		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"))
+		makeGitResourceBinding(testRepoURL, "master"))
 	applyOpts(
 		pipelineRun,
 		tb.PipelineRunAnnotation(notifiableName, "true"),
@@ -59,7 +60,7 @@ func TestPipelineRunControllerPendingState(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(t, "github", pipelineRun, objs...)
+	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -84,7 +85,7 @@ func TestPipelineRunControllerPendingState(t *testing.T) {
 func TestPipelineRunReconcileWithPreviousPending(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	pipelineRun := makePipelineRunWithResources(
-		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"))
+		makeGitResourceBinding(testRepoURL, "master"))
 	applyOpts(
 		pipelineRun,
 		tb.PipelineRunAnnotation(notifiableName, "true"),
@@ -96,7 +97,7 @@ func TestPipelineRunReconcileWithPreviousPending(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(t, "github", pipelineRun, objs...)
+	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -129,7 +130,7 @@ func TestPipelineRunReconcileWithPreviousPending(t *testing.T) {
 func TestPipelineRunControllerSuccessState(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	pipelineRun := makePipelineRunWithResources(
-		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"))
+		makeGitResourceBinding(testRepoURL, "master"))
 	applyOpts(
 		pipelineRun,
 		tb.PipelineRunAnnotation(notifiableName, "true"),
@@ -141,7 +142,7 @@ func TestPipelineRunControllerSuccessState(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(t, "github", pipelineRun, objs...)
+	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -166,7 +167,7 @@ func TestPipelineRunControllerSuccessState(t *testing.T) {
 func TestPipelineRunControllerFailedState(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	pipelineRun := makePipelineRunWithResources(
-		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"))
+		makeGitResourceBinding(testRepoURL, "master"))
 	applyOpts(
 		pipelineRun,
 		tb.PipelineRunAnnotation(notifiableName, "true"),
@@ -178,7 +179,7 @@ func TestPipelineRunControllerFailedState(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(t, "github", pipelineRun, objs...)
+	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -203,7 +204,7 @@ func TestPipelineRunControllerFailedState(t *testing.T) {
 func TestPipelineRunReconcileNonNotifiable(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	pipelineRun := makePipelineRunWithResources(
-		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"))
+		makeGitResourceBinding(testRepoURL, "master"))
 	applyOpts(
 		pipelineRun,
 		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
@@ -212,7 +213,7 @@ func TestPipelineRunReconcileNonNotifiable(t *testing.T) {
 		pipelineRun,
 		makeSecret(map[string][]byte{"token": []byte(testToken)}),
 	}
-	r, data := makeReconciler(t, "github", pipelineRun, objs...)
+	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -265,7 +266,7 @@ func TestPipelineRunReconcileWithNoGitRepository(t *testing.T) {
 func TestPipelineRunReconcileWithGitRepositories(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	pipelineRun := makePipelineRunWithResources(
-		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"),
+		makeGitResourceBinding(testRepoURL, "master"),
 		makeGitResourceBinding("https://github.com/tektoncd/pipeline", "master"))
 	applyOpts(
 		pipelineRun,
@@ -299,7 +300,7 @@ func TestPipelineRunReconcileWithGitRepositories(t *testing.T) {
 func TestPipelineRunReconcileWithNoGitCredentials(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	pipelineRun := makePipelineRunWithResources(
-		makeGitResourceBinding("https://github.com/tektoncd/triggers", "master"),
+		makeGitResourceBinding(testRepoURL, "master"),
 		makeGitResourceBinding("https://github.com/tektoncd/pipeline", "master"))
 	applyOpts(
 		pipelineRun,
@@ -309,6 +310,7 @@ func TestPipelineRunReconcileWithNoGitCredentials(t *testing.T) {
 		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
 	objs := []runtime.Object{pipelineRun}
+
 	r, data := makeReconciler(t, "", pipelineRun, objs...)
 
 	req := reconcile.Request{
@@ -349,17 +351,17 @@ func applyOpts(pr *pipelinev1.PipelineRun, opts ...tb.PipelineRunOp) {
 	}
 }
 
-func makeReconciler(t *testing.T, wantType string, pr *pipelinev1.PipelineRun, objs ...runtime.Object) (*ReconcilePipelineRun, *fakescm.Data) {
+func makeReconciler(t *testing.T, wantRepoURL string, pr *pipelinev1.PipelineRun, objs ...runtime.Object) (*ReconcilePipelineRun, *fakescm.Data) {
 	t.Helper()
 	s := scheme.Scheme
 	s.AddKnownTypes(pipelinev1.SchemeGroupVersion, pr)
 	cl := fake.NewFakeClient(objs...)
 	client, data := fakescm.NewDefault()
-	fakeClientFactory := func(s, gotType string) *scm.Client {
-		if wantType != gotType {
-			t.Fatalf("repository type mismatch: got type %s, want %s", gotType, wantType)
+	fakeClientFactory := func(repoURL, token string) (*scm.Client, error) {
+		if wantRepoURL != repoURL {
+			t.Fatalf("repository url mismatch: got %q, want %q", repoURL, wantRepoURL)
 		}
-		return client
+		return client, nil
 	}
 	return &ReconcilePipelineRun{
 		client:       cl,
