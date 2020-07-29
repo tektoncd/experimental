@@ -40,6 +40,7 @@ import (
 
 	"github.com/tektoncd/experimental/commit-status-tracker/pkg/apis"
 	"github.com/tektoncd/experimental/commit-status-tracker/pkg/controller"
+	"github.com/tektoncd/experimental/commit-status-tracker/pkg/controller/pipelinerun"
 	"github.com/tektoncd/experimental/commit-status-tracker/version"
 )
 
@@ -66,6 +67,9 @@ func main() {
 	// Add flags registered by imported packages (e.g. glog and
 	// controller-runtime)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
+	// Add the controller flag set to the CLI
+	pflag.CommandLine.AddFlagSet(pipelinerun.FlagSet())
 
 	pflag.Parse()
 

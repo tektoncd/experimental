@@ -19,33 +19,66 @@ import (
 	"testing"
 
 	"github.com/jenkins-x/go-scm/scm"
-	"github.com/jenkins-x/go-scm/scm/driver/github"
-	"github.com/jenkins-x/go-scm/scm/driver/gitlab"
+	"github.com/jenkins-x/go-scm/scm/transport"
 )
 
 func TestCreateClient(t *testing.T) {
 	tests := []struct {
-		desc     string
-		repoType string
-		want     *scm.Client
+		name       string
+		repoURL    string
+		baseURL    string
+		wantDriver scm.Driver
+
+		wantErr   string
+		wantToken string
 	}{
-		{"github repository", "github", github.NewDefault()},
-		{"gitlab repository", "gitlab", gitlab.NewDefault()},
-		{"unsupported repository", "abcd", nil},
+		{
+			"github repository",
+			"https://github.com/test/test.git", "https://api.github.com/", scm.DriverGithub, "", "",
+		},
+		{
+			"gitlab repository", "https://gitlab.com/test/test.git", "https://gitlab.com/", scm.DriverGitlab, "", "token",
+		},
+		{
+			"unsupported repository",
+			"https://example.com/test/test.git", "", scm.DriverUnknown, "unable to identify driver from hostname: example.com", "",
+		},
 	}
-	for i, tt := range tests {
-		t.Run(fmt.Sprintf("Test %d", i), func(rt *testing.T) {
-			got := createClient("123", tt.repoType)
-			if tt.want == nil || got == nil {
-				if tt.want != got {
-					rt.Fatalf("expected no client but got %v", got)
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s", tt.name), func(rt *testing.T) {
+			got, err := createClient(tt.repoURL, "token")
+			if tt.wantErr != "" {
+				if err.Error() != tt.wantErr {
+					rt.Errorf("error did not match, got %q, want %q", err, tt.wantErr)
 				}
-			} else {
-				if tt.want.Driver.String() != got.Driver.String() {
-					rt.Fatalf("createClient() failed: got client %v, want %v", tt.want.Driver.String(), got.Driver.String())
+				return
+			}
+			if got.BaseURL.String() != tt.baseURL {
+				rt.Errorf("BaseURL got %q, want %q", got.BaseURL, tt.baseURL)
+			}
+			if got.Driver != tt.wantDriver {
+				rt.Errorf("Driver got %q, want %q", got.Driver, tt.wantDriver)
+			}
+
+			if tt.wantToken != "" {
+				if p := got.Client.Transport.(*transport.PrivateToken).Token; p != "token" {
+					t.Fatalf("got %q, want %q", p, "token")
 				}
 			}
 		})
 	}
+}
 
+func TestAddTokenToURL(t *testing.T) {
+	testURL := "https://gitlab.com/org/repo"
+	token := "test-token"
+
+	newURL, err := addTokenToURL(testURL, token)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if newURL != "https://:test-token@gitlab.com/org/repo" {
+		t.Fatalf("got %q", newURL)
+	}
 }
