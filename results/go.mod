@@ -3,21 +3,27 @@ module github.com/tektoncd/experimental/results
 go 1.13
 
 require (
+	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/golang/protobuf v1.4.1
 	github.com/google/cel-go v0.5.1
 	github.com/google/go-cmp v0.5.0
 	github.com/google/uuid v1.1.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/smartystreets/assertions v1.1.1 // indirect
+	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/tektoncd/pipeline v0.12.0
 	go.chromium.org/luci v0.0.0-20200716065131-1f7c6da65cb2
-	go.uber.org/zap v1.13.0
+	go.uber.org/zap v1.15.0
+	gomodules.xyz/jsonpatch/v2 v2.1.0
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.27.1
 	google.golang.org/protobuf v1.25.0
-	k8s.io/api v0.17.3
-	k8s.io/apimachinery v0.17.3
-	k8s.io/client-go v0.17.3
-	knative.dev/pkg v0.0.0-20200306230727-a56a6ea3fa56
+	k8s.io/api v0.18.6
+	k8s.io/apiextensions-apiserver v0.18.6 // indirect
+	k8s.io/apimachinery v0.18.6
+	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
+	knative.dev/pkg v0.0.0-20200731005101-694087017879
+
 )
 
 // Knative deps (release-0.13)
