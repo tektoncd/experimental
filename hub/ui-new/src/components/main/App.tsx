@@ -130,7 +130,7 @@ const App: React.FC<mainProps> = () => {
       <Page header={Header}>
         <Route exact path="/" component={BackgroundImageHeader} />
         <PageSection >
-          <Grid gutter='sm' sm={6} md={4} lg={4} xl2={1}>
+          <Grid>
             <GridItem span={12}>
               <Route exact path="/detail/:taskId"
                 component={BasicDetailParent} />
