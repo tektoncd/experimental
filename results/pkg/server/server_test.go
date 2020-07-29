@@ -1,10 +1,7 @@
-package main
+package server
 
 import (
 	"context"
-	"database/sql"
-	"io/ioutil"
-	"os"
 	"sort"
 	"testing"
 
@@ -18,13 +15,13 @@ import (
 )
 
 const (
-	address = "localhost:50051"
+	address = "localhost:0"
 )
 
 // Test functionality of Server code
 func TestCreateTaskRun(t *testing.T) {
 	// Create a temporay database
-	srv, err := setupTestDB(t)
+	srv, err := SetupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
@@ -41,45 +38,9 @@ func TestCreateTaskRun(t *testing.T) {
 	}
 }
 
-// setupTestDB set up a temporary database for testing
-func setupTestDB(t *testing.T) (*server, error) {
-	t.Helper()
-
-	// Create a temporary file
-	tmpfile, err := ioutil.TempFile("", "testdb")
-	if err != nil {
-		t.Fatalf("failed to create temp file for db: %v", err)
-	}
-	t.Cleanup(func() {
-		os.Remove(tmpfile.Name())
-	})
-
-	// Connect to sqlite DB.
-	db, err := sql.Open("sqlite3", tmpfile.Name())
-	if err != nil {
-		t.Fatalf("failed to open the results.db: %v", err)
-	}
-	t.Cleanup(func() {
-		db.Close()
-	})
-	schema, err := ioutil.ReadFile("results.sql")
-	if err != nil {
-		t.Fatalf("failed to read schema file: %v", err)
-	}
-	// Create taskrun table
-	statement, err := db.Prepare(string(schema))
-	if err != nil {
-		t.Fatalf("failed to create taskrun table: %v", err)
-	}
-	if _, err := statement.Exec(); err != nil {
-		t.Fatalf("failed to execute the taskrun table creation statement statement: %v", err)
-	}
-	return new(db)
-}
-
 func TestGetTaskRun(t *testing.T) {
 	// Create a temporary database
-	srv, err := setupTestDB(t)
+	srv, err := SetupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to setup db: %v", err)
 	}
@@ -109,7 +70,7 @@ func TestGetTaskRun(t *testing.T) {
 
 func TestUpdateTaskRun(t *testing.T) {
 	// Create a temporary database
-	srv, err := setupTestDB(t)
+	srv, err := SetupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
@@ -392,11 +353,10 @@ func TestUpdateTaskRun(t *testing.T) {
 
 func TestDeleteTaskRun(t *testing.T) {
 	// Create a temporay database
-	srv, err := setupTestDB(t)
+	srv, err := SetupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
-
 	// Connect to fake server and insert a new taskrun
 	ctx := context.Background()
 	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{
@@ -430,7 +390,7 @@ func TestDeleteTaskRun(t *testing.T) {
 }
 func TestListTaskRuns(t *testing.T) {
 	// Create a temporary database
-	srv, err := setupTestDB(t)
+	srv, err := SetupTestDB(t)
 	if err != nil {
 		t.Fatalf("failed to setup db: %v", err)
 	}
