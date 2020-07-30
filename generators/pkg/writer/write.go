@@ -9,42 +9,76 @@ import (
 	"io"
 	"os"
 
+	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
-// WriteToDisk writes the generated task
-// to the io.Writer
-func WriteToDisk(filename string, writer io.Writer) error {
+func parseFile(filename string) (*generator.GitHub, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return fmt.Errorf("unable to open the file from %s. check if the file exists: %w", filename, err)
+		return nil, fmt.Errorf("unable to open the file from %s. check if the file exists: %w", filename, err)
 	}
 	defer file.Close()
 
 	github, err := parser.Parse(file)
 	if err != nil {
-		return fmt.Errorf("unable to parse the file from %s: %w", filename, err)
+		return nil, fmt.Errorf("unable to parse the file from %s: %w", filename, err)
 	}
+	return github, nil
+}
 
+func getResource(g *generator.GitHub) (*v1beta1.Task, *v1beta1.Pipeline, error) {
+	task, err := generator.GenerateTask(g)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to get the task: %w", err)
+	}
+	pipeline, err := generator.GeneratePipeline(g)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to get the pipeline: %w", err)
+	}
+	return task, pipeline, nil
+}
+
+// WriteTrigger writes the generated task, pipeline and trigger
+// to the io.Writer
+func WriteTrigger(filename string, writer io.Writer) error {
+	g, err := parseFile(filename)
+	if err != nil {
+		return fmt.Errorf("unable to parse the github config: %w", err)
+	}
 	// resrouces needed to write to disk
-	task, err := generator.GenerateTask(github)
+	t, p, err := getResource(g)
 	if err != nil {
-		return fmt.Errorf("unable to get the task: %w", err)
+		return fmt.Errorf("unable to get the task or pipeline: %w", err)
 	}
-
-	pipeline, err := generator.GeneratePipeline(github)
-	if err != nil {
-		return fmt.Errorf("unable to get the pipeline: %w", err)
-	}
-
-	trigger, err := generator.GenerateTrigger(pipeline, github)
+	trigger, err := generator.GenerateTrigger(p, g)
 	if err != nil {
 		return fmt.Errorf("unable to get the trigger: %w", err)
 	}
 
 	// write into the disk
-	return writeYaml(writer, task, pipeline, trigger.TriggerBinding[0], trigger.TriggerBinding[1], trigger.TriggerTemplate, trigger.EventListener)
+	return writeYaml(writer, t, p, trigger.TriggerBinding[0], trigger.TriggerBinding[1], trigger.TriggerTemplate, trigger.EventListener)
+}
+
+// WriteTrigger writes the generated task, pipeline and pipelinerun
+// to the io.Writer
+func WritePipelineRun(filename string, writer io.Writer) error {
+	g, err := parseFile(filename)
+	if err != nil {
+		return fmt.Errorf("unable to parse the github config: %w", err)
+	}
+	// resrouces needed to write to disk
+	t, p, err := getResource(g)
+	if err != nil {
+		return fmt.Errorf("unable to get the task or pipeline: %w", err)
+	}
+	pr, err := generator.GeneratePipelineRun(p, g)
+	if err != nil {
+		return fmt.Errorf("unable to get the pipelinerun: %w", err)
+	}
+	// write into the disk
+	return writeYaml(writer, t, p, pr)
 }
 
 func writeYaml(writer io.Writer, objs ...runtime.Object) error {

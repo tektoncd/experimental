@@ -24,7 +24,7 @@ var writeCmd = &cobra.Command{
 		}
 		defer file.Close()
 
-		return writer.WriteToDisk(specFilename, file)
+		return writer.WriteTrigger(specFilename, file)
 	},
 }
 

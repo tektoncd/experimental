@@ -1,4 +1,4 @@
-package trigger
+package pipelinerun
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ var deleteFile string
 func deleteCommand(kubeconfig string) *cobra.Command {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete generated configuration with trigger from Kubernetes Cluster",
+		Short: "Delete generated configuration with pipelinerun from Kubernetes Cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(deleteFile) == 0 {
 				return errors.New("No input file specified")
@@ -28,7 +28,7 @@ func deleteCommand(kubeconfig string) *cobra.Command {
 			}
 
 			buf := new(bytes.Buffer)
-			if err := writer.WriteTrigger(deleteFile, buf); err != nil {
+			if err := writer.WritePipelineRun(deleteFile, buf); err != nil {
 				return fmt.Errorf("fail to get the generated config from %s: %w", deleteFile, err)
 			}
 			return manager.DeleteResource(context.Background(), client, buf)

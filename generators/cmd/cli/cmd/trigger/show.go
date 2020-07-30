@@ -17,7 +17,7 @@ var showCmd = &cobra.Command{
 			return errors.New("No input file specified")
 		}
 
-		if err := writer.WriteToDisk(filename, os.Stdout); err != nil {
+		if err := writer.WriteTrigger(filename, os.Stdout); err != nil {
 			return err
 		}
 		return nil

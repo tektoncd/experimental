@@ -1,0 +1,100 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: github-build
+  name: github-build
+spec:
+  steps:
+  - args:
+    - --context=dir://$(workspaces.input.path)/src
+    - --destination=gcr.io/tekton-yolandadu/kaniko-test
+    - --verbosity=debug
+    command:
+    - /kaniko/executor
+    image: gcr.io/kaniko-project/executor:latest
+    name: build
+    resources: {}
+  workspaces:
+  - mountPath: /input
+    name: input
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: github-build-pipeline
+  name: github-build-pipeline
+  namespace: default
+spec:
+  finally:
+  - name: final-set-status
+    params:
+    - name: REPO_FULL_NAME
+      value: wlynch/test
+    - name: SHA
+      value: master
+    - name: STATE
+      value: success
+    taskRef:
+      name: github-set-status
+  params:
+  - name: gitrepositoryurl
+    type: string
+  - name: gitrevision
+    type: string
+  tasks:
+  - name: fetch-git-repo
+    params:
+    - name: url
+      value: https://github.com/wlynch/test
+    - name: revision
+      value: $(params.gitrevision)
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: source
+  - name: build-from-repo
+    runAfter:
+    - fetch-git-repo
+    taskRef:
+      name: github-build
+    workspaces:
+    - name: input
+      workspace: source
+  workspaces:
+  - name: source
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  creationTimestamp: null
+  labels:
+    generator.tekton.dev: github-build-pipeline
+  name: github-build-pipeline-run
+  namespace: default
+spec:
+  params:
+  - name: gitrepositoryurl
+    value: https://github.com/wlynch/test
+  - name: gitrevision
+    value: master
+  pipelineRef:
+    name: github-build-pipeline
+  workspaces:
+  - name: source
+    volumeClaimTemplate:
+      metadata:
+        creationTimestamp: null
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+      status: {}
+status: {}

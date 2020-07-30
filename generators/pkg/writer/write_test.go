@@ -8,10 +8,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestWriteToDisk(t *testing.T) {
+func TestWriteTrigger(t *testing.T) {
 	buf := new(bytes.Buffer)
-	if err := WriteToDisk("./testdata/spec-full.yaml", buf); err != nil {
-		t.Fatalf("error from 'WriteToDisk': %v", err)
+	if err := WriteTrigger("./testdata/spec-full.yaml", buf); err != nil {
+		t.Fatalf("error from 'WriteTrigger': %v", err)
 	}
 	got := buf.Bytes()
 
@@ -21,6 +21,23 @@ func TestWriteToDisk(t *testing.T) {
 		t.Fatalf("fail to read file %s: %v", path, err)
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("WriteToDisk mismatch (-want +got):\n %s", diff)
+		t.Errorf("WriteTrigger mismatch (-want +got):\n %s", diff)
+	}
+}
+
+func TestWritePipelineRun(t *testing.T) {
+	buf := new(bytes.Buffer)
+	if err := WritePipelineRun("./testdata/spec-full.yaml", buf); err != nil {
+		t.Fatalf("error from 'WritePipelineRun': %v", err)
+	}
+	got := buf.Bytes()
+
+	path := "./testdata/run.yaml"
+	want, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf("fail to read file %s: %v", path, err)
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("WritePipelineRun mismatch (-want +got):\n %s", diff)
 	}
 }
