@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"generators/cmd/cli/cmd/pipelinerun"
 	"generators/cmd/cli/cmd/trigger"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ func init() {
 	}
 	rootCmd.AddCommand(
 		trigger.Command(kubeconfig),
+		pipelinerun.Command(kubeconfig),
 	)
 }
 
