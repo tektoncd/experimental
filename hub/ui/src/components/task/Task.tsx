@@ -207,19 +207,14 @@ const Task: React.FC<TaskProp> = (props: any) => {
               Updated {diffDays}
             </TextContent>
 
-            <div style={{height: '2em'}}>
-              {
-                tempArr.map((tag: any, index: number) => {
-                  if (index < 3) {
-                    return (
-                      <Badge style={{
-                        marginRight: '0.3em',
-                        marginBottom: '0.5em',
-                      }} key={`badge-${tag}`} className="badge">{tag}</Badge>
-                    );
-                  }
-                })
-              }
+            <div style={{height: '2em'}}>{
+              tempArr.slice(0, 3).map((tag: any, index: number) => (
+                <Badge
+                  style={{marginRight: '0.3em', marginBottom: '0.5em'}}
+                  key={`badge-${tag}`}
+                  className="badge">{tag}</Badge>
+              ))
+            }
             </div>
 
           </CardFooter>
