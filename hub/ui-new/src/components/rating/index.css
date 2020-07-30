@@ -24,36 +24,38 @@
 .rate-area {
   float: left;
   border-style: none;
-  margin-left: 4em;
+  margin-left: 5.9em;
 }
 
 .rate-area:not(:checked)>input {
   position: absolute;
   top: -9999px;
-  clip: rect(0, 0, 0, 0);
 }
 
 .rate-area:not(:checked)>label {
   float: right;
   width: 1em;
-  padding: 0 .1em;
   overflow: hidden;
   white-space: nowrap;
   cursor: pointer;
-  font-size: 250%;
+  font-size: 170%;
   line-height: 1.2;
   color: lightgrey;
-  text-shadow: 1px 1px #484848;
+}
+
+
+.rate-area>label > svg {
+  color: #45550;
 }
 
 .rate-area:not(:checked)>label:before {
-  content: '★ ';
+  content: '';
 }
 
 .rate-area>input:checked~label {
   color:#484848;
   text-shadow: 1px 1px #484848;
-  font-size: 250% !important;
+  font-size: 170% !important;
 }
 
 .rate-area:not(:checked)>label:hover,
