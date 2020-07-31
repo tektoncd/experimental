@@ -11,7 +11,7 @@ option go_package = "./proto";
 service Results {
   rpc CreateTaskRunResult (CreateTaskRunRequest) returns (TaskRunResult) {}
   rpc UpdateTaskRunResult (UpdateTaskRunRequest) returns (TaskRunResult) {}
-  rpc GetTaskRunResultResult    (GetTaskRunRequest)    returns (TaskRunResult) {}
+  rpc GetTaskRunResult    (GetTaskRunRequest)    returns (TaskRunResult) {}
   rpc DeleteTaskRunResult (DeleteTaskRunRequest) returns (google.protobuf.Empty) {}  
   rpc ListTaskRunsResult  (ListTaskRunsRequest)  returns (ListTaskRunsResponse) {}
 }
@@ -46,7 +46,7 @@ message ListTaskRunsRequest {
 }
 
 message ListTaskRunsResponse {
-	repeated TaskRun items = 1;
+	repeated TaskRunResult items = 1;
 	// TODO: next_page_token, etc.
 }
 

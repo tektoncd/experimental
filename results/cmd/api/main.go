@@ -182,15 +182,16 @@ func (s *server) ListTaskRunsResult(ctx context.Context, req *pb.ListTaskRunsReq
 		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter parse step, no TaskRuns found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", issues.Err())
 	}
 	// get all taskruns from database
-	rows, err := s.db.Query("SELECT taskrunlog FROM taskrun")
+	rows, err := s.db.Query("SELECT taskrunlog, results_id FROM taskrun")
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
 		return nil, status.Errorf(codes.Internal, "failed to query results: %v", err)
 	}
-	var taskRunList []*pb.TaskRun
+	var taskRunList []*pb.TaskRunResult
 	for rows.Next() {
 		var taskrunblob []byte
-		if err := rows.Scan(&taskrunblob); err != nil {
+		var resultsID uuid.UUID
+		if err := rows.Scan(&taskrunblob, &resultsID); err != nil {
 			log.Printf("failed to scan a row in query results: %v", err)
 			return nil, status.Errorf(codes.Internal, "failed to read result data: %v", err)
 		}
@@ -199,7 +200,7 @@ func (s *server) ListTaskRunsResult(ctx context.Context, req *pb.ListTaskRunsReq
 			log.Printf("unmarshaling error: %v", err)
 			return nil, status.Errorf(codes.Internal, "failed to parse result data: %v", err)
 		}
-		taskRunList = append(taskRunList, taskrun)
+		taskRunList = append(taskRunList, &pb.TaskRunResult{TaskRun: taskrun, ResultsId: resultsID.String()})
 	}
 	// return all taskruns back to users if empty query is given
 	if req.GetFilter() == "" {
@@ -211,8 +212,9 @@ func (s *server) ListTaskRunsResult(ctx context.Context, req *pb.ListTaskRunsReq
 		log.Printf("program construction error: %s", err)
 		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter checking step, no TaskRuns found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
 	}
-	var resList []*pb.TaskRun
-	for _, taskrun := range taskRunList {
+	var resList []*pb.TaskRunResult
+	for _, taskrunResult := range taskRunList {
+		taskrun := taskrunResult.GetTaskRun()
 		out, _, err := prg.Eval(map[string]interface{}{
 			"taskrun": taskrun,
 		})
@@ -221,7 +223,7 @@ func (s *server) ListTaskRunsResult(ctx context.Context, req *pb.ListTaskRunsReq
 			return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter evaluation step, no TaskRuns found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
 		}
 		if out.Value() == true {
-			resList = append(resList, taskrun)
+			resList = append(resList, taskrunResult)
 		}
 	}
 	return &pb.ListTaskRunsResponse{Items: resList}, nil
