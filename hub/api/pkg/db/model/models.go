@@ -1,6 +1,8 @@
 package model
 
 import (
+	"time"
+
 	"github.com/jinzhu/gorm"
 )
 
@@ -56,6 +58,7 @@ type (
 		URL         string
 		Resource    Resource
 		ResourceID  uint
+		ModifiedAt  time.Time
 	}
 
 	// ResourceTag represent struct for resource_tag, needed for creating foreign key
