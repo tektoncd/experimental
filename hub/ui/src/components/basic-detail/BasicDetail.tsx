@@ -85,13 +85,12 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
     props.version.webUrl.lastIndexOf('/') + 1)}`);
 
   // resource name
-  let resourceName = props.task.displayName === '' ?
-    <span style={{fontFamily: 'courier, monospace'}}>
-      {props.task.name}</span> :
-    <p >{props.task.displayName}
-      {<span style={{fontFamily: 'courier, monospace'}}>
-        {`(${props.task.name})`}</span>}
-    </p>;
+  const githubName = <span style={{fontFamily: 'courier, monospace'}}> {props.task.name} </span>;
+
+  const [resourceName, setResourceName] = useState(
+    props.task.displayName === '' ? githubName : props.task.displayName,
+  );
+
 
   // Dropdown menu to show versions
   const [isOpen, set] = useState(false);
@@ -100,19 +99,18 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   if (props.task.data) {
     fetchTaskDescription(props.version.rawUrl);
     const tempTaskData = props.task.data.reverse();
+
     tempTaskData.forEach((item: any, index: any) => {
       if (props.task.latestVersion === item.version) {
-        dropdownItems.push(<DropdownItem
-          key={`res-${item.version}`} name={item.version}
-          onClick={version} >
-          {item.version + ' (latest) '}
-        </DropdownItem>);
+        dropdownItems.push(
+          <DropdownItem key={`res-${item.version}`} name={item.version} onClick={version} >
+            {item.version + ' (latest) '}
+          </DropdownItem>);
       } else {
-        dropdownItems.push(<DropdownItem
-          key={`res-${item.version}`} name={item.version}
-          onClick={version} >
-          {item.version}
-        </DropdownItem>);
+        dropdownItems.push(
+          <DropdownItem key={`res-${item.version}`} name={item.version} onClick={version} >
+            {item.version}
+          </DropdownItem>);
       }
     });
   }
@@ -120,19 +118,10 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   // Version for resource
   function version(event: any) {
     props.task.data.forEach((item: any) => {
-      // if (event.target.id === props.task.latestVersion) {
-      //   setVersion(props.task.latestVersion + ' (latest) ');
-      // } else {
       setVersion(event.target.text);
       if (event.target.name === item.version) {
         props.fetchTaskDescription(item.rawUrl);
 
-        resourceName = props.task.displayName === '' ?
-          <span style={{fontFamily: 'courier, monospace'}}>{item.name}</span> :
-          <p >{item.displayName}
-            {<span style={{fontFamily: 'courier, monospace'}}>
-              {`(${item.name})`}</span>}
-          </p>;
 
         setHref(`${item.webUrl.substring(0,
           item.webUrl.lastIndexOf('/') + 1)}`);
@@ -145,6 +134,9 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
         setDescription(
           item.description.substring(item.description.indexOf('\n') + 1).trim(),
         );
+        if (item.displayName !== '') {
+          setResourceName(item.displayName);
+        }
       }
     });
   }
@@ -154,9 +146,7 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
 
   // Get tags for resource
   if (props.task.tags != null) {
-    props.task.tags.forEach((item: any) => {
-      taskArr.push(item.name);
-    });
+    props.task.tags.forEach((item: any) => taskArr.push(item.name));
   } else {
     taskArr.push([]);
   }
@@ -164,11 +154,9 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   // ading icon for details page
   let resourceIcon: React.ReactNode;
   if (props.task.type.toLowerCase() === 'task') {
-    resourceIcon = <BuildIcon
-      style={{height: '5em', width: '5em'}} color="#484848" />;
+    resourceIcon = <BuildIcon style={{height: '5em', width: '5em', maxHeight: '4em'}} color="#484848" />;
   } else {
-    resourceIcon = <DomainIcon
-      style={{height: '5em', width: '5em'}} color="#4848484" />;
+    resourceIcon = <DomainIcon style={{height: '5em', width: '5em', maxHeight: '4em'}} color="#4848484" />;
   }
 
   // for verification status of resources
@@ -176,168 +164,131 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   if (props.task) {
     if (props.task.catalog.type.toLowerCase() === 'official') {
       verifiedStatus = <div className="vtask" >
-        <CatIcon size="md" color='#484848'
-          style={{width: '2em', height: '1.7em'}} />
+        <CatIcon size="md" color='#484848' style={{width: '2em', height: '1.7em'}} />
       </div>;
     }
     if (props.task.catalog.type.toLowerCase() === 'verified') {
       verifiedStatus = <div className="vtask" >
-        <CertificateIcon size="md" color='#484848'
-          style={{width: '2em', height: '1.7em'}} />
+        <CertificateIcon size="md" color='#484848' style={{width: '2em', height: '1.7em'}} />
       </div>;
     }
     if (props.task.catalog.type.toLowerCase() === 'community') {
       verifiedStatus = <div className="vtask" >
-        <UserIcon size="md" color='#484848'
-          style={{width: '2em', height: '1.7em'}} />
+        <UserIcon size="md" color='#484848' style={{width: '2em', height: '1.7em'}} />
       </div>;
     }
   }
 
   return (
-    <Flex>
+    <Card style={{
+      marginLeft: '-2em', marginRight: '-2em',
+      marginTop: '-2em', width: '115%', paddingBottom: '2em',
+    }}>
+      <Grid>
+        <GridItem span={1} />
 
-      <Card style={{
-        marginLeft: '-2em', marginRight: '-2em',
-        marginTop: '-2em', width: '120%', paddingBottom: '2em',
-      }}>
-        <CardHead style={{paddingTop: '2em'}}>
-          <div style={{height: '7em', paddingLeft: '10em', marginTop: '5em'}}>
-            {resourceIcon}
-          </div>
+        <GridItem span={1} style={{marginTop: '4.7em'}}> {resourceIcon} </GridItem>
+        <GridItem span={9}>
 
-          <TextContent style={{paddingLeft: '4em', paddingTop: '2em'}}>
+          <CardHead style={{paddingTop: '2em', marginLeft: '-4em'}}>
+            <TextContent style={{paddingTop: '2em'}}>
+              <Flex breakpointMods={[{modifier: 'row', breakpoint: 'md'}]}>
+                <FlexItem>
+                  <Text style={{fontSize: '2em'}}> {resourceName} </Text>
+                </FlexItem>
 
-            <Flex breakpointMods={[{modifier: 'row', breakpoint: 'lg'}]}>
+                <FlexItem> {verifiedStatus} </FlexItem>
+              </Flex>
 
-              <FlexItem>
-                <Text style={{fontSize: '2em'}}>
-                  {resourceName}
-                </Text>
-              </FlexItem>
+              <Text style={{fontSize: '1em'}}>
+                <a href={href} target="_">
+                  <GithubIcon size="md" style={{marginRight: '0.5em', marginBottom: '-0.3em', color:'#484848'}} />
+                  Open {githubName} in Github
+                </a>
+              </Text>
 
-              <FlexItem>
-                {verifiedStatus}
-              </FlexItem>
-
-            </Flex>
-
-            <Text style={{fontSize: '1em'}}>
-              <GithubIcon size="md"
-                style={{marginRight: '0.5em', marginBottom: '-0.3em'}} />
-
-              <a href={href} target="_">Github</a>
-            </Text>
-
-            <Grid>
-
-              <GridItem span={10}
-                style={{paddingBottom: '1.5em', textAlign: 'justify'}}>
-
-                {summary}
-                <br />
-                <br />
-                {descrption}
-
-              </GridItem>
+              <Grid>
+                <GridItem span={10} style={{paddingBottom: '1.5em', textAlign: 'justify'}}>
+                  <p> {summary} </p>
+                  <p>{descrption} </p>
+                </GridItem>
 
 
-              <GridItem>
-                {
-                  taskArr.map((tag: any) => {
-                    return (
-                      <Badge
-                        style={{
-                          paddingRight: '1em',
-                          marginBottom: '1em', marginRight: '1em',
-                        }}
-                        key={tag}
-                        className="badge">{tag}
-                      </Badge>);
-                  })
-                }
-              </GridItem>
+                <GridItem> {
+                  taskArr.map((tag: any) =>
+                    <Badge style={{paddingRight: '1em', marginBottom: '1em', marginRight: '1em'}}
+                      key={tag} className="badge">
+                      {tag}
+                    </Badge>)
+                }</GridItem>
+              </Grid>
 
-            </Grid>
+            </TextContent>
 
-          </TextContent>
+            <CardActions style={{marginRight: '3em', paddingTop: '2em'}}>
 
-          <CardActions style={{marginRight: '3em', paddingTop: '2em'}}>
+              <Flex breakpointMods={[{modifier: 'column', breakpoint: 'lg'}]}>
+                <FlexItem> <Rating /> </FlexItem>
 
-            <Flex breakpointMods={[{modifier: 'column', breakpoint: 'lg'}]}>
-              <FlexItem>
-                <Rating />
-              </FlexItem>
+                <FlexItem style={{marginLeft: '-3em'}}>
+                  <React.Fragment>
+                    {document.queryCommandSupported('copy')}
+                    <Button variant="primary"
+                      className="button"
+                      onClick={() => setIsModalOpen(!isModalOpen)}
+                      style={{width: '8.5em'}} >
+                      Install
+                    </Button>
 
-              <FlexItem style={{marginLeft: '-3em'}}>
-                <React.Fragment>
-                  {document.queryCommandSupported('copy')}
-                  <Button variant="primary"
-                    className="button"
-                    onClick={() => setIsModalOpen(!isModalOpen)}
-                    style={{width: '8.5em'}}
-                  >
-                    Install
-                  </Button>
+                    <Modal
+                      width={'60%'}
+                      title={props.task.name.charAt(0).toUpperCase() +
+                        props.task.name.slice(1)}
+                      isOpen={isModalOpen}
+                      onClose={() => setIsModalOpen(!isModalOpen)}
+                      isFooterLeftAligned >
+                      <hr />
+                      <div>
+                        <TextContent>
+                          <Text component={TextVariants.h2} className="modaltext">
+                            Install on Kubernetes
+                          </Text>
+                          <Text> Tasks </Text>
+                          <ClipboardCopy isReadOnly
+                            variant={ClipboardCopyVariant.expansion}>{taskLink}
+                          </ClipboardCopy>
+                        </TextContent>
+                        <br />
+                      </div>
+                    </Modal>
+                  </React.Fragment>
+                </FlexItem>
 
-                  <Modal
-                    width={'60%'}
-                    title={props.task.name.charAt(0).toUpperCase() +
-                      props.task.name.slice(1)}
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(!isModalOpen)}
-                    isFooterLeftAligned
-                  >
-                    <hr />
-                    <div>
+                <FlexItem style={{marginLeft: '-2em', marginTop: '0.7em'}}>
 
-                      <TextContent>
-                        <Text component={TextVariants.h2} className="modaltext">
-                          Install on Kubernetes
-                        </Text>
-                        {/* {pipelineLink} */}
-                        <Text> Tasks </Text>
+                  <Dropdown style={{marginLeft: '-1em'}}
+                    onSelect={onSelect}
+                    toggle={
+                      <DropdownToggle
+                        onToggle={ontoggle}
+                        style={{width: '8.5em'}}>
+                        {versions}
+                      </DropdownToggle>}
+                    isOpen={isOpen}
+                    dropdownItems={dropdownItems}
+                  />
 
-                        <ClipboardCopy isReadOnly
-                          variant={ClipboardCopyVariant.expansion}>{taskLink}
-                        </ClipboardCopy>
+                </FlexItem>
 
-                      </TextContent>
+              </Flex>
 
-                      <br />
-                    </div>
+            </CardActions>
 
-                  </Modal>
-
-                </React.Fragment>
-
-              </FlexItem>
-
-              <FlexItem style={{marginLeft: '-2em', marginTop: '0.7em'}}>
-
-                <Dropdown style={{marginLeft: '-1em'}}
-                  onSelect={onSelect}
-                  toggle={
-                    <DropdownToggle
-                      onToggle={ontoggle}
-                      style={{width: '8.5em'}}>
-                      {versions}
-                    </DropdownToggle>}
-                  isOpen={isOpen}
-                  dropdownItems={dropdownItems}
-                />
-
-              </FlexItem>
-
-            </Flex>
-
-          </CardActions>
-
-        </CardHead>
-
-      </Card>
-
-    </Flex >
+          </CardHead>
+        </GridItem>
+        <GridItem span={1} />
+      </Grid>
+    </Card>
   );
 };
 
