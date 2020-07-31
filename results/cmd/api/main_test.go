@@ -478,35 +478,38 @@ func TestListTaskRuns(t *testing.T) {
 		},
 	}
 	taskruns := []*pb.TaskRun{t1, t2, t3, t4, t5}
+	gotResults := []*pb.TaskRunResult{}
 	for _, ts := range taskruns {
-		if _, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
+		res, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
 			TaskRun: ts,
-		}); err != nil {
+		})
+		if err != nil {
 			t.Fatalf("could not create taskrun: %v", err)
 		}
+		gotResults = append(gotResults, res)
 	}
 	tt := []struct {
 		name         string
 		filter       string
-		expect       []*pb.TaskRun
+		expect       []*pb.TaskRunResult
 		expectStatus codes.Code
 	}{
 		{
 			name:         "test simple query",
 			filter:       `taskrun.api_version=="v1beta1"`,
-			expect:       []*pb.TaskRun{t1, t3, t4},
+			expect:       []*pb.TaskRunResult{gotResults[0], gotResults[2], gotResults[3]},
 			expectStatus: codes.OK,
 		},
 		{
 			name:         "test query with simple function",
 			filter:       `taskrun.metadata.name.endsWith("run")`,
-			expect:       []*pb.TaskRun{t1, t3, t4, t5},
+			expect:       []*pb.TaskRunResult{gotResults[0], gotResults[2], gotResults[3], gotResults[4]},
 			expectStatus: codes.OK,
 		},
 		{
 			name:         "test empty filter",
 			filter:       "",
-			expect:       taskruns,
+			expect:       gotResults,
 			expectStatus: codes.OK,
 		},
 		{
