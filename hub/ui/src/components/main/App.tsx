@@ -153,16 +153,12 @@ const App: React.FC<mainProps> = () => {
 
               <Route exact path="/" component={Filter} />
             </GridItem>
-            <GridItem span={8} rowSpan={12}>
+            <GridItem span={10} rowSpan={12}>
               <Route exact path="/" component={SearchBar} />
 
               <Route exact path="/" component={TaskContainer} />
 
             </GridItem>
-            <GridItem span={2} rowSpan={12}>
-
-            </GridItem>
-
           </Grid>
 
         </PageSection>

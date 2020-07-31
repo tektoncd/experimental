@@ -169,7 +169,7 @@ const Rating: React.FC = (props: any) => {
           <label htmlFor="4-star" > <StarIcon /> </label>
 
           <input type="radio" id="3-star" name="rating" value="3" />
-          <label htmlFor="3-star" > <StarIcon/> </label>
+          <label htmlFor="3-star" > <StarIcon /> </label>
 
           <input type="radio" id="2-star" name="rating" value="2" />
           <label htmlFor="2-star" > <StarIcon /> </label>
@@ -182,8 +182,7 @@ const Rating: React.FC = (props: any) => {
   }
   return (
     <Flex breakpointMods={[{modifier: 'column', breakpoint: 'lg'}]}>
-      <FlexItem style={{marginLeft: '0.2em', marginTop: '0.2em'}}>
-
+      <FlexItem style={{marginLeft: '-0.7em', marginTop: '0.2em'}}>
 
         <Flex breakpointMods={[{modifier: 'row', breakpoint: 'lg'}]}>
           <FlexItem>
