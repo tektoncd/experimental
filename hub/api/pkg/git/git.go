@@ -78,10 +78,7 @@ func (c *Client) Fetch(spec FetchSpec) (Repo, error) {
 		return Repo{}, err
 	}
 
-	fetchArgs := []string{
-		"fetch", "--recurse-submodules=yes", "--depth=1",
-		"origin", spec.Revision,
-	}
+	fetchArgs := []string{"fetch", "--recurse-submodules=yes", "origin", spec.Revision}
 
 	if _, err := git(log, "", fetchArgs...); err != nil {
 		// Fetch can fail if an old commitid was used so try git pull, performing regardless of error

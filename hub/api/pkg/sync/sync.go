@@ -34,7 +34,7 @@ func (s *SyncService) Init() error {
 	db.Model(&model.SyncJob{}).Count(&count)
 	log.Info("job count: ", count)
 
-	db.Where("status <> ?", model.Queued).Delete(model.SyncJob{})
+	db.Where("status <> ?", model.Queued.String()).Delete(model.SyncJob{})
 
 	db.Model(&model.SyncJob{}).Count(&count)
 	log.Info("job count: ", count)
@@ -47,25 +47,32 @@ func (s *SyncService) Sync(context context.Context) error {
 
 	count := 0
 	db.Model(&model.SyncJob{}).Count(&count)
-	log.Info("job count: ", count)
-
-	job := model.SyncJob{}
-	if err := db.Where("status = ?", "queued").First(&job).Error; err != nil {
-		return err
+	if count == 0 {
+		log.Infof("skipping sync job count: %d", count)
+		return nil
 	}
 
-	log.With("url", job.CatalogID, "status", job.Status).Info("Found job")
-	if job.IsRunning() {
-		log.Info("Already running")
-		return nil
+	log.Info("job count: ", count)
+	job := model.SyncJob{}
+
+	// helper to update job state
+	setJobState := func(s model.JobState) {
+		job.SetState(s)
+		db.Model(&job).Updates(job)
+	}
+
+	if err := db.Where("status = ?", model.Queued.String()).First(&job).Error; err != nil {
+		return err
 	}
 
 	job.SetState(model.Running)
 	db.Model(&job).Updates(job)
-	defer db.Unscoped().Where(&model.SyncJob{Status: "done"}).Delete(&job)
+	// NOTE: only delete done jobs
+	defer db.Unscoped().Where(&model.SyncJob{Status: model.Done.String()}).Delete(&job)
 
 	catalog := model.Catalog{}
 	db.Model(job).Related(&catalog)
+
 	fetchSpec := gitclient.FetchSpec{
 		URL:      catalog.URL,
 		Revision: catalog.Revision,
@@ -73,40 +80,41 @@ func (s *SyncService) Sync(context context.Context) error {
 	}
 
 	git := gitclient.New(s.app.Logger())
+
 	repo, err := git.Fetch(fetchSpec)
 	if err != nil {
-		// TODO: handle /return it
-		s.log.Error(err, "clone failed")
+		log.Error(err, "clone failed")
+		setJobState(model.Queued)
+		return err
+	}
+
+	if repo.Head() == catalog.SHA {
+		log.Infof("skipping already cloned catalog - %s | sha: %s", catalog.URL, catalog.SHA)
+		setJobState(model.Done)
 		return nil
 	}
 
-	s.log.Infof("Repo: %s | HEAD: %s", repo.Path, repo.Head())
-
 	res, err := repo.ParseTektonResources()
 	if err != nil {
-		// TODO(sthaha): handle updation failure better
-		s.log.Error(err)
+		if len(res) == 0 {
+			log.Error(err, "parsing of resources failed")
+			setJobState(model.Queued)
+			return err
 
-		job.SetState(model.Queued)
-		db.Model(&job).Updates(job)
-
-		return err
+		}
+		// Partial parsing of resources is allowed
+		log.Warnf("Failed to parse some for the resources: %s found: %d ", err, len(res))
 	}
 
 	if err := s.updateResources(job, repo, res); err != nil {
 		// TODO(sthaha): handle updation failure better
-		s.log.Error(err)
-
-		job.SetState(model.Queued)
-		db.Model(&job).Updates(job)
-
+		log.Error(err, "updation of db failed")
+		setJobState(model.Queued)
 		return err
 	}
 
-	job.SetState(model.Done)
-	db.Model(&job).Updates(job)
+	setJobState(model.Done)
 	return nil
-
 }
 
 func (s *SyncService) updateResources(job model.SyncJob, repo git.Repo, res []gitclient.TektonResource) error {
@@ -151,6 +159,7 @@ func (s *SyncService) updateResources(job model.SyncJob, repo git.Repo, res []gi
 
 			ver.DisplayName = v.DisplayName
 			ver.Description = v.Description
+			ver.ModifiedAt = v.ModifiedAt
 			// TODO(sthaha): use gh client to get the path?
 			// this heuristic works fine so far
 			ver.URL = fmt.Sprintf("%s/tree/%s/%s", catalog.URL, catalog.Revision, v.Path)
