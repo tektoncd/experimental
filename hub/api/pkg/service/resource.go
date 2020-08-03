@@ -78,7 +78,7 @@ func (d *ResourceDetail) Init(r *model.Resource) {
 	d.DisplayName = latestVersion.DisplayName
 	d.LatestVersion = latestVersion.Version
 	d.Description = latestVersion.Description
-	d.LastUpdatedAt = latestVersion.UpdatedAt
+	d.LastUpdatedAt = latestVersion.ModifiedAt
 }
 
 // All Resources
