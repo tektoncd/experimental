@@ -67,7 +67,7 @@ func (d *ResourceDetail) Init(r *model.Resource) {
 	d.Tags = make([]Tag, len(r.Tags))
 	for i, t := range r.Tags {
 		d.Tags[i].ID = t.ID
-		d.Tags[i].Tag = t.Name
+		d.Tags[i].Tag = strings.TrimSpace(t.Name)
 	}
 
 	d.Catalog.ID = r.Catalog.ID
