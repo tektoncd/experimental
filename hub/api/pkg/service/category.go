@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	"github.com/tektoncd/hub/api/pkg/db/model"
@@ -28,7 +29,7 @@ func (d *CategoryDetail) Init(c *model.Category) {
 	d.Tags = make([]Tag, len(c.Tags))
 	for i, t := range c.Tags {
 		d.Tags[i].ID = t.ID
-		d.Tags[i].Tag = t.Name
+		d.Tags[i].Tag = strings.TrimSpace(t.Name)
 	}
 }
 
