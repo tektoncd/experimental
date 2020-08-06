@@ -221,10 +221,10 @@ func (r Repo) parseResourceVersion(filePath string, kind string) (*TekonResource
 	}
 
 	ret := &TekonResourceVersion{
-		Version:     version,
-		DisplayName: displayName,
-		Tags:        strings.Split(tags, ","),
-		Description: description,
+		Version:     strings.TrimSpace(version),
+		DisplayName: strings.TrimSpace(displayName),
+		Tags:        strings.FieldsFunc(tags, func(c rune) bool { return c == ',' || c == ' ' }),
+		Description: strings.TrimSpace(description),
 		Path:        relPath,
 		ModifiedAt:  modified,
 	}
