@@ -1,0 +1,17 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: tekton-cd
+spec:
+  serviceAccountName: tekton-cleaner
+  triggers:
+    - name: cleanup
+      interceptors:
+        - cel:
+            filter: >-
+              'trigger-template' in body &&
+              body['trigger-template'] == 'cleanup'
+      bindings:
+        - ref: cleanup-details
+      template:
+        name: cleanup-runs
