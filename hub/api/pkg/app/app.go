@@ -112,6 +112,15 @@ func (e *ApiConfig) Addr() string {
 	return ":5000"
 }
 
+// adaptor for gorm logger interface
+type gormLogger struct {
+	*zap.SugaredLogger
+}
+
+func (l *gormLogger) Print(v ...interface{}) {
+	l.Info(v...)
+}
+
 func BaseConfigFromEnv() (*BaseConfig, error) {
 	// load from .env file but skip if not found
 	if err := godotenv.Load(); err != nil {
@@ -139,6 +148,8 @@ func BaseConfigFromEnv() (*BaseConfig, error) {
 		log.Error(err, "failed to establish database connection")
 		return nil, err
 	}
+
+	bc.db.SetLogger(&gormLogger{log})
 
 	log.Infof("Successfully connected to db %s", bc.dbConf)
 
