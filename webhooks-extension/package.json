@@ -14,7 +14,7 @@
   "dependencies": {
     "fetch-mock": "7.3.3",
     "@carbon/icons-react": "^10.3.0",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "stream": "0.0.2",
     "styled-components": "^4.3.1"
   },
