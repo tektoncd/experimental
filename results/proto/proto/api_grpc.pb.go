@@ -18,11 +18,11 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ResultsClient interface {
-	CreateTaskRunResult(ctx context.Context, in *CreateTaskRunRequest, opts ...grpc.CallOption) (*TaskRunResult, error)
-	UpdateTaskRunResult(ctx context.Context, in *UpdateTaskRunRequest, opts ...grpc.CallOption) (*TaskRunResult, error)
-	GetTaskRunResult(ctx context.Context, in *GetTaskRunRequest, opts ...grpc.CallOption) (*TaskRunResult, error)
-	DeleteTaskRunResult(ctx context.Context, in *DeleteTaskRunRequest, opts ...grpc.CallOption) (*empty.Empty, error)
-	ListTaskRunsResult(ctx context.Context, in *ListTaskRunsRequest, opts ...grpc.CallOption) (*ListTaskRunsResponse, error)
+	CreateResult(ctx context.Context, in *CreateResultRequest, opts ...grpc.CallOption) (*Result, error)
+	UpdateResult(ctx context.Context, in *UpdateResultRequest, opts ...grpc.CallOption) (*Result, error)
+	GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*Result, error)
+	DeleteResult(ctx context.Context, in *DeleteResultRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	ListResults(ctx context.Context, in *ListResultsRequest, opts ...grpc.CallOption) (*ListResultsResponse, error)
 }
 
 type resultsClient struct {
@@ -33,45 +33,45 @@ func NewResultsClient(cc grpc.ClientConnInterface) ResultsClient {
 	return &resultsClient{cc}
 }
 
-func (c *resultsClient) CreateTaskRunResult(ctx context.Context, in *CreateTaskRunRequest, opts ...grpc.CallOption) (*TaskRunResult, error) {
-	out := new(TaskRunResult)
-	err := c.cc.Invoke(ctx, "/tekton.Results/CreateTaskRunResult", in, out, opts...)
+func (c *resultsClient) CreateResult(ctx context.Context, in *CreateResultRequest, opts ...grpc.CallOption) (*Result, error) {
+	out := new(Result)
+	err := c.cc.Invoke(ctx, "/tekton.results.v1.Results/CreateResult", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *resultsClient) UpdateTaskRunResult(ctx context.Context, in *UpdateTaskRunRequest, opts ...grpc.CallOption) (*TaskRunResult, error) {
-	out := new(TaskRunResult)
-	err := c.cc.Invoke(ctx, "/tekton.Results/UpdateTaskRunResult", in, out, opts...)
+func (c *resultsClient) UpdateResult(ctx context.Context, in *UpdateResultRequest, opts ...grpc.CallOption) (*Result, error) {
+	out := new(Result)
+	err := c.cc.Invoke(ctx, "/tekton.results.v1.Results/UpdateResult", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *resultsClient) GetTaskRunResult(ctx context.Context, in *GetTaskRunRequest, opts ...grpc.CallOption) (*TaskRunResult, error) {
-	out := new(TaskRunResult)
-	err := c.cc.Invoke(ctx, "/tekton.Results/GetTaskRunResult", in, out, opts...)
+func (c *resultsClient) GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*Result, error) {
+	out := new(Result)
+	err := c.cc.Invoke(ctx, "/tekton.results.v1.Results/GetResult", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *resultsClient) DeleteTaskRunResult(ctx context.Context, in *DeleteTaskRunRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+func (c *resultsClient) DeleteResult(ctx context.Context, in *DeleteResultRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/tekton.Results/DeleteTaskRunResult", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/tekton.results.v1.Results/DeleteResult", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *resultsClient) ListTaskRunsResult(ctx context.Context, in *ListTaskRunsRequest, opts ...grpc.CallOption) (*ListTaskRunsResponse, error) {
-	out := new(ListTaskRunsResponse)
-	err := c.cc.Invoke(ctx, "/tekton.Results/ListTaskRunsResult", in, out, opts...)
+func (c *resultsClient) ListResults(ctx context.Context, in *ListResultsRequest, opts ...grpc.CallOption) (*ListResultsResponse, error) {
+	out := new(ListResultsResponse)
+	err := c.cc.Invoke(ctx, "/tekton.results.v1.Results/ListResults", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +82,11 @@ func (c *resultsClient) ListTaskRunsResult(ctx context.Context, in *ListTaskRuns
 // All implementations must embed UnimplementedResultsServer
 // for forward compatibility
 type ResultsServer interface {
-	CreateTaskRunResult(context.Context, *CreateTaskRunRequest) (*TaskRunResult, error)
-	UpdateTaskRunResult(context.Context, *UpdateTaskRunRequest) (*TaskRunResult, error)
-	GetTaskRunResult(context.Context, *GetTaskRunRequest) (*TaskRunResult, error)
-	DeleteTaskRunResult(context.Context, *DeleteTaskRunRequest) (*empty.Empty, error)
-	ListTaskRunsResult(context.Context, *ListTaskRunsRequest) (*ListTaskRunsResponse, error)
+	CreateResult(context.Context, *CreateResultRequest) (*Result, error)
+	UpdateResult(context.Context, *UpdateResultRequest) (*Result, error)
+	GetResult(context.Context, *GetResultRequest) (*Result, error)
+	DeleteResult(context.Context, *DeleteResultRequest) (*empty.Empty, error)
+	ListResults(context.Context, *ListResultsRequest) (*ListResultsResponse, error)
 	mustEmbedUnimplementedResultsServer()
 }
 
@@ -94,20 +94,20 @@ type ResultsServer interface {
 type UnimplementedResultsServer struct {
 }
 
-func (*UnimplementedResultsServer) CreateTaskRunResult(context.Context, *CreateTaskRunRequest) (*TaskRunResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateTaskRunResult not implemented")
+func (*UnimplementedResultsServer) CreateResult(context.Context, *CreateResultRequest) (*Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateResult not implemented")
 }
-func (*UnimplementedResultsServer) UpdateTaskRunResult(context.Context, *UpdateTaskRunRequest) (*TaskRunResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateTaskRunResult not implemented")
+func (*UnimplementedResultsServer) UpdateResult(context.Context, *UpdateResultRequest) (*Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateResult not implemented")
 }
-func (*UnimplementedResultsServer) GetTaskRunResult(context.Context, *GetTaskRunRequest) (*TaskRunResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTaskRunResult not implemented")
+func (*UnimplementedResultsServer) GetResult(context.Context, *GetResultRequest) (*Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetResult not implemented")
 }
-func (*UnimplementedResultsServer) DeleteTaskRunResult(context.Context, *DeleteTaskRunRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteTaskRunResult not implemented")
+func (*UnimplementedResultsServer) DeleteResult(context.Context, *DeleteResultRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteResult not implemented")
 }
-func (*UnimplementedResultsServer) ListTaskRunsResult(context.Context, *ListTaskRunsRequest) (*ListTaskRunsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListTaskRunsResult not implemented")
+func (*UnimplementedResultsServer) ListResults(context.Context, *ListResultsRequest) (*ListResultsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListResults not implemented")
 }
 func (*UnimplementedResultsServer) mustEmbedUnimplementedResultsServer() {}
 
@@ -115,119 +115,119 @@ func RegisterResultsServer(s *grpc.Server, srv ResultsServer) {
 	s.RegisterService(&_Results_serviceDesc, srv)
 }
 
-func _Results_CreateTaskRunResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateTaskRunRequest)
+func _Results_CreateResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateResultRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ResultsServer).CreateTaskRunResult(ctx, in)
+		return srv.(ResultsServer).CreateResult(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/tekton.Results/CreateTaskRunResult",
+		FullMethod: "/tekton.results.v1.Results/CreateResult",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResultsServer).CreateTaskRunResult(ctx, req.(*CreateTaskRunRequest))
+		return srv.(ResultsServer).CreateResult(ctx, req.(*CreateResultRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Results_UpdateTaskRunResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateTaskRunRequest)
+func _Results_UpdateResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateResultRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ResultsServer).UpdateTaskRunResult(ctx, in)
+		return srv.(ResultsServer).UpdateResult(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/tekton.Results/UpdateTaskRunResult",
+		FullMethod: "/tekton.results.v1.Results/UpdateResult",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResultsServer).UpdateTaskRunResult(ctx, req.(*UpdateTaskRunRequest))
+		return srv.(ResultsServer).UpdateResult(ctx, req.(*UpdateResultRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Results_GetTaskRunResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTaskRunRequest)
+func _Results_GetResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetResultRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ResultsServer).GetTaskRunResult(ctx, in)
+		return srv.(ResultsServer).GetResult(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/tekton.Results/GetTaskRunResult",
+		FullMethod: "/tekton.results.v1.Results/GetResult",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResultsServer).GetTaskRunResult(ctx, req.(*GetTaskRunRequest))
+		return srv.(ResultsServer).GetResult(ctx, req.(*GetResultRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Results_DeleteTaskRunResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteTaskRunRequest)
+func _Results_DeleteResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteResultRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ResultsServer).DeleteTaskRunResult(ctx, in)
+		return srv.(ResultsServer).DeleteResult(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/tekton.Results/DeleteTaskRunResult",
+		FullMethod: "/tekton.results.v1.Results/DeleteResult",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResultsServer).DeleteTaskRunResult(ctx, req.(*DeleteTaskRunRequest))
+		return srv.(ResultsServer).DeleteResult(ctx, req.(*DeleteResultRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Results_ListTaskRunsResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListTaskRunsRequest)
+func _Results_ListResults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListResultsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ResultsServer).ListTaskRunsResult(ctx, in)
+		return srv.(ResultsServer).ListResults(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/tekton.Results/ListTaskRunsResult",
+		FullMethod: "/tekton.results.v1.Results/ListResults",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResultsServer).ListTaskRunsResult(ctx, req.(*ListTaskRunsRequest))
+		return srv.(ResultsServer).ListResults(ctx, req.(*ListResultsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 var _Results_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "tekton.Results",
+	ServiceName: "tekton.results.v1.Results",
 	HandlerType: (*ResultsServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateTaskRunResult",
-			Handler:    _Results_CreateTaskRunResult_Handler,
+			MethodName: "CreateResult",
+			Handler:    _Results_CreateResult_Handler,
 		},
 		{
-			MethodName: "UpdateTaskRunResult",
-			Handler:    _Results_UpdateTaskRunResult_Handler,
+			MethodName: "UpdateResult",
+			Handler:    _Results_UpdateResult_Handler,
 		},
 		{
-			MethodName: "GetTaskRunResult",
-			Handler:    _Results_GetTaskRunResult_Handler,
+			MethodName: "GetResult",
+			Handler:    _Results_GetResult_Handler,
 		},
 		{
-			MethodName: "DeleteTaskRunResult",
-			Handler:    _Results_DeleteTaskRunResult_Handler,
+			MethodName: "DeleteResult",
+			Handler:    _Results_DeleteResult_Handler,
 		},
 		{
-			MethodName: "ListTaskRunsResult",
-			Handler:    _Results_ListTaskRunsResult_Handler,
+			MethodName: "ListResults",
+			Handler:    _Results_ListResults_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

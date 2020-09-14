@@ -7,18 +7,16 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/tektoncd/experimental/results/pkg/convert"
+	"github.com/tektoncd/experimental/results/pkg/server"
+	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	test "github.com/tektoncd/pipeline/test"
-
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/tektoncd/experimental/results/pkg/server"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"google.golang.org/grpc"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/tektoncd/experimental/results/pkg/convert"
 	"google.golang.org/protobuf/testing/protocmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
 )
 
@@ -105,7 +103,7 @@ func TestReconcile(t *testing.T) {
 		if _, ok := tr.Annotations[idName]; !ok {
 			t.Fatalf("Expected completed TaskRun %s should be updated with a results_id field in annotations", taskRun.Name)
 		}
-		if _, err := client.GetTaskRunResult(ctx, &pb.GetTaskRunRequest{ResultsId: tr.Annotations[idName]}); err != nil {
+		if _, err := client.GetResult(ctx, &pb.GetResultRequest{Name: tr.Annotations[idName]}); err != nil {
 			t.Fatalf("Expected completed TaskRun %s not created in api server", taskRun.Name)
 		}
 	})
@@ -140,17 +138,22 @@ func TestReconcile(t *testing.T) {
 		if diff := cmp.Diff(tr, updatetr); diff != "" {
 			t.Fatalf("Expected completed TaskRun should be updated in cluster: %v", diff)
 		}
-		res, err := client.GetTaskRunResult(ctx, &pb.GetTaskRunRequest{ResultsId: tr.Annotations[idName]})
+		res, err := client.GetResult(ctx, &pb.GetResultRequest{Name: tr.Annotations[idName]})
 		if err != nil {
 			t.Fatalf("Expected completed TaskRun %s not created in api server", taskRun.Name)
 		}
-		pr, err := convert.ToProto(updatetr)
+		p, err := convert.ToProto(updatetr)
 		if err != nil {
 			t.Fatalf("failed to convert to proto: %v", err)
 		}
-		if diff := cmp.Diff(pr, res.GetTaskRun(), protocmp.Transform()); diff != "" {
+		want := &pb.Result{
+			Name: tr.Annotations[idName],
+			Executions: []*pb.Execution{{
+				Execution: &pb.Execution_TaskRun{p},
+			}},
+		}
+		if diff := cmp.Diff(want, res, protocmp.Transform()); diff != "" {
 			t.Fatalf("Expected completed TaskRun should be upated in api server: %v", diff)
 		}
-
 	})
 }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tekton;
+package tekton.pipeline.v1;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
@@ -128,4 +128,8 @@ message Condition {
 	google.protobuf.Timestamp last_transition_time = 4;
 	string reason = 5;
 	string message = 6;
+}
+
+message PipelineRun {
+
 }
