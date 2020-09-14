@@ -5,7 +5,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"google.golang.org/genproto/protobuf/field_mask"
@@ -19,7 +18,7 @@ const (
 )
 
 // Test functionality of Server code
-func TestCreateTaskRun(t *testing.T) {
+func TestCreateResult(t *testing.T) {
 	// Create a temporay database
 	srv, err := SetupTestDB(t)
 	if err != nil {
@@ -28,17 +27,20 @@ func TestCreateTaskRun(t *testing.T) {
 
 	// connect to fake server and do testing
 	ctx := context.Background()
-	if _, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
-		TaskRun: &pb.TaskRun{ApiVersion: "1",
+	if _, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
+		Result: TaskRunResult(&pb.TaskRun{
+			ApiVersion: "1",
 			Metadata: &pb.ObjectMeta{
 				Uid:       "123459",
 				Name:      "mytaskrun",
-				Namespace: "default"}}}); err != nil {
+				Namespace: "default",
+			}},
+		)}); err != nil {
 		t.Fatalf("could not create taskrun: %v", err)
 	}
 }
 
-func TestGetTaskRun(t *testing.T) {
+func TestGetResult(t *testing.T) {
 	// Create a temporary database
 	srv, err := SetupTestDB(t)
 	if err != nil {
@@ -46,20 +48,22 @@ func TestGetTaskRun(t *testing.T) {
 	}
 	ctx := context.Background()
 	// Connect to fake server and create a new taskrun
-	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
-		TaskRun: &pb.TaskRun{
+	r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
+		Result: TaskRunResult(&pb.TaskRun{
 			ApiVersion: "v1beta1",
 			Metadata: &pb.ObjectMeta{
 				Uid:       "31415926",
 				Name:      "mytaskrun",
 				Namespace: "default",
-			}}})
+			}},
+		),
+	})
 	if err != nil {
 		t.Fatalf("could not create taskrun: %v", err)
 	}
 
 	// Test if we can find inserted taskrun
-	res, err := srv.GetTaskRunResult(ctx, &pb.GetTaskRunRequest{ResultsId: r.GetResultsId()})
+	res, err := srv.GetResult(ctx, &pb.GetResultRequest{Name: r.GetName()})
 	if err != nil {
 		t.Fatalf("could not get taskrun: %v", err)
 	}
@@ -68,7 +72,7 @@ func TestGetTaskRun(t *testing.T) {
 	}
 }
 
-func TestUpdateTaskRun(t *testing.T) {
+func TestUpdateResult(t *testing.T) {
 	// Create a temporary database
 	srv, err := SetupTestDB(t)
 	if err != nil {
@@ -76,282 +80,145 @@ func TestUpdateTaskRun(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	// Validate by checking if ouput equlas expected TaskRun
+	// Validate by checking if ouput equlas expected Result
 	tt := []struct {
 		name      string
-		in        *pb.TaskRun
+		in        *pb.Result
 		fieldmask *field_mask.FieldMask
-		update    *pb.TaskRun
-		expect    *pb.TaskRun
+		update    *pb.Result
+		expect    *pb.Result
+		err       bool
 	}{
 		{
-			in: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			in:   &pb.Result{},
 			name: "Test no Mask",
-			update: &pb.TaskRun{
+			update: TaskRunResult(&pb.TaskRun{
 				ApiVersion: "v1beta1",
 				Metadata: &pb.ObjectMeta{
 					Uid:       "123456",
 					Name:      "newtaskrun",
 					Namespace: "tekton",
 				},
-			},
+			}),
 			// update entire taskrun
-			expect: &pb.TaskRun{
+			expect: TaskRunResult(&pb.TaskRun{
 				ApiVersion: "v1beta1",
 				Metadata: &pb.ObjectMeta{
 					Uid:       "123456",
 					Name:      "newtaskrun",
 					Namespace: "tekton",
 				},
-			},
+			}),
 		},
 		{
-			in: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			in:        &pb.Result{},
 			name:      "Test partial Mask",
-			fieldmask: &field_mask.FieldMask{Paths: []string{"api_version", "metadata.uid"}},
-			update: &pb.TaskRun{
-				ApiVersion: "v1beta1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "123456",
-					Name:      "newtaskrun",
-					Namespace: "tekton",
-				},
-			},
+			fieldmask: &field_mask.FieldMask{Paths: []string{"annotations"}},
+			update:    &pb.Result{Annotations: map[string]string{"foo": "bar"}},
 			// update fields in fieldmask only
-			expect: &pb.TaskRun{
-				ApiVersion: "v1beta1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "123456",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			expect: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
 		},
 		{
-			in: &pb.TaskRun{
+			in: TaskRunResult(&pb.TaskRun{
 				ApiVersion: "v1alpha1",
 				Metadata: &pb.ObjectMeta{
 					Uid:       "31415926",
 					Name:      "mytaskrun",
 					Namespace: "default",
 				},
-			},
+			}),
 			name:      "Test Mask with excess field",
-			fieldmask: &field_mask.FieldMask{Paths: []string{"api_version", "metadata.uid"}},
+			fieldmask: &field_mask.FieldMask{Paths: []string{"annotations", "executions"}},
 			// unset field value to default value in fieldmask
-			update: &pb.TaskRun{
-				Metadata: &pb.ObjectMeta{
-					Uid:       "123456",
-					Name:      "newtaskrun",
-					Namespace: "tekton",
-				},
-			},
-			expect: &pb.TaskRun{
-				Metadata: &pb.ObjectMeta{
-					Uid:       "123456",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			update: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
+			expect: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
 		},
 		{
-			in: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
-			name:      "Test Mask with invalid field",
-			fieldmask: &field_mask.FieldMask{Paths: []string{"api_version", "invalid_field", "metadata.uid"}},
-			// do not update
-			update: &pb.TaskRun{
-				ApiVersion: "v1beta1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "123456",
-					Name:      "newtaskrun",
-					Namespace: "tekton",
-				},
-			},
-			expect: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
-		},
-		{
-			in: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			in:        &pb.Result{},
 			name:      "Test Mask with empty field",
 			fieldmask: &field_mask.FieldMask{Paths: []string{}},
 			// do not update
-			update: &pb.TaskRun{
-				ApiVersion: "v1beta1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "123456",
-					Name:      "newtaskrun",
-					Namespace: "tekton",
-				},
-			},
-			expect: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			update: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
+			expect: &pb.Result{},
 		},
 		{
-			in: &pb.TaskRun{
-				ApiVersion: "v1beta1",
+			in: TaskRunResult(&pb.TaskRun{
 				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
+					Name: "foo",
 				},
-				Spec: &pb.TaskRunSpec{
-					TaskSpec: &pb.TaskSpec{
-						Steps: []*pb.Step{
-							{
-								Name: "first_step",
-							},
-							{
-								Name: "next_step",
-							},
-						},
-					},
-				},
-			},
+			}),
 			name:      "Test Mask updating repeated fields",
-			fieldmask: &field_mask.FieldMask{Paths: []string{"spec.task_spec.steps"}},
+			fieldmask: &field_mask.FieldMask{Paths: []string{"executions"}},
 			// update entire repeated field(all elements in array) - standard update
-			update: &pb.TaskRun{
-				ApiVersion: "v1beta1",
+			update: TaskRunResult(&pb.TaskRun{
 				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
+					Name: "bar",
 				},
-				Spec: &pb.TaskRunSpec{
-					TaskSpec: &pb.TaskSpec{
-						Steps: []*pb.Step{
-							{
-								Name: "new_first_step",
-							},
-							{
-								Name: "new_next_step",
-							},
-						},
-					},
-				},
-			},
-			expect: &pb.TaskRun{
-				ApiVersion: "v1beta1",
+			}),
+			expect: TaskRunResult(&pb.TaskRun{
 				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
+					Name: "bar",
 				},
-				Spec: &pb.TaskRunSpec{
-					TaskSpec: &pb.TaskSpec{
-						Steps: []*pb.Step{
-							{
-								Name: "new_first_step",
-							},
-							{
-								Name: "new_next_step",
-							},
-						},
-					},
-				},
-			},
+			}),
 		},
 		{
-			in: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			in:        &pb.Result{},
 			name:      "Test Mask with nil Paths field",
 			fieldmask: &field_mask.FieldMask{},
 			// do not update
-			update: &pb.TaskRun{
-				ApiVersion: "v1beta1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "123456",
-					Name:      "newtaskrun",
-					Namespace: "tekton",
-				},
-			},
-			expect: &pb.TaskRun{
-				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
-					Uid:       "31415926",
-					Name:      "mytaskrun",
-					Namespace: "default",
-				},
-			},
+			update: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
+			expect: &pb.Result{},
+		},
+
+		// Errors
+		{
+			in:        &pb.Result{},
+			name:      "ERR Test Mask with invalid field",
+			fieldmask: &field_mask.FieldMask{Paths: []string{"annotations", "invalid_field"}},
+			// do not update
+			update: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
+			err:    true,
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{TaskRun: tc.in})
+			r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{Result: tc.in})
 			if err != nil {
 				t.Fatalf("could not create taskrun: %v", err)
 			}
+
+			// If we're doing a full update, pass through immutable fields to
+			// the update result. Since these are created dynamicly,
+			// we can't prepopulate these.
+			if tc.fieldmask == nil {
+				tc.update.Name = r.GetName()
+				tc.update.CreatedTime = r.GetCreatedTime()
+			}
+
 			// Update the created taskrun
-			r, err = srv.UpdateTaskRunResult(ctx, &pb.UpdateTaskRunRequest{TaskRun: tc.update, ResultsId: r.GetResultsId(), UpdateMask: tc.fieldmask})
-			if err != nil && status.Code(err) != codes.NotFound {
+			r, err = srv.UpdateResult(ctx, &pb.UpdateResultRequest{Result: tc.update, Name: r.GetName(), UpdateMask: tc.fieldmask})
+			if err != nil {
+				if tc.err {
+					return
+				}
 				t.Fatalf("could not update taskrun: %v, %v", err, status.Code(err))
 			}
-			rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", r.GetResultsId())
+
+			// Expected results should always match the created result.
+			tc.expect.Name = r.GetName()
+			tc.expect.CreatedTime = r.GetCreatedTime()
+			got, err := srv.GetResult(ctx, &pb.GetResultRequest{Name: r.GetName()})
 			if err != nil {
-				t.Fatalf("failed to query on database: %v", err)
+				t.Fatalf("GetResult: %v", err)
 			}
-			for rows.Next() {
-				var taskrunblob []byte
-				taskrun := &pb.TaskRun{}
-				rows.Scan(&taskrunblob)
-				if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
-					t.Fatal("unmarshaling error: ", err)
-				}
-				if diff := cmp.Diff(taskrun.String(), tc.expect.String()); diff != "" {
-					t.Fatalf("Update Function not properly implemented: %v, %v, %v", diff, tc.name, tc.fieldmask.String())
-				}
+			if diff := cmp.Diff(tc.expect, got, protocmp.Transform()); diff != "" {
+				t.Fatalf("-want, +got: %s", diff)
 			}
 		})
 	}
 }
 
-func TestDeleteTaskRun(t *testing.T) {
+func TestDeleteResult(t *testing.T) {
 	// Create a temporay database
 	srv, err := SetupTestDB(t)
 	if err != nil {
@@ -359,36 +226,36 @@ func TestDeleteTaskRun(t *testing.T) {
 	}
 	// Connect to fake server and insert a new taskrun
 	ctx := context.Background()
-	r, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{TaskRun: &pb.TaskRun{
-		ApiVersion: "1",
-		Metadata: &pb.ObjectMeta{
-			Uid:       "123459",
-			Name:      "mytaskrun",
-			Namespace: "default"}}})
+	r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
+		Result: TaskRunResult(&pb.TaskRun{
+			ApiVersion: "1",
+			Metadata: &pb.ObjectMeta{
+				Uid:       "123459",
+				Name:      "mytaskrun",
+				Namespace: "default",
+			},
+		}),
+	})
 	if err != nil {
 		t.Fatalf("could not create taskrun: %v", err)
 	}
 
 	// Delete inserted taskrun
-	if _, err := srv.DeleteTaskRunResult(ctx, &pb.DeleteTaskRunRequest{ResultsId: r.GetResultsId()}); err != nil {
+	if _, err := srv.DeleteResult(ctx, &pb.DeleteResultRequest{Name: r.GetName()}); err != nil {
 		t.Fatalf("could not delete taskrun: %v", err)
 	}
 
 	// Check if the taskrun is deleted
-	rows, err := srv.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", r.GetResultsId())
-	if err != nil {
-		t.Fatalf("failed to query on database: %v", err)
-	}
-	if rows.Next() {
-		t.Fatalf("failed to delete taskrun: %v", r.String())
+	if r, err := srv.GetResult(ctx, &pb.GetResultRequest{Name: r.GetName()}); err == nil {
+		t.Fatalf("expected result to be deleted, got: %+v", r)
 	}
 
 	// Check if a deleted taskrun can be deleted again
-	if _, err := srv.DeleteTaskRunResult(ctx, &pb.DeleteTaskRunRequest{ResultsId: r.GetResultsId()}); status.Code(err) != codes.NotFound {
+	if _, err := srv.DeleteResult(ctx, &pb.DeleteResultRequest{Name: r.GetName()}); status.Code(err) != codes.NotFound {
 		t.Fatalf("same taskrun not supposed to be deleted again: %v", r.String())
 	}
 }
-func TestListTaskRuns(t *testing.T) {
+func TestListResults(t *testing.T) {
 	// Create a temporary database
 	srv, err := SetupTestDB(t)
 	if err != nil {
@@ -437,33 +304,33 @@ func TestListTaskRuns(t *testing.T) {
 			Namespace: "official",
 		},
 	}
-	taskruns := []*pb.TaskRun{t1, t2, t3, t4, t5}
-	gotResults := []*pb.TaskRunResult{}
-	for _, ts := range taskruns {
-		res, err := srv.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
-			TaskRun: ts,
+	results := []*pb.Result{TaskRunResult(t1), TaskRunResult(t2), TaskRunResult(t3), TaskRunResult(t4), TaskRunResult(t5)}
+	gotResults := []*pb.Result{}
+	for _, r := range results {
+		res, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
+			Result: r,
 		})
 		if err != nil {
-			t.Fatalf("could not create taskrun: %v", err)
+			t.Fatalf("could not create result: %v", err)
 		}
 		gotResults = append(gotResults, res)
 	}
 	tt := []struct {
 		name         string
 		filter       string
-		expect       []*pb.TaskRunResult
+		expect       []*pb.Result
 		expectStatus codes.Code
 	}{
 		{
 			name:         "test simple query",
 			filter:       `taskrun.api_version=="v1beta1"`,
-			expect:       []*pb.TaskRunResult{gotResults[0], gotResults[2], gotResults[3]},
+			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3]},
 			expectStatus: codes.OK,
 		},
 		{
 			name:         "test query with simple function",
 			filter:       `taskrun.metadata.name.endsWith("run")`,
-			expect:       []*pb.TaskRunResult{gotResults[0], gotResults[2], gotResults[3], gotResults[4]},
+			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[4]},
 			expectStatus: codes.OK,
 		},
 		{
@@ -512,13 +379,13 @@ func TestListTaskRuns(t *testing.T) {
 	// Test if we can find inserted taskruns
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			res, err := srv.ListTaskRunsResult(ctx, &pb.ListTaskRunsRequest{
+			res, err := srv.ListResultsResult(ctx, &pb.ListResultsRequest{
 				Filter: tc.filter,
 			})
 			if tc.expectStatus != status.Code(err) {
 				t.Fatalf("failed on test %v: %v", tc.name, err)
 			}
-			gotList := res.GetItems()
+			gotList := res.GetResults()
 			sort.SliceStable(gotList, func(i, j int) bool {
 				return gotList[i].String() < gotList[j].String()
 			})
@@ -529,5 +396,13 @@ func TestListTaskRuns(t *testing.T) {
 				t.Fatalf("could not get the same taskrun: %v", diff)
 			}
 		})
+	}
+}
+
+func TaskRunResult(tr *pb.TaskRun) *pb.Result {
+	return &pb.Result{
+		Executions: []*pb.Execution{{
+			Execution: &pb.Execution_TaskRun{tr},
+		}},
 	}
 }

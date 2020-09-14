@@ -29,9 +29,8 @@ import (
 	"go.uber.org/zap"
 	jsonpatch "gomodules.xyz/jsonpatch/v2"
 	"google.golang.org/grpc"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/cache"
@@ -88,51 +87,55 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 		r.logger.Infof("task run %q in work queue no longer exists", key)
 		return nil
 	} else if err != nil {
-		r.logger.Errorf("Error retrieving TaskRun %q: %s", name, err)
+		r.logger.Errorf("Error retrieving Result %q: %s", name, err)
 		return err
 	}
 
-	r.logger.Infof("Receiving new TaskRun %s/%s", namespace, tr.Name)
+	r.logger.Infof("Receiving new Result %s/%s", namespace, tr.Name)
 
-	// Send the new status of the TaskRun to the API server.
+	// Send the new status of the Result to the API server.
 	p, err := convert.ToProto(tr)
 	if err != nil {
 		r.logger.Errorf("Error converting to proto: %v", err)
 		return err
 	}
+	res := &pb.Result{
+		Executions: []*pb.Execution{{
+			Execution: &pb.Execution_TaskRun{p},
+		}},
+	}
 
-	// Create a TaskRun if it does not exist in results server, update existing one otherwise.
+	// Create a Result if it does not exist in results server, update existing one otherwise.
 	if val, ok := p.GetMetadata().GetAnnotations()[idName]; ok {
-		if _, err := r.client.UpdateTaskRunResult(ctx, &pb.UpdateTaskRunRequest{
-			TaskRun:   p,
-			ResultsId: val,
+		res.Name = val
+		if _, err := r.client.UpdateResult(ctx, &pb.UpdateResultRequest{
+			Name:   val,
+			Result: res,
 		}); err != nil {
-			r.logger.Error("Error updating TaskRun %s: %v", name, err)
+			r.logger.Errorf("Error updating TaskRun %s: %v", name, err)
 			return err
 		}
-		r.logger.Infof("Sending updates for TaskRun %s/%s(results_id: %s)", namespace, tr.Name, val)
+		r.logger.Infof("Sending updates for TaskRun %s/%s (result: %s)", namespace, tr.Name, val)
 	} else {
-		var res *pb.TaskRunResult
-
-		res, err = r.client.CreateTaskRunResult(ctx, &pb.CreateTaskRunRequest{
-			TaskRun: p,
+		res, err = r.client.CreateResult(ctx, &pb.CreateResultRequest{
+			Result: res,
 		})
 		if err != nil {
-			r.logger.Error("Error creating TaskRun %s: %v", name, err)
+			r.logger.Error("Error creating Result %s: %v", name, err)
 			return err
 		}
-		path, err := annotationPath(res.GetResultsId(), path, "add")
+		path, err := annotationPath(res.GetName(), path, "add")
 		if err != nil {
-			r.logger.Error("Error jsonpatch for TaskRun %s : %v", name, err)
+			r.logger.Error("Error jsonpatch for Result %s : %v", name, err)
 			return err
 		}
 		r.pipelineclientset.TektonV1beta1().TaskRuns(namespace).Patch(name, types.JSONPatchType, path)
-		r.logger.Infof("Creating a new TaskRun result%s/%s(results_id: %s)", namespace, tr.Name, res.GetResultsId())
+		r.logger.Infof("Creating a new TaskRun result %s/%s (result: %s)", namespace, tr.Name, res.GetName())
 	}
 	return nil
 }
 
-// AnnotationPath creates a jsonpatch path used for adding results_id to TaskRun annotations field.
+// AnnotationPath creates a jsonpatch path used for adding results_id to Result annotations field.
 func annotationPath(val string, path string, op string) ([]byte, error) {
 	patches := []jsonpatch.JsonPatchOperation{{
 		Operation: op,

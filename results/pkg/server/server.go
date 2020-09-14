@@ -11,12 +11,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
-
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/uuid"
-
-	// create database
 	_ "github.com/mattn/go-sqlite3"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	mask "go.chromium.org/luci/common/proto/mask"
@@ -31,98 +28,107 @@ type Server struct {
 	db  *sql.DB
 }
 
-// CreateTaskRunResult receives CreateTaskRunRequest from clients and save it to local Sqlite Server.
-func (s *Server) CreateTaskRunResult(ctx context.Context, req *pb.CreateTaskRunRequest) (*pb.TaskRunResult, error) {
-	statement, err := s.db.Prepare("INSERT INTO taskrun (taskrunlog, results_id, name, namespace) VALUES (?, ?, ?, ?)")
-	if err != nil {
-		log.Printf("failed to insert a new taskrun: %v", err)
-		return nil, fmt.Errorf("failed to insert a new taskrun: %w", err)
-	}
-	resultsID := uuid.New()
+// CreateResult receives CreateResultRequest from clients and save it to local Sqlite Server.
+func (s *Server) CreateResult(ctx context.Context, req *pb.CreateResultRequest) (*pb.Result, error) {
+	r := req.GetResult()
+	r.Name = fmt.Sprintf("%s/results/%s", req.GetParent(), uuid.New().String())
 
 	// serialize data and insert it into database.
-	taskrunFromClient := req.GetTaskRun()
-	taskrunRes := pb.TaskRunResult{TaskRun: taskrunFromClient, ResultsId: resultsID.String()}
-	blobData, err := proto.Marshal(taskrunFromClient)
+	b, err := proto.Marshal(r)
 	if err != nil {
-		log.Printf("taskrun marshaling error: %v", err)
-		return nil, fmt.Errorf("failed to marshal taskrun: %w", err)
+		log.Printf("result marshaling error: %v", err)
+		return nil, fmt.Errorf("failed to marshal result: %w", err)
 	}
-	taskrunMeta := taskrunFromClient.GetMetadata()
-	if _, err := statement.Exec(blobData, resultsID, taskrunMeta.GetName(), taskrunMeta.GetNamespace()); err != nil {
-		log.Printf("failed to execute insertion of a new taskrun: %v\n", err)
-		return nil, status.Errorf(codes.AlreadyExists, "Try to create taskrun again")
+
+	statement, err := s.db.Prepare("INSERT INTO results (name, blob) VALUES (?, ?)")
+	if err != nil {
+		log.Printf("failed to prepare insert: %v", err)
+		return nil, fmt.Errorf("failed to insert a new result: %w", err)
 	}
-	return &taskrunRes, nil
+	if _, err := statement.Exec(r.GetName(), b); err != nil {
+		log.Printf("failed to execute insertion of a new result: %v\n", err)
+		return nil, fmt.Errorf("failed to add result: %w", err)
+	}
+	return r, nil
 }
 
-// GetTaskRunResult received GetTaskRunRequest from users and return TaskRunResult back to users
-func (s *Server) GetTaskRunResult(ctx context.Context, req *pb.GetTaskRunRequest) (*pb.TaskRunResult, error) {
-	taskrun, err := s.getTaskRunByID(req.GetResultsId())
+// GetResult received GetResultRequest from users and return Result back to users
+func (s *Server) GetResult(ctx context.Context, req *pb.GetResultRequest) (*pb.Result, error) {
+	r, err := s.getResultByID(req.GetName())
 	if err != nil {
-		return nil, fmt.Errorf("failed to find a taskrun: %w", err)
+		return nil, fmt.Errorf("failed to find a result: %w", err)
 	}
-	return &pb.TaskRunResult{TaskRun: taskrun, ResultsId: req.GetResultsId()}, nil
+	return r, nil
 }
 
-// UpdateTaskRunResult receives TaskRun and FieldMask from client and uses them to update records in local Sqlite Server.
-func (s Server) UpdateTaskRunResult(ctx context.Context, req *pb.UpdateTaskRunRequest) (*pb.TaskRunResult, error) {
-	// Find corresponding TaskRun in the database according to results_id.
+// UpdateResult receives Result and FieldMask from client and uses them to update records in local Sqlite Server.
+func (s Server) UpdateResult(ctx context.Context, req *pb.UpdateResultRequest) (*pb.Result, error) {
+	// Find corresponding Result in the database according to results_id.
 	tx, err := s.db.Begin()
 	if err != nil {
 		log.Printf("failed to begin a transaction: %v", err)
-		return nil, fmt.Errorf("failed to update a taskrun: %w", err)
+		return nil, fmt.Errorf("failed to update a result: %w", err)
 	}
-	updateTaskRun, err := s.getTaskRunByID(req.GetResultsId())
+
+	prev, err := s.getResultByID(req.GetName())
 	if err != nil {
-		return nil, fmt.Errorf("failed to find a taskrun: %w", err)
+		return nil, fmt.Errorf("failed to find a result: %w", err)
 	}
-	// Merge TaskRun from client into existing TaskRun based on fieldmask.
-	taskrunFromClient := req.GetTaskRun()
-	fieldMask := req.GetUpdateMask()
-	// Update entire taskrun if user do not specify paths
-	if fieldMask == nil {
-		updateTaskRun = taskrunFromClient
+
+	r := proto.Clone(prev).(*pb.Result)
+	// Update entire result if user do not specify paths
+	if req.GetUpdateMask() == nil {
+		r = req.GetResult()
 	} else {
-		msk, err := mask.FromFieldMask(fieldMask, updateTaskRun, false, true)
+		// Merge Result from client into existing Result based on fieldmask.
+		msk, err := mask.FromFieldMask(req.GetUpdateMask(), r, false, true)
 		// Return NotFound error to client field is invalid
 		if err != nil {
 			log.Printf("failed to convert fieldmask to mask: %v", err)
-			return nil, status.Errorf(codes.NotFound, "field in fieldmask not found in taskrun")
+			return nil, status.Errorf(codes.NotFound, "field in fieldmask not found in result")
 		}
-		if err := msk.Merge(taskrunFromClient, updateTaskRun); err != nil {
-			log.Printf("failed to merge new taskrun into old taskrun: %v", err)
-			return nil, fmt.Errorf("failed to update taskrun: %w", err)
+		if err := msk.Merge(req.GetResult(), r); err != nil {
+			log.Printf("failed to merge new result into old result: %v", err)
+			return nil, fmt.Errorf("failed to update result: %w", err)
 		}
 	}
-	blobData, err := proto.Marshal(updateTaskRun)
-	if err != nil {
-		log.Println("taskrun marshaling error: ", err)
-		return nil, fmt.Errorf("taskrun marshaling error: %w", err)
+
+	// Do any most-mask validation to make sure we are not mutating any immutable fields.
+	if r.GetName() != prev.GetName() {
+		return prev, status.Error(codes.InvalidArgument, "result name cannot be changed")
 	}
-	statement, err := s.db.Prepare("UPDATE taskrun SET name = ?, namespace = ?, taskrunlog = ? WHERE results_id = ?")
-	if err != nil {
-		log.Printf("failed to update a existing taskrun: %v", err)
-		return nil, fmt.Errorf("failed to update a exsiting taskrun: %w", err)
+	if r.GetCreatedTime() != prev.GetCreatedTime() {
+		return prev, status.Error(codes.InvalidArgument, "created time cannot be changed")
 	}
-	taskrunMeta := updateTaskRun.GetMetadata()
-	if _, err := statement.Exec(taskrunMeta.GetName(), taskrunMeta.GetNamespace(), blobData, req.GetResultsId()); err != nil {
+
+	// Write result back to database.
+	b, err := proto.Marshal(r)
+	if err != nil {
+		log.Println("result marshaling error: ", err)
+		return nil, fmt.Errorf("result marshaling error: %w", err)
+	}
+	statement, err := s.db.Prepare("UPDATE results SET blob = ? WHERE name = ?")
+	if err != nil {
+		log.Printf("failed to update a existing result: %v", err)
+		return nil, fmt.Errorf("failed to update a exsiting result: %w", err)
+	}
+	if _, err := statement.Exec(b, r.GetName()); err != nil {
 		tx.Rollback()
-		log.Printf("failed to execute update of a new taskrun: %v", err)
-		return nil, fmt.Errorf("failed to execute update of a new taskrun: %w", err)
+		log.Printf("failed to execute update of a new result: %v", err)
+		return nil, fmt.Errorf("failed to execute update of a new result: %w", err)
 	}
 	tx.Commit()
-	return &pb.TaskRunResult{TaskRun: taskrunFromClient, ResultsId: req.GetResultsId()}, nil
+	return r, nil
 }
 
-// DeleteTaskRunResult receives DeleteTaskRun request from users and delete TaskRun in local Sqlite Server.
-func (s Server) DeleteTaskRunResult(ctx context.Context, req *pb.DeleteTaskRunRequest) (*empty.Empty, error) {
-	statement, err := s.db.Prepare("DELETE FROM taskrun WHERE results_id = ?")
+// DeleteResult receives DeleteResult request from users and delete Result in local Sqlite Server.
+func (s Server) DeleteResult(ctx context.Context, req *pb.DeleteResultRequest) (*empty.Empty, error) {
+	statement, err := s.db.Prepare("DELETE FROM results WHERE name = ?")
 	if err != nil {
 		log.Printf("failed to create delete statement: %v", err)
 		return nil, fmt.Errorf("failed to create delete statement: %w", err)
 	}
-	results, err := statement.Exec(req.GetResultsId())
+	results, err := statement.Exec(req.GetName())
 	if err != nil {
 		log.Printf("failed to execute delete statement: %v", err)
 		return nil, fmt.Errorf("failed to execute delete statement: %w", err)
@@ -133,95 +139,96 @@ func (s Server) DeleteTaskRunResult(ctx context.Context, req *pb.DeleteTaskRunRe
 		return nil, fmt.Errorf("failed to retrieve results: %w", err)
 	}
 	if affect == 0 {
-		return nil, status.Errorf(codes.NotFound, "TaskRun not found")
+		return nil, status.Errorf(codes.NotFound, "Result not found")
 	}
 	return nil, nil
 }
 
-// ListTaskRunsResult receives a ListTaskRunRequest from users and return to users a list of TaskRuns according to the query
-func (s *Server) ListTaskRunsResult(ctx context.Context, req *pb.ListTaskRunsRequest) (*pb.ListTaskRunsResponse, error) {
+// ListResultsResult receives a ListResultRequest from users and return to users a list of Results according to the query
+func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsRequest) (*pb.ListResultsResponse, error) {
 	// Set up environment for cel and check if filter is empty string
 	ast, issues := s.env.Compile(req.GetFilter())
 	if issues != nil && issues.Err() != nil && req.GetFilter() != "" {
 		log.Printf("type-check error: %s", issues.Err())
-		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter parse step, no TaskRuns found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", issues.Err())
+		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter parse step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", issues.Err())
 	}
-	// get all taskruns from database
-	rows, err := s.db.Query("SELECT taskrunlog, results_id FROM taskrun")
+	// get all results from database
+	rows, err := s.db.Query("SELECT blob FROM results")
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
 		return nil, status.Errorf(codes.Internal, "failed to query results: %v", err)
 	}
-	var taskRunList []*pb.TaskRunResult
+	var results []*pb.Result
 	for rows.Next() {
-		var taskrunblob []byte
-		var resultsID uuid.UUID
-		if err := rows.Scan(&taskrunblob, &resultsID); err != nil {
+		var b []byte
+		if err := rows.Scan(&b); err != nil {
 			log.Printf("failed to scan a row in query results: %v", err)
 			return nil, status.Errorf(codes.Internal, "failed to read result data: %v", err)
 		}
-		taskrun := &pb.TaskRun{}
-		if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
+		r := &pb.Result{}
+		if err := proto.Unmarshal(b, r); err != nil {
 			log.Printf("unmarshaling error: %v", err)
 			return nil, status.Errorf(codes.Internal, "failed to parse result data: %v", err)
 		}
-		taskRunList = append(taskRunList, &pb.TaskRunResult{TaskRun: taskrun, ResultsId: resultsID.String()})
+		results = append(results, r)
 	}
-	// return all taskruns back to users if empty query is given
+
+	// return all results back to users if empty query is given
 	if req.GetFilter() == "" {
-		return &pb.ListTaskRunsResponse{Items: taskRunList}, nil
+		return &pb.ListResultsResponse{Results: results}, nil
 	}
-	// filter from all taskruns
+
+	// filter from all results
 	prg, err := s.env.Program(ast)
 	if err != nil {
 		log.Printf("program construction error: %s", err)
-		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter checking step, no TaskRuns found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter checking step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
 	}
-	var resList []*pb.TaskRunResult
-	for _, taskrunResult := range taskRunList {
-		taskrun := taskrunResult.GetTaskRun()
-		out, _, err := prg.Eval(map[string]interface{}{
-			"taskrun": taskrun,
-		})
-		if err != nil {
-			log.Printf("failed to evaluate the expression: %v", err)
-			return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter evaluation step, no TaskRuns found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
-		}
-		if out.Value() == true {
-			resList = append(resList, taskrunResult)
+	var resp []*pb.Result
+	for _, r := range results {
+		for _, e := range r.Executions {
+			out, _, err := prg.Eval(map[string]interface{}{
+				"taskrun": e.GetTaskRun(),
+			})
+			if err != nil {
+				log.Printf("failed to evaluate the expression: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter evaluation step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
+			}
+			if out.Value() == true {
+				resp = append(resp, r)
+			}
 		}
 	}
-	return &pb.ListTaskRunsResponse{Items: resList}, nil
+	return &pb.ListResultsResponse{Results: resp}, nil
 }
 
-// GetTaskRunByID is the helper function to get a TaskRun by results_id
-func (s Server) getTaskRunByID(id string) (*pb.TaskRun, error) {
-	resultsID, err := uuid.Parse(id)
-	if err != nil {
-		log.Printf("failed to parse resultID string into resultsID UUID: %v", err)
-		return nil, fmt.Errorf("failed to find a taskrun: %w", err)
-	}
-	rows, err := s.db.Query("SELECT taskrunlog FROM taskrun WHERE results_id = ?", resultsID)
+// GetResultByID is the helper function to get a Result by results_id
+func (s Server) getResultByID(name string) (*pb.Result, error) {
+
+	rows, err := s.db.Query("SELECT blob FROM results WHERE name = ?", name)
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
-		return nil, fmt.Errorf("failed to query on a taskrun: %w", err)
+		return nil, fmt.Errorf("failed to query on a result: %w", err)
 	}
-	taskrun := &pb.TaskRun{}
+	result := &pb.Result{}
 	rowNum := 0
 	for rows.Next() {
-		var taskrunblob []byte
+		var b []byte
 		rowNum++
 		if rowNum >= 2 {
 			log.Println("Warning: multiple rows found")
 			break
 		}
-		rows.Scan(&taskrunblob)
-		if err := proto.Unmarshal(taskrunblob, taskrun); err != nil {
+		rows.Scan(&b)
+		if err := proto.Unmarshal(b, result); err != nil {
 			log.Printf("unmarshaling error: %v", err)
-			return nil, fmt.Errorf("failed to unmarshal taskrun: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal result: %w", err)
 		}
 	}
-	return taskrun, nil
+	if rowNum == 0 {
+		return nil, status.Error(codes.NotFound, "result not found")
+	}
+	return result, nil
 }
 
 // SetupTestDB set up a temporary database for testing
@@ -249,13 +256,13 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 	if err != nil {
 		t.Fatalf("failed to read schema file: %v", err)
 	}
-	// Create taskrun table
+	// Create result table
 	statement, err := db.Prepare(string(schema))
 	if err != nil {
-		t.Fatalf("failed to create taskrun table: %v", err)
+		t.Fatalf("failed to create result table: %v", err)
 	}
 	if _, err := statement.Exec(); err != nil {
-		t.Fatalf("failed to execute the taskrun table creation statement statement: %v", err)
+		t.Fatalf("failed to execute the result table creation statement statement: %v", err)
 	}
 	return New(db)
 }
@@ -263,8 +270,8 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 // New set up environment for the api server
 func New(db *sql.DB) (*Server, error) {
 	env, err := cel.NewEnv(
-		cel.Types(&pb.TaskRun{}),
-		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.TaskRun"), nil)),
+		cel.Types(&pb.Result{}),
+		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.pipeline.v1.TaskRun"), nil)),
 	)
 	if err != nil {
 		log.Fatalf("failed to create environment for filter: %v", err)
