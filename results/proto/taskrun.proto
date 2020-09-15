@@ -93,8 +93,8 @@ message TaskRunStatus {
 
 message StepState {
 	string name = 1;
-	string container_name = 2;
-	string image_id = 3;
+	string container_name = 2 [json_name="container"];
+	string image_id = 3 [json_name="imageID"];
 	oneof status {
 		ContainerStateWaiting waiting = 4;
 		ContainerStateRunning running = 5;
@@ -118,7 +118,7 @@ message ContainerStateTerminated {
 	string message = 4;
 	google.protobuf.Timestamp started_at = 5;
 	google.protobuf.Timestamp finished_at = 6;
-	string container_id = 7;
+	string container_id = 7 [json_name="containerID"];
 }
 
 message Condition {

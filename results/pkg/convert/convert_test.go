@@ -20,7 +20,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
 	durpb "github.com/golang/protobuf/ptypes/duration"
+	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -253,4 +255,18 @@ func TestToProto(t *testing.T) {
 	if d := cmp.Diff(want, got, protocmp.Transform()); d != "" {
 		t.Errorf("Diff(-want,+got): %s", d)
 	}
+}
+
+func timestamp(t *metav1.Time) *tspb.Timestamp {
+	if t == nil {
+		return nil
+	}
+	if t.Time.IsZero() {
+		return nil
+	}
+	p, err := ptypes.TimestampProto(t.Time.Truncate(time.Second))
+	if err != nil {
+		panic(err.Error())
+	}
+	return p
 }
