@@ -82,10 +82,7 @@ const Rating: React.FC = (props: any) => {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(ratingData),
-    }).then((res) => res.json())
-      .then((response) => {
-        setAvgRating(response.avgRating);
-      });
+    });
   };
 
   const updateRating = (event: any) => {

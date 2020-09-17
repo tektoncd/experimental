@@ -20,8 +20,9 @@ import {
   CardActions,
   FlexItem,
   Flex,
-  FlexModifiers,
   Tooltip,
+  Grid,
+  GridItem,
 } from '@patternfly/react-core';
 import {
   StarIcon,
@@ -54,7 +55,7 @@ export interface TagInfo {
 export interface TaskPropObject {
   id: number,
   name: string;
-  type: string;
+  kind: string;
   catalog: CatalogInfo;
   latestVersion: LatestVersionInfo,
   tags: Array<TagInfo>,
@@ -67,6 +68,12 @@ export interface TaskProp {
 
 // eslint-disable-next-line
 const Task: React.FC<TaskProp> = (props: any) => {
+
+  const {description, updatedAt} = props.task.latestVersion;
+  const {type} = props.task.catalog;
+  const lastIndex = description.indexOf('\n');
+
+
   const tempArr: any = [];
   if (props.task.tags != null) {
     props.task.tags.forEach((item: any) => {
@@ -81,7 +88,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // Create relative date/time formatter.
   const timeAgo = new TimeAgo('en-US');
 
-  const catalogDate = new Date(props.task.latestVersion.updatedAt);
+  const catalogDate = new Date(updatedAt);
 
   const diffDays = timeAgo.format(catalogDate.getTime() - 60 * 1000);
 
@@ -89,7 +96,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // for verification status of resources
   let verifiedStatus: any;
   if (props.task) {
-    if (props.task.catalog.type.toLowerCase() === 'official') {
+    if (type.toLowerCase() === 'official') {
       verifiedStatus = <Tooltip content={<b>Official</b>}>
         <div className="vtask" >
           <CatIcon size="md" color='#484848'
@@ -97,7 +104,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
         </div>
       </Tooltip>;
     }
-    if (props.task.catalog.type.toLowerCase() === 'verified') {
+    if (type.toLowerCase() === 'verified') {
       verifiedStatus = <Tooltip content={<b>Verified</b>}>
         <div className="vtask" >
           <CertificateIcon size="md" color='#484848'
@@ -105,7 +112,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
         </div>
       </Tooltip>;
     }
-    if (props.task.catalog.type.toLowerCase() === 'community') {
+    if (type.toLowerCase() === 'community') {
       verifiedStatus = <Tooltip content={<b>Community</b>}>
         <div className="vtask" >
           <UserIcon size="md" color='#484848'
@@ -118,22 +125,34 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // }
   // for adding icon to task and pipeline
   let resourceIcon: React.ReactNode;
-  if (props.task.type.toLowerCase() === 'task') {
-    resourceIcon = <Tooltip content={<b>Task</b>}>
-      <BuildIcon
-        style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
-        color="#484848"
-      />
-    </Tooltip>;
+  if (props.task) {
+    if (props.task.kind.toLowerCase() === 'task') {
+      resourceIcon = <Tooltip content={<b>Task</b>}>
+        <BuildIcon
+          style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
+          color="#484848"
+        />
+      </Tooltip>;
+    } else {
+      resourceIcon = <Tooltip content={<b>Pipeline</b>}>
+        <DomainIcon
+          style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
+          color="#484848"
+        />
+      </Tooltip>;
+    };
+  }
+  // resource summary
+  let resourceSummary = '';
+  if (description.length > 120) {
+    resourceSummary = lastIndex > 120 ? description.substring(0, 120) :
+      description.substring(0, lastIndex !== -1 ? lastIndex : 120);
+    if (lastIndex > 120 || lastIndex === -1) {
+      resourceSummary += '...';
+    }
   } else {
-    resourceIcon = <Tooltip content={<b>Pipeline</b>}>
-      <DomainIcon
-        style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
-        color="#484848"
-      />
-    </Tooltip>;
-  };
-
+    resourceSummary = lastIndex !== -1 ? description.substring(0, lastIndex) : description;
+  }
 
   // Display name
 
@@ -171,30 +190,29 @@ const Task: React.FC<TaskProp> = (props: any) => {
 
             </CardActions>
           </CardHead>
-          <CardHeader className="catalog-tile-pf-header">
 
-            <Flex>
-              <FlexItem>
+          <CardHeader className="catalog-tile-pf-header">
+            <Grid>
+              <GridItem span={9}>
                 <span className="task-heading">
                   {resourceName}
-                  {/* {props.task.name[0].toUpperCase() + props.task.name.slice(1)} */}
                 </span>
-              </FlexItem>
-              <FlexItem
-                breakpointMods={[{modifier: FlexModifiers['align-right']}]}
-                style={{marginBottom: '0.5em'}}>
-                <span>
+              </GridItem>
+              <GridItem span={1}>
+
+              </GridItem>
+              <GridItem span={2} style={{marginTop: '0.25em'}}>
+                <span style={{marginLeft: '0.4em'}}>
                   v{props.task.latestVersion.version}
                 </span>
-              </FlexItem>
-            </Flex>
+              </GridItem>
+            </Grid>
           </CardHeader>
+
           <CardBody className="catalog-tile-pf-body">
             <div className="catalog-tile-pf-description">
               <span>
-                {`${props.task.latestVersion.description.substring(0,
-                  props.task.latestVersion.description.indexOf('\n'))}` ||
-                  `${props.task.latestVersion.description}`}
+                {resourceSummary}
               </span>
             </div>
 
@@ -204,8 +222,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
 
             <TextContent className="text"
               style={{
-                marginBottom: '0.5em', marginTop:
-                  '-1em', marginLeft: '0em',
+                marginBottom: '0.5em', marginTop: '-1em', marginLeft: '0em',
               }}>
               Updated {diffDays}
             </TextContent>

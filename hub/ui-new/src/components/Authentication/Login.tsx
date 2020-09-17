@@ -16,11 +16,10 @@ const Login: React.FC = () => {
   const history = useHistory();
   const onSuccess = (response) => {
     const authorizeToken = response.code.toString();
-    fetch(`${API_URL}/auth/login`, {
+    fetch(`${API_URL}/auth/login?code=${authorizeToken}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authorizeToken,
       },
     })
       .then((res) => res.json())

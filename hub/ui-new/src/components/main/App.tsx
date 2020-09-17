@@ -33,6 +33,7 @@ import BasicDetailParent from '../basic-detail/BasicDetailParent';
 import BackgroundImageHeader from '../background-image/BackgroundImage';
 import Login from '../Authentication/Login';
 import Footer from '../footer/Footer';
+import {GithubIcon} from '@patternfly/react-icons';
 interface mainProps {
 
 }
@@ -85,6 +86,7 @@ const App: React.FC<mainProps> = () => {
       style={{
         width: '1.5em',
         height: '1.5em',
+        marginRight: '2em',
       }}
       src={imgAvatar} alt="" />;
   }
@@ -95,6 +97,7 @@ const App: React.FC<mainProps> = () => {
     <div>
       <Toolbar>
         <ToolbarGroup>
+
           <ToolbarItem style={{color: 'white'}}>
             {displayUpload}
             <Button id="default-example-uid-01"
@@ -102,16 +105,27 @@ const App: React.FC<mainProps> = () => {
               variant={ButtonVariant.plain}>
             </Button>
           </ToolbarItem>
+
           <ToolbarItem>
             {
               authenticationButton
             }
-
-
           </ToolbarItem>
+
           <ToolbarItem>
             {userimage}
           </ToolbarItem>
+
+          <ToolbarItem>
+            <span>
+              <a href="https://github.com/tektoncd/hub" target="_">
+                <GithubIcon size="md"
+                  style={{color: 'white'}}
+                />
+              </a>
+            </span>
+          </ToolbarItem>
+
         </ToolbarGroup>
       </Toolbar>
     </div>
