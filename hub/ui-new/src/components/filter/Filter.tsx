@@ -182,7 +182,7 @@ const Filter: React.FC = (props: any) => {
     if (resourcetypeList.length > 0) {
       resourcetypeList.forEach((resourceType: any) => {
         filterArray.forEach((resourceItem: any) => {
-          if (resourceItem.type.toLowerCase() === resourceType) {
+          if (resourceItem.kind.toLowerCase() === resourceType) {
             tempv.push(resourceItem);
           }
         },
