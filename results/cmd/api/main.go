@@ -18,38 +18,53 @@ package main
 
 import (
 	"database/sql"
+	"flag"
+	"fmt"
 	"log"
 	"net"
+	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/tektoncd/experimental/results/pkg/server"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-const port = ":50051"
-
 func main() {
-	// Connect to sqlite DB.
-	db, err := sql.Open("sqlite3", "./results.db")
+	flag.Parse()
+
+	user, pass := os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD")
+	if user == "" || pass == "" {
+		log.Fatal("Must provide both DB_USER and DB_PASSWORD")
+	}
+	// Connect to the MySQL database.
+	// DSN derived from https://github.com/go-sql-driver/mysql#dsn-data-source-name
+	dbURI := fmt.Sprintf("%s:%s@%s(%s)/%s?parseTime=true", user, pass, os.Getenv("DB_PROTOCOL"), os.Getenv("DB_ADDR"), os.Getenv("DB_NAME"))
+	db, err := sql.Open("mysql", dbURI)
 	if err != nil {
 		log.Fatalf("failed to open the results.db: %v", err)
 	}
 	defer db.Close()
+
 	// Create cel enviroment for filter
 	srv, err := server.New(db)
 	if err != nil {
 		log.Fatalf("failed to create server: %v", err)
 	}
 	// Listen for gRPC requests.
-	lis, err := net.Listen("tcp", port)
+	port := os.Getenv("PORT")
+	if port == "" {
+		// Default gRPC server port to this value from tutorials (e.g., https://grpc.io/docs/guides/auth/#go)
+		port = "50051"
+	}
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterResultsServer(s, srv)
 	reflection.Register(s)
-	log.Printf("Listening on %s...", port)
+	log.Printf("Listening on :%s...", port)
 	log.Fatal(s.Serve(lis))
 }

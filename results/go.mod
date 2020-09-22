@@ -3,10 +3,12 @@ module github.com/tektoncd/experimental/results
 go 1.13
 
 require (
+	cloud.google.com/go v0.66.0
 	github.com/blang/semver v3.5.1+incompatible // indirect
-	github.com/golang/protobuf v1.4.1
+	github.com/go-sql-driver/mysql v1.5.0
+	github.com/golang/protobuf v1.4.2
 	github.com/google/cel-go v0.5.1
-	github.com/google/go-cmp v0.5.0
+	github.com/google/go-cmp v0.5.2
 	github.com/google/uuid v1.1.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/smartystreets/assertions v1.1.1 // indirect
@@ -15,8 +17,9 @@ require (
 	go.chromium.org/luci v0.0.0-20200716065131-1f7c6da65cb2
 	go.uber.org/zap v1.15.0
 	gomodules.xyz/jsonpatch/v2 v2.1.0
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	google.golang.org/grpc v1.27.1
+	google.golang.org/api v0.31.0
+	google.golang.org/genproto v0.0.0-20200914193844-75d14daec038
+	google.golang.org/grpc v1.31.1
 	google.golang.org/protobuf v1.25.0
 	k8s.io/api v0.18.6
 	k8s.io/apiextensions-apiserver v0.18.6 // indirect
