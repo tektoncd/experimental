@@ -40,7 +40,7 @@ func (s *Server) CreateResult(ctx context.Context, req *pb.CreateResultRequest) 
 		return nil, fmt.Errorf("failed to marshal result: %w", err)
 	}
 
-	statement, err := s.db.Prepare("INSERT INTO results (name, blob) VALUES (?, ?)")
+	statement, err := s.db.Prepare("INSERT INTO results (name, data) VALUES (?, ?)")
 	if err != nil {
 		log.Printf("failed to prepare insert: %v", err)
 		return nil, fmt.Errorf("failed to insert a new result: %w", err)
@@ -107,7 +107,7 @@ func (s Server) UpdateResult(ctx context.Context, req *pb.UpdateResultRequest) (
 		log.Println("result marshaling error: ", err)
 		return nil, fmt.Errorf("result marshaling error: %w", err)
 	}
-	statement, err := s.db.Prepare("UPDATE results SET blob = ? WHERE name = ?")
+	statement, err := s.db.Prepare("UPDATE results SET data = ? WHERE name = ?")
 	if err != nil {
 		log.Printf("failed to update a existing result: %v", err)
 		return nil, fmt.Errorf("failed to update a exsiting result: %w", err)
@@ -153,7 +153,7 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter parse step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", issues.Err())
 	}
 	// get all results from database
-	rows, err := s.db.Query("SELECT blob FROM results")
+	rows, err := s.db.Query("SELECT data FROM results")
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
 		return nil, status.Errorf(codes.Internal, "failed to query results: %v", err)
@@ -205,7 +205,7 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 // GetResultByID is the helper function to get a Result by results_id
 func (s Server) getResultByID(name string) (*pb.Result, error) {
 
-	rows, err := s.db.Query("SELECT blob FROM results WHERE name = ?", name)
+	rows, err := s.db.Query("SELECT data FROM results WHERE name = ?", name)
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
 		return nil, fmt.Errorf("failed to query on a result: %w", err)
@@ -252,7 +252,7 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 	t.Cleanup(func() {
 		db.Close()
 	})
-	schema, err := ioutil.ReadFile("../../cmd/api/results.sql")
+	schema, err := ioutil.ReadFile("../../schema/results.sql")
 	if err != nil {
 		t.Fatalf("failed to read schema file: %v", err)
 	}
