@@ -58,7 +58,7 @@ func TestPipelineRunControllerPendingState(t *testing.T) {
 
 	objs := []runtime.Object{
 		pipelineRun,
-		makeSecret(map[string][]byte{"token": []byte(testToken)}),
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
 	}
 	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
@@ -95,7 +95,7 @@ func TestPipelineRunReconcileWithPreviousPending(t *testing.T) {
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
 	objs := []runtime.Object{
 		pipelineRun,
-		makeSecret(map[string][]byte{"token": []byte(testToken)}),
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
 	}
 	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
@@ -140,7 +140,7 @@ func TestPipelineRunControllerSuccessState(t *testing.T) {
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionTrue})))
 	objs := []runtime.Object{
 		pipelineRun,
-		makeSecret(map[string][]byte{"token": []byte(testToken)}),
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
 	}
 	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
@@ -177,7 +177,7 @@ func TestPipelineRunControllerFailedState(t *testing.T) {
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionFalse})))
 	objs := []runtime.Object{
 		pipelineRun,
-		makeSecret(map[string][]byte{"token": []byte(testToken)}),
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
 	}
 	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
@@ -211,7 +211,7 @@ func TestPipelineRunReconcileNonNotifiable(t *testing.T) {
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
 	objs := []runtime.Object{
 		pipelineRun,
-		makeSecret(map[string][]byte{"token": []byte(testToken)}),
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
 	}
 	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
 
@@ -243,7 +243,7 @@ func TestPipelineRunReconcileWithNoGitRepository(t *testing.T) {
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
 	objs := []runtime.Object{
 		pipelineRun,
-		makeSecret(map[string][]byte{"token": []byte(testToken)}),
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
 	}
 	r, data := makeReconciler(t, "", pipelineRun, objs...)
 
@@ -277,7 +277,7 @@ func TestPipelineRunReconcileWithGitRepositories(t *testing.T) {
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
 	objs := []runtime.Object{
 		pipelineRun,
-		makeSecret(map[string][]byte{"token": []byte(testToken)}),
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
 	}
 	r, data := makeReconciler(t, "", pipelineRun, objs...)
 

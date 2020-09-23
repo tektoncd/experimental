@@ -17,6 +17,7 @@ package pipelinerun
 import (
 	"context"
 	"fmt"
+	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,16 +25,17 @@ import (
 )
 
 const (
-	// TODO: what should these be called?
-	secretName = "commit-status-tracker-git-secret"
-	secretID   = "token"
+	secretNameEnvVar = "STATUS_TRACKER_SECRET"
+
+	defaultSecretName = "commit-status-tracker-git-secret"
+	secretID          = "token"
 )
 
 func getAuthSecret(c client.Client, ns string) (string, error) {
 	secret := &corev1.Secret{}
 	err := c.Get(context.TODO(), getNamespaceSecretName(ns), secret)
 	if err != nil {
-		return "", fmt.Errorf("failed to getAuthSecret, error getting secret '%s' in namespace '%s': '%q'", secretName, ns, err)
+		return "", fmt.Errorf("failed to getAuthSecret, error getting secret '%s' in namespace '%s': '%q'", secretName(), ns, err)
 	}
 
 	tokenData, ok := secret.Data[secretID]
@@ -46,7 +48,13 @@ func getAuthSecret(c client.Client, ns string) (string, error) {
 func getNamespaceSecretName(s string) types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: s,
-		Name:      secretName,
+		Name:      secretName(),
 	}
+}
 
+func secretName() string {
+	if v := os.Getenv(secretNameEnvVar); v != "" {
+		return v
+	}
+	return defaultSecretName
 }
