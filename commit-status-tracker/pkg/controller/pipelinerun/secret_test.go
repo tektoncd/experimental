@@ -15,6 +15,7 @@
 package pipelinerun
 
 import (
+	"os"
 	"regexp"
 	"testing"
 
@@ -28,7 +29,8 @@ import (
 func TestGetAuthSecretWithExistingToken(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 
-	secret := makeSecret(map[string][]byte{"token": []byte(testToken)})
+	secret := makeSecret(defaultSecretName,
+		map[string][]byte{"token": []byte(testToken)})
 	objs := []runtime.Object{
 		secret,
 	}
@@ -58,14 +60,9 @@ func TestGetAuthSecretWithNoSecret(t *testing.T) {
 
 func TestGetAuthSecretWithNoToken(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
-	secret := &corev1.Secret{
-		Type: corev1.SecretTypeOpaque,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: testNamespace,
-		},
-		Data: map[string][]byte{},
-	}
+	secret := makeSecret(
+		defaultSecretName,
+		map[string][]byte{})
 	objs := []runtime.Object{
 		secret,
 	}
@@ -79,7 +76,32 @@ func TestGetAuthSecretWithNoToken(t *testing.T) {
 	}
 }
 
-func makeSecret(data map[string][]byte) *corev1.Secret {
+func TestGetAuthSecretWithNameInEnvironment(t *testing.T) {
+	customSecretName := "testing-secret-name"
+	old := os.Getenv(secretNameEnvVar)
+	defer func() {
+		os.Setenv(secretNameEnvVar, old)
+	}()
+	os.Setenv(secretNameEnvVar, customSecretName)
+	logf.SetLogger(logf.ZapLogger(true))
+
+	secret := makeSecret(customSecretName,
+		map[string][]byte{"token": []byte(testToken)})
+	objs := []runtime.Object{
+		secret,
+	}
+
+	cl := fake.NewFakeClient(objs...)
+	sec, err := getAuthSecret(cl, testNamespace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sec != testToken {
+		t.Fatalf("got %s, want %s", sec, testToken)
+	}
+}
+
+func makeSecret(secretName string, data map[string][]byte) *corev1.Secret {
 	return &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{
