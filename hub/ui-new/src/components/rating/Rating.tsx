@@ -39,19 +39,20 @@ const Rating: React.FC = (props: any) => {
       }
     }
   }
-
-  // Display rating for particular user
-  if (count === 0) {
-    fetch(`${API_URL}/resource/${Number(taskId)}/rating`, {
-      method: 'GET',
-      headers: new Headers({
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      }),
-    }).then((res) => res.json()).then((response) => {
-      setStars(Number(response.rating));
-    });
-    setCount((count) => count + 1);
+  if (localStorage.getItem("token") !== null) {
+    // Display rating for particular user
+    if (count === 0) {
+      fetch(`${API_URL}/resource/${Number(taskId)}/rating`, {
+        method: 'GET',
+        headers: new Headers({
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        }),
+      }).then((res) => res.json()).then((response) => {
+        setStars(Number(response.rating));
+      });
+      setCount((count) => count + 1);
+    }
   }
   // for showing number of star given by user
   switch (stars) {
