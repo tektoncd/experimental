@@ -29,11 +29,11 @@ import (
 	taskloopv1alpha1 "github.com/tektoncd/experimental/task-loops/pkg/apis/taskloop/v1alpha1"
 	fakeclient "github.com/tektoncd/experimental/task-loops/pkg/client/injection/client/fake"
 	faketaskloopinformer "github.com/tektoncd/experimental/task-loops/pkg/client/injection/informers/taskloop/v1alpha1/taskloop/fake"
+	"github.com/tektoncd/experimental/task-loops/test"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/pkg/system"
-	"github.com/tektoncd/pipeline/test"
 	"github.com/tektoncd/pipeline/test/diff"
 	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
@@ -60,7 +60,7 @@ func getRunName(run *v1alpha1.Run) string {
 func loopRunning(run *v1alpha1.Run) *v1alpha1.Run {
 	runWithStatus := run.DeepCopy()
 	runWithStatus.Status.InitializeConditions()
-	runWithStatus.Status.MarkRunning(taskloopv1alpha1.TaskLoopRunReasonRunning.String(), "")
+	runWithStatus.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonRunning.String(), "")
 	return runWithStatus
 }
 
