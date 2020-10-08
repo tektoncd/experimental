@@ -49,7 +49,7 @@ const Rating: React.FC = (props: any) => {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
       }),
     }).then((res) => res.json()).then((response) => {
-      setStars(Number(response.data.rating));
+      setStars(Number(response.rating));
     });
     setCount((count) => count + 1);
   }
@@ -82,10 +82,7 @@ const Rating: React.FC = (props: any) => {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(ratingData),
-    }).then((res) => res.json())
-      .then((response) => {
-        setAvgRating(response.data.avgRating);
-      });
+    });
   };
 
   const updateRating = (event: any) => {
@@ -183,6 +180,7 @@ const Rating: React.FC = (props: any) => {
   return (
     <Flex breakpointMods={[{modifier: 'column', breakpoint: 'lg'}]}>
       <FlexItem style={{marginLeft: '-0.7em', marginTop: '0.2em'}}>
+
 
         <Flex breakpointMods={[{modifier: 'row', breakpoint: 'lg'}]}>
           <FlexItem>
