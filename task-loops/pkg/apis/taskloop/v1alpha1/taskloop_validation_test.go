@@ -126,7 +126,7 @@ func TestTaskLoop_Validate_Error(t *testing.T) {
 		expectedError: apis.FieldError{
 			Message: `invalid value "bad@name!"`,
 			Details: "Task step name must be a valid DNS Label, For more info refer to https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
-			Paths:   []string{"spec.taskSpec.taskspec.steps.name"},
+			Paths:   []string{"spec.taskSpec.steps[0].name"},
 		},
 	}}
 	for _, tc := range tests {
@@ -135,7 +135,7 @@ func TestTaskLoop_Validate_Error(t *testing.T) {
 			if err == nil {
 				t.Errorf("Expected an Error but did not get one for %s", tc.name)
 			} else {
-				if d := cmp.Diff(tc.expectedError, *err, cmpopts.IgnoreUnexported(apis.FieldError{})); d != "" {
+				if d := cmp.Diff(tc.expectedError.Error(), err.Error(), cmpopts.IgnoreUnexported(apis.FieldError{})); d != "" {
 					t.Errorf("Error is different from expected for %s. diff %s", tc.name, diff.PrintWantGot(d))
 				}
 			}
