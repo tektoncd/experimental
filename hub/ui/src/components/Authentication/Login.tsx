@@ -16,16 +16,15 @@ const Login: React.FC = () => {
   const history = useHistory();
   const onSuccess = (response) => {
     const authorizeToken = response.code.toString();
-    fetch(`${API_URL}/oauth/redirect`, {
+    fetch(`${API_URL}/auth/login?code=${authorizeToken}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authorizeToken,
       },
     })
       .then((res) => res.json())
       .then((response) => {
-        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('token', response.token);
         checkAuthentication();
         history.push('/');
         window.location.reload();

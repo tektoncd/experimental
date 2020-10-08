@@ -4,18 +4,34 @@ import {connect} from 'react-redux';
 import store from '../redux/store';
 import fetchTaskSuccess from '../redux/Actions/TaskAction';
 import {FETCH_TASK_SUCCESS} from '../redux/Actions/TaskActionType';
-export interface TaskPropData {
-  id: number;
-  name: string,
+export interface LatestVersionInfo {
+  id: number,
+  version: string,
+  displayName: string,
   description: string,
-  rating: number,
-  tags: [],
-  lastUpdatedAt: string;
-  latestVersion;
-  catalog: [],
-  type: string,
-  displayName: string
+  minPipelinesVersion: string,
+  rawURL: string,
+  webURL: string,
+  updatedAt: string,
 }
+export interface CatalogInfo {
+  id: number,
+  type: string,
+}
+export interface TagInfo {
+  id: number,
+  name: string,
+}
+export interface TaskPropData {
+  id: number,
+  name: string;
+  kind: string;
+  catalog: CatalogInfo;
+  latestVersion: LatestVersionInfo,
+  tags: Array<TagInfo>,
+  rating: number;
+}
+
 const Sort: React.FC = (props: any) => {
   const [sort, setSort] = useState('Name');
   let tempArr: any = [];
@@ -23,15 +39,12 @@ const Sort: React.FC = (props: any) => {
     tempArr = props.TaskData.map((task: any) => {
       const taskData: TaskPropData = {
         id: task.id,
+        kind: task.kind,
         catalog: task.catalog,
         name: task.name,
-        description: task.description,
         rating: task.rating,
         tags: task.tags,
-        type: task.type,
-        lastUpdatedAt: task.lastUpdatedAt,
         latestVersion: task.latestVersion,
-        displayName: task.displayName,
       };
       return taskData;
     });

@@ -76,7 +76,7 @@ const Filter: React.FC = (props: any) => {
     fetch(`${API_URL}/categories`)
       .then((res) => res.json())
       .then((categoryData) =>
-        setCategoriesList(addCategory(categoryData.data)));
+        setCategoriesList(addCategory(categoryData)));
     if (categoriesList) {
       (Object.keys(categoriesList)).map((category) => {
         return tempObj.category = false;
@@ -182,7 +182,7 @@ const Filter: React.FC = (props: any) => {
     if (resourcetypeList.length > 0) {
       resourcetypeList.forEach((resourceType: any) => {
         filterArray.forEach((resourceItem: any) => {
-          if (resourceItem.type.toLowerCase() === resourceType) {
+          if (resourceItem.kind.toLowerCase() === resourceType) {
             tempv.push(resourceItem);
           }
         },

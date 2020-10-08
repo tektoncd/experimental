@@ -7,7 +7,6 @@ import {
   BrowserRouter as Router,
   Route,
 } from 'react-router-dom';
-import {GithubIcon} from '@patternfly/react-icons';
 import SearchBar from '../search-bar/SearchBar';
 import TaskContainer from '../task-container/TaskContainer';
 // import UploadTask from '../upload-task/UploadTask';
@@ -34,6 +33,7 @@ import BasicDetailParent from '../basic-detail/BasicDetailParent';
 import BackgroundImageHeader from '../background-image/BackgroundImage';
 import Login from '../Authentication/Login';
 import Footer from '../footer/Footer';
+import {GithubIcon} from '@patternfly/react-icons';
 interface mainProps {
 
 }
@@ -97,6 +97,7 @@ const App: React.FC<mainProps> = () => {
     <div>
       <Toolbar>
         <ToolbarGroup>
+
           <ToolbarItem style={{color: 'white'}}>
             {displayUpload}
             <Button id="default-example-uid-01"
@@ -104,13 +105,13 @@ const App: React.FC<mainProps> = () => {
               variant={ButtonVariant.plain}>
             </Button>
           </ToolbarItem>
+
           <ToolbarItem>
             {
               authenticationButton
             }
-
-
           </ToolbarItem>
+
           <ToolbarItem>
             {userimage}
           </ToolbarItem>
@@ -124,6 +125,7 @@ const App: React.FC<mainProps> = () => {
               </a>
             </span>
           </ToolbarItem>
+
         </ToolbarGroup>
       </Toolbar>
     </div>
@@ -159,6 +161,7 @@ const App: React.FC<mainProps> = () => {
               <Route exact path="/" component={TaskContainer} />
 
             </GridItem>
+
           </Grid>
 
         </PageSection>

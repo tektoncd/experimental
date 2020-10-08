@@ -20,9 +20,9 @@ import {
   CardActions,
   FlexItem,
   Flex,
+  Tooltip,
   Grid,
   GridItem,
-  Tooltip,
 } from '@patternfly/react-core';
 import {
   StarIcon,
@@ -32,17 +32,34 @@ import {
   CertificateIcon,
   UserIcon,
 } from '@patternfly/react-icons';
+
+
+export interface LatestVersionInfo {
+  id: number,
+  version: string,
+  displayName: string,
+  description: string,
+  minPipelinesVersion: string,
+  rawURL: string,
+  webURL: string,
+  updatedAt: string,
+}
+export interface CatalogInfo {
+  id: number,
+  type: string,
+}
+export interface TagInfo {
+  id: number,
+  name: string,
+}
 export interface TaskPropObject {
+  id: number,
   name: string;
-  description: string;
+  kind: string;
+  catalog: CatalogInfo;
+  latestVersion: LatestVersionInfo,
+  tags: Array<TagInfo>,
   rating: number;
-  catalog: string;
-  downloads: number;
-  yaml: string;
-  tags: [];
-  lastUpdatedAt: string;
-  latestVersion: string;
-  displayName: string
 }
 
 export interface TaskProp {
@@ -51,6 +68,12 @@ export interface TaskProp {
 
 // eslint-disable-next-line
 const Task: React.FC<TaskProp> = (props: any) => {
+
+  const {description, updatedAt} = props.task.latestVersion;
+  const {type} = props.task.catalog;
+  const lastIndex = description.indexOf('\n');
+
+
   const tempArr: any = [];
   if (props.task.tags != null) {
     props.task.tags.forEach((item: any) => {
@@ -65,7 +88,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // Create relative date/time formatter.
   const timeAgo = new TimeAgo('en-US');
 
-  const catalogDate = new Date(props.task.lastUpdatedAt);
+  const catalogDate = new Date(updatedAt);
 
   const diffDays = timeAgo.format(catalogDate.getTime() - 60 * 1000);
 
@@ -73,7 +96,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // for verification status of resources
   let verifiedStatus: any;
   if (props.task) {
-    if (props.task.catalog.type.toLowerCase() === 'official') {
+    if (type.toLowerCase() === 'official') {
       verifiedStatus = <Tooltip content={<b>Official</b>}>
         <div className="vtask" >
           <CatIcon size="md" color='#484848'
@@ -81,7 +104,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
         </div>
       </Tooltip>;
     }
-    if (props.task.catalog.type.toLowerCase() === 'verified') {
+    if (type.toLowerCase() === 'verified') {
       verifiedStatus = <Tooltip content={<b>Verified</b>}>
         <div className="vtask" >
           <CertificateIcon size="md" color='#484848'
@@ -89,7 +112,7 @@ const Task: React.FC<TaskProp> = (props: any) => {
         </div>
       </Tooltip>;
     }
-    if (props.task.catalog.type.toLowerCase() === 'community') {
+    if (type.toLowerCase() === 'community') {
       verifiedStatus = <Tooltip content={<b>Community</b>}>
         <div className="vtask" >
           <UserIcon size="md" color='#484848'
@@ -102,46 +125,41 @@ const Task: React.FC<TaskProp> = (props: any) => {
   // }
   // for adding icon to task and pipeline
   let resourceIcon: React.ReactNode;
-  if (props.task.type.toLowerCase() === 'task') {
-    resourceIcon = <Tooltip content={<b>Task</b>}>
-      <BuildIcon
-        style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
-        color="#484848"
-      />
-    </Tooltip>;
-  } else {
-    resourceIcon = <Tooltip content={<b>Pipeline</b>}>
-      <DomainIcon
-        style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
-        color="#484848"
-      />
-    </Tooltip>;
-  };
-
-  // resource name
-  const resourceName = props.task.displayName === '' ?
-    <span style={{fontFamily: 'courier, monospace'}}>
-      {props.task.name}</span> : <span>
-      {props.task.displayName}</span>;
-
-
+  if (props.task) {
+    if (props.task.kind.toLowerCase() === 'task') {
+      resourceIcon = <Tooltip content={<b>Task</b>}>
+        <BuildIcon
+          style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
+          color="#484848"
+        />
+      </Tooltip>;
+    } else {
+      resourceIcon = <Tooltip content={<b>Pipeline</b>}>
+        <DomainIcon
+          style={{width: '2em', height: '2em', verticalAlign: '-0.2em'}}
+          color="#484848"
+        />
+      </Tooltip>;
+    };
+  }
   // resource summary
   let resourceSummary = '';
-  if (props.task.description.length > 120) {
-    resourceSummary = props.task.description.indexOf('\n') > 120 ?
-      props.task.description.substring(0, 120) :
-      props.task.description.substring(0,
-        props.task.description.indexOf('\n') !== -1 ?
-          props.task.description.indexOf('\n') : 120);
-    if (props.task.description.indexOf('\n') > 120 ||
-      props.task.description.indexOf('\n') === -1) {
+  if (description.length > 120) {
+    resourceSummary = lastIndex > 120 ? description.substring(0, 120) :
+      description.substring(0, lastIndex !== -1 ? lastIndex : 120);
+    if (lastIndex > 120 || lastIndex === -1) {
       resourceSummary += '...';
     }
   } else {
-    resourceSummary = props.task.description.indexOf('\n') !== -1 ?
-      props.task.description.substring(0, props.task.description.indexOf('\n')) :
-      props.task.description;
+    resourceSummary = lastIndex !== -1 ? description.substring(0, lastIndex) : description;
   }
+
+  // Display name
+
+  const resourceName = props.task.latestVersion.displayName === '' ?
+    <span style={{fontFamily: 'courier, monospace'}}>
+      {props.task.name}</span> : <span>
+      {props.task.latestVersion.displayName}</span>;
 
   return (
     <GalleryItem>
@@ -172,13 +190,12 @@ const Task: React.FC<TaskProp> = (props: any) => {
 
             </CardActions>
           </CardHead>
-          <CardHeader className="catalog-tile-pf-header">
 
+          <CardHeader className="catalog-tile-pf-header">
             <Grid>
               <GridItem span={9}>
                 <span className="task-heading">
                   {resourceName}
-                  {/* {props.task.name[0].toUpperCase() + props.task.name.slice(1)} */}
                 </span>
               </GridItem>
               <GridItem span={1}>
@@ -186,11 +203,12 @@ const Task: React.FC<TaskProp> = (props: any) => {
               </GridItem>
               <GridItem span={2} style={{marginTop: '0.25em'}}>
                 <span style={{marginLeft: '0.4em'}}>
-                  v{props.task.latestVersion}
+                  v{props.task.latestVersion.version}
                 </span>
               </GridItem>
             </Grid>
           </CardHeader>
+
           <CardBody className="catalog-tile-pf-body">
             <div className="catalog-tile-pf-description">
               <span>
@@ -203,7 +221,9 @@ const Task: React.FC<TaskProp> = (props: any) => {
 
 
             <TextContent className="text"
-              style={{marginBottom: '0.5em', marginTop: '-1em', marginLeft: '0em'}}>
+              style={{
+                marginBottom: '0.5em', marginTop: '-1em', marginLeft: '0em',
+              }}>
               Updated {diffDays}
             </TextContent>
 

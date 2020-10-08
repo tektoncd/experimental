@@ -39,7 +39,7 @@ const SearchBar: React.FC = (props: any) => {
     const trimmedText = value.trim();
     if (trimmedText.length !== 0) {
       const filtered = fuzzysort.go(trimmedText, props.TaskDataList, {
-        keys: ['name', 'displayName'],
+        keys: ['name', 'latestVersion.displayName'],
       });
       const suggestions = filtered.map((resource: any) => resource.obj);
       store.dispatch({
