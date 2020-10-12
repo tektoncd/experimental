@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import './index.css';
 import imgAvatar from '../assets/logo/imgAvatar.png';
 import {
@@ -27,13 +27,19 @@ import {
   Avatar,
   Grid,
   GridItem,
+  Dropdown,
+  DropdownItem,
+  DropdownToggle,
+  ClipboardCopy,
+  ClipboardCopyVariant,
+  Modal,
 } from '@patternfly/react-core';
 import Detail from '../detail/Detail';
 import BasicDetailParent from '../basic-detail/BasicDetailParent';
 import BackgroundImageHeader from '../background-image/BackgroundImage';
 import Login from '../Authentication/Login';
 import Footer from '../footer/Footer';
-import {GithubIcon} from '@patternfly/react-icons';
+// import { GithubIcon } from '@patternfly/react-icons';
 interface mainProps {
 
 }
@@ -55,12 +61,12 @@ const App: React.FC<mainProps> = () => {
   };
   let userimage: any;
   let displayUpload: any = '';
-  let authenticationButton;
+  let loginButton;
   if (localStorage.getItem('token') === null) {
-    authenticationButton = <Link to="/login">
+    loginButton = <Link to="/login">
       <span
         style={{
-          marginRight: '1em',
+          marginRight: '-1em',
           color: 'white',
           fontSize: '1em',
         }}>
@@ -68,10 +74,6 @@ const App: React.FC<mainProps> = () => {
     </Link>;
     displayUpload = '';
   } else {
-    authenticationButton = <Link to="/">
-      <span style={{marginRight: '1em', color: 'white', fontSize: '1em'}}
-        onClick={logoutUser}> Logout </span>
-    </Link>;
 
     // TODO -> commented upload feature
 
@@ -86,10 +88,17 @@ const App: React.FC<mainProps> = () => {
       style={{
         width: '1.5em',
         height: '1.5em',
-        marginRight: '2em',
       }}
       src={imgAvatar} alt="" />;
   }
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [isOpen, set] = useState(false);
+  const dropdownItems = [
+    <DropdownItem key="copyToken" onClick={() => setIsModalOpen(!isModalOpen)}>Copy Hub Token</DropdownItem>,
+    <DropdownItem key="logout" onClick={logoutUser}>Logout</DropdownItem>,
+  ];
+  const onToggle = (isOpen: React.SetStateAction<boolean>) => set(isOpen);
 
   // code for header contents
   const PageToolbar = (
@@ -98,7 +107,7 @@ const App: React.FC<mainProps> = () => {
       <Toolbar>
         <ToolbarGroup>
 
-          <ToolbarItem style={{color: 'white'}}>
+          <ToolbarItem style={{ color: 'white' }}>
             {displayUpload}
             <Button id="default-example-uid-01"
               aria-label="Notifications actions"
@@ -108,23 +117,57 @@ const App: React.FC<mainProps> = () => {
 
           <ToolbarItem>
             {
-              authenticationButton
+              loginButton
             }
           </ToolbarItem>
 
-          <ToolbarItem>
-            {userimage}
+          <ToolbarItem
+            style={{
+              marginRight: "-1em",
+            }}
+          >
+
+            {localStorage.getItem('token') !== null && <Dropdown
+              position='right'
+              dropdownItems={dropdownItems}
+              toggle={
+                <DropdownToggle onToggle={onToggle} >
+                  {userimage}
+                </DropdownToggle>
+              }
+              isPlain
+              isOpen={isOpen}
+            >
+            </Dropdown>}
+
           </ToolbarItem>
 
-          <ToolbarItem>
+          <React.Fragment>
+            <Modal
+              width={'50%'}
+              title="Copy Hub Token"
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(!isModalOpen)}
+            >
+              <hr />
+              <div>
+                <ClipboardCopy isReadOnly
+                  variant={ClipboardCopyVariant.expansion}>{localStorage.getItem('token')}
+                </ClipboardCopy>
+                <br />
+              </div>
+            </Modal>
+          </React.Fragment>
+
+          {/* <ToolbarItem>
             <span>
               <a href="https://github.com/tektoncd/hub" target="_">
                 <GithubIcon size="md"
-                  style={{color: 'white'}}
+                  style={{ color: 'white' }}
                 />
               </a>
             </span>
-          </ToolbarItem>
+          </ToolbarItem> */}
 
         </ToolbarGroup>
       </Toolbar>

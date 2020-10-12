@@ -55,7 +55,9 @@
 
 @media only screen and (max-width: 768px) {
     /* For mobile phones: */
-    /* .main {
+
+
+/* .main {
         display: grid;
         grid-template-areas:
             "navbar"
@@ -66,8 +68,13 @@
         grid-template-columns: 1fr;
         gap: 1em;
     }
-} */ */
+} */
 
-.header{
+.header {
     background-color: #EDEDED;
+}
+
+.pf-c-dropdown svg {
+    margin-left: 0.2em;
+    margin-right: 0em;
 }
