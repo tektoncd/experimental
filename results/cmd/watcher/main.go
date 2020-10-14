@@ -60,7 +60,13 @@ const (
 func main() {
 	flag.Parse()
 
-	// Setup TLS certs to the server.
+	opts := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithTimeout(30 * time.Second),
+	}
+
+	// Setup TLS certs to the server. Do this once since this is likely going
+	// to be shared in multiple auth modes.
 	certs, err := x509.SystemCertPool()
 	if err != nil {
 		log.Fatalf("error loading cert pool: %v", err)
@@ -68,18 +74,16 @@ func main() {
 	cred := credentials.NewTLS(&tls.Config{
 		RootCAs: certs,
 	})
-
-	opts := []grpc.DialOption{
-		grpc.WithAuthority(*apiAddr),
-		grpc.WithTransportCredentials(cred),
-		grpc.WithBlock(),
-		grpc.WithTimeout(30 * time.Second),
-	}
-
 	// Add in additional credentials to requests if desired.
 	switch *authMode {
 	case "google":
-		opts = append(opts, grpc.WithDefaultCallOptions(grpc.PerRPCCredentials(creds.Google())))
+		opts = append(opts,
+			grpc.WithAuthority(*apiAddr),
+			grpc.WithTransportCredentials(cred),
+			grpc.WithDefaultCallOptions(grpc.PerRPCCredentials(creds.Google())),
+		)
+	case "insecure":
+		opts = append(opts, grpc.WithInsecure())
 	}
 
 	log.Printf("dialing %s...\n", *apiAddr)

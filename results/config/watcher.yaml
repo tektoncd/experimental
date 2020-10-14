@@ -30,5 +30,6 @@ spec:
       - name: tekton-results-watcher
         image: ko://github.com/tektoncd/experimental/results/cmd/watcher
         args: [
-          '-api_addr', 'tekton-results-api-service.tekton-pipelines.cluster.local',
+          '-api_addr', 'tekton-results-api-service.tekton-pipelines.svc.cluster.local:50051',
+          '-auth_mode', 'insecure',
         ]
