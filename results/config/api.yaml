@@ -28,6 +28,21 @@ spec:
       containers:
       - name: tekton-results-api
         image: ko://github.com/tektoncd/experimental/results/cmd/api
+        env:
+          # See cmd/api/README.md for documentation of these vars.
+          - name: DB_USER
+            value: <fill this in>
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: <fill this in>
+                key: <fill this in>
+          - name: DB_PROTOCOL
+            value: <fill this in> 
+          - name: DB_ADDR
+            value: <fill this in> 
+          - name: DB_NAME
+            value: <fill this in> 
 
 ---
 
@@ -41,5 +56,5 @@ spec:
     app: tekton-results-api
   ports:
   - protocol: TCP
-    port: 80
+    port: 50051
     targetPort: 50051
