@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package tekton.pipeline.v1;
+
+import "taskrun.proto";
+
+option go_package = "./proto";
+
+message PipelineRun {
+	string api_version = 1;
+	string kind = 2; // TODO: must always be TaskRun?
+
+    ObjectMeta metadata = 3;
+
+    PipelineRunSpec spec = 4;
+    PipelineRunStatus status = 5;
+}
+
+message PipelineRunSpec {
+}
+
+message PipelineRunStatus {
+
+}

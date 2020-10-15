@@ -129,7 +129,3 @@ message Condition {
 	string reason = 5;
 	string message = 6;
 }
-
-message PipelineRun {
-
-}

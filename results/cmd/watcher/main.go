@@ -104,66 +104,99 @@ type reconciler struct {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, key string) error {
+	// 1. Get resource object from key
+	// 2. Convert the object to the corresponding Result object.
+	// 3. Create/Update the Result Object
+
 	r.logger.Infof("reconciling resource key: %s", key)
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		r.logger.Errorf("invalid resource key: %s", key)
-		return nil
-	}
-
-	// Get the Task Run resource with this namespace/name
-	tr, err := r.pipelineclientset.TektonV1beta1().TaskRuns(namespace).Get(name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		// The resource no longer exists, in which case we stop processing.
-		r.logger.Infof("task run %q in work queue no longer exists", key)
-		return nil
-	} else if err != nil {
-		r.logger.Errorf("Error retrieving Result %q: %s", name, err)
 		return err
 	}
 
-	r.logger.Infof("Receiving new Result %s/%s", namespace, tr.Name)
+	// Get the resource object with this namespace/name
+	taskRun, terr := r.pipelineclientset.TektonV1beta1().TaskRuns(namespace).Get(name, metav1.GetOptions{})
+	pipelineRun, perr := r.pipelineclientset.TektonV1beta1().PipelineRuns(namespace).Get(name, metav1.GetOptions{})
 
-	// Send the new status of the Result to the API server.
-	p, err := convert.ToProto(tr)
-	if err != nil {
-		r.logger.Errorf("Error converting to proto: %v", err)
+	if errors.IsNotFound(terr) && errors.IsNotFound(perr) {
+		r.logger.Infof("Task/Pipeline run %q in work queue no longer exists", key)
 		return err
 	}
-	res := &pb.Result{
-		Executions: []*pb.Execution{{
-			Execution: &pb.Execution_TaskRun{p},
-		}},
+	if terr != nil {
+		r.logger.Errorf("Error retrieving TaskRun %q: %s", name, terr)
+		return terr
+	}
+	if perr != nil {
+		r.logger.Errorf("Error retrieving PipelineRun %q: %s", name, perr)
+		return perr
 	}
 
-	// Create a Result if it does not exist in results server, update existing one otherwise.
-	if val, ok := p.GetMetadata().GetAnnotations()[idName]; ok {
-		res.Name = val
+	r.logger.Infof("Receiving new Result %s/%s", namespace, name)
+
+	var result *pb.Result = nil
+
+	val := ""
+	ok := false
+	resultType := "OPAQUE"
+
+	if taskRun != nil {
+		resultType = "TASKRUN"
+		p, err := convert.ToTaskRunProto(taskRun)
+		if err != nil {
+			r.logger.Errorf("Error converting to proto: %v", err)
+			return err
+		}
+		result = &pb.Result{
+			Executions: []*pb.Execution{{
+				Execution: &pb.Execution_TaskRun{p},
+			}},
+		}
+		val, ok = p.GetMetadata().GetAnnotations()[idName]
+	}
+	if pipelineRun != nil {
+		resultType = "PIPELINERUN"
+		p, err := convert.ToPipelineRunProto(pipelineRun)
+		if err != nil {
+			r.logger.Errorf("Error converting to proto: %v", err)
+			return err
+		}
+		result = &pb.Result{
+			Executions: []*pb.Execution{{
+				Execution: &pb.Execution_PipelineRun{p},
+			}},
+		}
+		val, ok = p.GetMetadata().GetAnnotations()[idName]
+	}
+
+	if ok {
+		result.Name = val
 		if _, err := r.client.UpdateResult(ctx, &pb.UpdateResultRequest{
 			Name:   val,
-			Result: res,
+			Result: result,
 		}); err != nil {
-			r.logger.Errorf("Error updating TaskRun %s: %v", name, err)
+			r.logger.Errorf("Error updating Tekton Result(%s): %s\n%v", resultType, val, err)
 			return err
 		}
-		r.logger.Infof("Sending updates for TaskRun %s/%s (result: %s)", namespace, tr.Name, val)
+		r.logger.Infof("Sending updates for Tekton Result(%s): %s/%s (result: %s)", resultType, namespace, name, val)
 	} else {
-		res, err = r.client.CreateResult(ctx, &pb.CreateResultRequest{
-			Result: res,
+		result, err = r.client.CreateResult(ctx, &pb.CreateResultRequest{
+			Result: result,
 		})
 		if err != nil {
-			r.logger.Errorf("Error creating Result %s: %v", name, err)
+			r.logger.Errorf("Error creating Tekton Result(%s): %s/%s\n%v", resultType, namespace, name, err)
 			return err
 		}
-		path, err := annotationPath(res.GetName(), path, "add")
+		path, err := annotationPath(result.GetName(), path, "add")
 		if err != nil {
-			r.logger.Errorf("Error jsonpatch for Result %s : %v", name, err)
+			r.logger.Errorf("Error jsonpatch for Tekton Result(%s): %s/%s\n%v", resultType, namespace, name, err)
 			return err
 		}
 		r.pipelineclientset.TektonV1beta1().TaskRuns(namespace).Patch(name, types.JSONPatchType, path)
-		r.logger.Infof("Creating a new TaskRun result %s/%s (result: %s)", namespace, tr.Name, res.GetName())
+		r.logger.Infof("Creating a new Tekton Result(%s): %s/%s (result: %s)", resultType, namespace, name, result.GetName())
 	}
-	return nil
+
+	return err
 }
 
 // AnnotationPath creates a jsonpatch path used for adding results_id to Result annotations field.
