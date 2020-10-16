@@ -12,3 +12,5 @@
 
 Values derived from MySQL DSN (see
 https://github.com/go-sql-driver/mysql#dsn-data-source-name)
+
+If you use the default MySQL server we provide, the `DB_ADDR` can be set as `tekton-results-mysql.tekton-pipelines`.
