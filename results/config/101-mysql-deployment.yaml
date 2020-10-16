@@ -1,28 +1,29 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysql
+  name: tekton-results-mysql
+  namespace: tekton-pipelines
 spec:
   ports:
   - port: 3306
   selector:
-    app: mysql
-  clusterIP: None
+    app: tekton-results-mysql
 ---
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: mysql
+  name: tekton-results-mysql
+  namespace: tekton-pipelines
 spec:
   selector:
     matchLabels:
-      app: mysql
+      app: tekton-results-mysql
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: mysql
+        app: tekton-results-mysql
     spec:
       containers:
       - image: mysql:5.6
@@ -30,7 +31,10 @@ spec:
         env:
           # Use secret in real usage
         - name: MYSQL_ROOT_PASSWORD
-          value: password
+          valueFrom:
+            secretKeyRef:
+              name: <fill this in>
+              key: <fill this in>
         ports:
         - containerPort: 3306
           name: mysql
@@ -40,4 +44,4 @@ spec:
       volumes:
       - name: mysql-persistent-storage
         persistentVolumeClaim:
-          claimName: mysql-pv-claim
+          claimName: results-mysql-pv-claim

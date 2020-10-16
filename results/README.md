@@ -13,13 +13,18 @@ API server.
 The API server interface is defined in `./proto/api.proto`, and a reference
 implementation backed by Sqlite will live in `./cmd/api`. A reference
 implementation of the in-cluster watcher will live in `./cmd/watcher`.
+A local Mysql server configuration will be `./config/mysql-*.yaml`.
 
 ## Development
 
 ### Configure your database.
 
-The API Server requires a SQL database to connect to for result storage. The
-database schema can be found under [schema/results.sql](schema/results.sql).
+The API Server requires a SQL database to connect to for result storage.
+database schema can be found under [schema/results.sql](schema/results.sql). We provide a MySQL server as default. To deploy the default MySQL server in Tekton, you need to first set the environment variable `MYSQL_ROOT_PASSWORD`, then run:
+
+```
+ko apply -f config/mysql-pv.yaml && ko apply -f config/mysql-deployment.yaml
+```
 
 Connection parameters are
 [configured via environment variables](cmd/api/README.md). Configure these in
