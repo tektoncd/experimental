@@ -3,7 +3,7 @@ module github.com/tektoncd/experimental/results
 go 1.13
 
 require (
-	cloud.google.com/go v0.66.0
+	cloud.google.com/go v0.66.0 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.2
