@@ -1,4 +1,4 @@
-package main
+package reconciler
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/tektoncd/experimental/results/pkg/convert"
-	"github.com/tektoncd/experimental/results/pkg/server"
+	"github.com/tektoncd/experimental/results/pkg/api/server"
+	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
@@ -38,7 +38,7 @@ func getFakeClients(t *testing.T, tr []*v1beta1.TaskRun, client pb.ResultsClient
 	clients, _ := test.SeedTestData(t, ctx, d)
 	cmw := configmap.NewInformedWatcher(clients.Kube, "")
 	return test.Assets{
-		Controller: newController(ctx, cmw, client),
+		Controller: NewController(ctx, cmw, client),
 		Clients:    clients,
 	}, ctx
 }

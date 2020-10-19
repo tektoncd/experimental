@@ -25,7 +25,7 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/tektoncd/experimental/results/pkg/server"
+	"github.com/tektoncd/experimental/results/pkg/api/server"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

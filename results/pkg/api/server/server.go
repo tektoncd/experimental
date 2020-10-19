@@ -252,7 +252,7 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 	t.Cleanup(func() {
 		db.Close()
 	})
-	schema, err := ioutil.ReadFile("../../schema/results.sql")
+	schema, err := ioutil.ReadFile("../../../schema/results.sql")
 	if err != nil {
 		t.Fatalf("failed to read schema file: %v", err)
 	}
