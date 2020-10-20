@@ -24,10 +24,12 @@ source $(git rev-parse --show-toplevel)/task-loops/test/e2e-taskloops.sh
 
 initialize $@
 
+# initialize function does a CD to REPO_ROOT_DIR so we have to CD back here.
+cd ${REPO_ROOT_DIR}/task-loops
+
 header "Setting up environment"
 
-# TODO: Need to update to version with Run enhancements (pr 3301)
-install_pipeline_crd_version v0.16.3
+install_pipeline_crd_version v0.17.0
 
 install_taskloop_crd
 

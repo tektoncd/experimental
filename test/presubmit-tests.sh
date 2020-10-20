@@ -26,20 +26,41 @@ source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/presubmit-te
 function run() {
     folder=$1
     header "${folder}"
-    shift
-    pushd $(dirname $0)/../${folder} || return 1
-    if [[ -f ./test/presubmit-tests.sh ]]; then
-        ./test/presubmit-tests.sh $@ || exited=1
-    else
-        echo "Skip due to no `./test/presubmit-tests.sh` file"
+    if should_test_folder $folder ; then
+      shift
+      pushd $(dirname $0)/../${folder} || return 1
+      if [[ -f ./test/presubmit-tests.sh ]]; then
+          ./test/presubmit-tests.sh $@ || exited=1
+      else
+          echo "Skip due to no './test/presubmit-tests.sh' file"
+      fi
+      popd >/dev/null
+      return $exited
     fi
-    popd >/dev/null
-    return $exited
+    echo "Skip - no files changed"
+    return 0
 }
 
-run webhooks-extension $@ || exit 1
-run catalogs $@ || exit 1
-run octant-plugin $@ || exit 1
-run tekdoc  $@ || exit 1
-run results $@ || exit 1
-run generators $@ || exit 1
+function should_test_folder() {
+    # If initialize_environment failed to identify the changed files, fall back to testing everything.
+    if [[ -z "$(cat ${CHANGED_FILES})" ]]; then
+        echo "Cannot determine changed files.  Testing all projects." && return 0
+    fi
+    for file in $(cat "${CHANGED_FILES}"); do
+        # If changed file is in the folder then test that folder.
+        echo $file | grep -q "^$1/.*" && echo "$file is modified so testing project $1" && return 0
+        # If changed file is outside all project folders then test every folder.
+        echo $file | grep -q -v $inanyprojectregex && echo "$file is modified so testing all projects" && return 0
+    done
+    return 1
+}
+
+# Get list of changed files
+initialize_environment
+
+projects="catalogs commit-status-tracker generators helm hub oci octant-plugin pipeline/cleanup results tekdoc task-loops webhooks-extension"
+inanyprojectregex=$(echo "^${projects// /\/.* ^}\/.*" | sed 's/ /\\|/g')
+
+for proj in $projects; do
+    run $proj $@ || exit 1
+done
