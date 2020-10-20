@@ -465,7 +465,7 @@ func TestTaskLoopRun(t *testing.T) {
 
 			run := tc.run.DeepCopy()
 			run.Namespace = namespace
-			run, err := c.RunClient.Create(tc.run)
+			run, err := c.RunClient.Create(run)
 			if err != nil {
 				t.Fatalf("Failed to create Run `%s`: %s", run.Name, err)
 			}

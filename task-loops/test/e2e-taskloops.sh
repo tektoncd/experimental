@@ -38,7 +38,7 @@ function verify_taskloop_installation() {
 
 function uninstall_taskloop_crd() {
   echo ">> Uninstalling TaskLoop custom task"
-  ko delete --ignore-not-found=true -f config/
+  ko delete --ignore-not-found=true -f ${REPO_ROOT_DIR}/task-loops/config/
 
   # Make sure that everything is cleaned up in the current namespace.
   delete_taskloop_resources
