@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package tekton.pipeline.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "./proto";
+
+message ObjectMeta {
+	string name = 1;
+	string generate_name = 2;
+	string namespace = 3;
+	string uid = 4;
+	int64 generation = 5;
+	google.protobuf.Timestamp creation_timestamp = 6;
+	google.protobuf.Timestamp deletion_timestamp = 7;
+	map<string,string> labels = 8;
+	map<string,string> annotations = 9;
+}
+
+message Condition {
+	string type = 1;
+	string status = 2;
+	string severity = 3;
+	google.protobuf.Timestamp last_transition_time = 4;
+	string reason = 5;
+	string message = 6;
+}

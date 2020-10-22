@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package tekton.pipeline.v1;
+
+import "common.proto";
+import "taskrun.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "./proto";
+
+message PipelineRun {
+  string api_version = 1;
+  string kind = 2;
+
+	ObjectMeta metadata = 3;
+
+	PipelineRunSpec spec = 4;
+	PipelineRunStatus status = 5;
+}
+
+message PipelineRunSpec {
+  PipelineSpec pipeline_spec = 2;
+	google.protobuf.Duration timeout = 8;
+}
+
+message PipelineSpec {
+  repeated PipelineTask tasks = 3;
+  repeated PipelineResult results = 6;
+
+  repeated PipelineTask finally = 7;
+}
+
+message PipelineTask {
+  string name = 1;
+  TaskRef task_ref = 2;
+  EmbeddedTask task_spec = 3;
+
+  google.protobuf.Duration timeout = 11;
+}
+
+message TaskRef{
+  string name = 1;
+  string kind = 2;
+  string api_version = 3;
+}
+
+message EmbeddedTask{
+  PipelineTaskMetadata metadata = 1;
+
+  repeated Step steps = 2;
+	repeated Volume volumes = 3;
+	repeated Step sidecars = 4;
+}
+
+message PipelineTaskMetadata{
+  map<string, string> labels = 1;
+  map<string, string> annotations = 2;
+}
+
+message PipelineResult {
+  string name = 1;
+  string description = 2;
+  string value = 3;
+}
+
+message PipelineRunStatus {
+  repeated Condition conditions = 1;
+  int64 observed_generation = 2;
+	map<string, string> annotations = 3;
+	google.protobuf.Timestamp start_time = 4;
+  google.protobuf.Timestamp completion_time = 5;
+
+  // The type of this field in go struct is map[string]*PipelineRunTaskRunStatus
+  map<string, PipelineRunTaskRunStatus> task_runs = 6;
+  PipelineSpec pipeline_spec = 7;
+}
+
+message PipelineRunTaskRunStatus {
+  string pipeline_task_name = 1;
+  TaskRunStatus status = 2;
+}

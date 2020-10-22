@@ -12,7 +12,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
+const _ = grpc.SupportPackageIsVersion7
 
 // ResultsClient is the client API for Results service.
 //
@@ -94,22 +94,29 @@ type ResultsServer interface {
 type UnimplementedResultsServer struct {
 }
 
-func (*UnimplementedResultsServer) CreateResult(context.Context, *CreateResultRequest) (*Result, error) {
+func (UnimplementedResultsServer) CreateResult(context.Context, *CreateResultRequest) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateResult not implemented")
 }
-func (*UnimplementedResultsServer) UpdateResult(context.Context, *UpdateResultRequest) (*Result, error) {
+func (UnimplementedResultsServer) UpdateResult(context.Context, *UpdateResultRequest) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateResult not implemented")
 }
-func (*UnimplementedResultsServer) GetResult(context.Context, *GetResultRequest) (*Result, error) {
+func (UnimplementedResultsServer) GetResult(context.Context, *GetResultRequest) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetResult not implemented")
 }
-func (*UnimplementedResultsServer) DeleteResult(context.Context, *DeleteResultRequest) (*empty.Empty, error) {
+func (UnimplementedResultsServer) DeleteResult(context.Context, *DeleteResultRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteResult not implemented")
 }
-func (*UnimplementedResultsServer) ListResults(context.Context, *ListResultsRequest) (*ListResultsResponse, error) {
+func (UnimplementedResultsServer) ListResults(context.Context, *ListResultsRequest) (*ListResultsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListResults not implemented")
 }
-func (*UnimplementedResultsServer) mustEmbedUnimplementedResultsServer() {}
+func (UnimplementedResultsServer) mustEmbedUnimplementedResultsServer() {}
+
+// UnsafeResultsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ResultsServer will
+// result in compilation errors.
+type UnsafeResultsServer interface {
+	mustEmbedUnimplementedResultsServer()
+}
 
 func RegisterResultsServer(s *grpc.Server, srv ResultsServer) {
 	s.RegisterService(&_Results_serviceDesc, srv)

@@ -44,3 +44,20 @@ func ToProto(tr *v1beta1.TaskRun) (*pb.TaskRun, error) {
 	}
 	return out, nil
 }
+
+// ToPipelineRunProto converts a v1beta1.PipelineRun object to the equivalent
+// Results API proto message.o
+func ToPipelineRunProto(pr *v1beta1.PipelineRun) (*pb.PipelineRun, error) {
+	b, err := json.Marshal(pr)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling PipelineRun: %v", err)
+	}
+	out := new(pb.PipelineRun)
+	m := jsonpb.Unmarshaler{
+		AllowUnknownFields: true,
+	}
+	if err := m.Unmarshal(bytes.NewBuffer(b), out); err != nil {
+		return nil, fmt.Errorf("error converting PipelineRun to proto: %v", err)
+	}
+	return out, nil
+}

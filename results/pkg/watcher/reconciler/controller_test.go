@@ -132,6 +132,7 @@ func TestReconcile(t *testing.T) {
 		tr.UID = "234435"
 		asset.Clients.Pipeline.TektonV1beta1().TaskRuns(taskRun.Namespace).Update(tr)
 		updatetr, err := reconcileTaskRun(ctx, asset, tr)
+		updatetr.ResourceVersion = tr.ResourceVersion
 		if err != nil {
 			t.Fatalf("Failed to get completed TaskRun %s: %v", taskRun.Name, err)
 		}
