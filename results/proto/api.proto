@@ -3,6 +3,7 @@ syntax = "proto3";
 package tekton.results.v1;
 
 import "taskrun.proto";
+import "pipelinerun.proto";
 import "google/api/field_behavior.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/any.proto";

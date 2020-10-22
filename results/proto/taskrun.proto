@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package tekton.pipeline.v1;
 
+import "common.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -20,18 +21,6 @@ message TaskRun {
 	TaskRunSpec spec = 4;
 	TaskRunStatus status = 5;
 	// TODO: Add the rest of the fields. Generate this from Go structs?
-}
-
-message ObjectMeta {
-	string name = 1;
-	string generate_name = 2;
-	string namespace = 3;
-	string uid = 4;
-	int64 generation = 5;
-	google.protobuf.Timestamp creation_timestamp = 6;
-	google.protobuf.Timestamp deletion_timestamp = 7;
-	map<string,string> labels = 8;
-	map<string,string> annotations = 9;
 }
 
 message TaskRunSpec {
@@ -119,17 +108,4 @@ message ContainerStateTerminated {
 	google.protobuf.Timestamp started_at = 5;
 	google.protobuf.Timestamp finished_at = 6;
 	string container_id = 7 [json_name="containerID"];
-}
-
-message Condition {
-	string type = 1;
-	string status = 2;
-	string severity = 3;
-	google.protobuf.Timestamp last_transition_time = 4;
-	string reason = 5;
-	string message = 6;
-}
-
-message PipelineRun {
-
 }
