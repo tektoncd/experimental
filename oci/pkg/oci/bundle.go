@@ -11,18 +11,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	"gopkg.in/yaml.v2"
+	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes/scheme"
 )
-
-func init() {
-	// Because we are using the K8s deserializer, we need to add Tekton's types to it.
-	schemeBuilder := runtime.NewSchemeBuilder(v1alpha1.AddToScheme)
-	schemeBuilder.AddToScheme(scheme.Scheme)
-}
 
 // ParsedTektonResource represents a full Tekton task, pipeline, etc that has been read in from the user along with
 // metadata about the resource.
@@ -133,21 +125,16 @@ func readPath(filePath string) ([]ParsedTektonResource, error) {
 // CRD object and return the parsed representation.
 func decodeObject(contents string) (*ParsedTektonResource, error) {
 	object, kind, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(contents), nil, nil)
-	if err != nil || kind.GroupVersion().Identifier() != v1alpha1.SchemeGroupVersion.Identifier() {
+	if err != nil {
 		return nil, errors.Wrapf(err, "resource is not a valid Kubernetes resource:\n%s", contents)
 	}
 
 	resourceName := getResourceName(object, kind.Kind)
-	// Convert the structured data into yaml to get a "clean" copy of the resource.
-	rawContents, err := yaml.Marshal(object)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not marshal %+v to yaml", object)
-	}
 
 	return &ParsedTektonResource{
 		Name:     resourceName,
 		Kind:     kind,
-		Contents: string(rawContents),
+		Contents: contents,
 		Object:   object,
 	}, nil
 }
