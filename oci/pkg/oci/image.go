@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -25,10 +25,11 @@ func PushImage(ref name.Reference, resources []ParsedTektonResource) error {
 			return fmt.Errorf("Error creating layer for resource %s/%s: %w", r.Kind, r.Name, err)
 		}
 		img, err = mutate.Append(img, mutate.Addendum{
-			// TODO: Specify custom layer media type ("application/vnd.cdf.tekton.catalog.v1alpha1+json")
 			Layer: l,
 			Annotations: map[string]string{
-				"org.opencontainers.image.title": getLayerName(r.Kind.Kind, r.Name),
+				"dev.tekton.image.name":       r.Name,
+				"dev.tekton.image.kind":       strings.ToLower(r.Kind.Kind),
+				"dev.tekton.image.apiVersion": r.Kind.Version,
 			},
 		})
 		if err != nil {
@@ -70,7 +71,7 @@ func PullImage(ref name.Reference, kind string, name string) ([]byte, error) {
 	var layer v1.Layer
 	for idx, l := range m.Layers {
 		// TODO: Check for custom media type.
-		if l.Annotations["org.opencontainers.image.title"] == getLayerName(kind, name) {
+		if l.Annotations["dev.tekton.image.name"] == getLayerName(kind, name) {
 			layer = ls[idx]
 			break
 		}

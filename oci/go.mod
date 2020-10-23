@@ -13,14 +13,12 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.4.0 // indirect
 	github.com/spf13/cobra v0.0.5
-	github.com/tektoncd/pipeline v0.10.1
+	github.com/tektoncd/pipeline v0.11.2
 	go.opencensus.io v0.22.3 // indirect
 	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
 	google.golang.org/grpc v1.27.1 // indirect
-	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.17.2 // indirect
 	k8s.io/apimachinery v0.17.2
 	k8s.io/client-go v0.17.0
