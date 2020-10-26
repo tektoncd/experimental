@@ -9,7 +9,7 @@ export function fetchTaskSuccess() {
       .then((TaskData) => {
         dispatch({
           type: FETCH_TASK_SUCCESS,
-          payload: TaskData.sort((first: any, second: any) =>
+          payload: TaskData.data.sort((first: any, second: any) =>
             first.name > second.name ? 1 : -1),
         });
       });

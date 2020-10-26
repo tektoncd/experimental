@@ -76,7 +76,7 @@ const Filter: React.FC = (props: any) => {
     fetch(`${API_URL}/categories`)
       .then((res) => res.json())
       .then((categoryData) =>
-        setCategoriesList(addCategory(categoryData)));
+        setCategoriesList(addCategory(categoryData.data)));
     if (categoriesList) {
       (Object.keys(categoriesList)).map((category) => {
         return tempObj.category = false;
