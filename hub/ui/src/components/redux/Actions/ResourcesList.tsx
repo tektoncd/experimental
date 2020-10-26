@@ -9,7 +9,7 @@ export function fetchResourceList() {
       .then((TaskData) =>
         dispatch({
           type: FETCH_RESOURCE_LIST,
-          payload: TaskData,
+          payload: TaskData.data,
         }));
   };
 }
