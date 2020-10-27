@@ -8,7 +8,7 @@ export function fetchTaskName(id: number) {
       .then((response) => response.json())
       .then((TaskName) => dispatch({
         type: FETCH_TASK_NAME,
-        payload: TaskName,
+        payload: TaskName.data,
       }));
   };
 }

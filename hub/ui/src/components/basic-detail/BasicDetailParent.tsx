@@ -16,7 +16,7 @@ const Detail: React.FC = (props: any) => {
     props.fetchTaskSuccess();
     fetch(`${ API_URL }/resource/${ taskId }/versions`)
       .then((response) => response.json())
-      .then((data) => setAllversion(data.versions));
+      .then((res) => setAllversion(res.data.versions));
     // eslint-disable-next-line
   }, []);
 
