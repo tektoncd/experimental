@@ -19,26 +19,26 @@ cross: amd64 386 arm arm64 ## build cross platform binaries
 
 .PHONY: amd64
 amd64:
-	GOOS=linux GOARCH=amd64 go build -mod=vendor $(LDFLAGS) -o bin/oci-linux-amd64 ./cmd/oci
-	GOOS=windows GOARCH=amd64 go build -mod=vendor $(LDFLAGS) -o bin/oci-windows-amd64 ./cmd/oci
-	GOOS=darwin GOARCH=amd64 go build -mod=vendor $(LDFLAGS) -o bin/oci-darwin-amd64 ./cmd/oci
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o bin/oci-linux-amd64 ./cmd/oci
+	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o bin/oci-windows-amd64 ./cmd/oci
+	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o bin/oci-darwin-amd64 ./cmd/oci
 
 .PHONY: 386
 386:
-	GOOS=linux GOARCH=386 go build -mod=vendor $(LDFLAGS) -o bin/oci-linux-386 ./cmd/oci
-	GOOS=windows GOARCH=386 go build -mod=vendor $(LDFLAGS) -o bin/oci-windows-386 ./cmd/oci
-	GOOS=darwin GOARCH=386 go build -mod=vendor $(LDFLAGS) -o bin/oci-darwin-386 ./cmd/oci
+	GOOS=linux GOARCH=386 go build $(LDFLAGS) -o bin/oci-linux-386 ./cmd/oci
+	GOOS=windows GOARCH=386 go build $(LDFLAGS) -o bin/oci-windows-386 ./cmd/oci
+	GOOS=darwin GOARCH=386 go build $(LDFLAGS) -o bin/oci-darwin-386 ./cmd/oci
 
 .PHONY: arm
 arm:
-	GOOS=linux GOARCH=arm go build -mod=vendor $(LDFLAGS) -o bin/oci-linux-arm ./cmd/oci
+	GOOS=linux GOARCH=arm go build $(LDFLAGS) -o bin/oci-linux-arm ./cmd/oci
 
 .PHONY: arm64
 arm64:
-	GOOS=linux GOARCH=arm64 go build -mod=vendor $(LDFLAGS) -o bin/oci-linux-arm64 ./cmd/oci
+	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o bin/oci-linux-arm64 ./cmd/oci
 
 bin/%: cmd/% vendor FORCE
-	go build -mod=vendor $(LDFLAGS) -v -o $@ ./$<
+	go build $(LDFLAGS) -v -o $@ ./$<
 
 check: lint test
 
