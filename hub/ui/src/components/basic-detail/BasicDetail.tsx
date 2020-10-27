@@ -133,22 +133,22 @@ const BasicDetail: React.FC<BasicDetailProp> = (props: any) => {
   function getVersionDetail(event: any) {
     fetch(`${API_URL}/resource/version/${event.target.name}`)
       .then((response) => response.json())
-      .then((data) => {
-        props.fetchTaskDescription(data.rawURL);
+      .then((res) => {
+        props.fetchTaskDescription(res.data.rawURL);
 
-        setHref(`${data.webURL.substring(0,
-          data.webURL.lastIndexOf('/') + 1)}`);
+        setHref(`${res.data.webURL.substring(0,
+          res.data.webURL.lastIndexOf('/') + 1)}`);
 
-        setTaskLink(`kubectl apply -f ${data.rawURL}`);
+        setTaskLink(`kubectl apply -f ${res.data.rawURL}`);
 
-        setSummary(data.description.substring(0,
-          data.description.indexOf('\n')) || description);
+        setSummary(res.data.description.substring(0,
+          res.data.description.indexOf('\n')) || description);
 
         setShortDescription(
           description.indexOf('\n') !== -1 ?
             description.substring(lastIndex + 1).trim() : ' ');
-        if (data.displayName !== '') {
-          setResourceName(data.displayName);
+        if (res.data.displayName !== '') {
+          setResourceName(res.data.displayName);
         }
       });
     setVersion(event.target.text);
