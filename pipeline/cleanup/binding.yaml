@@ -4,7 +4,21 @@ metadata:
   name: cleanup-details
 spec:
   params:
-  - name: keep
-    value: $(body.params.cleanup.keep) 
   - name: namespace
     value: $(body.params.target.namespace)
+  - name: keep
+    value: $(body.params.cleanup.keep)
+  - name: filename
+    value: $(body.params.auth.filename)
+  - name: name
+    value: $(body.params.auth.name)
+  - name: url
+    value: $(body.params.auth.url)
+  - name: username
+    value: $(body.params.auth.username)
+  - name: cadata
+    value: $(body.params.auth.cadata)
+  - name: clientKeyData
+    value: $(body.params.auth.clientkeydata)
+  - name: clientCertificateData
+    value: $(body.params.auth.clientcertdata)

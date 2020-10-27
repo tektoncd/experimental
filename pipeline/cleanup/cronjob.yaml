@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: cleanup-trigger
 spec:
-  schedule: "*/1 * * * *"
+  schedule: "0 12 * * *"
   jobTemplate:
     spec:
       template:
@@ -27,7 +27,15 @@ spec:
                       "namespace": "$NAMESPACE"
                     },
                     "cleanup": {
-                        "keep": "$CLEANUP_KEEP"
+                      "keep": "$CLEANUP_KEEP"
+                    }, 
+                    "auth": {
+                      "filename:" $FILENAME
+                      "name": "$NAME",
+                      "url": "$URL",
+                      "cadata": "$CA_DATA",
+                      "clientKeyData": "$CLIENT_KEY_DATA",
+                      "clientCertificateData: "$CLIENT_CERTIFICATE_DATA"
                     }
                   }
                 }
@@ -37,10 +45,20 @@ spec:
             - mountPath: /workspace
               name: workspace
             env:
-              - name: SINK_URL
-                value: "http://el-tekton-cd.default.svc.cluster.local:8080"
+              - name: URL
+                value: https://api.ci-ln-...
               - name: NAMESPACE
-                value: "default"
+                value: default
+              - name: FILENAME
+                value: kubeconfig
               - name: CLEANUP_KEEP
-                value: "1"
+                value: "5"
+              - name: NAME 
+                value: cluster-bot
+              - name: CA_DATA
+                value: LS0tLS... 
+              - name: CLIENT_KEY_DATA
+                value: LS0tLS...
+              - name: CLIENT_CERTIFICATE_DATA
+                value: LS0tLS...
           restartPolicy: Never
