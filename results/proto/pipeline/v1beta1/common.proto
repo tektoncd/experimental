@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package tekton.pipeline.v1;
+package tekton.pipeline.v1beta1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "./proto";
+option go_package = "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto";
 
 message ObjectMeta {
 	string name = 1;

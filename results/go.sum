@@ -1039,6 +1039,7 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
 github.com/syndtr/gocapability v0.0.0-20170704070218-db04d3cc01c8/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/tdakkota/asciicheck v0.0.0-20200416190851-d7f85be797a2/go.mod h1:yHp0ai0Z9gUljN3o0xMhYJnH/IcvkdTBOX2fmJ93JEM=
 github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b/go.mod h1:yHp0ai0Z9gUljN3o0xMhYJnH/IcvkdTBOX2fmJ93JEM=
+github.com/tektoncd/experimental v0.7.0 h1:gxk3GF3hAq7JS1ysmgbMkjTsnWhX/Muw3mNU5fSmUpo=
 github.com/tektoncd/pipeline v0.11.0/go.mod h1:hlkH32S92+/UODROH0dmxzyuMxfRFp/Nc3e29MewLn8=
 github.com/tektoncd/pipeline v0.13.1-0.20200625065359-44f22a067b75/go.mod h1:R5AlT46x/F8n/pFJFjZ1U1q71GWtVXgG7RZkkoRL554=
 github.com/tektoncd/pipeline v0.17.1 h1:wLbdo+dnOKSqr8mNN5rT6UQ80hlyx06/bOVul5oITZk=

@@ -24,7 +24,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/jsonpb"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	pb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 

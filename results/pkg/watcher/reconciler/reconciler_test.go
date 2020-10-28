@@ -10,7 +10,7 @@ import (
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/pipelinerun"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/taskrun"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/test"
 	"google.golang.org/protobuf/testing/protocmp"

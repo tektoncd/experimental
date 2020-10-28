@@ -24,7 +24,7 @@ import (
 	durpb "github.com/golang/protobuf/ptypes/duration"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	pb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"google.golang.org/protobuf/testing/protocmp"
 	corev1 "k8s.io/api/core/v1"

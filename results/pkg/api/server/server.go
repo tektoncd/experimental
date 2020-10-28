@@ -18,7 +18,7 @@ import (
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	mask "go.chromium.org/luci/common/proto/mask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -276,7 +276,7 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 func New(db *sql.DB) (*Server, error) {
 	env, err := cel.NewEnv(
 		cel.Types(&pb.Result{}),
-		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.pipeline.v1.TaskRun"), nil)),
+		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.pipeline.v1beta1.TaskRun"), nil)),
 	)
 	if err != nil {
 		log.Fatalf("failed to create environment for filter: %v", err)

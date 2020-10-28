@@ -5,7 +5,7 @@ import (
 
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"go.uber.org/zap"
