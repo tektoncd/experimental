@@ -27,7 +27,7 @@ import (
 	creds "github.com/tektoncd/experimental/results/pkg/watcher/grpc"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/pipelinerun"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/taskrun"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"

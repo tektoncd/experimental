@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
+	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"google.golang.org/genproto/protobuf/field_mask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,9 +29,9 @@ func TestCreateResult(t *testing.T) {
 	// connect to fake server and do testing
 	ctx := context.Background()
 	if _, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
-		Result: TaskRunResult(&pb.TaskRun{
+		Result: TaskRunResult(&ppb.TaskRun{
 			ApiVersion: "1",
-			Metadata: &pb.ObjectMeta{
+			Metadata: &ppb.ObjectMeta{
 				Uid:       "123459",
 				Name:      "mytaskrun",
 				Namespace: "default",
@@ -49,9 +50,9 @@ func TestGetResult(t *testing.T) {
 	ctx := context.Background()
 	// Connect to fake server and create a new taskrun
 	r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
-		Result: TaskRunResult(&pb.TaskRun{
+		Result: TaskRunResult(&ppb.TaskRun{
 			ApiVersion: "v1beta1",
-			Metadata: &pb.ObjectMeta{
+			Metadata: &ppb.ObjectMeta{
 				Uid:       "31415926",
 				Name:      "mytaskrun",
 				Namespace: "default",
@@ -80,7 +81,7 @@ func TestUpdateResult(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	// Validate by checking if ouput equlas expected Result
+	// Validate by checking if output equals expected Result
 	tt := []struct {
 		name      string
 		in        *pb.Result
@@ -92,18 +93,18 @@ func TestUpdateResult(t *testing.T) {
 		{
 			in:   &pb.Result{},
 			name: "Test no Mask",
-			update: TaskRunResult(&pb.TaskRun{
+			update: TaskRunResult(&ppb.TaskRun{
 				ApiVersion: "v1beta1",
-				Metadata: &pb.ObjectMeta{
+				Metadata: &ppb.ObjectMeta{
 					Uid:       "123456",
 					Name:      "newtaskrun",
 					Namespace: "tekton",
 				},
 			}),
 			// update entire taskrun
-			expect: TaskRunResult(&pb.TaskRun{
+			expect: TaskRunResult(&ppb.TaskRun{
 				ApiVersion: "v1beta1",
-				Metadata: &pb.ObjectMeta{
+				Metadata: &ppb.ObjectMeta{
 					Uid:       "123456",
 					Name:      "newtaskrun",
 					Namespace: "tekton",
@@ -119,9 +120,9 @@ func TestUpdateResult(t *testing.T) {
 			expect: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
 		},
 		{
-			in: TaskRunResult(&pb.TaskRun{
+			in: TaskRunResult(&ppb.TaskRun{
 				ApiVersion: "v1alpha1",
-				Metadata: &pb.ObjectMeta{
+				Metadata: &ppb.ObjectMeta{
 					Uid:       "31415926",
 					Name:      "mytaskrun",
 					Namespace: "default",
@@ -142,21 +143,21 @@ func TestUpdateResult(t *testing.T) {
 			expect: &pb.Result{},
 		},
 		{
-			in: TaskRunResult(&pb.TaskRun{
-				Metadata: &pb.ObjectMeta{
+			in: TaskRunResult(&ppb.TaskRun{
+				Metadata: &ppb.ObjectMeta{
 					Name: "foo",
 				},
 			}),
 			name:      "Test Mask updating repeated fields",
 			fieldmask: &field_mask.FieldMask{Paths: []string{"executions"}},
 			// update entire repeated field(all elements in array) - standard update
-			update: TaskRunResult(&pb.TaskRun{
-				Metadata: &pb.ObjectMeta{
+			update: TaskRunResult(&ppb.TaskRun{
+				Metadata: &ppb.ObjectMeta{
 					Name: "bar",
 				},
 			}),
-			expect: TaskRunResult(&pb.TaskRun{
-				Metadata: &pb.ObjectMeta{
+			expect: TaskRunResult(&ppb.TaskRun{
+				Metadata: &ppb.ObjectMeta{
 					Name: "bar",
 				},
 			}),
@@ -227,9 +228,9 @@ func TestDeleteResult(t *testing.T) {
 	// Connect to fake server and insert a new taskrun
 	ctx := context.Background()
 	r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
-		Result: TaskRunResult(&pb.TaskRun{
+		Result: TaskRunResult(&ppb.TaskRun{
 			ApiVersion: "1",
-			Metadata: &pb.ObjectMeta{
+			Metadata: &ppb.ObjectMeta{
 				Uid:       "123459",
 				Name:      "mytaskrun",
 				Namespace: "default",
@@ -264,41 +265,41 @@ func TestListResults(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a bunch of taskruns for testing
-	t1 := &pb.TaskRun{
+	t1 := &ppb.TaskRun{
 		ApiVersion: "v1beta1",
-		Metadata: &pb.ObjectMeta{
+		Metadata: &ppb.ObjectMeta{
 			Uid:       "31415926",
 			Name:      "taskrun",
 			Namespace: "default",
 		},
 	}
-	t2 := &pb.TaskRun{
+	t2 := &ppb.TaskRun{
 		ApiVersion: "v1alpha1",
-		Metadata: &pb.ObjectMeta{
+		Metadata: &ppb.ObjectMeta{
 			Uid:       "43245243",
 			Name:      "task",
 			Namespace: "default",
 		},
 	}
-	t3 := &pb.TaskRun{
+	t3 := &ppb.TaskRun{
 		ApiVersion: "v1beta1",
-		Metadata: &pb.ObjectMeta{
+		Metadata: &ppb.ObjectMeta{
 			Uid:       "1234556",
 			Name:      "mytaskrun",
 			Namespace: "demo",
 		},
 	}
-	t4 := &pb.TaskRun{
+	t4 := &ppb.TaskRun{
 		ApiVersion: "v1beta1",
-		Metadata: &pb.ObjectMeta{
+		Metadata: &ppb.ObjectMeta{
 			Uid:       "543535",
 			Name:      "newtaskrun",
 			Namespace: "demo",
 		},
 	}
-	t5 := &pb.TaskRun{
+	t5 := &ppb.TaskRun{
 		ApiVersion: "v1alpha1",
-		Metadata: &pb.ObjectMeta{
+		Metadata: &ppb.ObjectMeta{
 			Uid:       "543535",
 			Name:      "newtaskrun",
 			Namespace: "official",
@@ -399,7 +400,7 @@ func TestListResults(t *testing.T) {
 	}
 }
 
-func TaskRunResult(tr *pb.TaskRun) *pb.Result {
+func TaskRunResult(tr *ppb.TaskRun) *pb.Result {
 	return &pb.Result{
 		Executions: []*pb.Execution{{
 			Execution: &pb.Execution_TaskRun{tr},

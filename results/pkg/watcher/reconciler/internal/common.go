@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/tektoncd/experimental/results/pkg/api/server"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
+	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"
 	"google.golang.org/grpc"

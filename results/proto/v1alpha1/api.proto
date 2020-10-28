@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tekton.results.v1;
+package tekton.results.v1alpha1;
 
 import "taskrun.proto";
 import "pipelinerun.proto";
@@ -12,7 +12,7 @@ import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
 
-option go_package = "./proto";
+option go_package = "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto";
 
 service Results {
   rpc CreateResult(CreateResultRequest) returns (Result) {
@@ -79,8 +79,8 @@ message Result {
 
 message Execution {
   oneof execution {
-    tekton.pipeline.v1.TaskRun task_run = 1;
-    tekton.pipeline.v1.PipelineRun pipeline_run = 2;
+    tekton.pipeline.v1beta1.TaskRun task_run = 1;
+    tekton.pipeline.v1beta1.PipelineRun pipeline_run = 2;
 
     // Additional execution types not covered above (e.g. DSLs).
     google.protobuf.Any opaque = 3;

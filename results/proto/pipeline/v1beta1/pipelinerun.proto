@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package tekton.pipeline.v1;
+package tekton.pipeline.v1beta1;
 
 import "common.proto";
 import "taskrun.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "./proto";
+option go_package = "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto";
 
 message PipelineRun {
   string api_version = 1;
