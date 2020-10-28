@@ -1,0 +1,82 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    github.integrations.tekton.dev/installation: "111795"
+    github.integrations.tekton.dev/commit: db165c3a71dc45d096aebd0f49f07ec565ad1e08
+    github.integrations.tekton.dev/owner: tektoncd
+    github.integrations.tekton.dev/repo: test
+    pipeline.tekton.dev/release: devel
+  creationTimestamp: "2020-08-27T15:21:37Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/managed-by: cloud-build
+    tekton.dev/pipeline: echo-6b4fn
+    tekton.dev/pipelineRun: echo-6b4fn
+    tekton.dev/pipelineTask: echo
+  name: echo-6b4fn-echo-xrxq4
+  namespace: default
+  ownerReferences:
+  - apiVersion: tekton.dev/v1beta1
+    blockOwnerDeletion: true
+    controller: true
+    kind: PipelineRun
+    name: echo-6b4fn
+    uid: bfe171d6-8934-4f27-b57e-7a226ded64b9
+  resourceVersion: "45775338"
+  selfLink: /apis/tekton.dev/v1beta1/namespaces/default/taskruns/echo-6b4fn-echo-xrxq4
+  uid: 4fcc1143-2b42-4d50-9963-9d292b64d189
+spec:
+  resources: {}
+  serviceAccountName: ""
+  taskSpec:
+    steps:
+    - command:
+      - echo
+      - hello
+      image: ubuntu
+      name: hello
+      resources: {}
+  timeout: 1h0m0s
+status:
+  completionTime: "2020-08-27T15:21:46Z"
+  conditions:
+  - lastTransitionTime: "2020-08-27T15:21:46Z"
+    message: All Steps have completed executing
+    reason: Succeeded
+    status: "True"
+    type: Succeeded
+  podName: echo-6b4fn-echo-xrxq4-pod-st699
+  startTime: "2020-08-27T15:21:37Z"
+  steps:
+  - container: step-hello
+    imageID: docker-pullable://ubuntu@sha256:6f2fb2f9fb5582f8b587837afd6ea8f37d8d1d9e41168c90f410a6ef15fa8ce5
+    name: hello
+    terminated:
+      containerID: docker://fecc41cd9e8d8b4417f9500c74914396a5407abe07ff9e3218ed4e9677617b43
+      exitCode: 0
+      finishedAt: "2020-08-27T15:21:44Z"
+      reason: Completed
+      startedAt: "2020-08-27T15:21:44Z"
+  taskSpec:
+    steps:
+    - command:
+      - echo
+      - hello
+      image: ubuntu
+      name: hello
+      resources: {}
