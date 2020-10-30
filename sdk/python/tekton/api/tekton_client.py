@@ -114,8 +114,7 @@ class TektonClient(object):
                 constants.TEKTON_VERSION,
                 namespace,
                 plural,
-                name,
-                client.V1DeleteOptions())
+                name)
         except client.rest.ApiException as e:
             raise RuntimeError(
                 "Exception when calling CustomObjectsApi->delete_namespaced_custom_object:\
