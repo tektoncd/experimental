@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-framework-sample
+  namespace: kube-system
+  labels:
+    component: scheduler-framework-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: scheduler-framework-sample
+  template:
+    metadata:
+      labels:
+        component: scheduler-framework-sample
+    spec:
+      serviceAccount: sample-sa
+      priorityClassName: system-cluster-critical
+      volumes:
+      - name: scheduler-config
+        configMap:
+          name: scheduler-config
+      containers:
+      - name: scheduler-ctrl
+        image: ko://github.com/tektoncd/experimental/scheduler/cmd
+        imagePullPolicy: Always
+        args:
+        - kube-scheduler
+        - --config=/scheduler/scheduler-config.yaml
+        - --v=3
+        resources:
+          requests:
+            cpu: "50m"
+        volumeMounts:
+        - name: scheduler-config
+          mountPath: /scheduler
