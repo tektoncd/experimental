@@ -33,7 +33,7 @@ import (
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
-func TestToProto(t *testing.T) {
+func TestToTaskRunProto(t *testing.T) {
 	n := time.Now()
 	nextTime := func() metav1.Time {
 		n = n.Add(time.Hour)
@@ -41,7 +41,7 @@ func TestToProto(t *testing.T) {
 	}
 	create, delete, start, finish := nextTime(), nextTime(), nextTime(), nextTime()
 
-	got, err := ToProto(&v1beta1.TaskRun{
+	got, err := ToTaskRunProto(&v1beta1.TaskRun{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "api-version",
 			Kind:       "kind",
@@ -150,7 +150,7 @@ func TestToProto(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("ToProto: %v", err)
+		t.Fatalf("ToTaskRunProto: %v", err)
 	}
 
 	want := &pb.TaskRun{

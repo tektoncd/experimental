@@ -28,9 +28,9 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
-// ToProto converts a v1beta1.TaskRun object to the equivalent Results API
+// ToTaskRunProto converts a v1beta1.TaskRun object to the equivalent Results API
 // proto message.
-func ToProto(tr *v1beta1.TaskRun) (*pb.TaskRun, error) {
+func ToTaskRunProto(tr *v1beta1.TaskRun) (*pb.TaskRun, error) {
 	b, err := json.Marshal(tr)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling TaskRun: %v", err)

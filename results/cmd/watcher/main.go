@@ -46,6 +46,20 @@ var (
 func main() {
 	flag.Parse()
 
+	conn, err := connectToAPIServer(*apiAddr, *authMode)
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	log.Println("connected!")
+	defer conn.Close()
+
+	sharedmain.MainWithContext(injection.WithNamespaceScope(signals.NewContext(), ""), "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+		client := pb.NewResultsClient(conn)
+		return reconciler.NewController(ctx, cmw, client)
+	})
+}
+
+func connectToAPIServer(apiAddr string, authMode string) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithTimeout(30 * time.Second),
@@ -60,11 +74,12 @@ func main() {
 	cred := credentials.NewTLS(&tls.Config{
 		RootCAs: certs,
 	})
+
 	// Add in additional credentials to requests if desired.
-	switch *authMode {
+	switch authMode {
 	case "google":
 		opts = append(opts,
-			grpc.WithAuthority(*apiAddr),
+			grpc.WithAuthority(apiAddr),
 			grpc.WithTransportCredentials(cred),
 			grpc.WithDefaultCallOptions(grpc.PerRPCCredentials(creds.Google())),
 		)
@@ -72,17 +87,6 @@ func main() {
 		opts = append(opts, grpc.WithInsecure())
 	}
 
-	log.Printf("dialing %s...\n", *apiAddr)
-	conn, err := grpc.Dial(*apiAddr, opts...)
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
-	log.Println("connected!")
-
-	ctx := sharedmain.WithHADisabled(injection.WithNamespaceScope(signals.NewContext(), ""))
-	sharedmain.MainWithContext(ctx, "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		client := pb.NewResultsClient(conn)
-		return reconciler.NewController(ctx, cmw, client)
-	})
+	log.Printf("dialing %s...\n", apiAddr)
+	return grpc.Dial(apiAddr, opts...)
 }
