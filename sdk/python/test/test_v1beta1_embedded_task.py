@@ -29,9 +29,9 @@ from __future__ import absolute_import
 import unittest
 import datetime
 
-import tekton
-from tekton.models.v1beta1_embedded_task import V1beta1EmbeddedTask  # noqa: E501
-from tekton.rest import ApiException
+import tekton_pipeline
+from tekton_pipeline.models.v1beta1_embedded_task import V1beta1EmbeddedTask  # noqa: E501
+from tekton_pipeline.rest import ApiException
 
 class TestV1beta1EmbeddedTask(unittest.TestCase):
     """V1beta1EmbeddedTask unit test stubs"""
@@ -47,11 +47,11 @@ class TestV1beta1EmbeddedTask(unittest.TestCase):
             include_option is a boolean, when False only required
             params are included, when True both required and
             optional params are included """
-        # model = tekton.models.v1beta1_embedded_task.V1beta1EmbeddedTask()  # noqa: E501
+        # model = tekton_pipeline.models.v1beta1_embedded_task.V1beta1EmbeddedTask()  # noqa: E501
         if include_optional :
             return V1beta1EmbeddedTask(
                 description = '0', 
-                metadata = tekton.models.v1beta1/pipeline_task_metadata.v1beta1.PipelineTaskMetadata(
+                metadata = tekton_pipeline.models.v1beta1/pipeline_task_metadata.v1beta1.PipelineTaskMetadata(
                     annotations = {
                         'key' : '0'
                         }, 
@@ -59,8 +59,8 @@ class TestV1beta1EmbeddedTask(unittest.TestCase):
                         'key' : '0'
                         }, ), 
                 params = [
-                    tekton.models.v1beta1/param_spec.v1beta1.ParamSpec(
-                        default = tekton.models.v1beta1/array_or_string.v1beta1.ArrayOrString(
+                    tekton_pipeline.models.v1beta1/param_spec.v1beta1.ParamSpec(
+                        default = tekton_pipeline.models.v1beta1/array_or_string.v1beta1.ArrayOrString(
                             array_val = [
                                 '0'
                                 ], 
@@ -70,9 +70,9 @@ class TestV1beta1EmbeddedTask(unittest.TestCase):
                         name = '0', 
                         type = '0', )
                     ], 
-                resources = tekton.models.v1beta1/task_resources.v1beta1.TaskResources(
+                resources = tekton_pipeline.models.v1beta1/task_resources.v1beta1.TaskResources(
                     inputs = [
-                        tekton.models.v1beta1/task_resource.v1beta1.TaskResource(
+                        tekton_pipeline.models.v1beta1/task_resource.v1beta1.TaskResource(
                             description = '0', 
                             name = '0', 
                             optional = True, 
@@ -80,7 +80,7 @@ class TestV1beta1EmbeddedTask(unittest.TestCase):
                             type = '0', )
                         ], 
                     outputs = [
-                        tekton.models.v1beta1/task_resource.v1beta1.TaskResource(
+                        tekton_pipeline.models.v1beta1/task_resource.v1beta1.TaskResource(
                             description = '0', 
                             name = '0', 
                             optional = True, 
@@ -88,12 +88,12 @@ class TestV1beta1EmbeddedTask(unittest.TestCase):
                             type = '0', )
                         ], ), 
                 results = [
-                    tekton.models.v1beta1/task_result.v1beta1.TaskResult(
+                    tekton_pipeline.models.v1beta1/task_result.v1beta1.TaskResult(
                         description = '0', 
                         name = '0', )
                     ], 
                 sidecars = [
-                    tekton.models.v1beta1/sidecar.v1beta1.Sidecar(
+                    tekton_pipeline.models.v1beta1/sidecar.v1beta1.Sidecar(
                         args = [
                             '0'
                             ], 
@@ -134,7 +134,7 @@ class TestV1beta1EmbeddedTask(unittest.TestCase):
                     ], 
                 step_template = None, 
                 steps = [
-                    tekton.models.v1beta1/step.v1beta1.Step(
+                    tekton_pipeline.models.v1beta1/step.v1beta1.Step(
                         args = [
                             '0'
                             ], 
@@ -178,7 +178,7 @@ class TestV1beta1EmbeddedTask(unittest.TestCase):
                     None
                     ], 
                 workspaces = [
-                    tekton.models.v1beta1/workspace_declaration.v1beta1.WorkspaceDeclaration(
+                    tekton_pipeline.models.v1beta1/workspace_declaration.v1beta1.WorkspaceDeclaration(
                         description = '0', 
                         mount_path = '0', 
                         name = '0', 

@@ -45,7 +45,9 @@ coverage.xml
 *,cover
 .hypothesis/
 venv/
+.venv/
 .python-version
+.pytest_cache
 
 # Translations
 *.mo
@@ -62,14 +64,3 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
-
-#SDK
-.swagger-codegen-ignore
-.swagger-codegen/
-.travis.yml
-git_push.sh
-tox.ini
-.gitlab-ci.yml
-
-.openapi-generator/
-git_push.sh

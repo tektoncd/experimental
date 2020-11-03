@@ -21,7 +21,7 @@ OPENAPI_GEN_URL="https://repo1.maven.org/maven2/org/openapitools/openapi-generat
 OPENAPI_GEN_JAR="sdk/hack/openapi-generator-cli.jar"
 SWAGGER_CODEGEN_CONF="sdk/hack/swagger_config.json"
 SWAGGER_CODEGEN_FILE="sdk/hack/swagger.json"
-SWAGGER_CODEGEN_SOURCE="https://github.com/tektoncd/pipeline/tree/master/pkg/apis/pipeline/v1beta1/swagger.json"
+SWAGGER_CODEGEN_SOURCE="https://raw.githubusercontent.com/tektoncd/pipeline/master/pkg/apis/pipeline/v1beta1/swagger.json"
 SDK_OUTPUT_PATH="./sdk/python"
 
 echo "Check the swagger.json file ..."
@@ -63,14 +63,14 @@ git checkout ${SDK_OUTPUT_PATH}/requirements.txt
 # Better to merge README file munally.
 #git checkout ${SDK_OUTPUT_PATH}/README.md
 
-if ! grep -q "TektonClient" ${SDK_OUTPUT_PATH}/tekton/__init__.py
+if ! grep -q "TektonClient" ${SDK_OUTPUT_PATH}/tekton_pipeline/__init__.py
 then
-echo "from tekton.api.tekton_client import TektonClient" >> ${SDK_OUTPUT_PATH}/tekton/__init__.py
+echo "from tekton_pipeline.api.tekton_client import TektonClient" >> ${SDK_OUTPUT_PATH}/tekton_pipeline/__init__.py
 fi
 
-if ! grep -q "constants" ${SDK_OUTPUT_PATH}/tekton/__init__.py
+if ! grep -q "constants" ${SDK_OUTPUT_PATH}/tekton_pipeline/__init__.py
 then
-echo "from tekton.constants import constants" >> ${SDK_OUTPUT_PATH}/tekton/__init__.py
+echo "from tekton_pipeline.constants import constants" >> ${SDK_OUTPUT_PATH}/tekton_pipeline/__init__.py
 fi
 
 echo "Tekton Pipeline Python SDK is generated successfully to folder ${SDK_OUTPUT_PATH}/."

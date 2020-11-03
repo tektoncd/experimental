@@ -25,7 +25,7 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name='tekton-pipeline',
-    version='0.1.1',
+    version='0.1.2',
     author="Tekton Authors",
     author_email='hejinchi@cn.ibm.com',
     license="Apache License Version 2.0",
@@ -33,11 +33,11 @@ setuptools.setup(
     description="Tekton Pipeline Python SDK",
     long_description="Python SDK for Tekton Pipeline.",
     packages=[
-        'tekton',
-        'tekton.api',
-        'tekton.constants',
-        'tekton.models',
-        'tekton.utils',
+        'tekton_pipeline',
+        'tekton_pipeline.api',
+        'tekton_pipeline.constants',
+        'tekton_pipeline.models',
+        'tekton_pipeline.utils',
     ],
     package_data={'': ['requirements.txt']},
     include_package_data=True,

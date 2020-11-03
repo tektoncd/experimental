@@ -1,4 +1,4 @@
-# tekton
+# tekton-pipeline
 Python SDK for Tekton Pipeline
 
 ## Requirements.
@@ -30,8 +30,8 @@ Please follow the [installation procedure](#installation--usage) and then run th
 
 ## Documentation for API Endpoints
 
-Class | Method | HTTP request | Description
------------- | ------------- | ------------- | -------------
+Class | Method | Description
+------------ | ------------- | -------------
 [TektonClient](docs/TektonClient.md) | [create](docs/TektonClient.md#create) | Create Tekton object|
 [TektonClient](docs/TektonClient.md) | [get](docs/TektonClient.md#get) | get Tekton object|
 [TektonClient](docs/TektonClient.md) | [delete](docs/TektonClient.md#delete) | delete Tekton object|
@@ -42,7 +42,6 @@ Class | Method | HTTP request | Description
  - [V1alpha1PipelineResource](docs/V1alpha1PipelineResource.md)
  - [V1alpha1PipelineResourceList](docs/V1alpha1PipelineResourceList.md)
  - [V1alpha1PipelineResourceSpec](docs/V1alpha1PipelineResourceSpec.md)
- - [V1alpha1PipelineResourceStatus](docs/V1alpha1PipelineResourceStatus.md)
  - [V1alpha1ResourceDeclaration](docs/V1alpha1ResourceDeclaration.md)
  - [V1alpha1ResourceParam](docs/V1alpha1ResourceParam.md)
  - [V1alpha1SecretParam](docs/V1alpha1SecretParam.md)
@@ -55,6 +54,7 @@ Class | Method | HTTP request | Description
  - [V1beta1ConditionCheck](docs/V1beta1ConditionCheck.md)
  - [V1beta1ConditionCheckStatus](docs/V1beta1ConditionCheckStatus.md)
  - [V1beta1ConditionCheckStatusFields](docs/V1beta1ConditionCheckStatusFields.md)
+ - [V1beta1EmbeddedTask](docs/V1beta1EmbeddedTask.md)
  - [V1beta1InternalTaskModifier](docs/V1beta1InternalTaskModifier.md)
  - [V1beta1Param](docs/V1beta1Param.md)
  - [V1beta1ParamSpec](docs/V1beta1ParamSpec.md)
@@ -79,6 +79,7 @@ Class | Method | HTTP request | Description
  - [V1beta1PipelineTask](docs/V1beta1PipelineTask.md)
  - [V1beta1PipelineTaskCondition](docs/V1beta1PipelineTaskCondition.md)
  - [V1beta1PipelineTaskInputResource](docs/V1beta1PipelineTaskInputResource.md)
+ - [V1beta1PipelineTaskMetadata](docs/V1beta1PipelineTaskMetadata.md)
  - [V1beta1PipelineTaskOutputResource](docs/V1beta1PipelineTaskOutputResource.md)
  - [V1beta1PipelineTaskParam](docs/V1beta1PipelineTaskParam.md)
  - [V1beta1PipelineTaskResources](docs/V1beta1PipelineTaskResources.md)
@@ -88,6 +89,7 @@ Class | Method | HTTP request | Description
  - [V1beta1ResultRef](docs/V1beta1ResultRef.md)
  - [V1beta1Sidecar](docs/V1beta1Sidecar.md)
  - [V1beta1SidecarState](docs/V1beta1SidecarState.md)
+ - [V1beta1SkippedTask](docs/V1beta1SkippedTask.md)
  - [V1beta1Step](docs/V1beta1Step.md)
  - [V1beta1StepState](docs/V1beta1StepState.md)
  - [V1beta1Task](docs/V1beta1Task.md)
@@ -107,6 +109,7 @@ Class | Method | HTTP request | Description
  - [V1beta1TaskRunStatus](docs/V1beta1TaskRunStatus.md)
  - [V1beta1TaskRunStatusFields](docs/V1beta1TaskRunStatusFields.md)
  - [V1beta1TaskSpec](docs/V1beta1TaskSpec.md)
+ - [V1beta1WhenExpression](docs/V1beta1WhenExpression.md)
  - [V1beta1WorkspaceBinding](docs/V1beta1WorkspaceBinding.md)
  - [V1beta1WorkspaceDeclaration](docs/V1beta1WorkspaceDeclaration.md)
  - [V1beta1WorkspacePipelineTaskBinding](docs/V1beta1WorkspacePipelineTaskBinding.md)
