@@ -29,9 +29,9 @@ from __future__ import absolute_import
 import unittest
 import datetime
 
-import tekton
-from tekton.models.v1beta1_pipeline_task_metadata import V1beta1PipelineTaskMetadata  # noqa: E501
-from tekton.rest import ApiException
+import tekton_pipeline
+from tekton_pipeline.models.v1beta1_pipeline_task_metadata import V1beta1PipelineTaskMetadata  # noqa: E501
+from tekton_pipeline.rest import ApiException
 
 class TestV1beta1PipelineTaskMetadata(unittest.TestCase):
     """V1beta1PipelineTaskMetadata unit test stubs"""
@@ -47,7 +47,7 @@ class TestV1beta1PipelineTaskMetadata(unittest.TestCase):
             include_option is a boolean, when False only required
             params are included, when True both required and
             optional params are included """
-        # model = tekton.models.v1beta1_pipeline_task_metadata.V1beta1PipelineTaskMetadata()  # noqa: E501
+        # model = tekton_pipeline.models.v1beta1_pipeline_task_metadata.V1beta1PipelineTaskMetadata()  # noqa: E501
         if include_optional :
             return V1beta1PipelineTaskMetadata(
                 annotations = {

@@ -1,6 +1,6 @@
 {
-    "packageName" : "tekton",
-    "projectName" : "tekton",
+    "packageName" : "tekton_pipeline",
+    "projectName" : "tekton_pipeline",
     "packageVersion": "0.1",
     "importMappings": {
         "V1Container": "from kubernetes.client import V1Container",
