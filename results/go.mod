@@ -12,13 +12,14 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/smartystreets/assertions v1.1.1 // indirect
 	github.com/tektoncd/pipeline v0.17.1
 	go.chromium.org/luci v0.0.0-20200716065131-1f7c6da65cb2
 	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
-	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
-	golang.org/x/sys v0.0.0-20201020230747-6e5568b54d1a // indirect
+	golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 // indirect
+	golang.org/x/tools v0.0.0-20201102212025-f46e4245211d // indirect
 	gomodules.xyz/jsonpatch/v2 v2.1.0
 	google.golang.org/api v0.31.0
 	google.golang.org/appengine v1.6.7 // indirect
