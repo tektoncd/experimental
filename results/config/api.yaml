@@ -31,18 +31,21 @@ spec:
         env:
           # See cmd/api/README.md for documentation of these vars.
           - name: DB_USER
-            value: <fill this in>
+            valueFrom:
+              secretKeyRef:
+                name: tekton-results-mysql
+                key: user
           - name: DB_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: <fill this in>
-                key: <fill this in>
+                name: tekton-results-mysql
+                key: password
           - name: DB_PROTOCOL
-            value: <fill this in> 
+            value: tcp
           - name: DB_ADDR
-            value: <fill this in> 
+            value: tekton-results-mysql.tekton-pipelines.svc.cluster.local
           - name: DB_NAME
-            value: <fill this in> 
+            value: results
 
 ---
 

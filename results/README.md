@@ -18,18 +18,16 @@ implementation of the in-cluster watcher will live in `./cmd/watcher`.
 
 ### Configure your database.
 
-The API Server requires a SQL database to connect to for result storage.
-database schema can be found under [schema/results.sql](schema/results.sql). We
-provide a MySQL server as default. To deploy the default MySQL server in Tekton,
-you need to first set the environment variable `MYSQL_ROOT_PASSWORD`, then run:
+The reference implementation of the API Server requires a SQL database for
+result storage. The database schema can be found under
+[schema/results.sql](schema/results.sql). 
 
-```
-ko apply -f config/100-mysql-pv.yaml && ko apply -f config/101-mysql-deployment.yaml
-```
+Initial one-time setup is required to configure the password and initial config:
 
-Connection parameters are
-[configured via environment variables](cmd/api/README.md). Configure these in
-the API deployment config in [config/api.yaml](config/api.yaml).
+```sh
+kubectl create secret generic tekton-results-mysql --namespace="tekton-pipelines" --from-literal=user=root --from-literal=password=$(openssl rand -base64 20)
+kubectl create configmap mysql-initdb-config --from-file="schema/results.sql" --namespace="tekton-pipelines"
+```
 
 ### Deploying
 
@@ -67,10 +65,4 @@ $ go get -u github.com/golang/protobuf/protoc-gen-go
 
 ```
 $ go generate ./proto/
-```
-
-4. Install the sqlite3
-
-```
-$ apt-get install sqlite3
 ```

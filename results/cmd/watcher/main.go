@@ -80,7 +80,8 @@ func main() {
 	defer conn.Close()
 	log.Println("connected!")
 
-	sharedmain.MainWithContext(injection.WithNamespaceScope(signals.NewContext(), ""), "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	ctx := sharedmain.WithHADisabled(injection.WithNamespaceScope(signals.NewContext(), ""))
+	sharedmain.MainWithContext(ctx, "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 		client := pb.NewResultsClient(conn)
 		return reconciler.NewController(ctx, cmw, client)
 	})
