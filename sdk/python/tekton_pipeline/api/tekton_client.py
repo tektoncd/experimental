@@ -17,6 +17,7 @@ from kubernetes import client, config
 
 from tekton_pipeline.constants import constants
 from tekton_pipeline.utils import utils
+from tekton_pipeline.api.tekton_watch import watch as tekton_watch
 
 
 class TektonClient(object):
@@ -42,20 +43,20 @@ class TektonClient(object):
         self.app_api = client.AppsV1Api()
         self.api_instance = client.CustomObjectsApi()
 
-    def create(self, tekton, plural=None, namespace=None):
+    def create(self, entity, body, namespace=None):
         """
-        Create the Tekton objects
-        :param tekton: Tekton objects
-        :param plural: the custom object's plural name. 
+        Create the Tekton entity
+        :param entity: the tekton entity,  currently supported values: ['task', 'taskrun', 'pipeline', 'pipelinerun', 'clustertask']. 
+        :param body: Tekton entity body
         :param namespace: defaults to current or default namespace
-        :return: created Tekton objects
+        :return: created Tekton entity
         """
+        utils.check_entity(entity)
 
         if namespace is None:
-            namespace = utils.get_tekton_namespace(tekton)
+            namespace = utils.get_tekton_namespace(body)
 
-        if plural is None:
-            plural = utils.get_tekton_plural(tekton)
+        plural = str(entity).lower() + "s"
 
         try:
             outputs = self.api_instance.create_namespaced_custom_object(
@@ -63,7 +64,7 @@ class TektonClient(object):
                 constants.TEKTON_VERSION,
                 namespace,
                 plural,
-                tekton)
+                body)
         except client.rest.ApiException as e:
             raise RuntimeError(
                 "Exception when calling CustomObjectsApi->create_namespaced_custom_object:\
@@ -71,40 +72,85 @@ class TektonClient(object):
 
         return outputs
 
-    def get(self, name, plural, namespace=None):
+    def get(self, entity, name, namespace=None, watch=False, timeout_seconds=600):
         """
         Get the Tekton objects
+        :param entity: the tekton entity, currently supported values: ['task', 'taskrun', 'pipeline', 'pipelinerun'].
         :param name: existing Tekton objects
-        :param plural: the custom object's plural name. 
         :param namespace: defaults to current or default namespace
         :return: Tekton objects
         """
+
+        utils.check_entity(entity)
+
         if namespace is None:
             namespace = utils.get_default_target_namespace()
 
+        plural = str(entity).lower() + "s"
+
+        if watch:
+            tekton_watch(
+                name=name,
+                plural=plural,
+                namespace=namespace,
+                timeout_seconds=timeout_seconds)
+        else:
+            try:
+                return self.api_instance.get_namespaced_custom_object(
+                    constants.TEKTON_GROUP,
+                    constants.TEKTON_VERSION,
+                    namespace,
+                    plural,
+                    name)
+            except client.rest.ApiException as e:
+                raise RuntimeError(
+                    "Exception when calling CustomObjectsApi->get_namespaced_custom_object:\
+                    %s\n" % e)
+
+    def patch(self, entity, name, body, namespace=None):
+        """
+        Patch existing tekton object
+        :param entity: the tekton entity, currently supported values: ['task', 'taskrun', 'pipeline', 'pipelinerun', 'clustertask'].
+        :param name: existing tekton object name
+        :param body: patched tekton object
+        :param namespace: defaults to current or default namespace
+        :return: patched tekton object
+        """
+
+        utils.check_entity(entity)
+
+        if namespace is None:
+            namespace = utils.get_tekton_namespace(body)
+
+        plural = str(entity).lower() + "s"
+
         try:
-            return self.api_instance.get_namespaced_custom_object(
+            return self.api_instance.patch_namespaced_custom_object(
                 constants.TEKTON_GROUP,
                 constants.TEKTON_VERSION,
                 namespace,
                 plural,
-                name)
+                name,
+                body)
         except client.rest.ApiException as e:
             raise RuntimeError(
-                "Exception when calling CustomObjectsApi->get_namespaced_custom_object:\
-                %s\n" % e)
+                "Exception when calling CustomObjectsApi->patch_namespaced_custom_object:\
+                 %s\n" % e)
 
-
-    def delete(self, name, plural, namespace=None):
+    def delete(self, entity, name, namespace=None):
         """
         Delete the Tekton objects
+        :param entity: the tekton entity, currently supported values: ['task', 'taskrun', 'pipeline', 'pipelinerun', 'clustertask'].
         :param name: Tekton object's name
-        :param plural: the custom object's plural name. 
         :param namespace: defaults to current or default namespace
         :return:
         """
+        utils.check_entity(entity)
+
         if namespace is None:
             namespace = utils.get_default_target_namespace()
+
+        plural = str(entity).lower() + "s"
 
         try:
             return self.api_instance.delete_namespaced_custom_object(
