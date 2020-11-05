@@ -9,7 +9,7 @@ spec:
   selector:
     app: tekton-results-mysql
 ---
-apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tekton-results-mysql
@@ -29,19 +29,25 @@ spec:
       - image: mysql:5.6
         name: mysql
         env:
-          # Use secret in real usage
+        - name: MYSQL_DATABASE
+          value: results
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: <fill this in>
-              key: <fill this in>
+              name: tekton-results-mysql
+              key: password
         ports:
         - containerPort: 3306
           name: mysql
         volumeMounts:
         - name: mysql-persistent-storage
           mountPath: /var/lib/mysql
+        - name: mysql-initdb
+          mountPath: /docker-entrypoint-initdb.d
       volumes:
       - name: mysql-persistent-storage
         persistentVolumeClaim:
           claimName: results-mysql-pv-claim
+      - name: mysql-initdb
+        configMap:
+          name: mysql-initdb-config
