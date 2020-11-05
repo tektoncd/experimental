@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: pipelinerun-sample-success-match-
+spec:
+  pipelineSpec:
+    params:
+      - name: string
+        type: string
+      - name: pattern
+        type: string
+    tasks:
+      - name: regex
+        taskRef:
+          apiVersion: sample.tekton.dev/v1alpha1
+          kind: Example
+        params:
+          - name: string
+            value: $(params.string)
+          - name: pattern
+            value: $(params.pattern)
+      - name: echo
+        taskSpec:
+          steps:
+          - name: echo
+            image: ubuntu
+            script: |
+              #!/usr/bin/env bash
+              echo Here
+        when:
+          - input: "$(tasks.regex.results.match)"
+            operator: in
+            values: ["true"]
+  params:
+    - name: string
+      value: abacab
+    - name: pattern
+      value: ab.*ab

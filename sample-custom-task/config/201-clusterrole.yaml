@@ -1,0 +1,38 @@
+# Copyright 2020 The Tekton Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tekton-sample-custom-task-controller
+  labels:
+    samples.tekton.dev/release: devel
+rules:
+  # Controller needs cluster access to all of the CRDs that it is responsible for managing.
+  - apiGroups: ["tekton.dev"]
+    resources: ["runs"]
+    verbs: ["get", "list", "update", "patch", "watch"]
+  - apiGroups: ["tekton.dev"]
+    resources: ["runs/status"]
+    verbs: ["get", "list", "update", "patch", "watch"]
+  # Controller needs to create events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  # We uses leases for leaderelection
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+
+

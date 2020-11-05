@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: run-sample-success-match-
+spec:
+  params:
+    - name: string
+      value: abacab
+    - name: pattern
+      value: ab.*ab
+  ref:
+    apiVersion: sample.tekton.dev/v1alpha1
+    kind: Example
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: run-sample-success-nomatch-
+spec:
+  params:
+    - name: string
+      value: xyzzy
+    - name: pattern
+      value: ab.*ab
+  ref:
+    apiVersion: sample.tekton.dev/v1alpha1
+    kind: Example
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: run-sample-fail
+spec:
+  params:
+    # missing params
+  ref:
+    apiVersion: sample.tekton.dev/v1alpha1
+    kind: Example
