@@ -18,54 +18,49 @@ Class | Method |  Description
 ------------ | ------------- | -------------
 TektonClient | [create](#create) | Create tekton object, such as task, taskrun, pipeline etc...|
 TektonClient | [get](#get)    | Get or watch the specified tekton object in the namespace |
+TektonClient | [patch](#patch) | Patch the specified tekton object in the namespace |
 TektonClient | [delete](#delete) | Delete the specified tekton object |
 
 
 ## create
-> create(tekton, plural=None, namespace=None)
+> create(entity, body, namespace=None)
 
 Create the provided Tekton object in the specified namespace
 
 ### Example
 
 ```python
-from kubernetes import client
-
-from tekton_pipeline import TektonClient
-from tekton_pipeline import V1beta1TaskRun
-from tekton_pipeline import V1beta1TaskRunSpec
+from kubernetes import client as k8s_client
+from tekton_pipeline import V1beta1Task
 from tekton_pipeline import V1beta1TaskSpec
 from tekton_pipeline import V1beta1Step
 
-tekton_client = TektonClient()
+# Define the task
+task = V1beta1Task(api_version='tekton.dev/v1beta1',
+                   kind='TaskRun',
+                   metadata=k8s_client.V1ObjectMeta(name='sdk-sample-task'),
+                   spec=V1beta1TaskSpec(
+                       steps=[V1beta1Step(name='default',
+                              image='ubuntu',
+                              script='sleep 30;echo "This is a sdk demo."')]
+                   ))
 
-taskrun = V1beta1TaskRun(
-    api_version='tekton.dev/v1beta1',
-    kind='TaskRun',
-    metadata=client.V1ObjectMeta(name='sdk-sample-taskrun'),
-    spec=V1beta1TaskRunSpec(
-        task_spec=V1beta1TaskSpec(
-            steps=[V1beta1Step(name='default',
-                            image='ubuntu',
-                            script='sleep 30;echo "This is a sdk demo.')]
-        )))
-
-tekton_client.create(taskrun, namespace='default')
+# Submit the task to cluster
+tekton_client.create(entity='task', body=task, namespace='default')
 ```
 
 
 ### Parameters
 Name | Type |  Description | Notes
 ------------ | ------------- | ------------- | -------------
-tekton  | tekton object | tekton object defination| Required |
+entity  | str | Tekton entity, valid value: ['task', 'taskrun', 'pipeline', 'pipelinerun']| Required |
 namespace | str | Namespace for tekton object deploying to. If the `namespace` is not defined, will align with tekton object definition, or use current or default namespace if namespace is not specified in tekton object definition.  | Optional |
-plural | tekton object plural | tekton object plural | Optional |
 
 ### Return type
 object
 
 ## get
-> get(self, name, plural, namespace=None)
+> get(entity, name, namespace=None, watch=False, timeout_seconds=600)
 
 Get the created tekton object in the specified namespace
 
@@ -76,7 +71,10 @@ from tekton_pipeline import TektonClient
 
 tekton_client = TektonClient()
 
-tekton_client.get(name='sdk-sample-taskrun', plural='taskruns', namespace='default')
+tekton_client.get(entity='task', name='sdk-sample-task', namespace='default')
+
+# Or watch the taskrun or pipeline run as below
+tekton_client.get(entity='taskrun', name='sdk-sample-taskrun', namespace='default', watch=True)
 
 ```
 
@@ -84,16 +82,49 @@ tekton_client.get(name='sdk-sample-taskrun', plural='taskruns', namespace='defau
 ### Parameters
 Name | Type |  Description | Notes
 ------------ | ------------- | ------------- | -------------
-name  | str | tekton object name. | Required. |
-plural | tekton object plural | tekton object plural | Required |
+entity  | str | Tekton entity, valid value: ['task', 'taskrun', 'pipeline', 'pipelinerun']| Required |
+name  | str | tekton object name| |
 namespace | str | The tekton object's namespace. Defaults to current or default namespace.| Optional |
+watch | bool | Watch the created Tekton object if `True`, otherwise will return the created Tekton object. Stop watching if reaches the optional specified `timeout_seconds` or once the status `Succeeded` or `Failed`. | Optional |
+timeout_seconds | int | Timeout seconds for watching. Defaults to 600. | Optional |
 
 ### Return type
 object
 
 
+## patch
+> patch(entity, name, body, namespace=None)
+
+Patch the provided Tekton object in the specified namespace
+
+### Example
+
+```python
+# Update the task defination
+task = V1beta1Task(api_version='tekton.dev/v1beta1',
+                   kind='TaskRun',
+                   metadata=k8s_client.V1ObjectMeta(name='sdk-sample-task'),
+                   spec=V1beta1TaskSpec(
+                       steps=[V1beta1Step(name='default',
+                              image='ubuntu',
+                              script='sleep 30;echo "This is a sdk patch demo."')]
+                   ))
+
+# Patch the task
+tekton_client.patch(entity='task', name='sdk-sample-task', body=task, namespace='default')
+```
+
+
+### Parameters
+Name | Type |  Description | Notes
+------------ | ------------- | ------------- | -------------
+entity  | str | Tekton entity, valid value: ['task', 'taskrun', 'pipeline', 'pipelinerun']| Required |
+name  | str | tekton object name| |
+namespace | str | Namespace for tekton object deploying to. If the `namespace` is not defined, will align with tekton object definition, or use current or default namespace if namespace is not specified in tekton object definition.  | Optional |
+
+
 ## delete
-> delete(self, name, plural, namespace=None)
+> delete(entity, name, namespace=None)
 
 Delete the created tekton object in the specified namespace
 
@@ -105,15 +136,15 @@ from tekton_pipeline import TektonClient
 
 tekton_client = TektonClient()
 
-tekton_client.delete(name='sdk-sample-taskrun', plural='taskruns', namespace='default')
+tekton_client.delete(entity='task', name='sdk-sample-task', namespace='default')
 
 ```
 
 ### Parameters
 Name | Type |  Description | Notes
 ------------ | ------------- | ------------- | -------------
+entity  | str | Tekton entity, valid value: ['task', 'taskrun', 'pipeline', 'pipelinerun']| Required |
 name  | str | tekton object name| |
-plural | tekton object plural | tekton object plural | Required |
 namespace | str | The tekton object's namespace. Defaults to current or default namespace. | Optional|
 
 ### Return type

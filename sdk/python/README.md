@@ -34,6 +34,7 @@ Class | Method | Description
 ------------ | ------------- | -------------
 [TektonClient](docs/TektonClient.md) | [create](docs/TektonClient.md#create) | Create Tekton object|
 [TektonClient](docs/TektonClient.md) | [get](docs/TektonClient.md#get) | get Tekton object|
+[TektonClient](docs/TektonClient.md) | [patch](docs/TektonClient.md#patch) | Patch Tekton object|
 [TektonClient](docs/TektonClient.md) | [delete](docs/TektonClient.md#delete) | delete Tekton object|
 
 ## Documentation For Models
