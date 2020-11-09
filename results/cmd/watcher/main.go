@@ -25,7 +25,8 @@ import (
 	"time"
 
 	creds "github.com/tektoncd/experimental/results/pkg/watcher/grpc"
-	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/pipelinerun"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/taskrun"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -53,10 +54,17 @@ func main() {
 	log.Println("connected!")
 	defer conn.Close()
 
-	sharedmain.MainWithContext(injection.WithNamespaceScope(signals.NewContext(), ""), "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		client := pb.NewResultsClient(conn)
-		return reconciler.NewController(ctx, cmw, client)
-	})
+	cfg := sharedmain.ParseAndGetConfigOrDie()
+
+	sharedmain.MainWithConfig(injection.WithNamespaceScope(signals.NewContext(), ""), "watcher", cfg,
+		func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+			client := pb.NewResultsClient(conn)
+			return pipelinerun.NewController(ctx, cmw, client)
+		}, func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+			client := pb.NewResultsClient(conn)
+			return taskrun.NewController(ctx, cmw, client)
+		},
+	)
 }
 
 func connectToAPIServer(apiAddr string, authMode string) (*grpc.ClientConn, error) {

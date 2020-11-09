@@ -7,6 +7,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -252,7 +255,9 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 	t.Cleanup(func() {
 		db.Close()
 	})
-	schema, err := ioutil.ReadFile("../../../schema/results.sql")
+	_, b, _, _ := runtime.Caller(0)
+	basepath := filepath.Dir(b)
+	schema, err := ioutil.ReadFile(path.Join(basepath, "../../../schema/results.sql"))
 	if err != nil {
 		t.Fatalf("failed to read schema file: %v", err)
 	}
