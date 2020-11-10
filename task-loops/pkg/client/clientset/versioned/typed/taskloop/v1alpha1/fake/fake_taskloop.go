@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/tektoncd/experimental/task-loops/pkg/apis/taskloop/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var taskloopsResource = schema.GroupVersionResource{Group: "custom.tekton.dev", 
 var taskloopsKind = schema.GroupVersionKind{Group: "custom.tekton.dev", Version: "v1alpha1", Kind: "TaskLoop"}
 
 // Get takes name of the taskLoop, and returns the corresponding taskLoop object, and an error if there is any.
-func (c *FakeTaskLoops) Get(name string, options v1.GetOptions) (result *v1alpha1.TaskLoop, err error) {
+func (c *FakeTaskLoops) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.TaskLoop, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(taskloopsResource, c.ns, name), &v1alpha1.TaskLoop{})
 
@@ -50,7 +52,7 @@ func (c *FakeTaskLoops) Get(name string, options v1.GetOptions) (result *v1alpha
 }
 
 // List takes label and field selectors, and returns the list of TaskLoops that match those selectors.
-func (c *FakeTaskLoops) List(opts v1.ListOptions) (result *v1alpha1.TaskLoopList, err error) {
+func (c *FakeTaskLoops) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.TaskLoopList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(taskloopsResource, taskloopsKind, c.ns, opts), &v1alpha1.TaskLoopList{})
 
@@ -72,14 +74,14 @@ func (c *FakeTaskLoops) List(opts v1.ListOptions) (result *v1alpha1.TaskLoopList
 }
 
 // Watch returns a watch.Interface that watches the requested taskLoops.
-func (c *FakeTaskLoops) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeTaskLoops) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(taskloopsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a taskLoop and creates it.  Returns the server's representation of the taskLoop, and an error, if there is any.
-func (c *FakeTaskLoops) Create(taskLoop *v1alpha1.TaskLoop) (result *v1alpha1.TaskLoop, err error) {
+func (c *FakeTaskLoops) Create(ctx context.Context, taskLoop *v1alpha1.TaskLoop, opts v1.CreateOptions) (result *v1alpha1.TaskLoop, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(taskloopsResource, c.ns, taskLoop), &v1alpha1.TaskLoop{})
 
@@ -90,7 +92,7 @@ func (c *FakeTaskLoops) Create(taskLoop *v1alpha1.TaskLoop) (result *v1alpha1.Ta
 }
 
 // Update takes the representation of a taskLoop and updates it. Returns the server's representation of the taskLoop, and an error, if there is any.
-func (c *FakeTaskLoops) Update(taskLoop *v1alpha1.TaskLoop) (result *v1alpha1.TaskLoop, err error) {
+func (c *FakeTaskLoops) Update(ctx context.Context, taskLoop *v1alpha1.TaskLoop, opts v1.UpdateOptions) (result *v1alpha1.TaskLoop, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(taskloopsResource, c.ns, taskLoop), &v1alpha1.TaskLoop{})
 
@@ -101,7 +103,7 @@ func (c *FakeTaskLoops) Update(taskLoop *v1alpha1.TaskLoop) (result *v1alpha1.Ta
 }
 
 // Delete takes name of the taskLoop and deletes it. Returns an error if one occurs.
-func (c *FakeTaskLoops) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeTaskLoops) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(taskloopsResource, c.ns, name), &v1alpha1.TaskLoop{})
 
@@ -109,15 +111,15 @@ func (c *FakeTaskLoops) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeTaskLoops) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(taskloopsResource, c.ns, listOptions)
+func (c *FakeTaskLoops) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(taskloopsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.TaskLoopList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched taskLoop.
-func (c *FakeTaskLoops) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.TaskLoop, err error) {
+func (c *FakeTaskLoops) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.TaskLoop, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(taskloopsResource, c.ns, name, pt, data, subresources...), &v1alpha1.TaskLoop{})
 
