@@ -2,24 +2,18 @@ package pipelinerun
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"go.uber.org/zap"
-	"gomodules.xyz/jsonpatch/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/logging"
-)
-
-const (
-	path   = "/metadata/annotations/results.tekton.dev~1id"
-	idName = "results.tekton.dev/id"
 )
 
 type Reconciler struct {
@@ -56,30 +50,43 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	prResult := &pb.Result{
-		Executions: []*pb.Execution{{
-			Execution: &pb.Execution_PipelineRun{prProto},
-		}},
-	}
-
-	if resultID, ok := prProto.GetMetadata().GetAnnotations()[idName]; ok {
-		prResult.Name = resultID
+	if resultID, ok := prProto.GetMetadata().GetAnnotations()[common.IDName]; ok {
+		result, err := r.client.GetResult(ctx, &pb.GetResultRequest{Name: resultID})
+		if err != nil {
+			logger.Fatalf("Error retrieving result %s: %v", resultID, err)
+		}
+		found := false
+		for idx, execution := range result.Executions {
+			remotePr := execution.GetPipelineRun()
+			if remotePr != nil && remotePr.Metadata.Namespace == pr.Namespace && remotePr.Metadata.Name == pr.Name {
+				found = true
+				result.Executions[idx] = &pb.Execution{Execution: &pb.Execution_PipelineRun{prProto}}
+			}
+		}
+		if !found {
+			result.Executions = append(result.Executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{prProto}})
+		}
 		if _, err = r.client.UpdateResult(ctx, &pb.UpdateResultRequest{
 			Name:   resultID,
-			Result: prResult,
+			Result: result,
 		}); err != nil {
 			logger.Errorf("Error updating PipelineRun: %v", err)
 			return err
 		}
 		logger.Infof("Updating PipelineRun, result id: ", resultID)
 	} else {
-		if prResult, err = r.client.CreateResult(ctx, &pb.CreateResultRequest{
-			Result: prResult,
-		}); err != nil {
+		prResult, err := r.client.CreateResult(ctx, &pb.CreateResultRequest{
+			Result: &pb.Result{
+				Executions: []*pb.Execution{{
+					Execution: &pb.Execution_PipelineRun{prProto},
+				}},
+			},
+		})
+		if err != nil {
 			logger.Errorf("Error creating PipelineRun Result: %v", err)
 			return err
 		}
-		path, err := annotationPath(prResult.GetName(), path, "add")
+		path, err := common.AnnotationPath(prResult.GetName(), common.Path, "add")
 		if err != nil {
 			logger.Errorf("Error jsonpatch for PipelineRun Result %s: %v", prResult.GetName(), err)
 			return err
@@ -89,15 +96,4 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	return nil
-}
-
-// AnnotationPath creates a jsonpatch path used for adding results_id to Result
-// annotations field.
-func annotationPath(resultID string, path string, op string) ([]byte, error) {
-	patches := []jsonpatch.JsonPatchOperation{{
-		Operation: op,
-		Path:      path,
-		Value:     resultID,
-	}}
-	return json.Marshal(patches)
 }
