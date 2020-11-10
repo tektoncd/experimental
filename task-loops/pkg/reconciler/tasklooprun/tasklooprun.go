@@ -129,7 +129,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) pkgre
 		merr = multierror.Append(merr, err)
 	}
 
-	if err := c.updateLabelsAndAnnotations(run); err != nil {
+	if err := c.updateLabelsAndAnnotations(ctx, run); err != nil {
 		logger.Warn("Failed to update Run labels/annotations", zap.Error(err))
 		merr = multierror.Append(merr, err)
 	}
@@ -151,7 +151,7 @@ func (c *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run, status *t
 	logger := logging.FromContext(ctx)
 
 	// Get the TaskLoop referenced by the Run
-	taskLoopMeta, taskLoopSpec, err := c.getTaskLoop(run)
+	taskLoopMeta, taskLoopSpec, err := c.getTaskLoop(ctx, run)
 	if err != nil {
 		return nil
 	}
@@ -194,7 +194,7 @@ func (c *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run, status *t
 				if err != nil {
 					return fmt.Errorf("Failed to make patch to cancel TaskRun %s: %v", highestIterationTr.Name, err)
 				}
-				if _, err := c.pipelineClientSet.TektonV1beta1().TaskRuns(run.Namespace).Patch(highestIterationTr.Name, types.JSONPatchType, b, ""); err != nil {
+				if _, err := c.pipelineClientSet.TektonV1beta1().TaskRuns(run.Namespace).Patch(ctx, highestIterationTr.Name, types.JSONPatchType, b, metav1.PatchOptions{}); err != nil {
 					run.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonCouldntCancel.String(),
 						"Failed to patch TaskRun `%s` with cancellation: %v", highestIterationTr.Name, err)
 					return nil
@@ -218,7 +218,7 @@ func (c *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run, status *t
 				retriesDone := len(highestIterationTr.Status.RetriesStatus)
 				retries := taskLoopSpec.Retries
 				if retriesDone < retries {
-					highestIterationTr, err = c.retryTaskRun(highestIterationTr)
+					highestIterationTr, err = c.retryTaskRun(ctx, highestIterationTr)
 					if err != nil {
 						return fmt.Errorf("error retrying TaskRun %s from Run %s: %w", highestIterationTr.Name, run.Name, err)
 					}
@@ -253,7 +253,7 @@ func (c *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run, status *t
 	}
 
 	// Create a TaskRun to run this iteration.
-	tr, err := c.createTaskRun(logger, taskLoopSpec, run, nextIteration)
+	tr, err := c.createTaskRun(ctx, logger, taskLoopSpec, run, nextIteration)
 	if err != nil {
 		return fmt.Errorf("error creating TaskRun from Run %s: %w", run.Name, err)
 	}
@@ -269,7 +269,7 @@ func (c *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run, status *t
 	return nil
 }
 
-func (c *Reconciler) getTaskLoop(run *v1alpha1.Run) (*metav1.ObjectMeta, *taskloopv1alpha1.TaskLoopSpec, error) {
+func (c *Reconciler) getTaskLoop(ctx context.Context, run *v1alpha1.Run) (*metav1.ObjectMeta, *taskloopv1alpha1.TaskLoopSpec, error) {
 	taskLoopMeta := metav1.ObjectMeta{}
 	taskLoopSpec := taskloopv1alpha1.TaskLoopSpec{}
 	if run.Spec.Ref != nil && run.Spec.Ref.Name != "" {
@@ -278,7 +278,7 @@ func (c *Reconciler) getTaskLoop(run *v1alpha1.Run) (*metav1.ObjectMeta, *tasklo
 		// See https://github.com/tektoncd/pipeline/issues/2740 for discussion on this issue.
 		//
 		// tl, err := c.taskLoopLister.TaskLoops(run.Namespace).Get(run.Spec.Ref.Name)
-		tl, err := c.taskloopClientSet.CustomV1alpha1().TaskLoops(run.Namespace).Get(run.Spec.Ref.Name, metav1.GetOptions{})
+		tl, err := c.taskloopClientSet.CustomV1alpha1().TaskLoops(run.Namespace).Get(ctx, run.Spec.Ref.Name, metav1.GetOptions{})
 		if err != nil {
 			run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonCouldntGetTaskLoop.String(),
 				"Error retrieving TaskLoop for Run %s/%s: %s",
@@ -297,7 +297,7 @@ func (c *Reconciler) getTaskLoop(run *v1alpha1.Run) (*metav1.ObjectMeta, *tasklo
 	return &taskLoopMeta, &taskLoopSpec, nil
 }
 
-func (c *Reconciler) createTaskRun(logger *zap.SugaredLogger, tls *taskloopv1alpha1.TaskLoopSpec, run *v1alpha1.Run, iteration int) (*v1beta1.TaskRun, error) {
+func (c *Reconciler) createTaskRun(ctx context.Context, logger *zap.SugaredLogger, tls *taskloopv1alpha1.TaskLoopSpec, run *v1alpha1.Run, iteration int) (*v1beta1.TaskRun, error) {
 
 	// Create name for TaskRun from Run name plus iteration number.
 	trName := names.SimpleNameGenerator.RestrictLengthWithRandomSuffix(fmt.Sprintf("%s-%s", run.Name, fmt.Sprintf("%05d", iteration)))
@@ -327,11 +327,11 @@ func (c *Reconciler) createTaskRun(logger *zap.SugaredLogger, tls *taskloopv1alp
 	}
 
 	logger.Infof("Creating a new TaskRun object %s", trName)
-	return c.pipelineClientSet.TektonV1beta1().TaskRuns(run.Namespace).Create(tr)
+	return c.pipelineClientSet.TektonV1beta1().TaskRuns(run.Namespace).Create(ctx, tr, metav1.CreateOptions{})
 
 }
 
-func (c *Reconciler) retryTaskRun(tr *v1beta1.TaskRun) (*v1beta1.TaskRun, error) {
+func (c *Reconciler) retryTaskRun(ctx context.Context, tr *v1beta1.TaskRun) (*v1beta1.TaskRun, error) {
 	newStatus := *tr.Status.DeepCopy()
 	newStatus.RetriesStatus = nil
 	tr.Status.RetriesStatus = append(tr.Status.RetriesStatus, newStatus)
@@ -342,10 +342,10 @@ func (c *Reconciler) retryTaskRun(tr *v1beta1.TaskRun) (*v1beta1.TaskRun, error)
 		Type:   apis.ConditionSucceeded,
 		Status: corev1.ConditionUnknown,
 	})
-	return c.pipelineClientSet.TektonV1beta1().TaskRuns(tr.Namespace).UpdateStatus(tr)
+	return c.pipelineClientSet.TektonV1beta1().TaskRuns(tr.Namespace).UpdateStatus(ctx, tr, metav1.UpdateOptions{})
 }
 
-func (c *Reconciler) updateLabelsAndAnnotations(run *v1alpha1.Run) error {
+func (c *Reconciler) updateLabelsAndAnnotations(ctx context.Context, run *v1alpha1.Run) error {
 	newRun, err := c.runLister.Runs(run.Namespace).Get(run.Name)
 	if err != nil {
 		return fmt.Errorf("error getting Run %s when updating labels/annotations: %w", run.Name, err)
@@ -361,7 +361,7 @@ func (c *Reconciler) updateLabelsAndAnnotations(run *v1alpha1.Run) error {
 		if err != nil {
 			return err
 		}
-		_, err = c.pipelineClientSet.TektonV1alpha1().Runs(run.Namespace).Patch(run.Name, types.MergePatchType, patch)
+		_, err = c.pipelineClientSet.TektonV1alpha1().Runs(run.Namespace).Patch(ctx, run.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 		return err
 	}
 	return nil

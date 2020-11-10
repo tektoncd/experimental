@@ -19,6 +19,7 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -433,39 +434,42 @@ func TestTaskLoopRun(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc // Copy current tc to local variable due to test parallelization
 			t.Parallel()
-			c, namespace := setup(t)
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			c, namespace := setup(ctx, t)
 			taskLoopClient := getTaskLoopClient(t, namespace)
 
-			knativetest.CleanupOnInterrupt(func() { tearDown(t, c, namespace) }, t.Logf)
-			defer tearDown(t, c, namespace)
+			knativetest.CleanupOnInterrupt(func() { tearDown(ctx, t, c, namespace) }, t.Logf)
+			defer tearDown(ctx, t, c, namespace)
 
 			if tc.task != nil {
 				task := tc.task.DeepCopy()
 				task.Namespace = namespace
-				if _, err := c.TaskClient.Create(task); err != nil {
+				if _, err := c.TaskClient.Create(ctx, task, metav1.CreateOptions{}); err != nil {
 					t.Fatalf("Failed to create Task `%s`: %s", task.Name, err)
 				}
 			}
 
 			if tc.clustertask != nil {
-				if _, err := c.ClusterTaskClient.Create(tc.clustertask); err != nil {
+				if _, err := c.ClusterTaskClient.Create(ctx, tc.clustertask, metav1.CreateOptions{}); err != nil {
 					t.Fatalf("Failed to create ClusterTask `%s`: %s", tc.clustertask.Name, err)
 				}
-				knativetest.CleanupOnInterrupt(func() { deleteClusterTask(t, c, tc.clustertask.Name) }, t.Logf)
-				defer deleteClusterTask(t, c, tc.clustertask.Name)
+				knativetest.CleanupOnInterrupt(func() { deleteClusterTask(ctx, t, c, tc.clustertask.Name) }, t.Logf)
+				defer deleteClusterTask(ctx, t, c, tc.clustertask.Name)
 			}
 
 			if tc.taskloop != nil {
 				taskloop := tc.taskloop.DeepCopy()
 				taskloop.Namespace = namespace
-				if _, err := taskLoopClient.Create(taskloop); err != nil {
+				if _, err := taskLoopClient.Create(ctx, taskloop, metav1.CreateOptions{}); err != nil {
 					t.Fatalf("Failed to create TaskLoop `%s`: %s", tc.taskloop.Name, err)
 				}
 			}
 
 			run := tc.run.DeepCopy()
 			run.Namespace = namespace
-			run, err := c.RunClient.Create(run)
+			run, err := c.RunClient.Create(ctx, run, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatalf("Failed to create Run `%s`: %s", run.Name, err)
 			}
@@ -480,17 +484,17 @@ func TestTaskLoopRun(t *testing.T) {
 				inState = FailedWithReason(tc.expectedReason.String(), run.Name)
 				desc = "RunFailed"
 			}
-			if err := WaitForRunState(c, run.Name, runTimeout, inState, desc); err != nil {
+			if err := WaitForRunState(ctx, c, run.Name, runTimeout, inState, desc); err != nil {
 				t.Fatalf("Error waiting for Run %s/%s to finish: %s", run.Namespace, run.Name, err)
 			}
 
-			run, err = c.RunClient.Get(run.Name, metav1.GetOptions{})
+			run, err = c.RunClient.Get(ctx, run.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("Couldn't get expected Run %s/%s: %s", run.Namespace, run.Name, err)
 			}
 
 			t.Logf("Making sure the expected TaskRuns were created")
-			actualTaskRunList, err := c.TaskRunClient.List(metav1.ListOptions{LabelSelector: fmt.Sprintf("tekton.dev/run=%s", run.Name)})
+			actualTaskRunList, err := c.TaskRunClient.List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("tekton.dev/run=%s", run.Name)})
 			if err != nil {
 				t.Fatalf("Error listing TaskRuns for Run %s/%s: %s", run.Namespace, run.Name, err)
 			}
@@ -559,7 +563,7 @@ func TestTaskLoopRun(t *testing.T) {
 
 			t.Logf("Checking events that were created from Run")
 			matchKinds := map[string][]string{"Run": {run.Name}}
-			events, err := collectMatchingEvents(c.KubeClient, namespace, matchKinds)
+			events, err := collectMatchingEvents(ctx, c.KubeClient, namespace, matchKinds)
 			if err != nil {
 				t.Fatalf("Failed to collect matching events: %q", err)
 			}
@@ -578,32 +582,37 @@ func TestTaskLoopRun(t *testing.T) {
 
 func TestCancelTaskLoopRun(t *testing.T) {
 	t.Run("cancel", func(t *testing.T) {
-		c, namespace := setup(t)
-		taskLoopClient := getTaskLoopClient(t, namespace)
 		t.Parallel()
 
-		knativetest.CleanupOnInterrupt(func() { tearDown(t, c, namespace) }, t.Logf)
-		defer tearDown(t, c, namespace)
+		ctx := context.Background()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		c, namespace := setup(ctx, t)
+		taskLoopClient := getTaskLoopClient(t, namespace)
+
+		knativetest.CleanupOnInterrupt(func() { tearDown(ctx, t, c, namespace) }, t.Logf)
+		defer tearDown(ctx, t, c, namespace)
 
 		t.Logf("Creating TaskLoop in namespace %s", namespace)
-		if _, err := taskLoopClient.Create(sleepyTaskLoop); err != nil {
+		if _, err := taskLoopClient.Create(ctx, sleepyTaskLoop, metav1.CreateOptions{}); err != nil {
 			t.Fatalf("Failed to create TaskLoop `%s`: %s", sleepyTaskLoop.Name, err)
 		}
 
 		t.Logf("Creating Run in namespace %s", namespace)
 		run := runSleepyTaskLoop
-		if _, err := c.RunClient.Create(run); err != nil {
+		if _, err := c.RunClient.Create(ctx, run, metav1.CreateOptions{}); err != nil {
 			t.Fatalf("Failed to create Run `%s`: %s", run.Name, err)
 		}
 
 		t.Logf("Waiting for Run %s in namespace %s to be started", run.Name, namespace)
-		if err := WaitForRunState(c, run.Name, runTimeout, Running(run.Name), "RunRunning"); err != nil {
+		if err := WaitForRunState(ctx, c, run.Name, runTimeout, Running(run.Name), "RunRunning"); err != nil {
 			t.Fatalf("Error waiting for Run %s to be running: %s", run.Name, err)
 		}
 
 		// The current looping behavior is to run a single TaskRun at a time but the following code is generalized
 		// to allow multiple TaskRuns in case that is added.
-		taskrunList, err := c.TaskRunClient.List(metav1.ListOptions{LabelSelector: "tekton.dev/run=" + run.Name})
+		taskrunList, err := c.TaskRunClient.List(ctx, metav1.ListOptions{LabelSelector: "tekton.dev/run=" + run.Name})
 		if err != nil {
 			t.Fatalf("Error listing TaskRuns for Run %s: %s", run.Name, err)
 		}
@@ -614,7 +623,7 @@ func TestCancelTaskLoopRun(t *testing.T) {
 			wg.Add(1)
 			go func(name string) {
 				defer wg.Done()
-				err := WaitForTaskRunState(c, name, Running(name), "TaskRunRunning")
+				err := WaitForTaskRunState(ctx, c, name, Running(name), "TaskRunRunning")
 				if err != nil {
 					t.Errorf("Error waiting for TaskRun %s to be running: %v", name, err)
 				}
@@ -622,7 +631,7 @@ func TestCancelTaskLoopRun(t *testing.T) {
 		}
 		wg.Wait()
 
-		pr, err := c.RunClient.Get(run.Name, metav1.GetOptions{})
+		pr, err := c.RunClient.Get(ctx, run.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Fatalf("Failed to get Run `%s`: %s", run.Name, err)
 		}
@@ -636,12 +645,12 @@ func TestCancelTaskLoopRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to marshal patch bytes in order to cancel")
 		}
-		if _, err := c.RunClient.Patch(pr.Name, types.JSONPatchType, patchBytes, ""); err != nil {
+		if _, err := c.RunClient.Patch(ctx, pr.Name, types.JSONPatchType, patchBytes, metav1.PatchOptions{}); err != nil {
 			t.Fatalf("Failed to patch Run `%s` with cancellation: %s", run.Name, err)
 		}
 
 		t.Logf("Waiting for Run %s in namespace %s to be cancelled", run.Name, namespace)
-		if err := WaitForRunState(c, run.Name, runTimeout,
+		if err := WaitForRunState(ctx, c, run.Name, runTimeout,
 			FailedWithReason(taskloopv1alpha1.TaskLoopRunReasonCancelled.String(), run.Name), "RunCancelled"); err != nil {
 			t.Errorf("Error waiting for Run %q to finished: %s", run.Name, err)
 		}
@@ -651,7 +660,7 @@ func TestCancelTaskLoopRun(t *testing.T) {
 			wg.Add(1)
 			go func(name string) {
 				defer wg.Done()
-				err := WaitForTaskRunState(c, name, FailedWithReason("TaskRunCancelled", name), "TaskRunCancelled")
+				err := WaitForTaskRunState(ctx, c, name, FailedWithReason("TaskRunCancelled", name), "TaskRunCancelled")
 				if err != nil {
 					t.Errorf("Error waiting for TaskRun %s to be finished: %v", name, err)
 				}
@@ -744,10 +753,10 @@ func checkTaskRunRetries(t *testing.T, expectedTaskRun *v1beta1.TaskRun, actualT
 
 // collectMatchingEvents collects a list of events under 5 seconds that match certain objects by kind and name.
 // This is copied from pipelinerun_test and modified to drop the reason parameter.
-func collectMatchingEvents(kubeClient *knativetest.KubeClient, namespace string, kinds map[string][]string) ([]*corev1.Event, error) {
+func collectMatchingEvents(ctx context.Context, kubeClient *knativetest.KubeClient, namespace string, kinds map[string][]string) ([]*corev1.Event, error) {
 	var events []*corev1.Event
 
-	watchEvents, err := kubeClient.Kube.CoreV1().Events(namespace).Watch(metav1.ListOptions{})
+	watchEvents, err := kubeClient.Kube.CoreV1().Events(namespace).Watch(ctx, metav1.ListOptions{})
 	// close watchEvents channel
 	defer watchEvents.Stop()
 	if err != nil {
@@ -778,9 +787,9 @@ func collectMatchingEvents(kubeClient *knativetest.KubeClient, namespace string,
 // clientset. Test state is used for logging. deleteClusterTask does not wait
 // for the clustertask to be deleted, so it is still possible to have name
 // conflicts during test
-func deleteClusterTask(t *testing.T, c *clients, name string) {
+func deleteClusterTask(ctx context.Context, t *testing.T, c *clients, name string) {
 	t.Logf("Deleting clustertask %s", name)
-	if err := c.ClusterTaskClient.Delete(name, &metav1.DeleteOptions{}); err != nil {
+	if err := c.ClusterTaskClient.Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
 		t.Fatalf("Failed to delete clustertask: %v", err)
 	}
 }

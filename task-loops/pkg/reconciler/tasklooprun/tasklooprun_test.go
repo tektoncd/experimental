@@ -130,7 +130,7 @@ func getTaskLoopController(t *testing.T, d test.Data, taskloops []*taskloopv1alp
 	client.PrependReactor("*", "taskloops", test.AddToInformer(t, faketaskloopinformer.Get(ctx).Informer().GetIndexer()))
 	for _, tl := range taskloops {
 		tl := tl.DeepCopy() // Avoid assumptions that the informer's copy is modified.
-		if _, err := client.CustomV1alpha1().TaskLoops(tl.Namespace).Create(tl); err != nil {
+		if _, err := client.CustomV1alpha1().TaskLoops(tl.Namespace).Create(ctx, tl, metav1.CreateOptions{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -643,6 +643,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			names.TestingSeed()
 
 			optionalTask := []*v1beta1.Task{tc.task}
@@ -660,12 +661,12 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 			c := testAssets.Controller
 			clients := testAssets.Clients
 
-			if err := c.Reconciler.Reconcile(context.Background(), getRunName(tc.run)); err != nil {
+			if err := c.Reconciler.Reconcile(ctx, getRunName(tc.run)); err != nil {
 				t.Fatalf("Error reconciling: %s", err)
 			}
 
 			// Fetch the updated Run
-			reconciledRun, err := clients.Pipeline.TektonV1alpha1().Runs(tc.run.Namespace).Get(tc.run.Name, metav1.GetOptions{})
+			reconciledRun, err := clients.Pipeline.TektonV1alpha1().Runs(tc.run.Namespace).Get(ctx, tc.run.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("Error getting reconciled run from fake client: %s", err)
 			}
@@ -752,6 +753,7 @@ func TestReconcileTaskLoopRunFailures(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 
 			d := test.Data{
 				Runs: []*v1alpha1.Run{tc.run},
@@ -766,12 +768,12 @@ func TestReconcileTaskLoopRunFailures(t *testing.T) {
 			c := testAssets.Controller
 			clients := testAssets.Clients
 
-			if err := c.Reconciler.Reconcile(context.Background(), getRunName(tc.run)); err != nil {
+			if err := c.Reconciler.Reconcile(ctx, getRunName(tc.run)); err != nil {
 				t.Fatalf("Error reconciling: %s", err)
 			}
 
 			// Fetch the updated Run
-			reconciledRun, err := clients.Pipeline.TektonV1alpha1().Runs(tc.run.Namespace).Get(tc.run.Name, metav1.GetOptions{})
+			reconciledRun, err := clients.Pipeline.TektonV1alpha1().Runs(tc.run.Namespace).Get(ctx, tc.run.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("Error getting reconciled run from fake client: %s", err)
 			}
