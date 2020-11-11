@@ -7,13 +7,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"
 	"google.golang.org/protobuf/testing/protocmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/configmap"
 )
 
 func TestReconcile(t *testing.T) {
@@ -38,7 +37,7 @@ type PipelineRunTest struct {
 }
 
 func NewPipelineRunTest(t *testing.T) PipelineRunTest {
-	client := common.NewResultsClient(t)
+	client := internal.NewResultsClient(t)
 	pipelineRun := &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "Tekton-PipelineRun",
@@ -47,12 +46,18 @@ func NewPipelineRunTest(t *testing.T) PipelineRunTest {
 			UID:         "54321",
 		},
 	}
-	asset, ctx := getFakeClients(t, []*v1beta1.PipelineRun{pipelineRun}, client)
+	d := test.Data{
+		PipelineRuns: []*v1beta1.PipelineRun{pipelineRun},
+	}
+	ctx, tclients, cmw := internal.GetFakeClients(t, d, client)
 	pipelineRunTest := PipelineRunTest{
 		pipelineRun: pipelineRun,
-		asset:       asset,
-		ctx:         ctx,
-		client:      client,
+		asset: test.Assets{
+			Controller: NewController(ctx, cmw, client),
+			Clients:    tclients,
+		},
+		ctx:    ctx,
+		client: client,
 	}
 	return pipelineRunTest
 }
@@ -90,7 +95,7 @@ func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
 	pr.UID = "234435"
-	if _, err = tt.asset.Clients.Pipeline.TektonV1beta1().PipelineRuns(tt.pipelineRun.Namespace).Update(pr); err != nil {
+	if _, err := tt.asset.Clients.Pipeline.TektonV1beta1().PipelineRuns(tt.pipelineRun.Namespace).Update(pr); err != nil {
 		t.Fatalf("Failed to update PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
 	updatepr, err := common.ReconcilePipelineRun(tt.ctx, tt.asset, pr)
@@ -118,20 +123,4 @@ func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
 	if diff := cmp.Diff(want, res, protocmp.Transform()); diff != "" {
 		t.Fatalf("Expected completed PipelineRun should be upated in api server: %v", diff)
 	}
-}
-
-// getFakeClients create a fake client to send test data to reconciler
-func getFakeClients(t *testing.T, pr []*v1beta1.PipelineRun, client pb.ResultsClient) (test.Assets, context.Context) {
-	t.Helper()
-	ctx, _ := ttesting.SetupFakeContext(t)
-	d := test.Data{
-		PipelineRuns: pr,
-	}
-	clients, _ := test.SeedTestData(t, ctx, d)
-	cmw := configmap.NewInformedWatcher(clients.Kube, "")
-
-	return test.Assets{
-		Controller: NewController(ctx, cmw, client),
-		Clients:    clients,
-	}, ctx
 }
