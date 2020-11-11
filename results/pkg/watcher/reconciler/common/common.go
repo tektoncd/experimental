@@ -3,50 +3,17 @@ package common
 import (
 	"context"
 	"encoding/json"
-	"net"
-	"testing"
 
-	"github.com/tektoncd/experimental/results/pkg/api/server"
-	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/test"
 	"gomodules.xyz/jsonpatch/v2"
-	"google.golang.org/grpc"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	port = ":0"
 )
 
 const (
 	Path   = "/metadata/annotations/results.tekton.dev~1id"
 	IDName = "results.tekton.dev/id"
 )
-
-func NewResultsClient(t *testing.T) pb.ResultsClient {
-	srv, err := server.SetupTestDB(t)
-	if err != nil {
-		t.Fatalf("Failed to create fake server: %v", err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterResultsServer(s, srv) // local test server
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		t.Fatalf("failed to listen: %v", err)
-	}
-	go s.Serve(lis)
-	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		t.Fatalf("did not connect: %v", err)
-	}
-	t.Cleanup(func() {
-		lis.Close()
-		s.Stop()
-		conn.Close()
-	})
-	return pb.NewResultsClient(conn)
-}
 
 // AnnotationPath creates a jsonpatch path used for adding results_id to Result
 // annotations field.

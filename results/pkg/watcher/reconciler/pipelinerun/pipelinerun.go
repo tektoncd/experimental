@@ -66,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		if !found {
 			result.Executions = append(result.Executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{prProto}})
 		}
-		if _, err = r.client.UpdateResult(ctx, &pb.UpdateResultRequest{
+		if _, err := r.client.UpdateResult(ctx, &pb.UpdateResultRequest{
 			Name:   resultID,
 			Result: result,
 		}); err != nil {
@@ -91,7 +91,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 			logger.Errorf("Error jsonpatch for PipelineRun Result %s: %v", prResult.GetName(), err)
 			return err
 		}
-		r.pipelineclientset.TektonV1beta1().PipelineRuns(pr.Namespace).Patch(pr.Name, types.JSONPatchType, path)
+		if _, err := r.pipelineclientset.TektonV1beta1().PipelineRuns(pr.Namespace).Patch(pr.Name, types.JSONPatchType, path); err != nil {
+			logger.Errorf("Error apply the patch to PipelineRun: %v", err)
+			return err
+		}
 		logger.Infof("Creating a new result: %s", prResult.GetName())
 	}
 

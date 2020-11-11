@@ -7,24 +7,21 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/pipelinerun"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/taskrun"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"
 	"google.golang.org/protobuf/testing/protocmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/pkg/configmap"
 )
 
 func TestReconciler(t *testing.T) {
-	var reconcilerTest ReconcilerTest
-
 	testFuncs := map[string]func(*testing.T){
-		"Update PipelineRun to the existed Result": reconcilerTest.testUpdatePipelineRunToTheExistedResult,
-		"Update TaskRun to the existed Result":     reconcilerTest.testUpdateTaskRunToTheExistedResult,
+		"Update PipelineRun to the existed Result": testUpdatePipelineRunToTheExistedResult,
+		"Update TaskRun to the existed Result":     testUpdateTaskRunToTheExistedResult,
 	}
 
 	for name, testFunc := range testFuncs {
@@ -43,7 +40,7 @@ type ReconcilerTest struct {
 }
 
 func newReconcilerTest(t *testing.T) *ReconcilerTest {
-	client := common.NewResultsClient(t)
+	client := internal.NewResultsClient(t)
 	tr := &v1beta1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "Tekton-Result",
@@ -60,39 +57,29 @@ func newReconcilerTest(t *testing.T) *ReconcilerTest {
 			UID:         "2",
 		},
 	}
-	trAsset, prAsset, ctx := getFakeClients(t, []*v1beta1.TaskRun{tr}, []*v1beta1.PipelineRun{pr}, client)
+	d := test.Data{
+		TaskRuns:     []*v1beta1.TaskRun{tr},
+		PipelineRuns: []*v1beta1.PipelineRun{pr},
+	}
+	ctx, tclients, cmw := internal.GetFakeClients(t, d, client)
 	return &ReconcilerTest{
-		taskRun:     tr,
-		trAsset:     trAsset,
+		taskRun: tr,
+		trAsset: test.Assets{
+			Controller: taskrun.NewController(ctx, cmw, client),
+			Clients:    tclients,
+		},
 		pipelineRun: pr,
-		prAsset:     prAsset,
-
+		prAsset: test.Assets{
+			Controller: pipelinerun.NewController(ctx, cmw, client),
+			Clients:    tclients,
+		},
 		ctx:    ctx,
 		client: client,
 	}
 }
 
-func getFakeClients(t *testing.T, tr []*v1beta1.TaskRun, pr []*v1beta1.PipelineRun, client pb.ResultsClient) (test.Assets, test.Assets, context.Context) {
-	t.Helper()
-	ctx, _ := ttesting.SetupFakeContext(t)
-	d := test.Data{
-		TaskRuns:     tr,
-		PipelineRuns: pr,
-	}
-	clients, _ := test.SeedTestData(t, ctx, d)
-	cmw := configmap.NewInformedWatcher(clients.Kube, "")
-
-	return test.Assets{
-			Controller: taskrun.NewController(ctx, cmw, client),
-			Clients:    clients,
-		}, test.Assets{
-			Controller: pipelinerun.NewController(ctx, cmw, client),
-			Clients:    clients,
-		}, ctx
-}
-
-func (tt *ReconcilerTest) testUpdatePipelineRunToTheExistedResult(t *testing.T) {
-	tt = newReconcilerTest(t)
+func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
+	tt := newReconcilerTest(t)
 	// Create a TaskRun
 	tr, err := common.ReconcileTaskRun(tt.ctx, tt.trAsset, tt.taskRun)
 	if err != nil {
@@ -138,8 +125,8 @@ func (tt *ReconcilerTest) testUpdatePipelineRunToTheExistedResult(t *testing.T) 
 	}
 }
 
-func (tt *ReconcilerTest) testUpdateTaskRunToTheExistedResult(t *testing.T) {
-	tt = newReconcilerTest(t)
+func testUpdateTaskRunToTheExistedResult(t *testing.T) {
+	tt := newReconcilerTest(t)
 	// Create a PipelineRun
 	pr, err := common.ReconcilePipelineRun(tt.ctx, tt.prAsset, tt.pipelineRun)
 	if err != nil {

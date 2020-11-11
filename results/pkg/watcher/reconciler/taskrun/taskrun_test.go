@@ -7,13 +7,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal"
 	pb "github.com/tektoncd/experimental/results/proto/proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"
 	"google.golang.org/protobuf/testing/protocmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/configmap"
 )
 
 func TestReconcile(t *testing.T) {
@@ -38,7 +37,7 @@ type TaskRunTest struct {
 }
 
 func NewTaskRunTest(t *testing.T) TaskRunTest {
-	client := common.NewResultsClient(t)
+	client := internal.NewResultsClient(t)
 	taskRun := &v1beta1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "Tekton-TaskRun",
@@ -47,12 +46,18 @@ func NewTaskRunTest(t *testing.T) TaskRunTest {
 			UID:         "12345",
 		},
 	}
-	asset, ctx := getFakeClients(t, []*v1beta1.TaskRun{taskRun}, client)
+	d := test.Data{
+		TaskRuns: []*v1beta1.TaskRun{taskRun},
+	}
+	ctx, tclients, cmw := internal.GetFakeClients(t, d, client)
 	taskRunTest := TaskRunTest{
 		taskRun: taskRun,
-		asset:   asset,
-		ctx:     ctx,
-		client:  client,
+		asset: test.Assets{
+			Controller: NewController(ctx, cmw, client),
+			Clients:    tclients,
+		},
+		ctx:    ctx,
+		client: client,
 	}
 	return taskRunTest
 }
@@ -90,7 +95,7 @@ func (tt *TaskRunTest) testUpdateTaskRun(t *testing.T) {
 		t.Fatalf("Failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
 	}
 	tr.UID = "234435"
-	if _, err = tt.asset.Clients.Pipeline.TektonV1beta1().TaskRuns(tt.taskRun.Namespace).Update(tr); err != nil {
+	if _, err := tt.asset.Clients.Pipeline.TektonV1beta1().TaskRuns(tt.taskRun.Namespace).Update(tr); err != nil {
 		t.Fatalf("Failed to update TaskRun %s to Tekton Pipeline Client: %v", tt.taskRun.Name, err)
 	}
 	updatetr, err := common.ReconcileTaskRun(tt.ctx, tt.asset, tr)
@@ -118,20 +123,4 @@ func (tt *TaskRunTest) testUpdateTaskRun(t *testing.T) {
 	if diff := cmp.Diff(want, res, protocmp.Transform()); diff != "" {
 		t.Fatalf("Expected completed TaskRun should be upated in api server: %v", diff)
 	}
-}
-
-// getFakeClients create a fake client to send test data to reconciler
-func getFakeClients(t *testing.T, tr []*v1beta1.TaskRun, client pb.ResultsClient) (test.Assets, context.Context) {
-	t.Helper()
-	ctx, _ := ttesting.SetupFakeContext(t)
-	d := test.Data{
-		TaskRuns: tr,
-	}
-	clients, _ := test.SeedTestData(t, ctx, d)
-	cmw := configmap.NewInformedWatcher(clients.Kube, "")
-
-	return test.Assets{
-		Controller: NewController(ctx, cmw, client),
-		Clients:    clients,
-	}, ctx
 }
