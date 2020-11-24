@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
-	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/annotation"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
@@ -50,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	if resultID, ok := trProto.GetMetadata().GetAnnotations()[common.IDName]; ok {
+	if resultID, ok := trProto.GetMetadata().GetAnnotations()[annotation.ResultID]; ok {
 		result, err := r.client.GetResult(ctx, &pb.GetResultRequest{Name: resultID})
 		if err != nil {
 			logger.Fatalf("Error retrieving result %s: %v", resultID, err)
@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 			logger.Errorf("Error creating TaskRun Result: %v", err)
 			return err
 		}
-		path, err := common.AnnotationPath(trResult.GetName(), common.Path, "add")
+		path, err := annotation.AddResultID(trResult.GetName())
 		if err != nil {
 			logger.Errorf("Error jsonpatch for TaskRun Result %s: %v", trResult.GetName(), err)
 			return err

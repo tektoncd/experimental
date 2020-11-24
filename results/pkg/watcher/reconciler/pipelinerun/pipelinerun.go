@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
-	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/annotation"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
@@ -43,14 +43,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	logger.Info("Recieving new PipelineRun")
+	logger.Info("Receiving new PipelineRun")
 	prProto, err := convert.ToPipelineRunProto(pr)
 	if err != nil {
 		logger.Errorf("Error converting PipelineRun to its corresponding proto: %v", err)
 		return err
 	}
 
-	if resultID, ok := prProto.GetMetadata().GetAnnotations()[common.IDName]; ok {
+	if resultID, ok := prProto.GetMetadata().GetAnnotations()[annotation.ResultID]; ok {
 		result, err := r.client.GetResult(ctx, &pb.GetResultRequest{Name: resultID})
 		if err != nil {
 			logger.Fatalf("Error retrieving result %s: %v", resultID, err)
@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 			logger.Errorf("Error creating PipelineRun Result: %v", err)
 			return err
 		}
-		path, err := common.AnnotationPath(prResult.GetName(), common.Path, "add")
+		path, err := annotation.AddResultID(prResult.GetName())
 		if err != nil {
 			logger.Errorf("Error jsonpatch for PipelineRun Result %s: %v", prResult.GetName(), err)
 			return err

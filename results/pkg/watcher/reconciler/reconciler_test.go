@@ -6,13 +6,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
-	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
-	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/annotation"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal/test"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/pipelinerun"
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/taskrun"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/test"
+	pipelinetest "github.com/tektoncd/pipeline/test"
 	"google.golang.org/protobuf/testing/protocmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,16 +31,16 @@ func TestReconciler(t *testing.T) {
 
 type ReconcilerTest struct {
 	taskRun *v1beta1.TaskRun
-	trAsset test.Assets
+	trAsset pipelinetest.Assets
 
 	pipelineRun *v1beta1.PipelineRun
-	prAsset     test.Assets
+	prAsset     pipelinetest.Assets
 	ctx         context.Context
 	client      pb.ResultsClient
 }
 
 func newReconcilerTest(t *testing.T) *ReconcilerTest {
-	client := internal.NewResultsClient(t)
+	client := test.NewResultsClient(t)
 	tr := &v1beta1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "Tekton-Result",
@@ -57,19 +57,19 @@ func newReconcilerTest(t *testing.T) *ReconcilerTest {
 			UID:         "2",
 		},
 	}
-	d := test.Data{
+	d := pipelinetest.Data{
 		TaskRuns:     []*v1beta1.TaskRun{tr},
 		PipelineRuns: []*v1beta1.PipelineRun{pr},
 	}
-	ctx, tclients, cmw := internal.GetFakeClients(t, d, client)
+	ctx, tclients, cmw := test.GetFakeClients(t, d, client)
 	return &ReconcilerTest{
 		taskRun: tr,
-		trAsset: test.Assets{
+		trAsset: pipelinetest.Assets{
 			Controller: taskrun.NewController(ctx, cmw, client),
 			Clients:    tclients,
 		},
 		pipelineRun: pr,
-		prAsset: test.Assets{
+		prAsset: pipelinetest.Assets{
 			Controller: pipelinerun.NewController(ctx, cmw, client),
 			Clients:    tclients,
 		},
@@ -81,11 +81,11 @@ func newReconcilerTest(t *testing.T) *ReconcilerTest {
 func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
 	tt := newReconcilerTest(t)
 	// Create a TaskRun
-	tr, err := common.ReconcileTaskRun(tt.ctx, tt.trAsset, tt.taskRun)
+	tr, err := test.ReconcileTaskRun(tt.ctx, tt.trAsset, tt.taskRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
 	}
-	resultID, ok := tr.Annotations[common.IDName]
+	resultID, ok := tr.Annotations[annotation.ResultID]
 	if !ok {
 		t.Fatalf("Expected completed TaskRun %s should be updated with a results_id field in annotations", tt.taskRun.Name)
 	}
@@ -94,7 +94,7 @@ func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
 		t.Fatalf("Expected completed TaskRun %s not created in api server", tt.taskRun.Name)
 	}
 
-	path, err := common.AnnotationPath(trResult.GetName(), common.Path, "add")
+	path, err := annotation.AddResultID(trResult.GetName())
 	if err != nil {
 		t.Fatalf("Error jsonpatch for TaskRun Result %s: %v", trResult.GetName(), err)
 	}
@@ -105,7 +105,7 @@ func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
 	}
 
 	// Update the PipelineRun to the same Result
-	pr, err = common.ReconcilePipelineRun(tt.ctx, tt.prAsset, tt.pipelineRun)
+	pr, err = test.ReconcilePipelineRun(tt.ctx, tt.prAsset, tt.pipelineRun)
 	if err != nil {
 		t.Fatalf("Failed to reconcile PipelineRun: %v", err)
 	}
@@ -128,11 +128,11 @@ func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
 func testUpdateTaskRunToTheExistedResult(t *testing.T) {
 	tt := newReconcilerTest(t)
 	// Create a PipelineRun
-	pr, err := common.ReconcilePipelineRun(tt.ctx, tt.prAsset, tt.pipelineRun)
+	pr, err := test.ReconcilePipelineRun(tt.ctx, tt.prAsset, tt.pipelineRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
-	resultID, ok := pr.Annotations[common.IDName]
+	resultID, ok := pr.Annotations[annotation.ResultID]
 	if !ok {
 		t.Fatalf("Expected completed PipelineRun %s should be updated with a results_id field in annotations", tt.pipelineRun.Name)
 	}
@@ -141,7 +141,7 @@ func testUpdateTaskRunToTheExistedResult(t *testing.T) {
 		t.Fatalf("Expected completed PipelineRun %s not created in api server", tt.pipelineRun.Name)
 	}
 
-	path, err := common.AnnotationPath(prResult.GetName(), common.Path, "add")
+	path, err := annotation.AddResultID(prResult.GetName())
 	if err != nil {
 		t.Fatalf("Error jsonpatch for PipelineRun Result %s: %v", prResult.GetName(), err)
 	}
@@ -152,7 +152,7 @@ func testUpdateTaskRunToTheExistedResult(t *testing.T) {
 	}
 
 	// Update the TaskRun to the same Result
-	tr, err = common.ReconcileTaskRun(tt.ctx, tt.trAsset, tt.taskRun)
+	tr, err = test.ReconcileTaskRun(tt.ctx, tt.trAsset, tt.taskRun)
 	if err != nil {
 		t.Fatalf("Failed to reconcile TaskRun: %v", err)
 	}
