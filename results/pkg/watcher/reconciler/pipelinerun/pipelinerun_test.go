@@ -6,11 +6,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/results/pkg/watcher/convert"
-	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/common"
-	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/annotation"
+	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/internal/test"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/test"
+	pipelinetest "github.com/tektoncd/pipeline/test"
 	"google.golang.org/protobuf/testing/protocmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,13 +31,13 @@ func TestReconcile(t *testing.T) {
 
 type PipelineRunTest struct {
 	pipelineRun *v1beta1.PipelineRun
-	asset       test.Assets
+	asset       pipelinetest.Assets
 	ctx         context.Context
 	client      pb.ResultsClient
 }
 
 func NewPipelineRunTest(t *testing.T) PipelineRunTest {
-	client := internal.NewResultsClient(t)
+	client := test.NewResultsClient(t)
 	pipelineRun := &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "Tekton-PipelineRun",
@@ -46,13 +46,13 @@ func NewPipelineRunTest(t *testing.T) PipelineRunTest {
 			UID:         "54321",
 		},
 	}
-	d := test.Data{
+	d := pipelinetest.Data{
 		PipelineRuns: []*v1beta1.PipelineRun{pipelineRun},
 	}
-	ctx, tclients, cmw := internal.GetFakeClients(t, d, client)
+	ctx, tclients, cmw := test.GetFakeClients(t, d, client)
 	pipelineRunTest := PipelineRunTest{
 		pipelineRun: pipelineRun,
-		asset: test.Assets{
+		asset: pipelinetest.Assets{
 			Controller: NewController(ctx, cmw, client),
 			Clients:    tclients,
 		},
@@ -63,14 +63,14 @@ func NewPipelineRunTest(t *testing.T) PipelineRunTest {
 }
 
 func (tt *PipelineRunTest) testCreatePipelineRun(t *testing.T) {
-	pr, err := common.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
+	pr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
-	if _, ok := pr.Annotations[common.IDName]; !ok {
+	if _, ok := pr.Annotations[annotation.ResultID]; !ok {
 		t.Fatalf("Expected completed PipelineRun %s should be updated with a results_id field in annotations", tt.pipelineRun.Name)
 	}
-	if _, err := tt.client.GetResult(tt.ctx, &pb.GetResultRequest{Name: pr.Annotations[common.IDName]}); err != nil {
+	if _, err := tt.client.GetResult(tt.ctx, &pb.GetResultRequest{Name: pr.Annotations[annotation.ResultID]}); err != nil {
 		t.Fatalf("Expected completed PipelineRun %s not created in api server", tt.pipelineRun.Name)
 	}
 }
@@ -80,7 +80,7 @@ func (tt *PipelineRunTest) testUnchangePipelineRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
-	newpr, err := common.ReconcilePipelineRun(tt.ctx, tt.asset, pr)
+	newpr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, pr)
 	if err != nil {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
@@ -90,7 +90,7 @@ func (tt *PipelineRunTest) testUnchangePipelineRun(t *testing.T) {
 }
 
 func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
-	pr, err := common.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
+	pr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
@@ -98,7 +98,7 @@ func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
 	if _, err := tt.asset.Clients.Pipeline.TektonV1beta1().PipelineRuns(tt.pipelineRun.Namespace).Update(pr); err != nil {
 		t.Fatalf("Failed to update PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
-	updatepr, err := common.ReconcilePipelineRun(tt.ctx, tt.asset, pr)
+	updatepr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, pr)
 	if err != nil {
 		t.Fatalf("Failed to reconcile PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
@@ -106,7 +106,7 @@ func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
 	if diff := cmp.Diff(pr, updatepr); diff != "" {
 		t.Fatalf("Expected completed PipelineRun should be updated in cluster: %v", diff)
 	}
-	res, err := tt.client.GetResult(tt.ctx, &pb.GetResultRequest{Name: pr.Annotations[common.IDName]})
+	res, err := tt.client.GetResult(tt.ctx, &pb.GetResultRequest{Name: pr.Annotations[annotation.ResultID]})
 	if err != nil {
 		t.Fatalf("Expected completed PipelineRun %s not created in api server", tt.pipelineRun.Name)
 	}
@@ -115,7 +115,7 @@ func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
 		t.Fatalf("failed to convert to proto: %v", err)
 	}
 	want := &pb.Result{
-		Name: pr.Annotations[common.IDName],
+		Name: pr.Annotations[annotation.ResultID],
 		Executions: []*pb.Execution{{
 			Execution: &pb.Execution_PipelineRun{p},
 		}},

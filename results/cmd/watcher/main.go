@@ -55,8 +55,9 @@ func main() {
 	defer conn.Close()
 
 	cfg := sharedmain.ParseAndGetConfigOrDie()
-
-	sharedmain.MainWithConfig(injection.WithNamespaceScope(signals.NewContext(), ""), "watcher", cfg,
+	// TODO: Enable leader election.
+	ctx := sharedmain.WithHADisabled(signals.NewContext())
+	sharedmain.MainWithConfig(injection.WithNamespaceScope(ctx, ""), "watcher", cfg,
 		func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 			client := pb.NewResultsClient(conn)
 			return pipelinerun.NewController(ctx, cmw, client)
