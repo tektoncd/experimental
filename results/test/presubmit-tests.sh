@@ -33,24 +33,12 @@ function pre_build_tests() {
     pushd ${TEST_FOLDER}
 }
 
+function post_build_tests() {
+    golangci-lint run
+}
+
 function pre_unit_tests() {
     pushd ${TEST_FOLDER}
-}
-
-function pre_integration_tests() {
-    pushd ${TEST_FOLDER}
-}
-
-function post_build_tests() {
-    popd
-}
-
-function post_unit_tests() {
-    popd
-}
-
-function post_integration_tests() {
-    popd
 }
 
 # June 28th 2019: work around https://github.com/tektoncd/plumbing/issues/44
@@ -60,6 +48,23 @@ function unit_tests() {
   go test -v -race ./... || failed=1
   echo "unit_tests returning $@"
   return ${failed}
+}
+
+function post_unit_tests() {
+    popd
+}
+
+function pre_integration_tests() {
+    ${TEST_FOLDER}/test/e2e/setup.sh
+    ${TEST_FOLDER}/test/e2e/install.sh
+}
+
+function integration_tests() {
+    ${TEST_FOLDER}/test/e2e/test.sh
+}
+
+function post_integration_tests() {
+    ${TEST_FOLDER}/test/e2e/cleanup.sh
 }
 
 # We use the default build, unit and integration test runners.

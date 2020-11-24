@@ -15,9 +15,13 @@
 
 set -e
 
+export DOCKER_IN_DOCKER_ENABLED="true"
+export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-"tekton-results"}
 export KO_DOCKER_REPO=${KO_DOCKER_REPO:-"kind.local"}
 
 ROOT="$(git rev-parse --show-toplevel)/results"
+
+echo "Using kubectl context: $(kubectl config current-context)"
 
 echo "Installing Tekton Pipelines..."
 TEKTON_PIPELINE_CONFIG=${TEKTON_PIPELINE_CONFIG:-"https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml"}
@@ -25,10 +29,10 @@ kubectl apply --filename ${TEKTON_PIPELINE_CONFIG}
 
 echo "Generating DB secret..."
 # Don't fail if the secret isn't created - this can happen if the secret already exists.
-kubectl create secret generic tekton-results-mysql --namespace="tekton-pipelines" --from-literal=user=root --from-literal=password=$(openssl rand -base64 20) || true
+kubectl create secret generic tekton-results-mysql --namespace="tekton-pipelines" --from-literal=user=root --from-literal=password=$(openssl rand -base64 20) || echo "continuing anyway..."
 
 echo "Generating DB init config..."
-kubectl create configmap mysql-initdb-config --from-file="${ROOT}/schema/results.sql" --namespace="tekton-pipelines" || true
+kubectl create configmap mysql-initdb-config --from-file="${ROOT}/schema/results.sql" --namespace="tekton-pipelines" || echo "continuing anyway..."
 
 echo "Installing Tekton Results..."
 ko apply --filename="${ROOT}/config/"

@@ -15,8 +15,9 @@
 
 set -e
 
+export DOCKER_IN_DOCKER_ENABLED="true"
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-"tekton-results"}
 KIND_IMAGE="${KIND_IMAGE:-kindest/node:v1.17.11}"
 
-kind create cluster --name="${KIND_CLUSTER_NAME}" --image="${KIND_IMAGE}" --wait=60s
+kind create cluster --name="${KIND_CLUSTER_NAME}" --image="${KIND_IMAGE}" --wait=60s || echo "continuing anyway..."
 kubectl cluster-info --context "kind-${KIND_CLUSTER_NAME}"
