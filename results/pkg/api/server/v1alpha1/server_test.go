@@ -332,39 +332,56 @@ func TestListResults(t *testing.T) {
 		}
 		gotResults = append(gotResults, res)
 	}
+	sortResults := func(results ...[]*pb.Result) {
+		for _, rs := range results {
+			sort.Slice(rs, func(i, j int) bool { return rs[i].Name < rs[j].Name })
+		}
+	}
+	tkrV1beta1Results := []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[7]}
+	plrV1beta1Results := []*pb.Result{gotResults[5], gotResults[7]}
+	taskRunResults := []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[4], gotResults[7]}
+	pipelineRunResults := []*pb.Result{gotResults[5], gotResults[6], gotResults[7]}
+	mixedQueryResults := []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[5], gotResults[7]}
+
+	sortResults(tkrV1beta1Results, plrV1beta1Results, taskRunResults, pipelineRunResults, mixedQueryResults)
 	tt := []struct {
-		name         string
-		filter       string
-		expect       []*pb.Result
-		expectStatus codes.Code
+		name          string
+		filter        string
+		pageSize      int32
+		pageToken     string
+		nextPageToken string
+		nextPageName  string
+		expect        []*pb.Result
+		expectStatus  codes.Code
 	}{
 		{
 			name:         "test query taskrun",
 			filter:       `taskrun.api_version=="v1beta1"`,
-			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[7]},
+			expect:       tkrV1beta1Results,
 			expectStatus: codes.OK,
 		},
 		{
 			name:         "test query pipelinerun",
 			filter:       `pipelinerun.api_version=="v1beta1"`,
-			expect:       []*pb.Result{gotResults[5], gotResults[7]},
+			expect:       plrV1beta1Results,
 			expectStatus: codes.OK,
 		},
 		{
 			name:         "test query taskrun with simple function",
 			filter:       `taskrun.metadata.name.endsWith("run")`,
-			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[4], gotResults[7]},
+			expect:       taskRunResults,
 			expectStatus: codes.OK,
 		},
 		{
 			name:         "test query pipelinerun with simple function",
 			filter:       `pipelinerun.metadata.name.startsWith("pipeline")`,
-			expect:       []*pb.Result{gotResults[5], gotResults[6], gotResults[7]},
+			expect:       pipelineRunResults,
 			expectStatus: codes.OK,
-		}, {
+		},
+		{
 			name:         "test query in a mixed way",
 			filter:       `pipelinerun.api_version=="v1beta1" || taskrun.api_version=="v1beta1"`,
-			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[5], gotResults[7]},
+			expect:       mixedQueryResults,
 			expectStatus: codes.OK,
 		},
 		{
@@ -409,12 +426,69 @@ func TestListResults(t *testing.T) {
 			filter:       `taskrun.MetaData.name=="notaskrun"`,
 			expectStatus: codes.InvalidArgument,
 		},
+		{
+			name:         "test query with invalid pagesize",
+			filter:       `taskrun.api_version=="v1beta1"`,
+			expectStatus: codes.InvalidArgument,
+			pageSize:     -2,
+		},
+		{
+			name:         "test query with invalid pagetoken, can't be decoded",
+			filter:       `taskrun.api_version=="v1beta1"`,
+			expectStatus: codes.InvalidArgument,
+			pageToken:    "invalid_token",
+		},
+		{
+			name:         "test query with invalid pagetoken, decoded filter mismatched",
+			filter:       `taskrun.api_version=="v1beta1"`,
+			expectStatus: codes.InvalidArgument,
+			pageToken:    getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[2].GetName(), Filter: `taskrun.api_version=="v1"`}),
+		},
+		{
+			name:          "test query with pagesize",
+			filter:        `taskrun.api_version=="v1beta1"`,
+			expect:        []*pb.Result{tkrV1beta1Results[0]},
+			expectStatus:  codes.OK,
+			pageSize:      1,
+			nextPageToken: getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[1].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			nextPageName:  tkrV1beta1Results[1].GetName(),
+		},
+		{
+			name:          "test query with pagesize and pagetoken",
+			filter:        `taskrun.api_version=="v1beta1"`,
+			expect:        []*pb.Result{tkrV1beta1Results[1]},
+			expectStatus:  codes.OK,
+			pageSize:      1,
+			pageToken:     getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[1].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			nextPageToken: getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[2].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			nextPageName:  tkrV1beta1Results[2].GetName(),
+		},
+		{
+			name:          "test query with pagesize and pagetoken, no more next page",
+			filter:        `taskrun.api_version=="v1beta1"`,
+			expect:        []*pb.Result{tkrV1beta1Results[1], tkrV1beta1Results[2], tkrV1beta1Results[3]},
+			expectStatus:  codes.OK,
+			pageSize:      3,
+			pageToken:     getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[1].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			nextPageToken: "",
+		},
+		{
+			name:          "test query with pagesize and pagetoken, the last page, got insufficient pages",
+			filter:        `taskrun.api_version=="v1beta1"`,
+			expect:        []*pb.Result{tkrV1beta1Results[2], tkrV1beta1Results[3]},
+			expectStatus:  codes.OK,
+			pageSize:      3,
+			pageToken:     getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[2].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			nextPageToken: "",
+		},
 	}
 	// Test if we can find inserted taskruns
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := srv.ListResultsResult(ctx, &pb.ListResultsRequest{
-				Filter: tc.filter,
+				Filter:    tc.filter,
+				PageSize:  tc.pageSize,
+				PageToken: tc.pageToken,
 			})
 			if tc.expectStatus != status.Code(err) {
 				t.Fatalf("failed on test %v: %v", tc.name, err)
@@ -428,6 +502,17 @@ func TestListResults(t *testing.T) {
 			})
 			if diff := cmp.Diff(gotList, tc.expect, protocmp.Transform()); diff != "" {
 				t.Fatalf("could not get the same taskrun: %v", diff)
+			}
+			nextPageToken := res.GetNextPageToken()
+			if tc.nextPageToken != nextPageToken {
+				t.Fatalf("NextPageToken mismatched, expected: %v, got: %v", tc.nextPageToken, nextPageToken)
+			}
+			if tc.nextPageName != "" {
+				if nextPageIdentifier, err := decodePageToken(nextPageToken); err != nil {
+					t.Fatalf("Error decoding nextPageToken: %v", err)
+				} else if nextPageIdentifier.ResultName != tc.nextPageName {
+					t.Fatalf("NextPageName mismatched, expected: %v, got: %v", tc.nextPageName, nextPageIdentifier.ResultName)
+				}
 			}
 		})
 	}
@@ -446,4 +531,13 @@ func Result(in ...proto.Message) *pb.Result {
 		}
 	}
 	return &pb.Result{Executions: executions}
+}
+
+func getEncodedPageToken(t *testing.T, pi *pb.ListPageIdentifier) string {
+	if token, err := encodePageResult(pi); err != nil {
+		t.Fatalf("Failed to get encoded token: %v", err)
+		return ""
+	} else {
+		return token
+	}
 }

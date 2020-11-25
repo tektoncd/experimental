@@ -3,14 +3,15 @@ package server
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -26,6 +27,11 @@ import (
 	"google.golang.org/grpc/status"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+)
+
+const (
+	listResultsDefaultPageSize int32 = 50
+	listResultsMaximumPageSize int32 = 10000
 )
 
 // Server with implementation of API server
@@ -170,51 +176,71 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 		log.Printf("type-check error: %s", issues.Err())
 		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter parse step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", issues.Err())
 	}
-	// get all results from database
-	rows, err := s.db.Query("SELECT data FROM records")
-	if err != nil {
-		log.Printf("failed to query on database: %v", err)
-		return nil, status.Errorf(codes.Internal, "failed to query record: %v", err)
-	}
-	var results []*pb.Result
-	for rows.Next() {
-		var b []byte
-		if err := rows.Scan(&b); err != nil {
-			log.Printf("failed to scan a row in query results: %v", err)
-			return nil, status.Errorf(codes.Internal, "failed to read result data: %v", err)
-		}
-		r := &pb.Result{}
-		if err := proto.Unmarshal(b, r); err != nil {
-			log.Printf("unmarshaling error: %v", err)
-			return nil, status.Errorf(codes.Internal, "failed to parse result data: %v", err)
-		}
-		results = append(results, r)
+
+	// checks and refines the pageSize
+	pageSize := req.GetPageSize()
+	if pageSize < 0 {
+		return nil, status.Error(codes.InvalidArgument, "PageSize should be greater than 0")
+	} else if pageSize == 0 {
+		pageSize = listResultsDefaultPageSize
+	} else if pageSize > listResultsMaximumPageSize {
+		pageSize = listResultsMaximumPageSize
 	}
 
+	// retrieve the ListPageIdentifier from PageToken
+	var pageIdentifier *pb.ListPageIdentifier
+	pageToken := req.GetPageToken()
+	if pageToken != "" {
+		var err error
+		if pageIdentifier, err = decodePageToken(pageToken); err != nil {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid PageToken: %v", err))
+		}
+		if req.GetFilter() != pageIdentifier.GetFilter() {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("use a different CEL `filter` from the last page."))
+		}
+	}
+
+	var prg cel.Program
+	var err error
 	// return all results back to users if empty query is given
-	if req.GetFilter() == "" {
-		return &pb.ListResultsResponse{Results: results}, nil
-	}
-
-	// filter from all results
-	prg, err := s.env.Program(ast)
-	if err != nil {
-		log.Printf("program construction error: %s", err)
-		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter checking step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
-	}
-	var resp []*pb.Result
-	for _, r := range results {
-		if ok, err := matchCelFilter(r, prg); err != nil {
-			return nil, err
-		} else if ok {
-			resp = append(resp, r)
+	if req.GetFilter() != "" {
+		// filter from all results
+		prg, err = s.env.Program(ast)
+		if err != nil {
+			log.Printf("program construction error: %s", err)
+			return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter checking step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
 		}
 	}
-	return &pb.ListResultsResponse{Results: resp}, nil
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	// always request one more result to know whether next page exists.
+	results, err := getFilteredPaginatedResults(tx, pageSize+1, pageIdentifier, prg)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to commit the query transaction: %v", err))
+	}
+
+	if int32(len(results)) > pageSize {
+		// there exists next page, generate the nextPageToken, and drop the last one of the results.
+		nextResult := results[len(results)-1]
+		results := results[:len(results)-1]
+		if nextPageToken, err := encodePageResult(&pb.ListPageIdentifier{ResultName: nextResult.GetName(), Filter: req.GetFilter()}); err == nil {
+			return &pb.ListResultsResponse{Results: results, NextPageToken: nextPageToken}, nil
+		}
+	}
+	return &pb.ListResultsResponse{Results: results}, nil
 }
 
 // Check if the result can be reserved.
 func matchCelFilter(r *pb.Result, prg cel.Program) (bool, error) {
+	if prg == nil {
+		return true, nil
+	}
 	for _, e := range r.Executions {
 		var (
 			taskrun     ppb.TaskRun
@@ -231,7 +257,7 @@ func matchCelFilter(r *pb.Result, prg cel.Program) (bool, error) {
 			"taskrun":     taskrun,
 			"pipelinerun": pipelinerun,
 		})
-		if err != nil && !strings.Contains(err.Error(), "no such attribute") && !strings.Contains(err.Error(), "undeclared reference to") {
+		if err != nil {
 			log.Printf("failed to evaluate the expression: %v", err)
 			return false, status.Errorf(codes.InvalidArgument, "Error occurred during filter evaluation step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
 		}
@@ -242,9 +268,113 @@ func matchCelFilter(r *pb.Result, prg cel.Program) (bool, error) {
 	return false, nil
 }
 
+// EncodePageResult encodes a ListPageIdentifier to PageToken
+func encodePageResult(pi *pb.ListPageIdentifier) (token string, err error) {
+	var tokenByte []byte
+	if tokenByte, err = proto.Marshal(pi); err != nil {
+		return "", err
+	}
+	encodedResult := make([]byte, base64.RawURLEncoding.EncodedLen(len(tokenByte)))
+	base64.RawURLEncoding.Encode(encodedResult, tokenByte)
+	return base64.RawURLEncoding.EncodeToString(encodedResult), nil
+}
+
+func decodePageToken(token string) (pi *pb.ListPageIdentifier, err error) {
+	var encodedToken []byte
+	if encodedToken, err = base64.RawURLEncoding.DecodeString(token); err != nil {
+		return nil, err
+	}
+	tokenByte := make([]byte, base64.RawURLEncoding.DecodedLen(len(encodedToken)))
+	if _, err = base64.RawURLEncoding.Decode(tokenByte, encodedToken); err != nil {
+		return nil, err
+	}
+	pi = &pb.ListPageIdentifier{}
+	if err = proto.Unmarshal(tokenByte, pi); err != nil {
+		return nil, err
+	}
+	return pi, err
+}
+
+// GetFilteredPaginatedResults aims to obtain a fixed size `pageSize` of results from the database, starting
+// from the results with the identifier `startPI`, filtered by a compiled CEL program `prg`.
+//
+// In this function, we query the database multiple times and filter the queried results to
+// comprise the final results.
+//
+// To minimize the query times, we introduce a variable `ratio` to indicate the retention rate
+// after filtering a batch of results. The ratio of the queried batch is:
+//             ratio = remained_results_size/batch_size.
+//
+// The batchSize depends on the `ratio` of the previous batch and the `pageSize`:
+//                  batchSize = pageSize/last_ratio
+// The less the previous ratio is, the bigger the upcoming batch_size is. Then the queried time
+// is significantly decreased.
+func getFilteredPaginatedResults(tx *sql.Tx, pageSize int32, startPI *pb.ListPageIdentifier, prg cel.Program) (results []*pb.Result, err error) {
+	var lastName string
+	// for a queried batch, ratio = matchedNum/batchSize, where the `matchedNum` is the number of remained `results` after filtering.
+	// we use the ratio of the current batch to dynamically determine the next batchSize, that is, nextBatchSize = pageSize/ratio.
+	var ratio float32 = 1
+	for int32(len(results)) < pageSize {
+		// If didn't get enought results.
+		var (
+			batchSize    int32 // batchSize = math.Ceil(pageSize/ratio), has the same maximum value as `pageSize`.
+			batchGot     int32 // less than batchSize, the size of the actually obtained records from a batch query.
+			batchMatched int32 // less than batchGot, the size of results satisfying the condition that `prg` indicates.
+		)
+		if math.Ceil(float64(pageSize)/float64(ratio)) > float64(listResultsMaximumPageSize) {
+			batchSize = listResultsMaximumPageSize
+		} else {
+			batchSize = int32(math.Ceil(float64(pageSize) / float64(ratio)))
+		}
+		var rows *sql.Rows
+		if lastName == "" {
+			if startPI != nil {
+				rows, err = tx.Query("SELECT name, data FROM records WHERE name >= ? ORDER BY name LIMIT ? ", startPI.GetResultName(), batchSize)
+			} else {
+				rows, err = tx.Query("SELECT name, data FROM records ORDER BY name LIMIT ?", batchSize)
+			}
+		} else {
+			rows, err = tx.Query("SELECT name, data FROM records WHERE name > ? ORDER BY name LIMIT ? ", lastName, batchSize)
+		}
+		if err != nil {
+			log.Printf("failed to query on database: %v", err)
+			return nil, status.Errorf(codes.Internal, "failed to query results: %v", err)
+		}
+		for rows.Next() {
+			batchGot++
+			var b []byte
+			if err := rows.Scan(&lastName, &b); err != nil {
+				log.Printf("failed to scan a row in query results: %v", err)
+				return nil, status.Errorf(codes.Internal, "failed to read result data: %v", err)
+			}
+			r := &pb.Result{}
+			if err := proto.Unmarshal(b, r); err != nil {
+				log.Printf("unmarshaling error: %v", err)
+				return nil, status.Errorf(codes.Internal, "failed to parse result data: %v", err)
+			}
+			// filter the results one by one
+			if ok, _ := matchCelFilter(r, prg); ok {
+				batchMatched++
+				results = append(results, r)
+				if int32(len(results)) >= pageSize {
+					break
+				}
+			}
+		}
+		if batchGot < batchSize {
+			// No more data in database.
+			break
+		}
+		// update `ratio` to dynamically determine the `batchSize`
+		if batchMatched != 0 && batchGot != 0 {
+			ratio = float32(batchMatched) / float32(batchGot)
+		}
+	}
+	return results, nil
+}
+
 // GetResultByID is the helper function to get a Result by results_id
 func (s Server) getResultByID(name string) (*pb.Result, error) {
-
 	rows, err := s.db.Query("SELECT data FROM records WHERE name = ?", name)
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
