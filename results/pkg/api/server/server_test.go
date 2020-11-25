@@ -2,9 +2,11 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
@@ -29,7 +31,7 @@ func TestCreateResult(t *testing.T) {
 	// connect to fake server and do testing
 	ctx := context.Background()
 	if _, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
-		Result: TaskRunResult(&ppb.TaskRun{
+		Result: Result(&ppb.TaskRun{
 			ApiVersion: "1",
 			Metadata: &ppb.ObjectMeta{
 				Uid:       "123459",
@@ -50,7 +52,7 @@ func TestGetResult(t *testing.T) {
 	ctx := context.Background()
 	// Connect to fake server and create a new taskrun
 	r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
-		Result: TaskRunResult(&ppb.TaskRun{
+		Result: Result(&ppb.TaskRun{
 			ApiVersion: "v1beta1",
 			Metadata: &ppb.ObjectMeta{
 				Uid:       "31415926",
@@ -93,7 +95,7 @@ func TestUpdateResult(t *testing.T) {
 		{
 			in:   &pb.Result{},
 			name: "Test no Mask",
-			update: TaskRunResult(&ppb.TaskRun{
+			update: Result(&ppb.TaskRun{
 				ApiVersion: "v1beta1",
 				Metadata: &ppb.ObjectMeta{
 					Uid:       "123456",
@@ -102,7 +104,7 @@ func TestUpdateResult(t *testing.T) {
 				},
 			}),
 			// update entire taskrun
-			expect: TaskRunResult(&ppb.TaskRun{
+			expect: Result(&ppb.TaskRun{
 				ApiVersion: "v1beta1",
 				Metadata: &ppb.ObjectMeta{
 					Uid:       "123456",
@@ -120,7 +122,7 @@ func TestUpdateResult(t *testing.T) {
 			expect: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
 		},
 		{
-			in: TaskRunResult(&ppb.TaskRun{
+			in: Result(&ppb.TaskRun{
 				ApiVersion: "v1alpha1",
 				Metadata: &ppb.ObjectMeta{
 					Uid:       "31415926",
@@ -143,7 +145,7 @@ func TestUpdateResult(t *testing.T) {
 			expect: &pb.Result{},
 		},
 		{
-			in: TaskRunResult(&ppb.TaskRun{
+			in: Result(&ppb.TaskRun{
 				Metadata: &ppb.ObjectMeta{
 					Name: "foo",
 				},
@@ -151,12 +153,12 @@ func TestUpdateResult(t *testing.T) {
 			name:      "Test Mask updating repeated fields",
 			fieldmask: &field_mask.FieldMask{Paths: []string{"executions"}},
 			// update entire repeated field(all elements in array) - standard update
-			update: TaskRunResult(&ppb.TaskRun{
+			update: Result(&ppb.TaskRun{
 				Metadata: &ppb.ObjectMeta{
 					Name: "bar",
 				},
 			}),
-			expect: TaskRunResult(&ppb.TaskRun{
+			expect: Result(&ppb.TaskRun{
 				Metadata: &ppb.ObjectMeta{
 					Name: "bar",
 				},
@@ -228,7 +230,7 @@ func TestDeleteResult(t *testing.T) {
 	// Connect to fake server and insert a new taskrun
 	ctx := context.Background()
 	r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
-		Result: TaskRunResult(&ppb.TaskRun{
+		Result: Result(&ppb.TaskRun{
 			ApiVersion: "1",
 			Metadata: &ppb.ObjectMeta{
 				Uid:       "123459",
@@ -256,6 +258,7 @@ func TestDeleteResult(t *testing.T) {
 		t.Fatalf("same taskrun not supposed to be deleted again: %v", r.String())
 	}
 }
+
 func TestListResults(t *testing.T) {
 	// Create a temporary database
 	srv, err := SetupTestDB(t)
@@ -268,7 +271,7 @@ func TestListResults(t *testing.T) {
 	t1 := &ppb.TaskRun{
 		ApiVersion: "v1beta1",
 		Metadata: &ppb.ObjectMeta{
-			Uid:       "31415926",
+			Uid:       "00000001",
 			Name:      "taskrun",
 			Namespace: "default",
 		},
@@ -276,7 +279,7 @@ func TestListResults(t *testing.T) {
 	t2 := &ppb.TaskRun{
 		ApiVersion: "v1alpha1",
 		Metadata: &ppb.ObjectMeta{
-			Uid:       "43245243",
+			Uid:       "00000002",
 			Name:      "task",
 			Namespace: "default",
 		},
@@ -284,7 +287,7 @@ func TestListResults(t *testing.T) {
 	t3 := &ppb.TaskRun{
 		ApiVersion: "v1beta1",
 		Metadata: &ppb.ObjectMeta{
-			Uid:       "1234556",
+			Uid:       "00000003",
 			Name:      "mytaskrun",
 			Namespace: "demo",
 		},
@@ -292,7 +295,7 @@ func TestListResults(t *testing.T) {
 	t4 := &ppb.TaskRun{
 		ApiVersion: "v1beta1",
 		Metadata: &ppb.ObjectMeta{
-			Uid:       "543535",
+			Uid:       "00000004",
 			Name:      "newtaskrun",
 			Namespace: "demo",
 		},
@@ -300,12 +303,29 @@ func TestListResults(t *testing.T) {
 	t5 := &ppb.TaskRun{
 		ApiVersion: "v1alpha1",
 		Metadata: &ppb.ObjectMeta{
-			Uid:       "543535",
+			Uid:       "00000005",
 			Name:      "newtaskrun",
 			Namespace: "official",
 		},
 	}
-	results := []*pb.Result{TaskRunResult(t1), TaskRunResult(t2), TaskRunResult(t3), TaskRunResult(t4), TaskRunResult(t5)}
+	t6 := &ppb.PipelineRun{
+		ApiVersion: "v1beta1",
+		Metadata: &ppb.ObjectMeta{
+			Uid:       "00000006",
+			Name:      "pipelinerun",
+			Namespace: "default",
+		},
+	}
+	t7 := &ppb.PipelineRun{
+		ApiVersion: "v1alpha1",
+		Metadata: &ppb.ObjectMeta{
+			Uid:       "00000007",
+			Name:      "pipeline",
+			Namespace: "demo",
+		},
+	}
+
+	results := []*pb.Result{Result(t1), Result(t2), Result(t3), Result(t4), Result(t5), Result(t6), Result(t7), Result(t4, t5, t6, t7)}
 	gotResults := []*pb.Result{}
 	for _, r := range results {
 		res, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
@@ -323,15 +343,32 @@ func TestListResults(t *testing.T) {
 		expectStatus codes.Code
 	}{
 		{
-			name:         "test simple query",
+			name:         "test query taskrun",
 			filter:       `taskrun.api_version=="v1beta1"`,
-			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3]},
+			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[7]},
 			expectStatus: codes.OK,
 		},
 		{
-			name:         "test query with simple function",
+			name:         "test query pipelinerun",
+			filter:       `pipelinerun.api_version=="v1beta1"`,
+			expect:       []*pb.Result{gotResults[5], gotResults[7]},
+			expectStatus: codes.OK,
+		},
+		{
+			name:         "test query taskrun with simple function",
 			filter:       `taskrun.metadata.name.endsWith("run")`,
-			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[4]},
+			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[4], gotResults[7]},
+			expectStatus: codes.OK,
+		},
+		{
+			name:         "test query pipelinerun with simple function",
+			filter:       `pipelinerun.metadata.name.startsWith("pipeline")`,
+			expect:       []*pb.Result{gotResults[5], gotResults[6], gotResults[7]},
+			expectStatus: codes.OK,
+		}, {
+			name:         "test query in a mixed way",
+			filter:       `pipelinerun.api_version=="v1beta1" || taskrun.api_version=="v1beta1"`,
+			expect:       []*pb.Result{gotResults[0], gotResults[2], gotResults[3], gotResults[5], gotResults[7]},
 			expectStatus: codes.OK,
 		},
 		{
@@ -400,10 +437,17 @@ func TestListResults(t *testing.T) {
 	}
 }
 
-func TaskRunResult(tr *ppb.TaskRun) *pb.Result {
-	return &pb.Result{
-		Executions: []*pb.Execution{{
-			Execution: &pb.Execution_TaskRun{tr},
-		}},
+func Result(in ...proto.Message) *pb.Result {
+	executions := make([]*pb.Execution, 0, len(in))
+	for _, m := range in {
+		switch x := m.(type) {
+		case *ppb.TaskRun:
+			executions = append(executions, &pb.Execution{Execution: &pb.Execution_TaskRun{x}})
+		case *ppb.PipelineRun:
+			executions = append(executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{x}})
+		default:
+			panic(fmt.Sprintf("unknown message: %v", m))
+		}
 	}
+	return &pb.Result{Executions: executions}
 }

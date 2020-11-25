@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
+	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	mask "go.chromium.org/luci/common/proto/mask"
 	"google.golang.org/grpc/codes"
@@ -189,20 +191,42 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 	}
 	var resp []*pb.Result
 	for _, r := range results {
-		for _, e := range r.Executions {
-			out, _, err := prg.Eval(map[string]interface{}{
-				"taskrun": e.GetTaskRun(),
-			})
-			if err != nil {
-				log.Printf("failed to evaluate the expression: %v", err)
-				return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter evaluation step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
-			}
-			if out.Value() == true {
-				resp = append(resp, r)
-			}
+		if ok, err := matchCelFilter(r, prg); err != nil {
+			return nil, err
+		} else if ok {
+			resp = append(resp, r)
 		}
 	}
 	return &pb.ListResultsResponse{Results: resp}, nil
+}
+
+// Check if the result can be reserved.
+func matchCelFilter(r *pb.Result, prg cel.Program) (bool, error) {
+	for _, e := range r.Executions {
+		var (
+			taskrun     ppb.TaskRun
+			pipelinerun ppb.PipelineRun
+		)
+		if t := e.GetTaskRun(); t != nil {
+			taskrun = *(t)
+		}
+		if p := e.GetPipelineRun(); p != nil {
+			pipelinerun = *(p)
+		}
+		// We can't directly using e.GetTaskRun() and e.GetPipelineRun() here because the CEL doesn't work well with the nil pointer for proto types.
+		out, _, err := prg.Eval(map[string]interface{}{
+			"taskrun":     taskrun,
+			"pipelinerun": pipelinerun,
+		})
+		if err != nil && !strings.Contains(err.Error(), "no such attribute") && !strings.Contains(err.Error(), "undeclared reference to") {
+			log.Printf("failed to evaluate the expression: %v", err)
+			return false, status.Errorf(codes.InvalidArgument, "Error occurred during filter evaluation step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
+		}
+		if out.Value() == true {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // GetResultByID is the helper function to get a Result by results_id
@@ -275,8 +299,9 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 // New set up environment for the api server
 func New(db *sql.DB) (*Server, error) {
 	env, err := cel.NewEnv(
-		cel.Types(&pb.Result{}),
+		cel.Types(&pb.Result{}, &ppb.PipelineRun{}, &ppb.TaskRun{}),
 		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.pipeline.v1beta1.TaskRun"), nil)),
+		cel.Declarations(decls.NewIdent("pipelinerun", decls.NewObjectType("tekton.pipeline.v1beta1.PipelineRun"), nil)),
 	)
 	if err != nil {
 		log.Fatalf("failed to create environment for filter: %v", err)
