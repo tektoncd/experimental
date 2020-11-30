@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package tekton.results.v1alpha2;
+
+import "resources.proto";
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+
+option go_package = "github.com/tektoncd/experimental/results/proto/v1alpha2/results_go_proto";
+
+service Results {
+  rpc CreateResult(CreateResultRequest) returns (Result) {
+    option (google.api.http) = {
+      post: "/v1alpha2/{parent=*}/results"
+      body: "result"
+    };
+  }
+
+  rpc UpdateResult(UpdateResultRequest) returns (Result) {
+    option (google.api.http) = {
+      patch: "/v1alpha2/{result.name=*/results/*}"
+      body: "result"
+    };
+  }
+
+  rpc GetResult(GetResultRequest) returns (Result) {
+    option (google.api.http) = {
+      get: "/v1alpha2/{name=*/results/*}"
+    };
+  }
+
+  rpc DeleteResult(DeleteResultRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1alpha2/{name=*/results/*}"
+    };
+  }
+
+  rpc ListResults(ListResultsRequest) returns (ListResultsResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha2/{parent=*}/results"
+    };
+  }
+
+  rpc CreateRecord(CreateRecordRequest) returns (Record) {
+    option (google.api.http) = {
+    post: "/v1alpha2/{parent=*/results/*}/records"
+      body: "record"
+    };
+  }
+
+  rpc UpdateRecord(UpdateRecordRequest) returns (Record) {
+    option (google.api.http) = {
+    patch: "/v1alpha2/{record.name=*/results/*/records/*}"
+      body: "record"
+    };
+  }
+
+  rpc GetRecord(GetRecordRequest) returns (Record) {
+    option (google.api.http) = {
+      get: "/v1alpha2/{name=*/results/*/records/*}"
+    };
+  }
+
+  rpc DeleteRecord(DeleteRecordRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1alpha2/{name=*/results/*/records/*}"
+    };
+  }
+}
+
+message CreateResultRequest {
+  // User provided parent to partition results under.
+  string parent = 1;
+
+  Result result = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteResultRequest {
+  string name = 1;
+}
+
+message UpdateResultRequest {
+  string name = 1;
+  Result result = 2;
+
+  google.protobuf.FieldMask update_mask = 3;
+  // If set, then the request will succeed if and only if the provided etag
+  // matches the server-computed value, else will fail.
+  // Should be used to prevent concurrent updates from overwritting each other.
+  string etag = 4;
+}
+
+message GetResultRequest {
+  string name = 1;
+}
+
+message ListResultsRequest {
+  string parent = 1;
+
+  string filter = 2;
+
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListResultsResponse {
+  repeated Result results = 1;
+  string next_page_token = 2;
+}
+
+message CreateRecordRequest {
+  // User provided parent to partition results under.
+  string parent = 1 [(google.api.resource_reference) = {
+    type: "tekton.results.v1alpha2/Result"
+    child_type: "tekton.results.v1alpha2/Record"
+  }];
+
+  Record record = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteRecordRequest {
+  string name = 1;
+}
+
+message UpdateRecordRequest {
+  string name = 1;
+  Result result = 2;
+
+  google.protobuf.FieldMask update_mask = 3;
+  // If set, then the request will succeed if and only if the provided etag
+  // matches the server-computed value, else will fail.
+  // Should be used to prevent concurrent updates from overwritting each other.
+  string etag = 4;
+}
+
+message GetRecordRequest {
+  string name = 1;
+}

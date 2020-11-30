@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package tekton.results.v1alpha2;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tektoncd/experimental/results/proto/v1alpha2/results_go_proto";
+
+message Result {
+    // User assigned identifier of the Result.
+    // Encodes parent information.
+    //
+    // Examples: namespace/default/results/1234
+    //           cluster/<cluster-id>/namespace/tekton/results/1234
+    string name = 1 [(google.api.resource_reference) = {
+      child_type: "tekton.results.v1alpha2/Result"
+    }];
+  
+    // Server assigned identifier of the Result.
+    string id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  
+      // Server assigned timestamp for when the result was created.
+    google.protobuf.Timestamp created_time = 3
+        [(google.api.field_behavior) = OUTPUT_ONLY];
+  
+    // Arbitrary user provided labels for the result.
+    map<string, string> annotations = 4;
+  
+    // The etag for this result.
+    // If this is provided on update, it must match the server's etag.
+    string etag = 5
+        [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+  
+  // Record belonging to a Result. Typically will be Tekton
+  // Task/PipelineRuns, but may also include other execution information
+  // (e.g. alternative configs, DSLs, input payloads, post-execution actions, etc.)
+  message Record {
+    // Resource name, must be rooted in parent result.
+    string name = 1 [(google.api.resource_reference) = {
+        child_type: "tekton.results.v1alpha2/Record"
+    }];
+    
+    // Server assigned identifier of the Result.
+    string id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  
+    google.protobuf.Any data = 3;
+    
+    // The etag for this record.
+    // If this is provided on update, it must match the server's etag.
+    string etag = 4;
+  }
