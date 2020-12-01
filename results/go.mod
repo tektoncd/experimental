@@ -5,13 +5,12 @@ go 1.13
 require (
 	cloud.google.com/go v0.66.0 // indirect
 	github.com/evanphx/json-patch v4.9.0+incompatible // indirect
-	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.3
 	github.com/google/cel-go v0.5.1
 	github.com/google/go-cmp v0.5.2
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.1.2
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/smartystreets/assertions v1.1.1 // indirect
 	github.com/tektoncd/pipeline v0.17.1
@@ -26,6 +25,9 @@ require (
 	google.golang.org/genproto v0.0.0-20201019141844-1ed22bb0c154
 	google.golang.org/grpc v1.33.1
 	google.golang.org/protobuf v1.25.0
+	gorm.io/driver/mysql v1.0.3
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.20.7
 	k8s.io/api v0.19.3
 	k8s.io/apiextensions-apiserver v0.18.6 // indirect
 	k8s.io/apimachinery v0.19.3
