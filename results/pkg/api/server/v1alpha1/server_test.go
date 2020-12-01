@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
+	"github.com/tektoncd/experimental/results/pkg/api/server/test"
 	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"google.golang.org/genproto/protobuf/field_mask"
@@ -19,7 +20,7 @@ import (
 // Test functionality of Server code
 func TestCreateResult(t *testing.T) {
 	// Create a temporay database
-	srv, err := SetupTestDB(t)
+	srv, err := New(test.NewDB(t))
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
@@ -41,7 +42,7 @@ func TestCreateResult(t *testing.T) {
 
 func TestGetResult(t *testing.T) {
 	// Create a temporary database
-	srv, err := SetupTestDB(t)
+	srv, err := New(test.NewDB(t))
 	if err != nil {
 		t.Fatalf("failed to setup db: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestGetResult(t *testing.T) {
 
 func TestUpdateResult(t *testing.T) {
 	// Create a temporary database
-	srv, err := SetupTestDB(t)
+	srv, err := New(test.NewDB(t))
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
@@ -219,7 +220,7 @@ func TestUpdateResult(t *testing.T) {
 
 func TestDeleteResult(t *testing.T) {
 	// Create a temporay database
-	srv, err := SetupTestDB(t)
+	srv, err := New(test.NewDB(t))
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
@@ -257,7 +258,7 @@ func TestDeleteResult(t *testing.T) {
 
 func TestListResults(t *testing.T) {
 	// Create a temporary database
-	srv, err := SetupTestDB(t)
+	srv, err := New(test.NewDB(t))
 	if err != nil {
 		t.Fatalf("failed to setup db: %v", err)
 	}

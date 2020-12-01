@@ -5,10 +5,11 @@ import (
 	"net"
 	"testing"
 
+	"github.com/tektoncd/experimental/results/pkg/api/server/test"
 	server "github.com/tektoncd/experimental/results/pkg/api/server/v1alpha1"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
-	"github.com/tektoncd/pipeline/test"
+	pipelinetest "github.com/tektoncd/pipeline/test"
 	"google.golang.org/grpc"
 	"knative.dev/pkg/configmap"
 )
@@ -18,7 +19,7 @@ const (
 )
 
 func NewResultsClient(t *testing.T) pb.ResultsClient {
-	srv, err := server.SetupTestDB(t)
+	srv, err := server.New(test.NewDB(t))
 	if err != nil {
 		t.Fatalf("Failed to create fake server: %v", err)
 	}
@@ -41,10 +42,10 @@ func NewResultsClient(t *testing.T) pb.ResultsClient {
 	return pb.NewResultsClient(conn)
 }
 
-func GetFakeClients(t *testing.T, d test.Data, client pb.ResultsClient) (context.Context, test.Clients, *configmap.InformedWatcher) {
+func GetFakeClients(t *testing.T, d pipelinetest.Data, client pb.ResultsClient) (context.Context, pipelinetest.Clients, *configmap.InformedWatcher) {
 	t.Helper()
 	ctx, _ := ttesting.SetupFakeContext(t)
-	clients, _ := test.SeedTestData(t, ctx, d)
+	clients, _ := pipelinetest.SeedTestData(t, ctx, d)
 	cmw := configmap.NewInformedWatcher(clients.Kube, "")
 	return ctx, clients, cmw
 }

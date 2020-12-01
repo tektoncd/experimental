@@ -8,7 +8,7 @@ CREATE TABLE results (
 
 	PRIMARY KEY(parent, id)
 );
-CREATE UNIQUE INDEX resultsByName ON results(parent, name);
+CREATE UNIQUE INDEX results_by_name ON results(parent, name);
 
 CREATE TABLE records (
 	parent varchar(64),
@@ -21,4 +21,4 @@ CREATE TABLE records (
 
 	PRIMARY KEY(parent, result_id, id)
 );
-CREATE UNIQUE INDEX recordsByName ON records(parent, result_name, name);
+CREATE UNIQUE INDEX records_by_name ON records(parent, result_name, name);

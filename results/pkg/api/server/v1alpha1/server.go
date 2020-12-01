@@ -5,14 +5,8 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
-	"testing"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -25,7 +19,6 @@ import (
 	mask "go.chromium.org/luci/common/proto/mask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -399,48 +392,6 @@ func (s Server) getResultByID(name string) (*pb.Result, error) {
 		return nil, status.Error(codes.NotFound, "result not found")
 	}
 	return result, nil
-}
-
-// SetupTestDB set up a temporary database for testing
-func SetupTestDB(t *testing.T) (*Server, error) {
-	t.Helper()
-
-	// Create a temporary file
-	tmpfile, err := ioutil.TempFile("", "testdb")
-	if err != nil {
-		t.Fatalf("failed to create temp file for db: %v", err)
-	}
-	t.Log("test database: ", tmpfile.Name())
-	t.Cleanup(func() {
-		tmpfile.Close()
-		os.Remove(tmpfile.Name())
-	})
-
-	// Connect to sqlite DB manually to load in schema.
-	db, err := sql.Open("sqlite3", tmpfile.Name())
-	if err != nil {
-		t.Fatalf("failed to open the results.db: %v", err)
-	}
-	defer db.Close()
-
-	_, b, _, _ := runtime.Caller(0)
-	basepath := filepath.Dir(b)
-	schema, err := ioutil.ReadFile(path.Join(basepath, "../../../../schema/results.sql"))
-	if err != nil {
-		t.Fatalf("failed to read schema file: %v", err)
-	}
-	// Create result table using the checked in scheme to ensure compatibility.
-	if _, err := db.Exec(string(schema)); err != nil {
-		t.Fatalf("failed to execute the result table creation statement statement: %v", err)
-	}
-
-	// Reopen DB using gorm to use all the nice gorm tools.
-	gdb, err := gorm.Open(sqlite.Open(tmpfile.Name()), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open the results.db: %v", err)
-	}
-
-	return New(gdb)
 }
 
 // New set up environment for the api server
