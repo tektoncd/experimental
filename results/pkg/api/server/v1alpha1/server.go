@@ -18,25 +18,29 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
 	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
+	dbmodel "github.com/tektoncd/experimental/results/pkg/api/server/db"
 	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	mask "go.chromium.org/luci/common/proto/mask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 // Server with implementation of API server
 type Server struct {
 	pb.UnimplementedResultsServer
 	env *cel.Env
+	gdb *gorm.DB
 	db  *sql.DB
 }
 
 // CreateResult receives CreateResultRequest from clients and save it to local Sqlite Server.
 func (s *Server) CreateResult(ctx context.Context, req *pb.CreateResultRequest) (*pb.Result, error) {
 	r := req.GetResult()
-	r.Name = fmt.Sprintf("%s/results/%s", req.GetParent(), uuid.New().String())
+	name := uuid.New().String()
+	r.Name = fmt.Sprintf("%s/results/%s", req.GetParent(), name)
 
 	// serialize data and insert it into database.
 	b, err := proto.Marshal(r)
@@ -45,15 +49,24 @@ func (s *Server) CreateResult(ctx context.Context, req *pb.CreateResultRequest) 
 		return nil, fmt.Errorf("failed to marshal result: %w", err)
 	}
 
-	statement, err := s.db.Prepare("INSERT INTO results (name, data) VALUES (?, ?)")
-	if err != nil {
-		log.Printf("failed to prepare insert: %v", err)
-		return nil, fmt.Errorf("failed to insert a new result: %w", err)
+	// Slightly confusing since this is CreateResult, but this maps better to
+	// Records in the v1alpha2 API, so store this as a Record for
+	// compatibility.
+	record := &dbmodel.Record{
+		Parent: req.GetParent(),
+		// TODO: Require Records to be nested in Results. Since v1alpha1
+		// results ~= records, allow parent-less records for now to allow
+		// clients to continue working.
+		ResultID: "",
+		ID:       name,
+		// This should be the parent-less name, but allow for now for compatibility.
+		Name: r.Name,
+		Data: b,
 	}
-	if _, err := statement.Exec(r.GetName(), b); err != nil {
-		log.Printf("failed to execute insertion of a new result: %v\n", err)
-		return nil, fmt.Errorf("failed to add result: %w", err)
+	if err := s.gdb.WithContext(ctx).Create(record).Error; err != nil {
+		return nil, err
 	}
+
 	return r, nil
 }
 
@@ -112,7 +125,7 @@ func (s Server) UpdateResult(ctx context.Context, req *pb.UpdateResultRequest) (
 		log.Println("result marshaling error: ", err)
 		return nil, fmt.Errorf("result marshaling error: %w", err)
 	}
-	statement, err := s.db.Prepare("UPDATE results SET data = ? WHERE name = ?")
+	statement, err := s.db.Prepare("UPDATE records SET data = ? WHERE name = ?")
 	if err != nil {
 		log.Printf("failed to update a existing result: %v", err)
 		return nil, fmt.Errorf("failed to update a exsiting result: %w", err)
@@ -128,7 +141,7 @@ func (s Server) UpdateResult(ctx context.Context, req *pb.UpdateResultRequest) (
 
 // DeleteResult receives DeleteResult request from users and delete Result in local Sqlite Server.
 func (s Server) DeleteResult(ctx context.Context, req *pb.DeleteResultRequest) (*empty.Empty, error) {
-	statement, err := s.db.Prepare("DELETE FROM results WHERE name = ?")
+	statement, err := s.db.Prepare("DELETE FROM records WHERE name = ?")
 	if err != nil {
 		log.Printf("failed to create delete statement: %v", err)
 		return nil, fmt.Errorf("failed to create delete statement: %w", err)
@@ -158,10 +171,10 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter parse step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", issues.Err())
 	}
 	// get all results from database
-	rows, err := s.db.Query("SELECT data FROM results")
+	rows, err := s.db.Query("SELECT data FROM records")
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
-		return nil, status.Errorf(codes.Internal, "failed to query results: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to query record: %v", err)
 	}
 	var results []*pb.Result
 	for rows.Next() {
@@ -232,7 +245,7 @@ func matchCelFilter(r *pb.Result, prg cel.Program) (bool, error) {
 // GetResultByID is the helper function to get a Result by results_id
 func (s Server) getResultByID(name string) (*pb.Result, error) {
 
-	rows, err := s.db.Query("SELECT data FROM results WHERE name = ?", name)
+	rows, err := s.db.Query("SELECT data FROM records WHERE name = ?", name)
 	if err != nil {
 		log.Printf("failed to query on database: %v", err)
 		return nil, fmt.Errorf("failed to query on a result: %w", err)
@@ -267,37 +280,41 @@ func SetupTestDB(t *testing.T) (*Server, error) {
 	if err != nil {
 		t.Fatalf("failed to create temp file for db: %v", err)
 	}
+	t.Log("test database: ", tmpfile.Name())
 	t.Cleanup(func() {
+		tmpfile.Close()
 		os.Remove(tmpfile.Name())
 	})
 
-	// Connect to sqlite DB.
+	// Connect to sqlite DB manually to load in schema.
 	db, err := sql.Open("sqlite3", tmpfile.Name())
 	if err != nil {
 		t.Fatalf("failed to open the results.db: %v", err)
 	}
-	t.Cleanup(func() {
-		db.Close()
-	})
+	defer db.Close()
+
 	_, b, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(b)
-	schema, err := ioutil.ReadFile(path.Join(basepath, "../../../schema/results.sql"))
+	schema, err := ioutil.ReadFile(path.Join(basepath, "../../../../schema/results.sql"))
 	if err != nil {
 		t.Fatalf("failed to read schema file: %v", err)
 	}
-	// Create result table
-	statement, err := db.Prepare(string(schema))
-	if err != nil {
-		t.Fatalf("failed to create result table: %v", err)
-	}
-	if _, err := statement.Exec(); err != nil {
+	// Create result table using the checked in scheme to ensure compatibility.
+	if _, err := db.Exec(string(schema)); err != nil {
 		t.Fatalf("failed to execute the result table creation statement statement: %v", err)
 	}
-	return New(db)
+
+	// Reopen DB using gorm to use all the nice gorm tools.
+	gdb, err := gorm.Open(sqlite.Open(tmpfile.Name()), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open the results.db: %v", err)
+	}
+
+	return New(gdb)
 }
 
 // New set up environment for the api server
-func New(db *sql.DB) (*Server, error) {
+func New(gdb *gorm.DB) (*Server, error) {
 	env, err := cel.NewEnv(
 		cel.Types(&pb.Result{}, &ppb.PipelineRun{}, &ppb.TaskRun{}),
 		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.pipeline.v1beta1.TaskRun"), nil)),
@@ -306,6 +323,14 @@ func New(db *sql.DB) (*Server, error) {
 	if err != nil {
 		log.Fatalf("failed to create environment for filter: %v", err)
 	}
-	srv := &Server{db: db, env: env}
+	db, err := gdb.DB()
+	if err != nil {
+		return nil, err
+	}
+	srv := &Server{
+		gdb: gdb,
+		db:  db,
+		env: env,
+	}
 	return srv, nil
 }

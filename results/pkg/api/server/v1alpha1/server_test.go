@@ -16,10 +16,6 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 )
 
-const (
-	address = "localhost:0"
-)
-
 // Test functionality of Server code
 func TestCreateResult(t *testing.T) {
 	// Create a temporay database

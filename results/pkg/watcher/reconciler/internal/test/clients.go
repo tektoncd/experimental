@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/tektoncd/experimental/results/pkg/api/server"
+	server "github.com/tektoncd/experimental/results/pkg/api/server/v1alpha1"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"

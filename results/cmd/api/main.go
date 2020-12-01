@@ -17,18 +17,18 @@ limitations under the License.
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
 
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/tektoncd/experimental/results/pkg/api/server"
+	server "github.com/tektoncd/experimental/results/pkg/api/server/v1alpha1"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -41,11 +41,10 @@ func main() {
 	// Connect to the MySQL database.
 	// DSN derived from https://github.com/go-sql-driver/mysql#dsn-data-source-name
 	dbURI := fmt.Sprintf("%s:%s@%s(%s)/%s?parseTime=true", user, pass, os.Getenv("DB_PROTOCOL"), os.Getenv("DB_ADDR"), os.Getenv("DB_NAME"))
-	db, err := sql.Open("mysql", dbURI)
+	db, err := gorm.Open(mysql.Open(dbURI), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to open the results.db: %v", err)
 	}
-	defer db.Close()
 
 	// Create cel enviroment for filter
 	srv, err := server.New(db)
