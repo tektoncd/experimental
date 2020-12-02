@@ -140,3 +140,39 @@ func TestGetResult(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteResult(t *testing.T) {
+	srv, err := New(test.NewDB(t))
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+	ctx := context.Background()
+	r, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
+		Parent: "foo",
+		Result: &pb.Result{
+			Name: "foo/results/bar",
+		},
+	})
+	if err != nil {
+		t.Fatalf("could not create result: %v", err)
+	}
+
+	t.Run("success", func(t *testing.T) {
+		// Delete inserted taskrun
+		if _, err := srv.DeleteResult(ctx, &pb.DeleteResultRequest{Name: r.GetName()}); err != nil {
+			t.Fatalf("could not delete taskrun: %v", err)
+		}
+
+		// Check if the taskrun is deleted
+		if r, err := srv.GetResult(ctx, &pb.GetResultRequest{Name: r.GetName()}); err == nil {
+			t.Fatalf("expected result to be deleted, got: %+v", r)
+		}
+	})
+
+	t.Run("already deleted", func(t *testing.T) {
+		// Check if a deleted taskrun can be deleted again
+		if _, err := srv.DeleteResult(ctx, &pb.DeleteResultRequest{Name: r.GetName()}); status.Code(err) != codes.NotFound {
+			t.Fatalf("expected NOT_FOUND, got: %v", err)
+		}
+	})
+}
