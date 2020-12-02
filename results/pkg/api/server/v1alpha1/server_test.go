@@ -72,6 +72,16 @@ func TestGetResult(t *testing.T) {
 }
 
 func TestUpdateResult(t *testing.T) {
+	t.Run("Test etag generation", func(t *testing.T) {
+		r1 := Result(&ppb.TaskRun{})
+		etag1 := obtainResultEtag(t, r1)
+		r1.Annotations = map[string]string{"foo": "bar"}
+		etag2 := obtainResultEtag(t, r1)
+		if etag1 == etag2 {
+			t.Fatalf("different results can't have the same etag")
+		}
+	})
+
 	// Create a temporary database
 	srv, err := SetupTestDB(t)
 	if err != nil {
@@ -81,12 +91,13 @@ func TestUpdateResult(t *testing.T) {
 
 	// Validate by checking if output equals expected Result
 	tt := []struct {
-		name      string
-		in        *pb.Result
-		fieldmask *field_mask.FieldMask
-		update    *pb.Result
-		expect    *pb.Result
-		err       bool
+		name       string
+		in         *pb.Result
+		fieldmask  *field_mask.FieldMask
+		update     *pb.Result
+		expect     *pb.Result
+		concurrent bool
+		err        bool
 	}{
 		{
 			in:   &pb.Result{},
@@ -178,6 +189,13 @@ func TestUpdateResult(t *testing.T) {
 			update: &pb.Result{Annotations: map[string]string{"foo": "bar"}},
 			err:    true,
 		},
+		{
+			in:         &pb.Result{},
+			name:       "Test race condition",
+			update:     &pb.Result{Annotations: map[string]string{"foo": "bar"}, Etag: "etag"},
+			concurrent: true,
+			err:        true,
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -195,6 +213,14 @@ func TestUpdateResult(t *testing.T) {
 			}
 
 			// Update the created taskrun
+			//
+			// If the test is not meant to reproduce race condition problem, then
+			// keep the ETag of the created result when updating. Otherwise let
+			// the ETag in the update request be different from the ETag of the
+			// created result.
+			if !tc.concurrent {
+				tc.update.Etag = r.GetEtag()
+			}
 			r, err = srv.UpdateResult(ctx, &pb.UpdateResultRequest{Result: tc.update, Name: r.GetName(), UpdateMask: tc.fieldmask})
 			if err != nil {
 				if tc.err {
@@ -206,6 +232,7 @@ func TestUpdateResult(t *testing.T) {
 			// Expected results should always match the created result.
 			tc.expect.Name = r.GetName()
 			tc.expect.CreatedTime = r.GetCreatedTime()
+			tc.expect.Etag = obtainResultEtag(t, tc.expect)
 			got, err := srv.GetResult(ctx, &pb.GetResultRequest{Name: r.GetName()})
 			if err != nil {
 				t.Fatalf("GetResult: %v", err)
@@ -539,5 +566,14 @@ func getEncodedPageToken(t *testing.T, pi *pb.ListPageIdentifier) string {
 		return ""
 	} else {
 		return token
+	}
+}
+
+func obtainResultEtag(t *testing.T, result *pb.Result) string {
+	if etag, err := getResultETag(result); err != nil {
+		t.Fatalf("failed to get etag for a result: %v", err)
+		return ""
+	} else {
+		return etag
 	}
 }

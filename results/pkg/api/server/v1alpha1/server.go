@@ -48,6 +48,13 @@ func (s *Server) CreateResult(ctx context.Context, req *pb.CreateResultRequest) 
 	name := uuid.New().String()
 	r.Name = fmt.Sprintf("%s/results/%s", req.GetParent(), name)
 
+	if etag, err := getResultETag(r); err != nil {
+		log.Printf("etag generating error: %v", err)
+		return nil, fmt.Errorf("failed to generate the etag for a result: %w", err)
+	} else {
+		r.Etag = etag
+	}
+
 	// serialize data and insert it into database.
 	b, err := proto.Marshal(r)
 	if err != nil {
@@ -123,6 +130,17 @@ func (s Server) UpdateResult(ctx context.Context, req *pb.UpdateResultRequest) (
 	}
 	if r.GetCreatedTime() != prev.GetCreatedTime() {
 		return prev, status.Error(codes.InvalidArgument, "created time cannot be changed")
+	}
+
+	// Check if there's any race condition problem.
+	if prev.GetEtag() != r.GetEtag() {
+		return nil, status.Error(codes.Aborted, "failed on the race condition, the content of this result has been modified.")
+	}
+	if etag, err := getResultETag(r); err != nil {
+		log.Printf("etag generating error: %v", err)
+		return nil, fmt.Errorf("failed to generate the etag for a result: %w", err)
+	} else {
+		r.Etag = etag
 	}
 
 	// Write result back to database.
@@ -399,6 +417,18 @@ func (s Server) getResultByID(name string) (*pb.Result, error) {
 		return nil, status.Error(codes.NotFound, "result not found")
 	}
 	return result, nil
+}
+
+func getResultETag(result *pb.Result) (etag string, err error) {
+	tmpEtag := result.GetEtag()
+	result.Etag = ""
+	if b, err := proto.Marshal(result); err == nil {
+		dst := make([]byte, base64.RawURLEncoding.EncodedLen(len(b)))
+		base64.RawURLEncoding.Encode(dst, b)
+		etag = base64.RawURLEncoding.EncodeToString(dst)
+	}
+	result.Etag = tmpEtag
+	return
 }
 
 // SetupTestDB set up a temporary database for testing

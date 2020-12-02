@@ -119,6 +119,7 @@ func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
 		Executions: []*pb.Execution{{
 			Execution: &pb.Execution_PipelineRun{p},
 		}},
+		Etag: res.Etag,
 	}
 	if diff := cmp.Diff(want, res, protocmp.Transform()); diff != "" {
 		t.Fatalf("Expected completed PipelineRun should be upated in api server: %v", diff)

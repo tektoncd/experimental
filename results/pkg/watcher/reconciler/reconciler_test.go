@@ -119,6 +119,7 @@ func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
 	}
 
 	want := trResult
+	want.Etag = prResult.Etag
 	want.Executions = append(want.Executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{prProto}})
 	if diff := cmp.Diff(want, prResult, protocmp.Transform()); diff != "" {
 		t.Fatalf("Expected completed PipelineRun should be upated in api server: %v", diff)
@@ -166,6 +167,7 @@ func testUpdateTaskRunToTheExistedResult(t *testing.T) {
 	}
 
 	want := prResult
+	want.Etag = trResult.Etag
 	want.Executions = append(want.Executions, &pb.Execution{Execution: &pb.Execution_TaskRun{trProto}})
 	if diff := cmp.Diff(want, trResult, protocmp.Transform()); diff != "" {
 		t.Fatalf("Expected completed TaskRun should be upated in api server: %v", diff)
