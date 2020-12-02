@@ -117,7 +117,7 @@ func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
 	want := &pb.Result{
 		Name: pr.Annotations[annotation.ResultID],
 		Executions: []*pb.Execution{{
-			Execution: &pb.Execution_PipelineRun{p},
+			Execution: &pb.Execution_PipelineRun{PipelineRun: p},
 		}},
 	}
 	if diff := cmp.Diff(want, res, protocmp.Transform()); diff != "" {

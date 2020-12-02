@@ -99,13 +99,12 @@ func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
 		t.Fatalf("Error jsonpatch for TaskRun Result %s: %v", trResult.GetName(), err)
 	}
 	// Give the PipelineRun the same Result ID as the TaskRun
-	pr, err := tt.prAsset.Clients.Pipeline.TektonV1beta1().PipelineRuns(tt.pipelineRun.Namespace).Patch(tt.pipelineRun.Name, types.JSONPatchType, path)
-	if err != nil {
+	if _, err := tt.prAsset.Clients.Pipeline.TektonV1beta1().PipelineRuns(tt.pipelineRun.Namespace).Patch(tt.pipelineRun.Name, types.JSONPatchType, path); err != nil {
 		t.Fatalf("Failed to apply result patch to PipelineRun: %v", err)
 	}
 
 	// Update the PipelineRun to the same Result
-	pr, err = test.ReconcilePipelineRun(tt.ctx, tt.prAsset, tt.pipelineRun)
+	pr, err := test.ReconcilePipelineRun(tt.ctx, tt.prAsset, tt.pipelineRun)
 	if err != nil {
 		t.Fatalf("Failed to reconcile PipelineRun: %v", err)
 	}
@@ -119,7 +118,7 @@ func testUpdatePipelineRunToTheExistedResult(t *testing.T) {
 	}
 
 	want := trResult
-	want.Executions = append(want.Executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{prProto}})
+	want.Executions = append(want.Executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{PipelineRun: prProto}})
 	if diff := cmp.Diff(want, prResult, protocmp.Transform()); diff != "" {
 		t.Fatalf("Expected completed PipelineRun should be upated in api server: %v", diff)
 	}
@@ -146,13 +145,12 @@ func testUpdateTaskRunToTheExistedResult(t *testing.T) {
 		t.Fatalf("Error jsonpatch for PipelineRun Result %s: %v", prResult.GetName(), err)
 	}
 	// Give the TaskRun the same Result ID as the PipelineRun
-	tr, err := tt.trAsset.Clients.Pipeline.TektonV1beta1().TaskRuns(tt.taskRun.Namespace).Patch(tt.taskRun.Name, types.JSONPatchType, path)
-	if err != nil {
+	if _, err := tt.trAsset.Clients.Pipeline.TektonV1beta1().TaskRuns(tt.taskRun.Namespace).Patch(tt.taskRun.Name, types.JSONPatchType, path); err != nil {
 		t.Fatalf("Failed to apply result patch to TaskRun: %v", err)
 	}
 
 	// Update the TaskRun to the same Result
-	tr, err = test.ReconcileTaskRun(tt.ctx, tt.trAsset, tt.taskRun)
+	tr, err := test.ReconcileTaskRun(tt.ctx, tt.trAsset, tt.taskRun)
 	if err != nil {
 		t.Fatalf("Failed to reconcile TaskRun: %v", err)
 	}
@@ -166,7 +164,7 @@ func testUpdateTaskRunToTheExistedResult(t *testing.T) {
 	}
 
 	want := prResult
-	want.Executions = append(want.Executions, &pb.Execution{Execution: &pb.Execution_TaskRun{trProto}})
+	want.Executions = append(want.Executions, &pb.Execution{Execution: &pb.Execution_TaskRun{TaskRun: trProto}})
 	if diff := cmp.Diff(want, trResult, protocmp.Transform()); diff != "" {
 		t.Fatalf("Expected completed TaskRun should be upated in api server: %v", diff)
 	}

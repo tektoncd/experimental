@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/jsonpb" //nolint:staticcheck // While protojson is the new recommended package, this has compatibility issues with Duration proto conversion.
 	pb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )

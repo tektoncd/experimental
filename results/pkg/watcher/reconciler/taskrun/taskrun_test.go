@@ -117,7 +117,7 @@ func (tt *TaskRunTest) testUpdateTaskRun(t *testing.T) {
 	want := &pb.Result{
 		Name: tr.Annotations[annotation.ResultID],
 		Executions: []*pb.Execution{{
-			Execution: &pb.Execution_TaskRun{p},
+			Execution: &pb.Execution_TaskRun{TaskRun: p},
 		}},
 	}
 	if diff := cmp.Diff(want, res, protocmp.Transform()); diff != "" {

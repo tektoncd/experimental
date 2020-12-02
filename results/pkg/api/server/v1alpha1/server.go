@@ -8,7 +8,6 @@ import (
 	"log"
 	"math"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/checker/decls"
@@ -19,6 +18,7 @@ import (
 	mask "go.chromium.org/luci/common/proto/mask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"gorm.io/gorm"
 )
 
@@ -130,11 +130,15 @@ func (s Server) UpdateResult(ctx context.Context, req *pb.UpdateResultRequest) (
 		return nil, fmt.Errorf("failed to update a exsiting result: %w", err)
 	}
 	if _, err := statement.Exec(b, r.GetName()); err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("failed to rollback transaction: %v", err)
+		}
 		log.Printf("failed to execute update of a new result: %v", err)
 		return nil, fmt.Errorf("failed to execute update of a new result: %w", err)
 	}
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		log.Printf("failed to commit transaction: %v", err)
+	}
 	return r, nil
 }
 
@@ -186,10 +190,10 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 	if pageToken != "" {
 		var err error
 		if pageIdentifier, err = decodePageToken(pageToken); err != nil {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid PageToken: %v", err))
+			return nil, status.Errorf(codes.InvalidArgument, "invalid PageToken: %v", err)
 		}
 		if req.GetFilter() != pageIdentifier.GetFilter() {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("use a different CEL `filter` from the last page."))
+			return nil, status.Error(codes.InvalidArgument, "use a different CEL `filter` from the last page.")
 		}
 	}
 
@@ -235,15 +239,15 @@ func matchCelFilter(r *pb.Result, prg cel.Program) (bool, error) {
 		return true, nil
 	}
 	for _, e := range r.Executions {
-		var (
-			taskrun     ppb.TaskRun
-			pipelinerun ppb.PipelineRun
-		)
+		// CEL requires non-nil values for protos, so default to 0 value if not
+		// present in result.
+		taskrun := &ppb.TaskRun{}
 		if t := e.GetTaskRun(); t != nil {
-			taskrun = *(t)
+			taskrun = t
 		}
+		pipelinerun := &ppb.PipelineRun{}
 		if p := e.GetPipelineRun(); p != nil {
-			pipelinerun = *(p)
+			pipelinerun = p
 		}
 		// We can't directly using e.GetTaskRun() and e.GetPipelineRun() here because the CEL doesn't work well with the nil pointer for proto types.
 		out, _, err := prg.Eval(map[string]interface{}{
@@ -382,7 +386,10 @@ func (s Server) getResultByID(name string) (*pb.Result, error) {
 			log.Println("Warning: multiple rows found")
 			break
 		}
-		rows.Scan(&b)
+		if err := rows.Scan(&b); err != nil {
+			log.Printf("error scanning rows: %v", err)
+			return nil, fmt.Errorf("error scanning rows: %w", err)
+		}
 		if err := proto.Unmarshal(b, result); err != nil {
 			log.Printf("unmarshaling error: %v", err)
 			return nil, fmt.Errorf("failed to unmarshal result: %w", err)
@@ -398,8 +405,8 @@ func (s Server) getResultByID(name string) (*pb.Result, error) {
 func New(gdb *gorm.DB) (*Server, error) {
 	env, err := cel.NewEnv(
 		cel.Types(&pb.Result{}, &ppb.PipelineRun{}, &ppb.TaskRun{}),
-		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.pipeline.v1beta1.TaskRun"), nil)),
-		cel.Declarations(decls.NewIdent("pipelinerun", decls.NewObjectType("tekton.pipeline.v1beta1.PipelineRun"), nil)),
+		cel.Declarations(decls.NewVar("taskrun", decls.NewObjectType("tekton.pipeline.v1beta1.TaskRun"))),
+		cel.Declarations(decls.NewVar("pipelinerun", decls.NewObjectType("tekton.pipeline.v1beta1.PipelineRun"))),
 	)
 	if err != nil {
 		log.Fatalf("failed to create environment for filter: %v", err)

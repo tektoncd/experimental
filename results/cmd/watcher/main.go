@@ -46,8 +46,10 @@ var (
 
 func main() {
 	flag.Parse()
+	// TODO: Enable leader election.
+	ctx := sharedmain.WithHADisabled(signals.NewContext())
 
-	conn, err := connectToAPIServer(*apiAddr, *authMode)
+	conn, err := connectToAPIServer(ctx, *apiAddr, *authMode)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -55,8 +57,6 @@ func main() {
 	defer conn.Close()
 
 	cfg := sharedmain.ParseAndGetConfigOrDie()
-	// TODO: Enable leader election.
-	ctx := sharedmain.WithHADisabled(signals.NewContext())
 	sharedmain.MainWithConfig(injection.WithNamespaceScope(ctx, ""), "watcher", cfg,
 		func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 			client := pb.NewResultsClient(conn)
@@ -68,10 +68,9 @@ func main() {
 	)
 }
 
-func connectToAPIServer(apiAddr string, authMode string) (*grpc.ClientConn, error) {
+func connectToAPIServer(ctx context.Context, apiAddr string, authMode string) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
-		grpc.WithTimeout(30 * time.Second),
 	}
 
 	// Setup TLS certs to the server. Do this once since this is likely going
@@ -97,5 +96,7 @@ func connectToAPIServer(apiAddr string, authMode string) (*grpc.ClientConn, erro
 	}
 
 	log.Printf("dialing %s...\n", apiAddr)
-	return grpc.Dial(apiAddr, opts...)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	return grpc.DialContext(ctx, apiAddr, opts...)
 }

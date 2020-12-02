@@ -7,7 +7,6 @@ import (
 	"github.com/tektoncd/experimental/results/pkg/watcher/reconciler/annotation"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
-	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +18,6 @@ import (
 type Reconciler struct {
 	logger            *zap.SugaredLogger
 	client            pb.ResultsClient
-	taskRunLister     listers.TaskRunLister
 	pipelineclientset versioned.Interface
 }
 
@@ -60,11 +58,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 			remoteTr := execution.GetTaskRun()
 			if remoteTr != nil && remoteTr.Metadata.Namespace == tr.Namespace && remoteTr.Metadata.Name == tr.Name {
 				found = true
-				result.Executions[idx] = &pb.Execution{Execution: &pb.Execution_TaskRun{trProto}}
+				result.Executions[idx] = &pb.Execution{Execution: &pb.Execution_TaskRun{TaskRun: trProto}}
 			}
 		}
 		if !found {
-			result.Executions = append(result.Executions, &pb.Execution{Execution: &pb.Execution_TaskRun{trProto}})
+			result.Executions = append(result.Executions, &pb.Execution{Execution: &pb.Execution_TaskRun{TaskRun: trProto}})
 		}
 		if _, err := r.client.UpdateResult(ctx, &pb.UpdateResultRequest{
 			Name:   resultID,
@@ -78,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		trResult, err := r.client.CreateResult(ctx, &pb.CreateResultRequest{
 			Result: &pb.Result{
 				Executions: []*pb.Execution{{
-					Execution: &pb.Execution_TaskRun{trProto},
+					Execution: &pb.Execution_TaskRun{TaskRun: trProto},
 				}},
 			},
 		})

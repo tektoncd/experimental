@@ -6,7 +6,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/results/pkg/api/server/test"
 	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
@@ -14,6 +13,7 @@ import (
 	"google.golang.org/genproto/protobuf/field_mask"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 )
 
@@ -524,9 +524,9 @@ func Result(in ...proto.Message) *pb.Result {
 	for _, m := range in {
 		switch x := m.(type) {
 		case *ppb.TaskRun:
-			executions = append(executions, &pb.Execution{Execution: &pb.Execution_TaskRun{x}})
+			executions = append(executions, &pb.Execution{Execution: &pb.Execution_TaskRun{TaskRun: x}})
 		case *ppb.PipelineRun:
-			executions = append(executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{x}})
+			executions = append(executions, &pb.Execution{Execution: &pb.Execution_PipelineRun{PipelineRun: x}})
 		default:
 			panic(fmt.Sprintf("unknown message: %v", m))
 		}
@@ -535,10 +535,11 @@ func Result(in ...proto.Message) *pb.Result {
 }
 
 func getEncodedPageToken(t *testing.T, pi *pb.ListPageIdentifier) string {
-	if token, err := encodePageResult(pi); err != nil {
+	token, err := encodePageResult(pi)
+	if err != nil {
 		t.Fatalf("Failed to get encoded token: %v", err)
 		return ""
-	} else {
-		return token
 	}
+
+	return token
 }

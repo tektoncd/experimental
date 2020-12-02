@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 
@@ -29,14 +30,18 @@ func NewResultsClient(t *testing.T) pb.ResultsClient {
 	if err != nil {
 		t.Fatalf("failed to listen: %v", err)
 	}
-	go s.Serve(lis)
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			fmt.Printf("error starting result server: %v\n", err)
+		}
+	}()
 	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		t.Fatalf("did not connect: %v", err)
 	}
 	t.Cleanup(func() {
-		lis.Close()
 		s.Stop()
+		lis.Close()
 		conn.Close()
 	})
 	return pb.NewResultsClient(conn)
