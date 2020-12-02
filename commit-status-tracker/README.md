@@ -153,7 +153,7 @@ override the default secret name which is `commit-status-tracker-git-secret`.
 - [go][go_tool] version v1.13+.
 - [docker][docker_tool] version 17.03+
 - [kubectl][kubectl_tool] v1.11.3+
-- [operator-sdk][operator_install]
+- [operator-sdk][operator_sdk]
 - Access to a Kubernetes v1.11.3+ cluster
 
 ## Getting Started
@@ -235,7 +235,6 @@ $ kubectl logs commit-status-tracker
 $ go test -v ./...
 ```
 
-[dep_tool]: https://golang.github.io/dep/docs/installation.html
 [go_tool]: https://golang.org/dl/
 [kubectl_tool]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 [docker_tool]: https://docs.docker.com/install/
