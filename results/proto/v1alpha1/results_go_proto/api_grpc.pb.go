@@ -4,10 +4,10 @@ package results_go_proto
 
 import (
 	context "context"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -21,7 +21,7 @@ type ResultsClient interface {
 	CreateResult(ctx context.Context, in *CreateResultRequest, opts ...grpc.CallOption) (*Result, error)
 	UpdateResult(ctx context.Context, in *UpdateResultRequest, opts ...grpc.CallOption) (*Result, error)
 	GetResult(ctx context.Context, in *GetResultRequest, opts ...grpc.CallOption) (*Result, error)
-	DeleteResult(ctx context.Context, in *DeleteResultRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteResult(ctx context.Context, in *DeleteResultRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ListResults(ctx context.Context, in *ListResultsRequest, opts ...grpc.CallOption) (*ListResultsResponse, error)
 }
 
@@ -60,8 +60,8 @@ func (c *resultsClient) GetResult(ctx context.Context, in *GetResultRequest, opt
 	return out, nil
 }
 
-func (c *resultsClient) DeleteResult(ctx context.Context, in *DeleteResultRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *resultsClient) DeleteResult(ctx context.Context, in *DeleteResultRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/tekton.results.v1alpha1.Results/DeleteResult", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ type ResultsServer interface {
 	CreateResult(context.Context, *CreateResultRequest) (*Result, error)
 	UpdateResult(context.Context, *UpdateResultRequest) (*Result, error)
 	GetResult(context.Context, *GetResultRequest) (*Result, error)
-	DeleteResult(context.Context, *DeleteResultRequest) (*emptypb.Empty, error)
+	DeleteResult(context.Context, *DeleteResultRequest) (*empty.Empty, error)
 	ListResults(context.Context, *ListResultsRequest) (*ListResultsResponse, error)
 	mustEmbedUnimplementedResultsServer()
 }
@@ -103,7 +103,7 @@ func (UnimplementedResultsServer) UpdateResult(context.Context, *UpdateResultReq
 func (UnimplementedResultsServer) GetResult(context.Context, *GetResultRequest) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetResult not implemented")
 }
-func (UnimplementedResultsServer) DeleteResult(context.Context, *DeleteResultRequest) (*emptypb.Empty, error) {
+func (UnimplementedResultsServer) DeleteResult(context.Context, *DeleteResultRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteResult not implemented")
 }
 func (UnimplementedResultsServer) ListResults(context.Context, *ListResultsRequest) (*ListResultsResponse, error) {

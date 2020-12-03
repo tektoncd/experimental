@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package tekton.results.internal;
+option go_package = "github.com/tektoncd/experimental/results/pkg/api/server/db/pagination/proto/internal_go_proto";
+
+message ListPageIdentifier{
+  string name = 1;
+  string filter = 2;
+}

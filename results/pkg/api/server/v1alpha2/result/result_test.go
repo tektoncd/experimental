@@ -4,8 +4,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/tektoncd/experimental/results/pkg/api/server/cel"
 	"github.com/tektoncd/experimental/results/pkg/api/server/db"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha2/results_go_proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -112,5 +115,78 @@ func TestToAPI(t *testing.T) {
 	}
 	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
 		t.Errorf("-want,+got: %s", diff)
+	}
+}
+
+func TestMatch(t *testing.T) {
+	env, err := cel.NewEnv()
+	if err != nil {
+		t.Fatalf("NewEnv: %v", err)
+	}
+
+	r := &pb.Result{
+		Name:        "foo",
+		Id:          "bar",
+		CreatedTime: timestamppb.Now(),
+		Annotations: map[string]string{"a": "b"},
+		Etag:        "tacocat",
+	}
+	for _, tc := range []struct {
+		name   string
+		result *pb.Result
+		filter string
+		match  bool
+		status codes.Code
+	}{
+		{
+			name:   "no filter",
+			filter: "",
+			result: r,
+			match:  true,
+		},
+		{
+			name:   "matching condition",
+			filter: `result.id != ""`,
+			result: r,
+			match:  true,
+		},
+		{
+			name:   "non-matching condition",
+			filter: `result.id == ""`,
+			result: r,
+			match:  false,
+		},
+		{
+			name:   "nil result",
+			result: nil,
+			filter: "result.id",
+			match:  false,
+		},
+		{
+			name:   "non-bool output",
+			result: r,
+			filter: "result",
+			status: codes.InvalidArgument,
+		},
+		{
+			name:   "wrong resource type",
+			result: r,
+			filter: "taskrun",
+			status: codes.InvalidArgument,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := cel.ParseFilter(env, tc.filter)
+			if err != nil {
+				t.Fatalf("ParseFilter: %v", err)
+			}
+			got, err := Match(tc.result, p)
+			if status.Code(err) != tc.status {
+				t.Fatalf("Match: %v", err)
+			}
+			if got != tc.match {
+				t.Errorf("want: %t, got: %t", tc.match, got)
+			}
+		})
 	}
 }

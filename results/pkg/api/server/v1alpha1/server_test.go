@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
+	"github.com/tektoncd/experimental/results/pkg/api/server/db/pagination"
 	"github.com/tektoncd/experimental/results/pkg/api/server/test"
 	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
@@ -443,7 +444,7 @@ func TestListResults(t *testing.T) {
 			name:         "test query with invalid pagetoken, decoded filter mismatched",
 			filter:       `taskrun.api_version=="v1beta1"`,
 			expectStatus: codes.InvalidArgument,
-			pageToken:    getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[2].GetName(), Filter: `taskrun.api_version=="v1"`}),
+			pageToken:    getEncodedPageToken(t, tkrV1beta1Results[2].GetName(), `taskrun.api_version=="v1"`),
 		},
 		{
 			name:          "test query with pagesize",
@@ -451,7 +452,7 @@ func TestListResults(t *testing.T) {
 			expect:        []*pb.Result{tkrV1beta1Results[0]},
 			expectStatus:  codes.OK,
 			pageSize:      1,
-			nextPageToken: getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[1].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			nextPageToken: getEncodedPageToken(t, tkrV1beta1Results[1].GetName(), `taskrun.api_version=="v1beta1"`),
 			nextPageName:  tkrV1beta1Results[1].GetName(),
 		},
 		{
@@ -460,8 +461,8 @@ func TestListResults(t *testing.T) {
 			expect:        []*pb.Result{tkrV1beta1Results[1]},
 			expectStatus:  codes.OK,
 			pageSize:      1,
-			pageToken:     getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[1].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
-			nextPageToken: getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[2].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			pageToken:     getEncodedPageToken(t, tkrV1beta1Results[1].GetName(), `taskrun.api_version=="v1beta1"`),
+			nextPageToken: getEncodedPageToken(t, tkrV1beta1Results[2].GetName(), `taskrun.api_version=="v1beta1"`),
 			nextPageName:  tkrV1beta1Results[2].GetName(),
 		},
 		{
@@ -470,7 +471,7 @@ func TestListResults(t *testing.T) {
 			expect:        []*pb.Result{tkrV1beta1Results[1], tkrV1beta1Results[2], tkrV1beta1Results[3]},
 			expectStatus:  codes.OK,
 			pageSize:      3,
-			pageToken:     getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[1].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			pageToken:     getEncodedPageToken(t, tkrV1beta1Results[1].GetName(), `taskrun.api_version=="v1beta1"`),
 			nextPageToken: "",
 		},
 		{
@@ -479,7 +480,7 @@ func TestListResults(t *testing.T) {
 			expect:        []*pb.Result{tkrV1beta1Results[2], tkrV1beta1Results[3]},
 			expectStatus:  codes.OK,
 			pageSize:      3,
-			pageToken:     getEncodedPageToken(t, &pb.ListPageIdentifier{ResultName: tkrV1beta1Results[2].GetName(), Filter: `taskrun.api_version=="v1beta1"`}),
+			pageToken:     getEncodedPageToken(t, tkrV1beta1Results[2].GetName(), `taskrun.api_version=="v1beta1"`),
 			nextPageToken: "",
 		},
 	}
@@ -509,10 +510,12 @@ func TestListResults(t *testing.T) {
 				t.Fatalf("NextPageToken mismatched, expected: %v, got: %v", tc.nextPageToken, nextPageToken)
 			}
 			if tc.nextPageName != "" {
-				if nextPageIdentifier, err := decodePageToken(nextPageToken); err != nil {
+				name, _, err := pagination.DecodeToken(nextPageToken)
+				if err != nil {
 					t.Fatalf("Error decoding nextPageToken: %v", err)
-				} else if nextPageIdentifier.ResultName != tc.nextPageName {
-					t.Fatalf("NextPageName mismatched, expected: %v, got: %v", tc.nextPageName, nextPageIdentifier.ResultName)
+				}
+				if name != tc.nextPageName {
+					t.Fatalf("NextPageName mismatched, expected: %v, got: %v", tc.nextPageName, name)
 				}
 			}
 		})
@@ -534,8 +537,8 @@ func Result(in ...proto.Message) *pb.Result {
 	return &pb.Result{Executions: executions}
 }
 
-func getEncodedPageToken(t *testing.T, pi *pb.ListPageIdentifier) string {
-	if token, err := encodePageResult(pi); err != nil {
+func getEncodedPageToken(t *testing.T, name, filter string) string {
+	if token, err := pagination.EncodeToken(name, filter); err != nil {
 		t.Fatalf("Failed to get encoded token: %v", err)
 		return ""
 	} else {

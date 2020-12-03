@@ -3,17 +3,16 @@ package server
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"fmt"
 	"log"
-	"math"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/checker/decls"
 	"github.com/google/uuid"
+	resultscel "github.com/tektoncd/experimental/results/pkg/api/server/cel"
 	dbmodel "github.com/tektoncd/experimental/results/pkg/api/server/db"
+	"github.com/tektoncd/experimental/results/pkg/api/server/db/pagination"
 	ppb "github.com/tektoncd/experimental/results/proto/pipeline/v1beta1/pipeline_go_proto"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto"
 	mask "go.chromium.org/luci/common/proto/mask"
@@ -23,8 +22,8 @@ import (
 )
 
 const (
-	listResultsDefaultPageSize int32 = 50
-	listResultsMaximumPageSize int32 = 10000
+	listResultsDefaultPageSize = 50
+	listResultsMaximumPageSize = 10000
 )
 
 // Server with implementation of API server
@@ -163,15 +162,8 @@ func (s Server) DeleteResult(ctx context.Context, req *pb.DeleteResultRequest) (
 
 // ListResultsResult receives a ListResultRequest from users and return to users a list of Results according to the query
 func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsRequest) (*pb.ListResultsResponse, error) {
-	// Set up environment for cel and check if filter is empty string
-	ast, issues := s.env.Compile(req.GetFilter())
-	if issues != nil && issues.Err() != nil && req.GetFilter() != "" {
-		log.Printf("type-check error: %s", issues.Err())
-		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter parse step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", issues.Err())
-	}
-
 	// checks and refines the pageSize
-	pageSize := req.GetPageSize()
+	pageSize := int(req.GetPageSize())
 	if pageSize < 0 {
 		return nil, status.Error(codes.InvalidArgument, "PageSize should be greater than 0")
 	} else if pageSize == 0 {
@@ -181,28 +173,23 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 	}
 
 	// retrieve the ListPageIdentifier from PageToken
-	var pageIdentifier *pb.ListPageIdentifier
+	var start string
 	pageToken := req.GetPageToken()
 	if pageToken != "" {
-		var err error
-		if pageIdentifier, err = decodePageToken(pageToken); err != nil {
+		name, filter, err := pagination.DecodeToken(pageToken)
+		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid PageToken: %v", err))
 		}
-		if req.GetFilter() != pageIdentifier.GetFilter() {
+		if req.GetFilter() != filter {
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("use a different CEL `filter` from the last page."))
 		}
+		start = name
 	}
 
-	var prg cel.Program
-	var err error
-	// return all results back to users if empty query is given
-	if req.GetFilter() != "" {
-		// filter from all results
-		prg, err = s.env.Program(ast)
-		if err != nil {
-			log.Printf("program construction error: %s", err)
-			return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter checking step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
-		}
+	prg, err := resultscel.ParseFilter(s.env, req.GetFilter())
+	if err != nil {
+		log.Printf("program construction error: %s", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Error occurred during filter checking step, no Results found for the query string due to invalid field, invalid function to evaluate filter or missing double quotes around field value, please try to enter a query with correct type again: %v", err)
 	}
 
 	tx, err := s.db.Begin()
@@ -210,7 +197,7 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 		return nil, err
 	}
 	// always request one more result to know whether next page exists.
-	results, err := getFilteredPaginatedResults(tx, pageSize+1, pageIdentifier, prg)
+	results, err := getFilteredPaginatedResults(tx, pageSize+1, start, prg)
 	if err != nil {
 		return nil, err
 	}
@@ -218,11 +205,11 @@ func (s *Server) ListResultsResult(ctx context.Context, req *pb.ListResultsReque
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to commit the query transaction: %v", err))
 	}
 
-	if int32(len(results)) > pageSize {
+	if len(results) > pageSize {
 		// there exists next page, generate the nextPageToken, and drop the last one of the results.
 		nextResult := results[len(results)-1]
 		results := results[:len(results)-1]
-		if nextPageToken, err := encodePageResult(&pb.ListPageIdentifier{ResultName: nextResult.GetName(), Filter: req.GetFilter()}); err == nil {
+		if nextPageToken, err := pagination.EncodeToken(nextResult.GetName(), req.GetFilter()); err == nil {
 			return &pb.ListResultsResponse{Results: results, NextPageToken: nextPageToken}, nil
 		}
 	}
@@ -261,33 +248,6 @@ func matchCelFilter(r *pb.Result, prg cel.Program) (bool, error) {
 	return false, nil
 }
 
-// EncodePageResult encodes a ListPageIdentifier to PageToken
-func encodePageResult(pi *pb.ListPageIdentifier) (token string, err error) {
-	var tokenByte []byte
-	if tokenByte, err = proto.Marshal(pi); err != nil {
-		return "", err
-	}
-	encodedResult := make([]byte, base64.RawURLEncoding.EncodedLen(len(tokenByte)))
-	base64.RawURLEncoding.Encode(encodedResult, tokenByte)
-	return base64.RawURLEncoding.EncodeToString(encodedResult), nil
-}
-
-func decodePageToken(token string) (pi *pb.ListPageIdentifier, err error) {
-	var encodedToken []byte
-	if encodedToken, err = base64.RawURLEncoding.DecodeString(token); err != nil {
-		return nil, err
-	}
-	tokenByte := make([]byte, base64.RawURLEncoding.DecodedLen(len(encodedToken)))
-	if _, err = base64.RawURLEncoding.Decode(tokenByte, encodedToken); err != nil {
-		return nil, err
-	}
-	pi = &pb.ListPageIdentifier{}
-	if err = proto.Unmarshal(tokenByte, pi); err != nil {
-		return nil, err
-	}
-	return pi, err
-}
-
 // GetFilteredPaginatedResults aims to obtain a fixed size `pageSize` of results from the database, starting
 // from the results with the identifier `startPI`, filtered by a compiled CEL program `prg`.
 //
@@ -302,27 +262,17 @@ func decodePageToken(token string) (pi *pb.ListPageIdentifier, err error) {
 //                  batchSize = pageSize/last_ratio
 // The less the previous ratio is, the bigger the upcoming batch_size is. Then the queried time
 // is significantly decreased.
-func getFilteredPaginatedResults(tx *sql.Tx, pageSize int32, startPI *pb.ListPageIdentifier, prg cel.Program) (results []*pb.Result, err error) {
+func getFilteredPaginatedResults(tx *sql.Tx, pageSize int, start string, prg cel.Program) (results []*pb.Result, err error) {
 	var lastName string
-	// for a queried batch, ratio = matchedNum/batchSize, where the `matchedNum` is the number of remained `results` after filtering.
-	// we use the ratio of the current batch to dynamically determine the next batchSize, that is, nextBatchSize = pageSize/ratio.
-	var ratio float32 = 1
-	for int32(len(results)) < pageSize {
+	//var ratio float32 = 1
+	batcher := pagination.NewBatcher(pageSize, listResultsDefaultPageSize, listResultsMaximumPageSize)
+	for len(results) < pageSize {
 		// If didn't get enought results.
-		var (
-			batchSize    int32 // batchSize = math.Ceil(pageSize/ratio), has the same maximum value as `pageSize`.
-			batchGot     int32 // less than batchSize, the size of the actually obtained records from a batch query.
-			batchMatched int32 // less than batchGot, the size of results satisfying the condition that `prg` indicates.
-		)
-		if math.Ceil(float64(pageSize)/float64(ratio)) > float64(listResultsMaximumPageSize) {
-			batchSize = listResultsMaximumPageSize
-		} else {
-			batchSize = int32(math.Ceil(float64(pageSize) / float64(ratio)))
-		}
+		batchSize := batcher.Next()
 		var rows *sql.Rows
 		if lastName == "" {
-			if startPI != nil {
-				rows, err = tx.Query("SELECT name, data FROM records WHERE name >= ? ORDER BY name LIMIT ? ", startPI.GetResultName(), batchSize)
+			if start != "" {
+				rows, err = tx.Query("SELECT name, data FROM records WHERE name >= ? ORDER BY name LIMIT ? ", start, batchSize)
 			} else {
 				rows, err = tx.Query("SELECT name, data FROM records ORDER BY name LIMIT ?", batchSize)
 			}
@@ -333,6 +283,11 @@ func getFilteredPaginatedResults(tx *sql.Tx, pageSize int32, startPI *pb.ListPag
 			log.Printf("failed to query on database: %v", err)
 			return nil, status.Errorf(codes.Internal, "failed to query results: %v", err)
 		}
+
+		var (
+			batchGot     int // number of items returned from the query. Always <= less than batchSize.
+			batchMatched int // number of items returned from the query that satisfy the filter condition. Always <= batchGot.
+		)
 		for rows.Next() {
 			batchGot++
 			var b []byte
@@ -349,7 +304,7 @@ func getFilteredPaginatedResults(tx *sql.Tx, pageSize int32, startPI *pb.ListPag
 			if ok, _ := matchCelFilter(r, prg); ok {
 				batchMatched++
 				results = append(results, r)
-				if int32(len(results)) >= pageSize {
+				if len(results) >= pageSize {
 					break
 				}
 			}
@@ -358,10 +313,8 @@ func getFilteredPaginatedResults(tx *sql.Tx, pageSize int32, startPI *pb.ListPag
 			// No more data in database.
 			break
 		}
-		// update `ratio` to dynamically determine the `batchSize`
-		if batchMatched != 0 && batchGot != 0 {
-			ratio = float32(batchMatched) / float32(batchGot)
-		}
+		// update batcher to determine the next batch size.
+		batcher.Update(batchMatched, batchGot)
 	}
 	return results, nil
 }
@@ -396,11 +349,7 @@ func (s Server) getResultByID(name string) (*pb.Result, error) {
 
 // New set up environment for the api server
 func New(gdb *gorm.DB) (*Server, error) {
-	env, err := cel.NewEnv(
-		cel.Types(&pb.Result{}, &ppb.PipelineRun{}, &ppb.TaskRun{}),
-		cel.Declarations(decls.NewIdent("taskrun", decls.NewObjectType("tekton.pipeline.v1beta1.TaskRun"), nil)),
-		cel.Declarations(decls.NewIdent("pipelinerun", decls.NewObjectType("tekton.pipeline.v1beta1.PipelineRun"), nil)),
-	)
+	env, err := resultscel.NewEnv()
 	if err != nil {
 		log.Fatalf("failed to create environment for filter: %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/tektoncd/experimental/results/pkg/api/server/db/pagination"
 	"github.com/tektoncd/experimental/results/pkg/api/server/test"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha2/results_go_proto"
 	"google.golang.org/grpc/codes"
@@ -175,4 +176,202 @@ func TestDeleteResult(t *testing.T) {
 			t.Fatalf("expected NOT_FOUND, got: %v", err)
 		}
 	})
+}
+
+func TestListResults(t *testing.T) {
+	// Reset so IDs match names
+	lastID = 0
+
+	// Create a temporary database
+	srv, err := New(test.NewDB(t))
+	if err != nil {
+		t.Fatalf("failed to setup db: %v", err)
+	}
+	ctx := context.Background()
+
+	parent := "foo"
+	results := make([]*pb.Result, 0, 5)
+	for i := 1; i <= cap(results); i++ {
+		res, err := srv.CreateResult(ctx, &pb.CreateResultRequest{
+			Parent: "foo",
+			Result: &pb.Result{
+				Name: fmt.Sprintf("%s/results/%d", parent, i),
+			},
+		})
+		if err != nil {
+			t.Fatalf("could not create result: %v", err)
+		}
+		t.Logf("Created name: %s, id: %s", res.GetName(), res.GetId())
+		results = append(results, res)
+	}
+
+	tt := []struct {
+		name   string
+		req    *pb.ListResultsRequest
+		want   *pb.ListResultsResponse
+		status codes.Code
+	}{
+		{
+			name: "list all",
+			req: &pb.ListResultsRequest{
+				Parent: parent,
+			},
+			want: &pb.ListResultsResponse{
+				Results: results,
+			},
+			status: codes.OK,
+		},
+		{
+			name: "list all w/ pagination token",
+			req: &pb.ListResultsRequest{
+				Parent:   parent,
+				PageSize: int32(len(results)),
+			},
+			want: &pb.ListResultsResponse{
+				Results: results,
+			},
+			status: codes.OK,
+		},
+		{
+			name: "no results",
+			req: &pb.ListResultsRequest{
+				Parent: fmt.Sprintf("%s-doesnotexist", parent),
+			},
+			want:   &pb.ListResultsResponse{},
+			status: codes.OK,
+		},
+		{
+			name:   "missing parent",
+			req:    &pb.ListResultsRequest{},
+			status: codes.InvalidArgument,
+		},
+		{
+			name: "simple query",
+			req: &pb.ListResultsRequest{
+				Parent: parent,
+				Filter: `result.id == "1"`,
+			},
+			want: &pb.ListResultsResponse{
+				Results: results[:1],
+			},
+		},
+		{
+			name: "simple query - function",
+			req: &pb.ListResultsRequest{
+				Parent: parent,
+				Filter: `result.id.endsWith("1")`,
+			},
+			want: &pb.ListResultsResponse{
+				Results: results[:1],
+			},
+		},
+		{
+			name: "complex query",
+			req: &pb.ListResultsRequest{
+				Parent: parent,
+				Filter: `result.id == "1" || result.id == "2"`,
+			},
+			want: &pb.ListResultsResponse{
+				Results: results[:2],
+			},
+		},
+		{
+			name: "filter all",
+			req: &pb.ListResultsRequest{
+				Parent: parent,
+				Filter: `result.id == "doesnotexist"`,
+			},
+			want: &pb.ListResultsResponse{},
+		},
+		{
+			name: "non-boolean expression",
+			req: &pb.ListResultsRequest{
+				Parent: parent,
+				Filter: `result.id`,
+			},
+			status: codes.InvalidArgument,
+		},
+		{
+			name: "wrong resource type",
+			req: &pb.ListResultsRequest{
+				Parent: parent,
+				Filter: `taskrun.api_version != ""`,
+			},
+			status: codes.InvalidArgument,
+		},
+		{
+			name: "partial response",
+			req: &pb.ListResultsRequest{
+				Parent:   parent,
+				PageSize: 1,
+			},
+			want: &pb.ListResultsResponse{
+				Results:       results[:1],
+				NextPageToken: pagetoken(t, results[1].GetId(), ""),
+			},
+		},
+		{
+			name: "partial response with filter",
+			req: &pb.ListResultsRequest{
+				Parent:   parent,
+				PageSize: 1,
+				Filter:   `result.id > "1"`,
+			},
+			want: &pb.ListResultsResponse{
+				Results:       results[1:2],
+				NextPageToken: pagetoken(t, results[2].GetId(), `result.id > "1"`),
+			},
+		},
+		{
+			name: "with page token",
+			req: &pb.ListResultsRequest{
+				Parent:    parent,
+				PageToken: pagetoken(t, results[1].GetId(), ""),
+			},
+			want: &pb.ListResultsResponse{
+				Results: results[1:],
+			},
+		},
+		{
+			name: "with page token and filter and page size",
+			req: &pb.ListResultsRequest{
+				Parent:    parent,
+				PageToken: pagetoken(t, results[1].GetId(), `result.id > "1"`),
+				Filter:    `result.id > "1"`,
+				PageSize:  1,
+			},
+			want: &pb.ListResultsResponse{
+				Results:       results[1:2],
+				NextPageToken: pagetoken(t, results[2].GetId(), `result.id > "1"`),
+			},
+		},
+		{
+			name: "invalid page size",
+			req: &pb.ListResultsRequest{
+				Parent:   parent,
+				PageSize: -1,
+			},
+			status: codes.InvalidArgument,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := srv.ListResults(ctx, tc.req)
+			if status.Code(err) != tc.status {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(tc.want, got, protocmp.Transform()); diff != "" {
+				t.Errorf("-want,+got: %s", diff)
+			}
+		})
+	}
+}
+
+func pagetoken(t *testing.T, name, filter string) string {
+	if token, err := pagination.EncodeToken(name, filter); err != nil {
+		t.Fatalf("Failed to get encoded token: %v", err)
+		return ""
+	} else {
+		return token
+	}
 }

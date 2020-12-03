@@ -3,8 +3,10 @@ package result
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 
+	"github.com/google/cel-go/cel"
 	"github.com/tektoncd/experimental/results/pkg/api/server/db"
 	pb "github.com/tektoncd/experimental/results/proto/v1alpha2/results_go_proto"
 	"google.golang.org/grpc/codes"
@@ -45,4 +47,27 @@ func ToAPI(r *db.Result) *pb.Result {
 		Name: fmt.Sprintf("%s/results/%s", r.Parent, r.Name),
 		Id:   r.ID,
 	}
+}
+
+// Match determines whether the given CEL filter matches the result.
+func Match(r *pb.Result, prg cel.Program) (bool, error) {
+	if prg == nil {
+		return true, nil
+	}
+	if r == nil {
+		return false, nil
+	}
+
+	out, _, err := prg.Eval(map[string]interface{}{
+		"result": r,
+	})
+	if err != nil {
+		log.Printf("failed to evaluate the expression: %v", err)
+		return false, status.Errorf(codes.InvalidArgument, "failed to evaluate filter: %v", err)
+	}
+	b, ok := out.Value().(bool)
+	if !ok {
+		return false, status.Errorf(codes.InvalidArgument, "expected boolean result, got %s", out.Type().TypeName())
+	}
+	return b, nil
 }
