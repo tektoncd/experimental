@@ -15,28 +15,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestReconcile(t *testing.T) {
-	taskRunTest := NewTaskRunTest(t)
-
-	testFuncs := map[string]func(t *testing.T){
-		"Create":   taskRunTest.testCreateTaskRun,
-		"Unchange": taskRunTest.testUnchangeTaskRun,
-		"Update":   taskRunTest.testUpdateTaskRun,
-	}
-
-	for name, testFunc := range testFuncs {
-		t.Run(name, testFunc)
-	}
-}
-
-type TaskRunTest struct {
+type taskRunTest struct {
 	taskRun *v1beta1.TaskRun
 	asset   pipelinetest.Assets
 	ctx     context.Context
 	client  pb.ResultsClient
 }
 
-func NewTaskRunTest(t *testing.T) TaskRunTest {
+func newTaskRunTest(t *testing.T) *taskRunTest {
 	client := test.NewResultsClient(t)
 	taskRun := &v1beta1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -50,7 +36,7 @@ func NewTaskRunTest(t *testing.T) TaskRunTest {
 		TaskRuns: []*v1beta1.TaskRun{taskRun},
 	}
 	ctx, tclients, cmw := test.GetFakeClients(t, d, client)
-	taskRunTest := TaskRunTest{
+	taskRunTest := &taskRunTest{
 		taskRun: taskRun,
 		asset: pipelinetest.Assets{
 			Controller: NewController(ctx, cmw, client),
@@ -62,7 +48,8 @@ func NewTaskRunTest(t *testing.T) TaskRunTest {
 	return taskRunTest
 }
 
-func (tt *TaskRunTest) testCreateTaskRun(t *testing.T) {
+func TestReconcile_CreateTaskRun(t *testing.T) {
+	tt := newTaskRunTest(t)
 	tr, err := test.ReconcileTaskRun(tt.ctx, tt.asset, tt.taskRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
@@ -75,21 +62,27 @@ func (tt *TaskRunTest) testCreateTaskRun(t *testing.T) {
 	}
 }
 
-func (tt *TaskRunTest) testUnchangeTaskRun(t *testing.T) {
-	tr, err := tt.asset.Clients.Pipeline.TektonV1beta1().TaskRuns(tt.taskRun.Namespace).Get(tt.taskRun.Name, metav1.GetOptions{})
+func TestReconcile_UnchangeTaskRun(t *testing.T) {
+	tt := newTaskRunTest(t)
+
+	// Reconcile once to get IDs, etc.
+	tr, err := test.ReconcileTaskRun(tt.ctx, tt.asset, tt.taskRun)
 	if err != nil {
-		t.Fatalf("Failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
+		t.Fatalf("failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
 	}
-	newtr, err := test.ReconcileTaskRun(tt.ctx, tt.asset, tr)
+
+	// Reconcile again to verify nothing changes.
+	newtr, err := test.ReconcileTaskRun(tt.ctx, tt.asset, tt.taskRun)
 	if err != nil {
-		t.Fatalf("Failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
+		t.Fatalf("failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
 	}
 	if diff := cmp.Diff(tr, newtr); diff != "" {
-		t.Fatalf("Expected completed TaskRun should remain unchanged when it has a results_id in annotations: %v", diff)
+		t.Error(diff)
 	}
 }
 
-func (tt *TaskRunTest) testUpdateTaskRun(t *testing.T) {
+func TestReconcile_UpdateTaskRun(t *testing.T) {
+	tt := newTaskRunTest(t)
 	tr, err := test.ReconcileTaskRun(tt.ctx, tt.asset, tt.taskRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed TaskRun %s: %v", tt.taskRun.Name, err)
