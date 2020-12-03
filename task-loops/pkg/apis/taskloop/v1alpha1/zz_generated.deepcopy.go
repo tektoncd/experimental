@@ -140,6 +140,11 @@ func (in *TaskLoopSpec) DeepCopyInto(out *TaskLoopSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.Concurrency != nil {
+		in, out := &in.Concurrency, &out.Concurrency
+		*out = new(int)
+		**out = **in
+	}
 	return
 }
 

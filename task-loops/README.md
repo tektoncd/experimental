@@ -14,6 +14,8 @@ This is an **_experimental feature_**.  The purpose is to explore potential use 
 
 ## Install
 
+The Task Loop Extension does not have any published releases.  You can build and deploy it using [`ko`](https://github.com/google/ko).
+
 ## Usage
 
 Two resources are required to run a Task in a loop:
@@ -35,6 +37,7 @@ A `TaskLoop` definition supports the following fields:
 - Optional:
   - [`timeout`](#specifying-a-timeout) - Specifies a timeout for the execution of a `Task`.
   - [`retries`](#specifying-retries) - Specifies the number of times to retry the execution of a `Task` after a failure.
+  - [`concurrency`](#specifying-concurrency) - Specifies the number of `TaskRuns` that are allowed to run concurrently.
 
 The example below shows a basic `TaskLoop`:
 
@@ -160,8 +163,13 @@ for more information about how `TaskRun` processes the timeout.
 
 #### Specifying retries
 
-You can specify the number of times to retry the execution of a `Task` when it fails.
+You can use the `retries` field to specify the number of times to retry the execution of a `Task` when it fails.
 If you don't explicitly specify a value, no retry is performed.
+
+#### Specifying concurrency
+
+You can use the `concurrency` field to specify the number of `TaskRuns` that are allowed to run concurrently.
+The default is 1.  If you specify 0 or a negative value, then the `TaskRuns` for all iterations are allowed to run concurrently.
 
 ### Configuring a `Run`
 
@@ -262,8 +270,6 @@ These limitations may be addressed in future issues based on community feedback.
 
 * The value of only one `Task` parameter can be varied between `TaskRun` executions.
 
-* Each `TaskRun` is executed sequentially.  The second `TaskRun` is created only after the first `TaskRun` completes, and so on.
-
 * If a `TaskRun` fails, the execution of the `TaskLoop` stops.  `TaskRun`s for remaining iteration values are not created.
 
 * `Task` results are not collected into `Run` results (`run.status.results`).
@@ -274,6 +280,8 @@ These limitations may be addressed in future issues based on community feedback.
 * There are no metrics specific to `Run`.
 
 ## Uninstall
+
+Use the command `kubectl delete -f config\` to delete the Kubernetes resources for this project.
 
 ## Want to get involved?
 

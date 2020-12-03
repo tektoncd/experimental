@@ -57,6 +57,10 @@ type TaskLoopSpec struct {
 	// Retries represents how many times a task should be retried in case of task failure.
 	// +optional
 	Retries int `json:"retries,omitempty"`
+
+	// Concurrency represents how many tasks can be running at the same time.
+	// +optional
+	Concurrency *int `json:"concurrency,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -49,8 +49,11 @@ import (
 )
 
 var (
-	namespace = ""
-	trueB     = true
+	concurrencyLimit1  = 1
+	concurrencyLimit2  = 2
+	noConcurrencyLimit = 0
+	namespace          = ""
+	trueB              = true
 )
 
 func getRunName(run *v1alpha1.Run) string {
@@ -74,6 +77,12 @@ func allowRetry(tl *taskloopv1alpha1.TaskLoop) *taskloopv1alpha1.TaskLoop {
 	taskLoopWithRetries := tl.DeepCopy()
 	taskLoopWithRetries.Spec.Retries = 1
 	return taskLoopWithRetries
+}
+
+func withConcurrencyLimit(tl *taskloopv1alpha1.TaskLoop, concurrencyLimit int) *taskloopv1alpha1.TaskLoop {
+	taskLoopWithConcurrency := tl.DeepCopy()
+	taskLoopWithConcurrency.Spec.Concurrency = &concurrencyLimit
+	return taskLoopWithConcurrency
 }
 
 func running(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -154,17 +163,18 @@ func getTaskLoopController(t *testing.T, d test.Data, taskloops []*taskloopv1alp
 	}, cancel
 }
 
-func getCreatedTaskrun(t *testing.T, clients test.Clients) *v1beta1.TaskRun {
+func getCreatedTaskRuns(t *testing.T, clients test.Clients) []*v1beta1.TaskRun {
+	createdTaskRuns := []*v1beta1.TaskRun{}
 	t.Log("actions", clients.Pipeline.Actions())
 	for _, a := range clients.Pipeline.Actions() {
 		if a.GetVerb() == "create" {
 			obj := a.(ktesting.CreateAction).GetObject()
 			if tr, ok := obj.(*v1beta1.TaskRun); ok {
-				return tr
+				createdTaskRuns = append(createdTaskRuns, tr)
 			}
 		}
 	}
-	return nil
+	return createdTaskRuns
 }
 
 func checkEvents(fr *record.FakeRecorder, testName string, wantEvents []string) error {
@@ -232,39 +242,58 @@ func checkRunStatus(t *testing.T, run *v1alpha1.Run, expectedStatus map[string]t
 		return
 	}
 	for expectedTaskRunName, expectedTaskRunStatus := range expectedStatus {
-		actualTaskRunStatus, exists := status.TaskRuns[expectedTaskRunName]
-		if !exists {
-			t.Errorf("Expected Run status to include TaskRun status for TaskRun %s", expectedTaskRunName)
+		found := false
+		for actualTaskRunName, actualTaskRunStatus := range status.TaskRuns {
+			if strings.HasPrefix(actualTaskRunName, expectedTaskRunName) {
+				found = true
+				if actualTaskRunStatus.Iteration != expectedTaskRunStatus.Iteration {
+					t.Errorf("Run status for TaskRun %s has iteration number %d instead of %d",
+						actualTaskRunName, actualTaskRunStatus.Iteration, expectedTaskRunStatus.Iteration)
+				}
+				if d := cmp.Diff(expectedTaskRunStatus.Status, actualTaskRunStatus.Status, cmpopts.IgnoreTypes(apis.Condition{}.LastTransitionTime.Inner.Time)); d != "" {
+					t.Errorf("Run status for TaskRun %s is incorrect. Diff %s", actualTaskRunName, diff.PrintWantGot(d))
+				}
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected TaskRun with prefix %s for Run %s/%s not found",
+				expectedTaskRunName, run.Namespace, run.Name)
 			continue
-		}
-		if actualTaskRunStatus.Iteration != expectedTaskRunStatus.Iteration {
-			t.Errorf("Run status for TaskRun %s has iteration number %d instead of %d",
-				expectedTaskRunName, actualTaskRunStatus.Iteration, expectedTaskRunStatus.Iteration)
-		}
-		if d := cmp.Diff(expectedTaskRunStatus.Status, actualTaskRunStatus.Status, cmpopts.IgnoreTypes(apis.Condition{}.LastTransitionTime.Inner.Time)); d != "" {
-			t.Errorf("Run status for TaskRun %s is incorrect. Diff %s", expectedTaskRunName, diff.PrintWantGot(d))
 		}
 	}
 }
 
+// commonTaskSpec is reused in Task and inline task
+var commonTaskSpec = v1beta1.TaskSpec{
+	Params: []v1beta1.ParamSpec{{
+		Name: "current-item",
+		Type: v1beta1.ParamTypeString,
+	}, {
+		Name: "additional-parameter",
+		Type: v1beta1.ParamTypeString,
+	}},
+	Steps: []v1beta1.Step{{
+		Container: corev1.Container{Name: "foo", Image: "bar"},
+	}},
+}
+
 var aTask = &v1beta1.Task{
 	ObjectMeta: metav1.ObjectMeta{Name: "a-task", Namespace: "foo"},
-	Spec: v1beta1.TaskSpec{
-		Params: []v1beta1.ParamSpec{{
-			Name: "current-item",
-			Type: v1beta1.ParamTypeString,
-		}, {
-			Name: "additional-parameter",
-			Type: v1beta1.ParamTypeString,
-		}},
-		Steps: []v1beta1.Step{{
-			Container: corev1.Container{Name: "foo", Image: "bar"},
-		}},
-	},
+	Spec:       commonTaskSpec,
 }
 
 var aTaskLoop = &taskloopv1alpha1.TaskLoop{
-	ObjectMeta: metav1.ObjectMeta{Name: "a-taskloop", Namespace: "foo"},
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "a-taskloop",
+		Namespace: "foo",
+		Labels: map[string]string{
+			"myTaskLoopLabel": "myTaskLoopLabelValue",
+		},
+		Annotations: map[string]string{
+			"myTaskLoopAnnotation": "myTaskLoopAnnotationValue",
+		},
+	},
 	Spec: taskloopv1alpha1.TaskLoopSpec{
 		TaskRef:      &v1beta1.TaskRef{Name: "a-task"},
 		IterateParam: "current-item",
@@ -272,20 +301,13 @@ var aTaskLoop = &taskloopv1alpha1.TaskLoop{
 }
 
 var aTaskLoopWithInlineTask = &taskloopv1alpha1.TaskLoop{
-	ObjectMeta: metav1.ObjectMeta{Name: "a-taskloop-with-inline-task", Namespace: "foo"},
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "a-taskloop-with-inline-task",
+		Namespace: "foo",
+		// No labels or annotations in this one to test that case works
+	},
 	Spec: taskloopv1alpha1.TaskLoopSpec{
-		TaskSpec: &v1beta1.TaskSpec{
-			Params: []v1beta1.ParamSpec{{
-				Name: "current-item",
-				Type: v1beta1.ParamTypeString,
-			}, {
-				Name: "additional-parameter",
-				Type: v1beta1.ParamTypeString,
-			}},
-			Steps: []v1beta1.Step{{
-				Container: corev1.Container{Name: "foo", Image: "bar"},
-			}},
-		},
+		TaskSpec:     &commonTaskSpec,
 		IterateParam: "current-item",
 		Timeout:      &metav1.Duration{Duration: 5 * time.Minute},
 	},
@@ -296,16 +318,16 @@ var runTaskLoop = &v1alpha1.Run{
 		Name:      "run-taskloop",
 		Namespace: "foo",
 		Labels: map[string]string{
-			"myTestLabel": "myTestLabelValue",
+			"myRunLabel": "myRunLabelValue",
 		},
 		Annotations: map[string]string{
-			"myTestAnnotation": "myTestAnnotationValue",
+			"myRunAnnotation": "myRunAnnotationValue",
 		},
 	},
 	Spec: v1alpha1.RunSpec{
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2"}},
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2", "item3"}},
 		}, {
 			Name:  "additional-parameter",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
@@ -322,12 +344,7 @@ var runTaskLoopWithInlineTask = &v1alpha1.Run{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-taskloop-with-inline-task",
 		Namespace: "foo",
-		Labels: map[string]string{
-			"myTestLabel": "myTestLabelValue",
-		},
-		Annotations: map[string]string{
-			"myTestAnnotation": "myTestAnnotationValue",
-		},
+		// No labels or annotations in this one to test that case works
 	},
 	Spec: v1alpha1.RunSpec{
 		Params: []v1beta1.Param{{
@@ -416,7 +433,7 @@ var runWithIterateParamNotAnArray = &v1alpha1.Run{
 
 var expectedTaskRunIteration1 = &v1beta1.TaskRun{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "run-taskloop-00001-9l9zj",
+		Name:      "run-taskloop-00001-", // does not include random suffix
 		Namespace: "foo",
 		OwnerReferences: []metav1.OwnerReference{{
 			APIVersion:         "tekton.dev/v1alpha1",
@@ -429,10 +446,12 @@ var expectedTaskRunIteration1 = &v1beta1.TaskRun{
 			"custom.tekton.dev/taskLoop":          "a-taskloop",
 			"tekton.dev/run":                      "run-taskloop",
 			"custom.tekton.dev/taskLoopIteration": "1",
-			"myTestLabel":                         "myTestLabelValue",
+			"myTaskLoopLabel":                     "myTaskLoopLabelValue",
+			"myRunLabel":                          "myRunLabelValue",
 		},
 		Annotations: map[string]string{
-			"myTestAnnotation": "myTestAnnotationValue",
+			"myTaskLoopAnnotation": "myTaskLoopAnnotationValue",
+			"myRunAnnotation":      "myRunAnnotationValue",
 		},
 	},
 	Spec: v1beta1.TaskRunSpec{
@@ -447,10 +466,9 @@ var expectedTaskRunIteration1 = &v1beta1.TaskRun{
 	},
 }
 
-// Note: The taskrun for the second iteration has the same random suffix as the first due to the resetting of the seed on each test.
 var expectedTaskRunIteration2 = &v1beta1.TaskRun{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "run-taskloop-00002-9l9zj",
+		Name:      "run-taskloop-00002-", // does not include random suffix
 		Namespace: "foo",
 		OwnerReferences: []metav1.OwnerReference{{
 			APIVersion:         "tekton.dev/v1alpha1",
@@ -463,10 +481,12 @@ var expectedTaskRunIteration2 = &v1beta1.TaskRun{
 			"custom.tekton.dev/taskLoop":          "a-taskloop",
 			"tekton.dev/run":                      "run-taskloop",
 			"custom.tekton.dev/taskLoopIteration": "2",
-			"myTestLabel":                         "myTestLabelValue",
+			"myTaskLoopLabel":                     "myTaskLoopLabelValue",
+			"myRunLabel":                          "myRunLabelValue",
 		},
 		Annotations: map[string]string{
-			"myTestAnnotation": "myTestAnnotationValue",
+			"myTaskLoopAnnotation": "myTaskLoopAnnotationValue",
+			"myRunAnnotation":      "myRunAnnotationValue",
 		},
 	},
 	Spec: v1beta1.TaskRunSpec{
@@ -481,9 +501,44 @@ var expectedTaskRunIteration2 = &v1beta1.TaskRun{
 	},
 }
 
+var expectedTaskRunIteration3 = &v1beta1.TaskRun{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "run-taskloop-00003-", // does not include random suffix
+		Namespace: "foo",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion:         "tekton.dev/v1alpha1",
+			Kind:               "Run",
+			Name:               "run-taskloop",
+			Controller:         &trueB,
+			BlockOwnerDeletion: &trueB,
+		}},
+		Labels: map[string]string{
+			"custom.tekton.dev/taskLoop":          "a-taskloop",
+			"tekton.dev/run":                      "run-taskloop",
+			"custom.tekton.dev/taskLoopIteration": "3",
+			"myTaskLoopLabel":                     "myTaskLoopLabelValue",
+			"myRunLabel":                          "myRunLabelValue",
+		},
+		Annotations: map[string]string{
+			"myTaskLoopAnnotation": "myTaskLoopAnnotationValue",
+			"myRunAnnotation":      "myRunAnnotationValue",
+		},
+	},
+	Spec: v1beta1.TaskRunSpec{
+		TaskRef: &v1beta1.TaskRef{Name: "a-task"},
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item3"},
+		}, {
+			Name:  "additional-parameter",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
+		}},
+	},
+}
+
 var expectedTaskRunWithInlineTaskIteration1 = &v1beta1.TaskRun{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "run-taskloop-with-inline-task-00001-9l9zj",
+		Name:      "run-taskloop-with-inline-task-00001-", // does not include random suffix
 		Namespace: "foo",
 		OwnerReferences: []metav1.OwnerReference{{
 			APIVersion:         "tekton.dev/v1alpha1",
@@ -496,25 +551,11 @@ var expectedTaskRunWithInlineTaskIteration1 = &v1beta1.TaskRun{
 			"custom.tekton.dev/taskLoop":          "a-taskloop-with-inline-task",
 			"tekton.dev/run":                      "run-taskloop-with-inline-task",
 			"custom.tekton.dev/taskLoopIteration": "1",
-			"myTestLabel":                         "myTestLabelValue",
 		},
-		Annotations: map[string]string{
-			"myTestAnnotation": "myTestAnnotationValue",
-		},
+		Annotations: map[string]string{},
 	},
 	Spec: v1beta1.TaskRunSpec{
-		TaskSpec: &v1beta1.TaskSpec{
-			Params: []v1beta1.ParamSpec{{
-				Name: "current-item",
-				Type: v1beta1.ParamTypeString,
-			}, {
-				Name: "additional-parameter",
-				Type: v1beta1.ParamTypeString,
-			}},
-			Steps: []v1beta1.Step{{
-				Container: corev1.Container{Name: "foo", Image: "bar"},
-			}},
-		},
+		TaskSpec: &commonTaskSpec,
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
@@ -560,7 +601,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunWithInlineTaskIteration1},
 		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
 	}, {
-		name:             "Reconcile a run after the first TaskRun has succeeded.",
+		name:             "Reconcile a run after the first TaskRun has succeeded",
 		task:             aTask,
 		taskloop:         aTaskLoop,
 		run:              loopRunning(runTaskLoop),
@@ -574,10 +615,10 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		task:             aTask,
 		taskloop:         aTaskLoop,
 		run:              loopRunning(runTaskLoop),
-		taskruns:         []*v1beta1.TaskRun{successful(expectedTaskRunIteration1), successful(expectedTaskRunIteration2)},
+		taskruns:         []*v1beta1.TaskRun{successful(expectedTaskRunIteration1), successful(expectedTaskRunIteration2), successful(expectedTaskRunIteration3)},
 		expectedStatus:   corev1.ConditionTrue,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonSucceeded,
-		expectedTaskruns: []*v1beta1.TaskRun{successful(expectedTaskRunIteration1), successful(expectedTaskRunIteration2)},
+		expectedTaskruns: []*v1beta1.TaskRun{successful(expectedTaskRunIteration1), successful(expectedTaskRunIteration2), successful(expectedTaskRunIteration3)},
 		expectedEvents:   []string{"Normal Succeeded All TaskRuns completed successfully"},
 	}, {
 		name:             "Reconcile a run after the first TaskRun has failed",
@@ -588,7 +629,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedStatus:   corev1.ConditionFalse,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonFailed,
 		expectedTaskruns: []*v1beta1.TaskRun{failed(expectedTaskRunIteration1)},
-		expectedEvents:   []string{"Warning Failed TaskRun " + expectedTaskRunIteration1.Name + " has failed"},
+		expectedEvents:   []string{"Warning Failed One or more TaskRuns have failed"},
 	}, {
 		name:             "Reconcile a run after the first TaskRun has failed and retry is allowed",
 		task:             aTask,
@@ -598,7 +639,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedStatus:   corev1.ConditionUnknown,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
 		expectedTaskruns: []*v1beta1.TaskRun{retrying(failed(expectedTaskRunIteration1))},
-		expectedEvents:   []string{},
+		expectedEvents:   []string{"Normal Running Iterations completed: 0"},
 	}, {
 		name:             "Reconcile a run after the first TaskRun has failed and retry failed as well",
 		task:             aTask,
@@ -608,7 +649,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedStatus:   corev1.ConditionFalse,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonFailed,
 		expectedTaskruns: []*v1beta1.TaskRun{failed(retrying(failed(expectedTaskRunIteration1)))},
-		expectedEvents:   []string{"Warning Failed TaskRun " + expectedTaskRunIteration1.Name + " has failed"},
+		expectedEvents:   []string{"Warning Failed One or more TaskRuns have failed"},
 	}, {
 		name:             "Reconcile a cancelled run while the first TaskRun is running",
 		task:             aTask,
@@ -618,7 +659,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedStatus:   corev1.ConditionUnknown,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
 		expectedTaskruns: []*v1beta1.TaskRun{running(expectedTaskRunIteration1)},
-		expectedEvents:   []string{"Normal Running Cancelling TaskRun " + expectedTaskRunIteration1.Name},
+		expectedEvents:   []string{"Normal Running Cancelling TaskRuns"},
 	}, {
 		name:             "Reconcile a cancelled run after the first TaskRun has failed",
 		task:             aTask,
@@ -639,6 +680,56 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonCancelled,
 		expectedTaskruns: []*v1beta1.TaskRun{successful(expectedTaskRunIteration1)},
 		expectedEvents:   []string{"Warning Failed Run " + runTaskLoop.Namespace + "/" + runTaskLoop.Name + " was cancelled"},
+	}, {
+		name:             "Reconcile a new run with a taskloop that explicitly requests sequential execution",
+		task:             aTask,
+		taskloop:         withConcurrencyLimit(aTaskLoop, concurrencyLimit1),
+		run:              runTaskLoop,
+		taskruns:         []*v1beta1.TaskRun{},
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunIteration1},
+		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
+	}, {
+		name:             "Reconcile a new run with a taskloop that allows limited concurrency",
+		task:             aTask,
+		taskloop:         withConcurrencyLimit(aTaskLoop, concurrencyLimit2),
+		run:              runTaskLoop,
+		taskruns:         []*v1beta1.TaskRun{},
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunIteration1, expectedTaskRunIteration2},
+		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
+	}, {
+		name:             "Reconcile a new run with a taskloop that allows unlimited concurrency",
+		task:             aTask,
+		taskloop:         withConcurrencyLimit(aTaskLoop, noConcurrencyLimit),
+		run:              runTaskLoop,
+		taskruns:         []*v1beta1.TaskRun{},
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunIteration1, expectedTaskRunIteration2, expectedTaskRunIteration3},
+		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
+	}, {
+		name:             "Reconcile a run that allows limited concurrency after the first TaskRun has succeeded",
+		task:             aTask,
+		taskloop:         withConcurrencyLimit(aTaskLoop, concurrencyLimit2),
+		run:              loopRunning(runTaskLoop),
+		taskruns:         []*v1beta1.TaskRun{successful(expectedTaskRunIteration1), running(expectedTaskRunIteration2)},
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{successful(expectedTaskRunIteration1), running(expectedTaskRunIteration2), expectedTaskRunIteration3},
+		expectedEvents:   []string{"Normal Running Iterations completed: 1"},
+	}, {
+		name:             "Reconcile a run that allows limited concurrency after the first TaskRun has failed but the other is still running",
+		task:             aTask,
+		taskloop:         withConcurrencyLimit(aTaskLoop, concurrencyLimit2),
+		run:              loopRunning(runTaskLoop),
+		taskruns:         []*v1beta1.TaskRun{failed(expectedTaskRunIteration1), running(expectedTaskRunIteration2)},
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{failed(expectedTaskRunIteration1), running(expectedTaskRunIteration2)}, // no new TaskRun
+		expectedEvents:   []string{"Normal Running Iterations completed: 1"},
 	}}
 
 	for _, tc := range testcases {
@@ -674,22 +765,34 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 			// Verify that the Run has the expected status and reason.
 			checkRunCondition(t, reconciledRun, tc.expectedStatus, tc.expectedReason)
 
-			// Verify that a TaskRun was or was not created depending on the test.
+			// Verify that TaskRun(s) were or were not created depending on the test.
 			// If the number of expected TaskRuns is greater than the original number of TaskRuns
-			// then the test expects a new TaskRun to be created.  The new TaskRun must be the
-			// last one in the list of expected TaskRuns.
-			createdTaskrun := getCreatedTaskrun(t, clients)
-			if len(tc.expectedTaskruns) > len(tc.taskruns) {
-				if createdTaskrun == nil {
-					t.Errorf("A TaskRun should have been created but was not")
+			// then the test expects new TaskRuns to be created.  The new TaskRuns must be at the
+			// end of the list of expected TaskRuns.
+			createdTaskRuns := getCreatedTaskRuns(t, clients)
+			numberofExpectedNewTaskRuns := len(tc.expectedTaskruns) - len(tc.taskruns)
+			numberOfActualNewTaskRuns := len(createdTaskRuns)
+			n := numberofExpectedNewTaskRuns
+			if numberOfActualNewTaskRuns > numberofExpectedNewTaskRuns {
+				n = numberOfActualNewTaskRuns
+			}
+			for i := 0; i < n; i++ {
+				if i >= numberofExpectedNewTaskRuns {
+					t.Errorf("A TaskRun %s was created which was not expected", createdTaskRuns[i].ObjectMeta.Name)
 				} else {
-					if d := cmp.Diff(tc.expectedTaskruns[len(tc.expectedTaskruns)-1], createdTaskrun); d != "" {
-						t.Errorf("Expected TaskRun was not created. Diff %s", diff.PrintWantGot(d))
+					expectedNewTaskRun := tc.expectedTaskruns[len(tc.taskruns)+i]
+					if i >= numberOfActualNewTaskRuns {
+						t.Errorf("A TaskRun with prefix %s should have been created but was not", expectedNewTaskRun.ObjectMeta.Name)
+					} else {
+						if !strings.HasPrefix(createdTaskRuns[i].ObjectMeta.Name, expectedNewTaskRun.ObjectMeta.Name) {
+							t.Errorf("A TaskRun %s was created but the name does not have expected prefix %s",
+								createdTaskRuns[i].ObjectMeta.Name, expectedNewTaskRun.ObjectMeta.Name)
+						}
+						if d := cmp.Diff(expectedNewTaskRun, createdTaskRuns[i],
+							cmpopts.IgnoreFields(metav1.ObjectMeta{}, "Name")); d != "" {
+							t.Errorf("Expected TaskRun was not created. Diff %s", diff.PrintWantGot(d))
+						}
 					}
-				}
-			} else {
-				if createdTaskrun != nil {
-					t.Errorf("A TaskRun was created which was not expected")
 				}
 			}
 

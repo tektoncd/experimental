@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,16 +51,28 @@ import (
 )
 
 var (
-	numRetries              = 2 // number of task retries to test
-	runTimeout              = 10 * time.Minute
-	startedEventMessage     = "" // Run started event has no message
-	taskTimeout             = &metav1.Duration{Duration: 10 * time.Second}
-	ignoreReleaseAnnotation = func(k string, v string) bool {
+	concurrencyLimit2         = 2
+	noConcurrencyLimit        = 0
+	numRetries                = 2 // number of task retries to test
+	runTimeout                = 10 * time.Minute
+	startedEventMessage       = ""        // Run started event has no message
+	defaultServiceAccountName = "default" // default service account name
+	defaultTaskRunTimeout     = &metav1.Duration{Duration: 1 * time.Hour}
+	shortTaskRunTimeout       = &metav1.Duration{Duration: 10 * time.Second}
+	ignoreReleaseAnnotation   = func(k string, v string) bool {
 		return k == pod.ReleaseAnnotation
 	}
 )
 
-// commonTaskSpec is reused in Task, Cluster Task, and inline task
+// Expected events can be required or optional.
+type ev struct {
+	message  string
+	required bool
+}
+
+// commonTaskSpec is reused in Task, Cluster Task, and inline task.
+// This task is used to test TaskRun success and failure based on string comparison (current-item = fail-on-item).
+// It is also used to test timeouts and cancellation by supporting a sleep parameter to control execution time.
 var commonTaskSpec = v1beta1.TaskSpec{
 	Params: []v1beta1.ParamSpec{{
 		Name: "current-item",
@@ -68,13 +81,17 @@ var commonTaskSpec = v1beta1.TaskSpec{
 		Name:    "fail-on-item",
 		Type:    v1beta1.ParamTypeString,
 		Default: &v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: ""},
+	}, {
+		Name:    "sleep-time",
+		Type:    v1beta1.ParamTypeString,
+		Default: &v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "0"},
 	}},
 	Steps: []v1beta1.Step{{
 		Container: corev1.Container{
 			Name:    "passfail",
 			Image:   "ubuntu",
 			Command: []string{"/bin/bash"},
-			Args:    []string{"-c", `[[ "$(params.fail-on-item)" == "" || "$(params.current-item)" != "$(params.fail-on-item)" ]]`},
+			Args:    []string{"-c", `sleep $(params.sleep-time) && [[ "$(params.fail-on-item)" == "" || "$(params.current-item)" != "$(params.fail-on-item)" ]]`},
 		},
 	}},
 }
@@ -143,7 +160,7 @@ var runTaskLoopSuccess = &v1alpha1.Run{
 	Spec: v1alpha1.RunSpec{
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2"}},
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2", "item3"}},
 		}},
 		Ref: &v1alpha1.TaskRef{
 			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
@@ -166,7 +183,7 @@ var runTaskLoopFailure = &v1alpha1.Run{
 	Spec: v1alpha1.RunSpec{
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2"}},
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2", "item3"}},
 		}, {
 			Name:  "fail-on-item",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
@@ -187,7 +204,7 @@ var runTaskLoopUsingAnInlineTaskSuccess = &v1alpha1.Run{
 	Spec: v1alpha1.RunSpec{
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2"}},
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2", "item3"}},
 		}},
 		Ref: &v1alpha1.TaskRef{
 			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
@@ -205,12 +222,52 @@ var runTaskLoopUsingAClusterTaskSuccess = &v1alpha1.Run{
 	Spec: v1alpha1.RunSpec{
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2"}},
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2", "item3"}},
 		}},
 		Ref: &v1alpha1.TaskRef{
 			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
 			Kind:       taskloop.TaskLoopControllerName,
 			Name:       "a-taskloop-using-a-cluster-task",
+		},
+	},
+}
+
+// This Run is used in the concurrency tests.  The tasks need to execute a short amount of time to make it
+// unlikely that one could complete before the controller submits all of the TaskRuns.  If that happened, it would
+// appear as if the desired concurrency wasn't obtained.  See checkConcurrency() for details.
+var runTaskLoopWithShortSleep = &v1alpha1.Run{
+	ObjectMeta: metav1.ObjectMeta{Name: "run-taskloop"},
+	Spec: v1alpha1.RunSpec{
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2", "item3"}},
+		}, {
+			Name:  "sleep-time",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "10"},
+		}},
+		Ref: &v1alpha1.TaskRef{
+			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
+			Kind:       taskloop.TaskLoopControllerName,
+			Name:       "a-taskloop",
+		},
+	},
+}
+
+// This Run is used in timeout and cancellation tests where we need the task to hang around a while.
+var runTaskLoopWithLongSleep = &v1alpha1.Run{
+	ObjectMeta: metav1.ObjectMeta{Name: "run-taskloop"},
+	Spec: v1alpha1.RunSpec{
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"item1", "item2", "item3"}},
+		}, {
+			Name:  "sleep-time",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "120"},
+		}},
+		Ref: &v1alpha1.TaskRef{
+			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
+			Kind:       taskloop.TaskLoopControllerName,
+			Name:       "a-taskloop",
 		},
 	},
 }
@@ -245,9 +302,9 @@ var expectedTaskRunIteration1Success = &v1beta1.TaskRun{
 		// Expected labels and annotations are added dynamically
 	},
 	Spec: v1beta1.TaskRunSpec{
-		ServiceAccountName: "default", // default service account name
+		ServiceAccountName: defaultServiceAccountName,
 		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
-		Timeout:            &metav1.Duration{Duration: 1 * time.Hour}, // default TaskRun timeout
+		Timeout:            defaultTaskRunTimeout,
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
@@ -264,12 +321,31 @@ var expectedTaskRunIteration2Success = &v1beta1.TaskRun{
 		// Expected labels and annotations are added dynamically
 	},
 	Spec: v1beta1.TaskRunSpec{
-		ServiceAccountName: "default", // default service account name
+		ServiceAccountName: defaultServiceAccountName,
 		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
-		Timeout:            &metav1.Duration{Duration: 1 * time.Hour}, // default TaskRun timeout
+		Timeout:            defaultTaskRunTimeout,
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item2"},
+		}},
+	},
+	Status: v1beta1.TaskRunStatus{
+		Status: taskRunStatusSuccess,
+	},
+}
+
+var expectedTaskRunIteration3Success = &v1beta1.TaskRun{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "run-taskloop-00003-", // does not include random suffix
+		// Expected labels and annotations are added dynamically
+	},
+	Spec: v1beta1.TaskRunSpec{
+		ServiceAccountName: defaultServiceAccountName,
+		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
+		Timeout:            defaultTaskRunTimeout,
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item3"},
 		}},
 	},
 	Status: v1beta1.TaskRunStatus{
@@ -283,9 +359,9 @@ var expectedTaskRunIteration1Failure = &v1beta1.TaskRun{
 		// Expected labels and annotations are added dynamically
 	},
 	Spec: v1beta1.TaskRunSpec{
-		ServiceAccountName: "default", // default service account name
+		ServiceAccountName: defaultServiceAccountName,
 		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
-		Timeout:            &metav1.Duration{Duration: 1 * time.Hour}, // default TaskRun timeout
+		Timeout:            defaultTaskRunTimeout,
 		Params: []v1beta1.Param{{
 			Name:  "current-item",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
@@ -299,50 +375,85 @@ var expectedTaskRunIteration1Failure = &v1beta1.TaskRun{
 	},
 }
 
-var sleepyTaskLoop = &taskloopv1alpha1.TaskLoop{
-	ObjectMeta: metav1.ObjectMeta{Name: "sleepyloop"},
-	Spec: taskloopv1alpha1.TaskLoopSpec{
-		TaskSpec: &v1beta1.TaskSpec{
-			Params: []v1beta1.ParamSpec{{
-				Name: "sleep-time",
-				Type: v1beta1.ParamTypeString,
-			}},
-			Steps: []v1beta1.Step{{
-				Container: corev1.Container{
-					Image: "busybox",
-				},
-				Script: "sleep $(params.sleep-time)",
-			}},
-		},
-		IterateParam: "sleep-time",
-	},
-}
-
-var runSleepyTaskLoop = &v1alpha1.Run{
-	ObjectMeta: metav1.ObjectMeta{Name: "run-sleepy"},
-	Spec: v1alpha1.RunSpec{
-		Params: []v1beta1.Param{{
-			Name:  "sleep-time",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"120", "120"}},
-		}},
-		Ref: &v1alpha1.TaskRef{
-			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
-			Kind:       taskloop.TaskLoopControllerName,
-			Name:       "sleepyloop",
-		},
-	},
-}
-
-var expectedTaskRunIteration1Timeout = &v1beta1.TaskRun{
+var expectedTaskRunShortSleepIteration1Success = &v1beta1.TaskRun{
 	ObjectMeta: metav1.ObjectMeta{
-		Name: "run-sleepy-00001-", // does not include random suffix
+		Name: "run-taskloop-00001-", // does not include random suffix
 		// Expected labels and annotations are added dynamically
 	},
 	Spec: v1beta1.TaskRunSpec{
-		ServiceAccountName: "default", // default service account name
-		Timeout:            taskTimeout,
-		TaskSpec:           sleepyTaskLoop.Spec.TaskSpec,
+		ServiceAccountName: defaultServiceAccountName,
+		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
+		Timeout:            defaultTaskRunTimeout,
 		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
+		}, {
+			Name:  "sleep-time",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "10"},
+		}},
+	},
+	Status: v1beta1.TaskRunStatus{
+		Status: taskRunStatusSuccess,
+	},
+}
+
+var expectedTaskRunShortSleepIteration2Success = &v1beta1.TaskRun{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "run-taskloop-00002-", // does not include random suffix
+		// Expected labels and annotations are added dynamically
+	},
+	Spec: v1beta1.TaskRunSpec{
+		ServiceAccountName: defaultServiceAccountName,
+		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
+		Timeout:            defaultTaskRunTimeout,
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item2"},
+		}, {
+			Name:  "sleep-time",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "10"},
+		}},
+	},
+	Status: v1beta1.TaskRunStatus{
+		Status: taskRunStatusSuccess,
+	},
+}
+
+var expectedTaskRunShortSleepIteration3Success = &v1beta1.TaskRun{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "run-taskloop-00003-", // does not include random suffix
+		// Expected labels and annotations are added dynamically
+	},
+	Spec: v1beta1.TaskRunSpec{
+		ServiceAccountName: defaultServiceAccountName,
+		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
+		Timeout:            defaultTaskRunTimeout,
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item3"},
+		}, {
+			Name:  "sleep-time",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "10"},
+		}},
+	},
+	Status: v1beta1.TaskRunStatus{
+		Status: taskRunStatusSuccess,
+	},
+}
+
+var expectedTaskRunLongSleepIteration1Timeout = &v1beta1.TaskRun{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "run-taskloop-00001-", // does not include random suffix
+		// Expected labels and annotations are added dynamically
+	},
+	Spec: v1beta1.TaskRunSpec{
+		ServiceAccountName: defaultServiceAccountName,
+		Timeout:            shortTaskRunTimeout,
+		TaskRef:            &v1beta1.TaskRef{Name: "a-task", Kind: "Task"},
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
+		}, {
 			Name:  "sleep-time",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "120"},
 		}},
@@ -363,21 +474,30 @@ func TestTaskLoopRun(t *testing.T) {
 		taskloop    *taskloopv1alpha1.TaskLoop
 		run         *v1alpha1.Run
 		// The following set of fields describe the expected outcome.
-		expectedStatus   corev1.ConditionStatus
-		expectedReason   taskloopv1alpha1.TaskLoopRunReason
-		expectedTaskRuns []*v1beta1.TaskRun
-		expectedEvents   []string
+		expectedStatus      corev1.ConditionStatus
+		expectedReason      taskloopv1alpha1.TaskLoopRunReason
+		expectedTaskRuns    []*v1beta1.TaskRun
+		expectedConcurrency *int // default is sequential
+		expectedEvents      []ev
 		// This function can perform additional checks on the TaskRun.  It is passed the expected and actual TaskRuns.
 		extraTaskRunChecks func(*testing.T, *v1beta1.TaskRun, *v1beta1.TaskRun)
 	}{{
-		name:             "successful TaskLoop",
-		task:             aTask,
-		taskloop:         aTaskLoop,
-		run:              runTaskLoopSuccess,
-		expectedStatus:   corev1.ConditionTrue,
-		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonSucceeded,
-		expectedTaskRuns: []*v1beta1.TaskRun{expectedTaskRunIteration1Success, expectedTaskRunIteration2Success},
-		expectedEvents:   []string{startedEventMessage, "Iterations completed: 0", "Iterations completed: 1", "All TaskRuns completed successfully"},
+		name:           "successful TaskLoop",
+		task:           aTask,
+		taskloop:       aTaskLoop,
+		run:            runTaskLoopSuccess,
+		expectedStatus: corev1.ConditionTrue,
+		expectedReason: taskloopv1alpha1.TaskLoopRunReasonSucceeded,
+		expectedTaskRuns: []*v1beta1.TaskRun{
+			expectedTaskRunIteration1Success,
+			expectedTaskRunIteration2Success,
+			expectedTaskRunIteration3Success},
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"Iterations completed: 1", true},
+			ev{"Iterations completed: 2", true},
+			ev{"All TaskRuns completed successfully", true}},
 	}, {
 		name:             "failed TaskLoop",
 		task:             aTask,
@@ -386,25 +506,35 @@ func TestTaskLoopRun(t *testing.T) {
 		expectedStatus:   corev1.ConditionFalse,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonFailed,
 		expectedTaskRuns: []*v1beta1.TaskRun{expectedTaskRunIteration1Failure},
-		expectedEvents:   []string{startedEventMessage, "Iterations completed: 0", "TaskRun run-taskloop-00001-.* has failed"},
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"One or more TaskRuns have failed", true}},
 	}, {
-		name:               "failed TaskLoop with retries",
-		task:               aTask,
-		taskloop:           getTaskLoopWithRetries(aTaskLoop),
-		run:                runTaskLoopFailure,
-		expectedStatus:     corev1.ConditionFalse,
-		expectedReason:     taskloopv1alpha1.TaskLoopRunReasonFailed,
-		expectedTaskRuns:   []*v1beta1.TaskRun{expectedTaskRunIteration1Failure},
-		expectedEvents:     []string{startedEventMessage, "Iterations completed: 0", "TaskRun run-taskloop-00001-.* has failed"},
-		extraTaskRunChecks: checkTaskRunRetries,
-	}, {
-		name:             "failed TaskLoop due to timeout",
-		taskloop:         getTaskLoopWithTimeout(sleepyTaskLoop),
-		run:              runSleepyTaskLoop,
+		name:             "failed TaskLoop with retries",
+		task:             aTask,
+		taskloop:         getTaskLoopWithRetries(aTaskLoop),
+		run:              runTaskLoopFailure,
 		expectedStatus:   corev1.ConditionFalse,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonFailed,
-		expectedTaskRuns: []*v1beta1.TaskRun{expectedTaskRunIteration1Timeout},
-		expectedEvents:   []string{startedEventMessage, "Iterations completed: 0", "TaskRun run-sleepy-00001-.* has failed"},
+		expectedTaskRuns: []*v1beta1.TaskRun{expectedTaskRunIteration1Failure},
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"One or more TaskRuns have failed", true}},
+		extraTaskRunChecks: checkTaskRunRetries,
+	}, {
+		name:             "failed TaskLoop due to taskrun timeout",
+		task:             aTask,
+		taskloop:         getTaskLoopWithTimeout(aTaskLoop),
+		run:              runTaskLoopWithLongSleep,
+		expectedStatus:   corev1.ConditionFalse,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonFailed,
+		expectedTaskRuns: []*v1beta1.TaskRun{expectedTaskRunLongSleepIteration1Timeout},
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"One or more TaskRuns have failed", true}},
 	}, {
 		name:           "successful TaskLoop using an inline task",
 		taskloop:       aTaskLoopUsingAnInlineTask,
@@ -414,8 +544,14 @@ func TestTaskLoopRun(t *testing.T) {
 		expectedTaskRuns: []*v1beta1.TaskRun{
 			getExpectedTaskRunForInlineTask(expectedTaskRunIteration1Success),
 			getExpectedTaskRunForInlineTask(expectedTaskRunIteration2Success),
+			getExpectedTaskRunForInlineTask(expectedTaskRunIteration3Success),
 		},
-		expectedEvents: []string{startedEventMessage, "Iterations completed: 0", "Iterations completed: 1", "All TaskRuns completed successfully"},
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"Iterations completed: 1", true},
+			ev{"Iterations completed: 2", true},
+			ev{"All TaskRuns completed successfully", true}},
 	}, {
 		name:           "successful TaskLoop using a cluster task",
 		clustertask:    aClusterTask,
@@ -426,8 +562,50 @@ func TestTaskLoopRun(t *testing.T) {
 		expectedTaskRuns: []*v1beta1.TaskRun{
 			getExpectedTaskRunForClusterTask(expectedTaskRunIteration1Success),
 			getExpectedTaskRunForClusterTask(expectedTaskRunIteration2Success),
+			getExpectedTaskRunForClusterTask(expectedTaskRunIteration3Success),
 		},
-		expectedEvents: []string{startedEventMessage, "Iterations completed: 0", "Iterations completed: 1", "All TaskRuns completed successfully"},
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"Iterations completed: 1", true},
+			ev{"Iterations completed: 2", true},
+			ev{"All TaskRuns completed successfully", true}},
+	}, {
+		name:           "successful TaskLoop with concurrency limit",
+		task:           aTask,
+		taskloop:       getTaskLoopWithConcurrency(aTaskLoop, concurrencyLimit2),
+		run:            runTaskLoopWithShortSleep,
+		expectedStatus: corev1.ConditionTrue,
+		expectedReason: taskloopv1alpha1.TaskLoopRunReasonSucceeded,
+		expectedTaskRuns: []*v1beta1.TaskRun{
+			expectedTaskRunShortSleepIteration1Success,
+			expectedTaskRunShortSleepIteration2Success,
+			expectedTaskRunShortSleepIteration3Success},
+		expectedConcurrency: &concurrencyLimit2,
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"Iterations completed: 1", false}, // Optional event depending on timing
+			ev{"Iterations completed: 2", false}, // Optional event depending on timing
+			ev{"All TaskRuns completed successfully", true}},
+	}, {
+		name:           "successful TaskLoop with unlimited concurrency",
+		task:           aTask,
+		taskloop:       getTaskLoopWithConcurrency(aTaskLoop, noConcurrencyLimit),
+		run:            runTaskLoopWithShortSleep,
+		expectedStatus: corev1.ConditionTrue,
+		expectedReason: taskloopv1alpha1.TaskLoopRunReasonSucceeded,
+		expectedTaskRuns: []*v1beta1.TaskRun{
+			expectedTaskRunShortSleepIteration1Success,
+			expectedTaskRunShortSleepIteration2Success,
+			expectedTaskRunShortSleepIteration3Success},
+		expectedConcurrency: &noConcurrencyLimit,
+		expectedEvents: []ev{
+			ev{startedEventMessage, true},
+			ev{"Iterations completed: 0", true},
+			ev{"Iterations completed: 1", false}, // Optional event depending on timing
+			ev{"Iterations completed: 2", false}, // Optional event depending on timing
+			ev{"All TaskRuns completed successfully", true}},
 	}}
 
 	for _, tc := range testcases {
@@ -561,21 +739,12 @@ func TestTaskLoopRun(t *testing.T) {
 				}
 			}
 
+			// Check for concurrency limit violation.
+			t.Logf("Checking for concurrency limit violation")
+			checkConcurrency(t, tc.expectedConcurrency, run, tc.expectedTaskRuns, actualTaskRunList)
+
 			t.Logf("Checking events that were created from Run")
-			matchKinds := map[string][]string{"Run": {run.Name}}
-			events, err := collectMatchingEvents(ctx, c.KubeClient, namespace, matchKinds)
-			if err != nil {
-				t.Fatalf("Failed to collect matching events: %q", err)
-			}
-			for e, expectedEvent := range tc.expectedEvents {
-				if e >= len(events) {
-					t.Errorf("Expected %d events but got %d", len(tc.expectedEvents), len(events))
-					break
-				}
-				if matched, _ := regexp.MatchString(expectedEvent, events[e].Message); !matched {
-					t.Errorf("Expected event %q but got %q", expectedEvent, events[e].Message)
-				}
-			}
+			checkEvents(ctx, t, c, run, namespace, tc.expectedEvents)
 		})
 	}
 }
@@ -594,13 +763,18 @@ func TestCancelTaskLoopRun(t *testing.T) {
 		knativetest.CleanupOnInterrupt(func() { tearDown(ctx, t, c, namespace) }, t.Logf)
 		defer tearDown(ctx, t, c, namespace)
 
-		t.Logf("Creating TaskLoop in namespace %s", namespace)
-		if _, err := taskLoopClient.Create(ctx, sleepyTaskLoop, metav1.CreateOptions{}); err != nil {
-			t.Fatalf("Failed to create TaskLoop `%s`: %s", sleepyTaskLoop.Name, err)
+		t.Logf("Creating Task %s in namespace %s", aTask.Name, namespace)
+		if _, err := c.TaskClient.Create(ctx, aTask, metav1.CreateOptions{}); err != nil {
+			t.Fatalf("Failed to create TaskLoop `%s`: %s", aTaskLoop.Name, err)
 		}
 
-		t.Logf("Creating Run in namespace %s", namespace)
-		run := runSleepyTaskLoop
+		t.Logf("Creating TaskLoop %s in namespace %s", aTaskLoop.Name, namespace)
+		if _, err := taskLoopClient.Create(ctx, getTaskLoopWithConcurrency(aTaskLoop, concurrencyLimit2), metav1.CreateOptions{}); err != nil {
+			t.Fatalf("Failed to create TaskLoop `%s`: %s", aTaskLoop.Name, err)
+		}
+
+		run := runTaskLoopWithLongSleep
+		t.Logf("Creating Run %s in namespace %s", run.Name, namespace)
 		if _, err := c.RunClient.Create(ctx, run, metav1.CreateOptions{}); err != nil {
 			t.Fatalf("Failed to create Run `%s`: %s", run.Name, err)
 		}
@@ -610,16 +784,14 @@ func TestCancelTaskLoopRun(t *testing.T) {
 			t.Fatalf("Error waiting for Run %s to be running: %s", run.Name, err)
 		}
 
-		// The current looping behavior is to run a single TaskRun at a time but the following code is generalized
-		// to allow multiple TaskRuns in case that is added.
 		taskrunList, err := c.TaskRunClient.List(ctx, metav1.ListOptions{LabelSelector: "tekton.dev/run=" + run.Name})
 		if err != nil {
 			t.Fatalf("Error listing TaskRuns for Run %s: %s", run.Name, err)
 		}
 
 		var wg sync.WaitGroup
-		t.Logf("Waiting for TaskRuns from Run %s in namespace %s to be running", run.Name, namespace)
 		for _, taskrunItem := range taskrunList.Items {
+			t.Logf("Waiting for TaskRun %s from Run %s in namespace %s to be running", taskrunItem.Name, run.Name, namespace)
 			wg.Add(1)
 			go func(name string) {
 				defer wg.Done()
@@ -655,8 +827,8 @@ func TestCancelTaskLoopRun(t *testing.T) {
 			t.Errorf("Error waiting for Run %q to finished: %s", run.Name, err)
 		}
 
-		t.Logf("Waiting for TaskRuns in Run %s in namespace %s to be cancelled", run.Name, namespace)
 		for _, taskrunItem := range taskrunList.Items {
+			t.Logf("Waiting for TaskRun %s in Run %s in namespace %s to be cancelled", taskrunItem.Name, run.Name, namespace)
 			wg.Add(1)
 			go func(name string) {
 				defer wg.Done()
@@ -732,6 +904,12 @@ func getExpectedTaskRunLabels(task *v1beta1.Task, clustertask *v1beta1.ClusterTa
 	return labels
 }
 
+func getTaskLoopWithConcurrency(taskloop *taskloopv1alpha1.TaskLoop, concurrency int) *taskloopv1alpha1.TaskLoop {
+	taskloop = taskloop.DeepCopy()
+	taskloop.Spec.Concurrency = &concurrency
+	return taskloop
+}
+
 func getTaskLoopWithRetries(taskloop *taskloopv1alpha1.TaskLoop) *taskloopv1alpha1.TaskLoop {
 	taskloop = taskloop.DeepCopy()
 	taskloop.Spec.Retries = numRetries
@@ -740,7 +918,7 @@ func getTaskLoopWithRetries(taskloop *taskloopv1alpha1.TaskLoop) *taskloopv1alph
 
 func getTaskLoopWithTimeout(taskloop *taskloopv1alpha1.TaskLoop) *taskloopv1alpha1.TaskLoop {
 	taskloop = taskloop.DeepCopy()
-	taskloop.Spec.Timeout = taskTimeout
+	taskloop.Spec.Timeout = shortTaskRunTimeout
 	return taskloop
 }
 
@@ -748,6 +926,164 @@ func checkTaskRunRetries(t *testing.T, expectedTaskRun *v1beta1.TaskRun, actualT
 	if len(actualTaskRun.Status.RetriesStatus) != numRetries {
 		t.Errorf("Expected TaskRun %s to be retried %d times but it was retried %d times",
 			actualTaskRun.Name, numRetries, len(actualTaskRun.Status.RetriesStatus))
+	}
+}
+
+// checkConcurrency collects and sorts the creation and completion times of each TaskRun.
+// It then processes the times in sequence to determine the maximum number of TaskRuns were alive at a time.
+func checkConcurrency(t *testing.T, expectedConcurrency *int, run *v1alpha1.Run,
+	expectedTaskRuns []*v1beta1.TaskRun, actualTaskRunList *v1beta1.TaskRunList) {
+
+	type taskRunEventType int
+	const (
+		trCreated   taskRunEventType = iota
+		trCompleted taskRunEventType = iota
+	)
+
+	type taskRunEvent struct {
+		eventTime metav1.Time
+		eventType taskRunEventType
+		trName    string
+	}
+
+	events := []taskRunEvent{}
+	for _, actualTaskRun := range actualTaskRunList.Items {
+		// This shouldn't happen unless something really went wrong but we need to test it to avoid a panic dereferencing the pointer.
+		if actualTaskRun.Status.CompletionTime == nil {
+			t.Errorf("TaskRun %s does not have a completion time", actualTaskRun.Name)
+			continue
+		}
+		events = append(events,
+			taskRunEvent{eventTime: actualTaskRun.ObjectMeta.CreationTimestamp, eventType: trCreated, trName: actualTaskRun.ObjectMeta.Name},
+			taskRunEvent{eventTime: *actualTaskRun.Status.CompletionTime, eventType: trCompleted, trName: actualTaskRun.ObjectMeta.Name},
+		)
+	}
+
+	sort.Slice(events, func(i, j int) bool {
+		// Unfortunately the timestamp resolution is only 1 second which makes event ordering imprecise.
+		// This could trigger a false limit failure if TaskRun B was created a few milliseconds after TaskRun A completed
+		// but the events were sorted the other way.  In order to address this, the sort places TaskRun completion
+		// before TaskRun creation when the times are equal and the TaskRun names are different.  There is a small
+		// chance this could mask a problem but it's the best that can be done with the limited timestamp resolution.
+		return events[i].eventTime.Before(&events[j].eventTime) ||
+			(events[i].eventTime.Equal(&events[j].eventTime) &&
+				((events[i].trName == events[j].trName && events[i].eventType == trCreated) ||
+					(events[i].trName != events[j].trName && events[i].eventType == trCompleted)))
+	})
+
+	t.Logf("Sorted taskrun event table: %v", events)
+
+	// Determine how many TaskRuns were "alive" at any given time, where "alive" means the TaskRun was created
+	// and thus eligible to run and not yet completed.
+	concurrency := 0
+	maxConcurrency := 0
+	concurrencyLimit := 1
+	if expectedConcurrency != nil {
+		concurrencyLimit = *expectedConcurrency
+	}
+	offender := ""
+	var firstCreationTime, lastCompletionTime metav1.Time
+	firstCreationTime = metav1.Unix(1<<63-62135596801, 999999999) // max time
+	for _, event := range events {
+		if event.eventType == trCreated {
+			concurrency++
+		} else {
+			concurrency--
+		}
+		// If the concurrency limit was breached, record the first TaskRun where it happened.
+		if concurrencyLimit > 0 && concurrency > concurrencyLimit && offender == "" {
+			offender = event.trName
+		}
+		// Track the peak number of active TaskRuns.
+		if concurrency > maxConcurrency {
+			maxConcurrency = concurrency
+		}
+		if event.eventType == trCreated {
+			if event.eventTime.Before(&firstCreationTime) {
+				firstCreationTime = event.eventTime
+			}
+		} else {
+			if lastCompletionTime.Before(&event.eventTime) {
+				lastCompletionTime = event.eventTime
+			}
+		}
+	}
+
+	t.Logf("maxConcurrency=%v", maxConcurrency)
+
+	if concurrencyLimit <= 0 {
+		// There is no limit so all of the expected TaskRuns should have been created at once.
+		// This check assumes that the controller can create all of the TaskRuns before any of them complete.
+		// It would take a very fast TaskRun and a very slow controller to violate that but using a sleep in
+		// the task helps to make that unlikely.
+		if maxConcurrency < len(expectedTaskRuns) {
+			t.Errorf("Concurrency is unlimited so all %d expected TaskRuns should have been active at once but only %d were.",
+				len(expectedTaskRuns), maxConcurrency)
+		}
+	} else {
+		// There is a limit so there shouldn't be more TaskRuns than that alive at any moment.
+		if maxConcurrency > concurrencyLimit {
+			t.Errorf("Concurrency limit %d was broken. "+
+				"%d TaskRuns were running or eligible to run at one point. "+
+				"The limit was first crossed when TaskRun %s was created.",
+				concurrencyLimit, maxConcurrency, offender)
+		} else {
+			// The limit should be equaled when TaskRuns are created for the first set of iterations,
+			// unless there are fewer TaskRuns than the limit.
+			expectedPeak := concurrencyLimit
+			if len(expectedTaskRuns) < concurrencyLimit {
+				expectedPeak = len(expectedTaskRuns)
+			}
+			if maxConcurrency < expectedPeak {
+				t.Errorf("Concurrency limit %d was not reached. "+
+					"At most only %d TaskRuns were running or eligible to run.",
+					concurrencyLimit, maxConcurrency)
+			}
+		}
+	}
+
+	// Check that the Run's start and completion times are set appropriately.
+	if run.Status.StartTime == nil {
+		t.Errorf("The Run start time is not set!")
+	} else if firstCreationTime.Before(run.Status.StartTime) {
+		t.Errorf("The Run start time %v is after the first TaskRun's creation time %v", run.Status.StartTime, firstCreationTime)
+	}
+	if run.Status.CompletionTime == nil {
+		t.Errorf("The Run completion time is not set!")
+	} else if run.Status.CompletionTime.Before(&lastCompletionTime) {
+		t.Errorf("The Run completion time %v is before the last TaskRun's completion time %v", run.Status.CompletionTime, lastCompletionTime)
+	}
+}
+
+func checkEvents(ctx context.Context, t *testing.T, c *clients, run *v1alpha1.Run, namespace string, expectedEvents []ev) {
+	matchKinds := map[string][]string{"Run": {run.Name}}
+	events, err := collectMatchingEvents(ctx, c.KubeClient, namespace, matchKinds)
+	if err != nil {
+		t.Fatalf("Failed to collect matching events: %q", err)
+	}
+	// Log the received events.
+	receivedEvents := make([]string, 0, len(events))
+	for _, receivedEvent := range events {
+		receivedEvents = append(receivedEvents, receivedEvent.Message)
+	}
+	t.Logf("Received events: %q", receivedEvents)
+	// In the concurrency scenarios some events may or may not happen based on timing.
+	e := 0
+	for _, expectedEvent := range expectedEvents {
+		if e >= len(events) {
+			if !expectedEvent.required {
+				continue
+			}
+			t.Errorf("Did not get expected event %q", expectedEvent.message)
+			continue
+		}
+		if matched, _ := regexp.MatchString(expectedEvent.message, events[e].Message); !matched {
+			if !expectedEvent.required {
+				continue
+			}
+			t.Errorf("Expected event %q but got %q", expectedEvent.message, events[e].Message)
+		}
+		e++
 	}
 }
 

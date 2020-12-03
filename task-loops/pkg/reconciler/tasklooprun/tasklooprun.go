@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 	"time"
@@ -71,8 +72,22 @@ type Reconciler struct {
 
 var (
 	// Check that our Reconciler implements runreconciler.Interface
-	_ runreconciler.Interface = (*Reconciler)(nil)
+	_                runreconciler.Interface = (*Reconciler)(nil)
+	cancelPatchBytes []byte
 )
+
+func init() {
+	var err error
+	patches := []jsonpatch.JsonPatchOperation{{
+		Operation: "add",
+		Path:      "/spec/status",
+		Value:     v1beta1.TaskRunSpecStatusCancelled,
+	}}
+	cancelPatchBytes, err = json.Marshal(patches)
+	if err != nil {
+		log.Fatalf("failed to marshal patch bytes in order to cancel: %v", err)
+	}
+}
 
 // ReconcileKind compares the actual state with the desired, and attempts to converge the two.
 // It then updates the Status block of the Run resource with the current status of the resource.
@@ -178,93 +193,76 @@ func (c *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run, status *t
 		return nil
 	}
 
-	// Update status of TaskRuns.  Return the TaskRun representing the highest loop iteration.
-	highestIteration, highestIterationTr, err := c.updateTaskRunStatus(logger, run, status)
+	// Update the status of the TaskRuns created from this Run on prior reconciliations.
+	// updateTaskRunStatus() also handles TaskRun cancellation and retry.
+	// It returns the total number of TaskRuns that are running now, the highest
+	// iteration number processed so far, and an indicator whether any TaskRun has failed.
+	totalRunning, highestIteration, taskRunFailed, err := c.updateTaskRunStatus(ctx, logger, run, status, taskLoopSpec)
 	if err != nil {
 		return fmt.Errorf("error updating TaskRun status for Run %s/%s: %w", run.Namespace, run.Name, err)
 	}
 
-	// Check the status of the TaskRun for the highest iteration.
-	if highestIterationTr != nil {
-		// If it's not done, wait for it to finish or cancel it if the run is cancelled.
-		if !highestIterationTr.IsDone() {
-			if run.IsCancelled() {
-				logger.Infof("Run %s/%s is cancelled.  Cancelling TaskRun %s.", run.Namespace, run.Name, highestIterationTr.Name)
-				b, err := getCancelPatch()
-				if err != nil {
-					return fmt.Errorf("Failed to make patch to cancel TaskRun %s: %v", highestIterationTr.Name, err)
-				}
-				if _, err := c.pipelineClientSet.TektonV1beta1().TaskRuns(run.Namespace).Patch(ctx, highestIterationTr.Name, types.JSONPatchType, b, metav1.PatchOptions{}); err != nil {
-					run.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonCouldntCancel.String(),
-						"Failed to patch TaskRun `%s` with cancellation: %v", highestIterationTr.Name, err)
-					return nil
-				}
-				// Update status. It is still running until the TaskRun is actually cancelled.
-				run.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonRunning.String(),
-					"Cancelling TaskRun %s", highestIterationTr.Name)
-				return nil
-			}
-			run.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonRunning.String(),
-				"Iterations completed: %d", highestIteration-1)
-			return nil
-		}
-		// If it failed, then retry the task if possible.  Otherwise fail the Run.
-		if !highestIterationTr.IsSuccessful() {
-			if run.IsCancelled() {
-				run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonCancelled.String(),
-					"Run %s/%s was cancelled",
-					run.Namespace, run.Name)
-			} else {
-				retriesDone := len(highestIterationTr.Status.RetriesStatus)
-				retries := taskLoopSpec.Retries
-				if retriesDone < retries {
-					highestIterationTr, err = c.retryTaskRun(ctx, highestIterationTr)
-					if err != nil {
-						return fmt.Errorf("error retrying TaskRun %s from Run %s: %w", highestIterationTr.Name, run.Name, err)
-					}
-					status.TaskRuns[highestIterationTr.Name] = &taskloopv1alpha1.TaskLoopTaskRunStatus{
-						Iteration: highestIteration,
-						Status:    &highestIterationTr.Status,
-					}
-				} else {
-					run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonFailed.String(),
-						"TaskRun %s has failed", highestIterationTr.Name)
-				}
-			}
-			return nil
-		}
-	}
-
-	// Move on to the next iteration (or the first iteration if there was no TaskRun).
-	// Check if the Run is done.
-	nextIteration := highestIteration + 1
-	if nextIteration > totalIterations {
-		run.Status.MarkRunSucceeded(taskloopv1alpha1.TaskLoopRunReasonSucceeded.String(),
-			"All TaskRuns completed successfully")
-		return nil
-	}
-
-	// Before starting up another TaskRun, check if the run was cancelled.
+	// Check if the run was cancelled.  Since updateTaskRunStatus() handled cancelling any running TaskRuns
+	// the only thing to do here is to determine if all running TaskRuns have finished.
 	if run.IsCancelled() {
-		run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonCancelled.String(),
-			"Run %s/%s was cancelled",
-			run.Namespace, run.Name)
+		// If no TaskRuns are running, mark the Run as failed.
+		if totalRunning == 0 {
+			run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonCancelled.String(),
+				"Run %s/%s was cancelled", run.Namespace, run.Name)
+		} else {
+			// The Run is still running until the TaskRuns process their cancel requests.
+			run.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonRunning.String(),
+				"Cancelling TaskRuns")
+		}
 		return nil
 	}
 
-	// Create a TaskRun to run this iteration.
-	tr, err := c.createTaskRun(ctx, logger, taskLoopSpec, run, nextIteration)
-	if err != nil {
-		return fmt.Errorf("error creating TaskRun from Run %s: %w", run.Name, err)
+	// Check if the Run is done.
+	//   1) TaskRuns were created for all iterations OR a TaskRun has failed.
+	//      (TaskRun failure stops submission of any remaining iterations.)
+	//   2) All TaskRuns are done.  If there are TaskRuns running then wait
+	//      for them to complete before marking the Run complete.
+	if highestIteration == totalIterations || taskRunFailed {
+		if totalRunning == 0 {
+			if taskRunFailed {
+				run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonFailed.String(),
+					"One or more TaskRuns have failed")
+			} else {
+				run.Status.MarkRunSucceeded(taskloopv1alpha1.TaskLoopRunReasonSucceeded.String(),
+					"All TaskRuns completed successfully")
+			}
+		} else {
+			// Update number of iterations completed.
+			run.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonRunning.String(),
+				"Iterations completed: %d", highestIteration-totalRunning)
+		}
+		return nil
 	}
 
-	status.TaskRuns[tr.Name] = &taskloopv1alpha1.TaskLoopTaskRunStatus{
-		Iteration: nextIteration,
-		Status:    &tr.Status,
+	// Create TaskRuns for the next iterations.  Continue creating them until the concurrency
+	// limit is reached.  If the limit is unspecified, it defaults to 1 (sequential execution).
+	// If the limit is 0 or negative, then TaskRuns are created for all iterations at once.
+	nextIteration := highestIteration + 1
+	concurrency := 1
+	if taskLoopSpec.Concurrency != nil {
+		concurrency = *taskLoopSpec.Concurrency
+	}
+	for nextIteration <= totalIterations && (concurrency <= 0 || totalRunning < concurrency) {
+		// Create a TaskRun to run the next iteration.
+		tr, err := c.createTaskRun(ctx, logger, taskLoopSpec, run, nextIteration)
+		if err != nil {
+			return fmt.Errorf("error creating TaskRun from Run %s: %w", run.Name, err)
+		}
+		status.TaskRuns[tr.Name] = &taskloopv1alpha1.TaskLoopTaskRunStatus{
+			Iteration: nextIteration,
+			Status:    &tr.Status,
+		}
+		totalRunning++
+		nextIteration++
 	}
 
 	run.Status.MarkRunRunning(taskloopv1alpha1.TaskLoopRunReasonRunning.String(),
-		"Iterations completed: %d", highestIteration)
+		"Iterations completed: %d", nextIteration-totalRunning-1)
 
 	return nil
 }
@@ -307,7 +305,7 @@ func (c *Reconciler) createTaskRun(ctx context.Context, logger *zap.SugaredLogge
 			Name:            trName,
 			Namespace:       run.Namespace,
 			OwnerReferences: []metav1.OwnerReference{run.GetOwnerReference()},
-			Labels:          getTaskRunLabels(run, strconv.Itoa(iteration)),
+			Labels:          getTaskRunLabels(run, strconv.Itoa(iteration), true),
 			Annotations:     getTaskRunAnnotations(run),
 		},
 		Spec: v1beta1.TaskRunSpec{
@@ -367,53 +365,94 @@ func (c *Reconciler) updateLabelsAndAnnotations(ctx context.Context, run *v1alph
 	return nil
 }
 
-func (c *Reconciler) updateTaskRunStatus(logger *zap.SugaredLogger, run *v1alpha1.Run, status *taskloopv1alpha1.TaskLoopRunStatus) (int, *v1beta1.TaskRun, error) {
-	highestIteration := 0
-	var highestIterationTr *v1beta1.TaskRun = nil
+func (c *Reconciler) updateTaskRunStatus(ctx context.Context, logger *zap.SugaredLogger, run *v1alpha1.Run, status *taskloopv1alpha1.TaskLoopRunStatus,
+	taskLoopSpec *taskloopv1alpha1.TaskLoopSpec) (totalRunning int, highestIteration int, taskRunFailed bool, retryableErr error) {
 	if status.TaskRuns == nil {
 		status.TaskRuns = make(map[string]*taskloopv1alpha1.TaskLoopTaskRunStatus)
 	}
-	taskRunLabels := getTaskRunLabels(run, "")
+	// List TaskRuns associated with this Run.  These TaskRuns should be recorded in the Run status but it's
+	// possible that this reconcile call has been passed stale status which doesn't include a previous update.
+	// Find the TaskRuns by matching labels.  Do not include the propagated labels from the Run.
+	// The user could change them during the lifetime of the Run so the current labels may not be set on the
+	// previously created TaskRuns.
+	taskRunLabels := getTaskRunLabels(run, "", false)
 	taskRuns, err := c.taskRunLister.TaskRuns(run.Namespace).List(labels.SelectorFromSet(taskRunLabels))
 	if err != nil {
-		return 0, nil, fmt.Errorf("could not list TaskRuns %#v", err)
+		retryableErr = fmt.Errorf("could not list TaskRuns %#v", err)
+		return
 	}
 	if taskRuns == nil || len(taskRuns) == 0 {
-		return 0, nil, nil
+		return
 	}
 	for _, tr := range taskRuns {
 		lbls := tr.GetLabels()
 		iterationStr := lbls[taskloop.GroupName+taskLoopIterationLabelKey]
 		iteration, err := strconv.Atoi(iterationStr)
 		if err != nil {
+			logger.Errorf("Error converting iteration number in TaskRun %s:  %#v", tr.Name, err)
 			run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonFailedValidation.String(),
 				"Error converting iteration number in TaskRun %s:  %#v", tr.Name, err)
-			logger.Errorf("Error converting iteration number in TaskRun %s:  %#v", tr.Name, err)
-			return 0, nil, nil
+			return
 		}
 		status.TaskRuns[tr.Name] = &taskloopv1alpha1.TaskLoopTaskRunStatus{
 			Iteration: iteration,
 			Status:    &tr.Status,
 		}
+		// If the TaskRun was created before the Run says it was started, then change the Run's
+		// start time.  This happens when this reconcile call has been passed stale status that
+		// doesn't have the start time set.  The reconcile call will set a new start time that
+		// is later than TaskRuns it previously created.  The Run start time is adjusted back
+		// to compensate for this problem.
+		if tr.CreationTimestamp.Before(run.Status.CompletionTime) {
+			run.Status.CompletionTime = tr.CreationTimestamp.DeepCopy()
+		}
+		// Handle TaskRun cancellation and retry.
+		if err := c.processTaskRun(ctx, logger, tr, run, status, taskLoopSpec); err != nil {
+			retryableErr = fmt.Errorf("error processing TaskRun %s: %#v", tr.Name, err)
+			return
+		}
 		if iteration > highestIteration {
 			highestIteration = iteration
-			highestIterationTr = tr
+		}
+		if !tr.IsDone() {
+			totalRunning++
+		} else {
+			if !tr.IsSuccessful() {
+				taskRunFailed = true
+			}
 		}
 	}
-	return highestIteration, highestIterationTr, nil
+	return
 }
 
-func getCancelPatch() ([]byte, error) {
-	patches := []jsonpatch.JsonPatchOperation{{
-		Operation: "add",
-		Path:      "/spec/status",
-		Value:     v1beta1.TaskRunSpecStatusCancelled,
-	}}
-	patchBytes, err := json.Marshal(patches)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal patch bytes in order to cancel: %v", err)
+func (c *Reconciler) processTaskRun(ctx context.Context, logger *zap.SugaredLogger, tr *v1beta1.TaskRun,
+	run *v1alpha1.Run, status *taskloopv1alpha1.TaskLoopRunStatus, taskLoopSpec *taskloopv1alpha1.TaskLoopSpec) error {
+	// If the TaskRun is running and the Run is cancelled, cancel the TaskRun.
+	if !tr.IsDone() {
+		if run.IsCancelled() && !tr.IsCancelled() {
+			logger.Infof("Run %s/%s is cancelled.  Cancelling TaskRun %s.", run.Namespace, run.Name, tr.Name)
+			if _, err := c.pipelineClientSet.TektonV1beta1().TaskRuns(run.Namespace).Patch(ctx, tr.Name, types.JSONPatchType, cancelPatchBytes, metav1.PatchOptions{}); err != nil {
+				return fmt.Errorf("Failed to patch TaskRun `%s` with cancellation: %v", tr.Name, err)
+			}
+		}
+	} else {
+		// If the TaskRun failed, then retry it if possible.
+		if !tr.IsSuccessful() && !run.IsCancelled() {
+			retriesDone := len(tr.Status.RetriesStatus)
+			retries := taskLoopSpec.Retries
+			if retriesDone < retries {
+				retryTr, err := c.retryTaskRun(ctx, tr)
+				if err != nil {
+					return fmt.Errorf("error retrying TaskRun %s from Run %s: %w", tr.Name, run.Name, err)
+				}
+				status.TaskRuns[retryTr.Name] = &taskloopv1alpha1.TaskLoopTaskRunStatus{
+					Iteration: status.TaskRuns[retryTr.Name].Iteration,
+					Status:    &retryTr.Status,
+				}
+			}
+		}
 	}
-	return patchBytes, nil
+	return nil
 }
 
 func computeIterations(run *v1alpha1.Run, tls *taskloopv1alpha1.TaskLoopSpec) (int, error) {
@@ -459,11 +498,13 @@ func getTaskRunAnnotations(run *v1alpha1.Run) map[string]string {
 	return annotations
 }
 
-func getTaskRunLabels(run *v1alpha1.Run, iterationStr string) map[string]string {
+func getTaskRunLabels(run *v1alpha1.Run, iterationStr string, includeRunLabels bool) map[string]string {
 	// Propagate labels from Run to TaskRun.
 	labels := make(map[string]string, len(run.ObjectMeta.Labels)+1)
-	for key, val := range run.ObjectMeta.Labels {
-		labels[key] = val
+	if includeRunLabels {
+		for key, val := range run.ObjectMeta.Labels {
+			labels[key] = val
+		}
 	}
 	// Note: The Run label uses the normal Tekton group name.
 	labels[pipeline.GroupName+taskLoopRunLabelKey] = run.Name
