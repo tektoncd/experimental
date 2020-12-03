@@ -15,28 +15,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestReconcile(t *testing.T) {
-	pipelineRunTest := NewPipelineRunTest(t)
-
-	testFuncs := map[string]func(t *testing.T){
-		"Create":   pipelineRunTest.testCreatePipelineRun,
-		"Unchange": pipelineRunTest.testUnchangePipelineRun,
-		"Update":   pipelineRunTest.testUpdatePipelineRun,
-	}
-
-	for name, testFunc := range testFuncs {
-		t.Run(name, testFunc)
-	}
-}
-
-type PipelineRunTest struct {
+type pipelineRunTest struct {
 	pipelineRun *v1beta1.PipelineRun
 	asset       pipelinetest.Assets
 	ctx         context.Context
 	client      pb.ResultsClient
 }
 
-func NewPipelineRunTest(t *testing.T) PipelineRunTest {
+func newPipelineRunTest(t *testing.T) *pipelineRunTest {
 	client := test.NewResultsClient(t)
 	pipelineRun := &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -50,7 +36,7 @@ func NewPipelineRunTest(t *testing.T) PipelineRunTest {
 		PipelineRuns: []*v1beta1.PipelineRun{pipelineRun},
 	}
 	ctx, tclients, cmw := test.GetFakeClients(t, d, client)
-	pipelineRunTest := PipelineRunTest{
+	pipelineRunTest := &pipelineRunTest{
 		pipelineRun: pipelineRun,
 		asset: pipelinetest.Assets{
 			Controller: NewController(ctx, cmw, client),
@@ -62,7 +48,9 @@ func NewPipelineRunTest(t *testing.T) PipelineRunTest {
 	return pipelineRunTest
 }
 
-func (tt *PipelineRunTest) testCreatePipelineRun(t *testing.T) {
+func TestReconcile_CreatePipelineRun(t *testing.T) {
+	tt := newPipelineRunTest(t)
+
 	pr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
@@ -75,21 +63,28 @@ func (tt *PipelineRunTest) testCreatePipelineRun(t *testing.T) {
 	}
 }
 
-func (tt *PipelineRunTest) testUnchangePipelineRun(t *testing.T) {
-	pr, err := tt.asset.Clients.Pipeline.TektonV1beta1().PipelineRuns(tt.pipelineRun.Namespace).Get(tt.pipelineRun.Name, metav1.GetOptions{})
+func TestReconcile_UnchangePipelineRun(t *testing.T) {
+	tt := newPipelineRunTest(t)
+
+	// Reconcile once to get IDs, etc.
+	pr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
 	if err != nil {
-		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
+		t.Fatalf("failed to get PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
-	newpr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, pr)
+
+	// Reconcile again to verify nothing changes.
+	newpr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
 	if err != nil {
-		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
+		t.Fatalf("failed to get second PipelineRun %s: %v", tt.pipelineRun.Name, err)
 	}
 	if diff := cmp.Diff(pr, newpr); diff != "" {
-		t.Fatalf("Expected completed PipelineRun should remain unchanged when it has a results_id in annotations: %v", diff)
+		t.Fatal(diff)
 	}
 }
 
-func (tt *PipelineRunTest) testUpdatePipelineRun(t *testing.T) {
+func TestReconcile_UpdatePipelineRun(t *testing.T) {
+	tt := newPipelineRunTest(t)
+
 	pr, err := test.ReconcilePipelineRun(tt.ctx, tt.asset, tt.pipelineRun)
 	if err != nil {
 		t.Fatalf("Failed to get completed PipelineRun %s: %v", tt.pipelineRun.Name, err)
