@@ -30,6 +30,7 @@ import (
 	fakeclient "github.com/tektoncd/experimental/task-loops/pkg/client/injection/client/fake"
 	faketaskloopinformer "github.com/tektoncd/experimental/task-loops/pkg/client/injection/informers/taskloop/v1alpha1/taskloop/fake"
 	"github.com/tektoncd/experimental/task-loops/test"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
@@ -42,7 +43,7 @@ import (
 	ktesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/configmap"
+	cminformer "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
@@ -52,8 +53,18 @@ var (
 	concurrencyLimit1  = 1
 	concurrencyLimit2  = 2
 	noConcurrencyLimit = 0
-	namespace          = ""
-	trueB              = true
+	myPodTemplate      = &pod.Template{
+		NodeSelector: map[string]string{
+			"workloadtype": "tekton",
+		},
+	}
+	myServiceAccountName = "special-account"
+	myWorkspaces         = []v1beta1.WorkspaceBinding{{
+		Name:     "myworkspace",
+		EmptyDir: &corev1.EmptyDirVolumeSource{},
+	}}
+	namespace = ""
+	trueB     = true
 )
 
 func getRunName(run *v1alpha1.Run) string {
@@ -128,6 +139,22 @@ func retrying(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
 	return trWithRetryStatus
 }
 
+func withUpdatedRunSpec(run *v1alpha1.Run, serviceAccountName string, workspaces []v1beta1.WorkspaceBinding, podTemplate *pod.Template) *v1alpha1.Run {
+	runWithUpdatedSpec := run.DeepCopy()
+	runWithUpdatedSpec.Spec.ServiceAccountName = serviceAccountName
+	runWithUpdatedSpec.Spec.Workspaces = workspaces
+	runWithUpdatedSpec.Spec.PodTemplate = podTemplate
+	return runWithUpdatedSpec
+}
+
+func withUpdatedTaskRunSpec(tr *v1beta1.TaskRun, serviceAccountName string, workspaces []v1beta1.WorkspaceBinding, podTemplate *pod.Template) *v1beta1.TaskRun {
+	trWithUpdatedSpec := tr.DeepCopy()
+	trWithUpdatedSpec.Spec.ServiceAccountName = serviceAccountName
+	trWithUpdatedSpec.Spec.Workspaces = workspaces
+	trWithUpdatedSpec.Spec.PodTemplate = podTemplate
+	return trWithUpdatedSpec
+}
+
 // getTaskLoopController returns an instance of the TaskLoop controller/reconciler that has been seeded with
 // d, where d represents the state of the system (existing resources) needed for the test.
 func getTaskLoopController(t *testing.T, d test.Data, taskloops []*taskloopv1alpha1.TaskLoop) (test.Assets, func()) {
@@ -144,7 +171,7 @@ func getTaskLoopController(t *testing.T, d test.Data, taskloops []*taskloopv1alp
 		}
 	}
 
-	configMapWatcher := configmap.NewInformedWatcher(c.Kube, system.GetNamespace())
+	configMapWatcher := cminformer.NewInformedWatcher(c.Kube, system.GetNamespace())
 	ctl := NewController(namespace)(ctx, configMapWatcher)
 
 	if la, ok := ctl.Reconciler.(reconciler.LeaderAware); ok {
@@ -463,6 +490,7 @@ var expectedTaskRunIteration1 = &v1beta1.TaskRun{
 			Name:  "additional-parameter",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
 		}},
+		ServiceAccountName: "default",
 	},
 }
 
@@ -498,6 +526,7 @@ var expectedTaskRunIteration2 = &v1beta1.TaskRun{
 			Name:  "additional-parameter",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
 		}},
+		ServiceAccountName: "default",
 	},
 }
 
@@ -533,6 +562,7 @@ var expectedTaskRunIteration3 = &v1beta1.TaskRun{
 			Name:  "additional-parameter",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
 		}},
+		ServiceAccountName: "default",
 	},
 }
 
@@ -563,7 +593,8 @@ var expectedTaskRunWithInlineTaskIteration1 = &v1beta1.TaskRun{
 			Name:  "additional-parameter",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
 		}},
-		Timeout: &metav1.Duration{Duration: 5 * time.Minute},
+		ServiceAccountName: "default",
+		Timeout:            &metav1.Duration{Duration: 5 * time.Minute},
 	},
 }
 
@@ -599,6 +630,16 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedStatus:   corev1.ConditionUnknown,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
 		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunWithInlineTaskIteration1},
+		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
+	}, {
+		name:             "Reconcile a new run that uses all the bells and whistles (tests propagation to TaskRun)",
+		task:             aTask,
+		taskloop:         aTaskLoop,
+		run:              withUpdatedRunSpec(runTaskLoop, myServiceAccountName, myWorkspaces, myPodTemplate),
+		taskruns:         []*v1beta1.TaskRun{},
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{withUpdatedTaskRunSpec(expectedTaskRunIteration1, myServiceAccountName, myWorkspaces, myPodTemplate)},
 		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
 	}, {
 		name:             "Reconcile a run after the first TaskRun has succeeded",
@@ -667,7 +708,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		run:              requestCancel(loopRunning(runTaskLoop)),
 		taskruns:         []*v1beta1.TaskRun{failed(expectedTaskRunIteration1)},
 		expectedStatus:   corev1.ConditionFalse,
-		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonCancelled,
+		expectedReason:   v1alpha1.RunReasonCancelled,
 		expectedTaskruns: []*v1beta1.TaskRun{failed(expectedTaskRunIteration1)},
 		expectedEvents:   []string{"Warning Failed Run " + runTaskLoop.Namespace + "/" + runTaskLoop.Name + " was cancelled"},
 	}, {
@@ -677,7 +718,7 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		run:              requestCancel(loopRunning(runTaskLoop)),
 		taskruns:         []*v1beta1.TaskRun{successful(expectedTaskRunIteration1)},
 		expectedStatus:   corev1.ConditionFalse,
-		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonCancelled,
+		expectedReason:   v1alpha1.RunReasonCancelled,
 		expectedTaskruns: []*v1beta1.TaskRun{successful(expectedTaskRunIteration1)},
 		expectedEvents:   []string{"Warning Failed Run " + runTaskLoop.Namespace + "/" + runTaskLoop.Name + " was cancelled"},
 	}, {

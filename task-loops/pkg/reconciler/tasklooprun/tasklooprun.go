@@ -207,7 +207,7 @@ func (c *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run, status *t
 	if run.IsCancelled() {
 		// If no TaskRuns are running, mark the Run as failed.
 		if totalRunning == 0 {
-			run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonCancelled.String(),
+			run.Status.MarkRunFailed(v1alpha1.RunReasonCancelled,
 				"Run %s/%s was cancelled", run.Namespace, run.Name)
 		} else {
 			// The Run is still running until the TaskRuns process their cancel requests.
@@ -311,8 +311,9 @@ func (c *Reconciler) createTaskRun(ctx context.Context, logger *zap.SugaredLogge
 		Spec: v1beta1.TaskRunSpec{
 			Params:             getParameters(run, tls, iteration),
 			Timeout:            tls.Timeout,
-			ServiceAccountName: "",  // TODO: Implement service account name
-			PodTemplate:        nil, // TODO: Implement pod template
+			ServiceAccountName: run.Spec.ServiceAccountName,
+			PodTemplate:        run.Spec.PodTemplate,
+			Workspaces:         run.Spec.Workspaces,
 		}}
 
 	if tls.TaskRef != nil {

@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"github.com/tektoncd/pipeline/pkg/reconciler/pipeline/dag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // +genclient
@@ -46,7 +47,7 @@ func (p *Pipeline) PipelineSpec() PipelineSpec {
 	return p.Spec
 }
 
-func (p *Pipeline) Copy() PipelineInterface {
+func (p *Pipeline) Copy() PipelineObject {
 	return p.DeepCopy()
 }
 
@@ -174,7 +175,16 @@ func (pt PipelineTask) Deps() []string {
 	deps = append(deps, pt.resourceDeps()...)
 	deps = append(deps, pt.orderingDeps()...)
 
-	return deps
+	uniqueDeps := sets.NewString()
+	for _, w := range deps {
+		if uniqueDeps.Has(w) {
+			continue
+		}
+		uniqueDeps.Insert(w)
+
+	}
+
+	return uniqueDeps.List()
 }
 
 func (pt PipelineTask) resourceDeps() []string {
@@ -184,6 +194,7 @@ func (pt PipelineTask) resourceDeps() []string {
 			resourceDeps = append(resourceDeps, rd.From...)
 		}
 	}
+
 	// Add any dependents from conditional resources.
 	for _, cond := range pt.Conditions {
 		for _, rd := range cond.Resources {
@@ -199,6 +210,7 @@ func (pt PipelineTask) resourceDeps() []string {
 			}
 		}
 	}
+
 	// Add any dependents from task results
 	for _, param := range pt.Params {
 		expressions, ok := GetVarSubstitutionExpressionsForParam(param)
@@ -244,12 +256,29 @@ func contains(s string, arr []string) bool {
 
 type PipelineTaskList []PipelineTask
 
+func (l PipelineTaskList) Deps() map[string][]string {
+	deps := map[string][]string{}
+	for _, pt := range l {
+		deps[pt.HashKey()] = pt.Deps()
+	}
+	return deps
+}
+
 func (l PipelineTaskList) Items() []dag.Task {
 	tasks := []dag.Task{}
 	for _, t := range l {
 		tasks = append(tasks, dag.Task(t))
 	}
 	return tasks
+}
+
+// Names returns a set of pipeline task names from the given list of pipeline tasks
+func (l PipelineTaskList) Names() sets.String {
+	names := sets.String{}
+	for _, pt := range l {
+		names.Insert(pt.Name)
+	}
+	return names
 }
 
 // PipelineTaskParam is used to provide arbitrary string parameters to a Task.
