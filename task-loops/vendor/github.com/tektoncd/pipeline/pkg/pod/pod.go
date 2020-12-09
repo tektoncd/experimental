@@ -23,6 +23,7 @@ import (
 
 	"github.com/tektoncd/pipeline/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/names"
 	"github.com/tektoncd/pipeline/pkg/version"
@@ -169,9 +170,9 @@ func (b *Builder) Build(ctx context.Context, taskRun *v1beta1.TaskRun, taskSpec 
 	for i, s := range stepContainers {
 		// Mount /tekton/creds with a fresh volume for each Step. It needs to
 		// be world-writeable and empty so creds can be initialized in there. Cant
-		// guarantee what UID container runs with. If creds-init is disabled via
-		// feature flag then these can be nil since we don't want to mount the
-		// automatic credential volume.
+		// guarantee what UID container runs with. If legacy credential helper (creds-init)
+		// is disabled via feature flag then these can be nil since we don't want to mount
+		// the automatic credential volume.
 		v, vm := getCredsInitVolume(ctx)
 		if v != nil && vm != nil {
 			volumes = append(volumes, *v)
@@ -210,7 +211,7 @@ func (b *Builder) Build(ctx context.Context, taskRun *v1beta1.TaskRun, taskSpec 
 	}
 
 	// By default, use an empty pod template and take the one defined in the task run spec if any
-	podTemplate := v1beta1.PodTemplate{}
+	podTemplate := pod.Template{}
 
 	if taskRun.Spec.PodTemplate != nil {
 		podTemplate = *taskRun.Spec.PodTemplate

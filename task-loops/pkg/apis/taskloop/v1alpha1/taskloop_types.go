@@ -89,9 +89,6 @@ const (
 	// TaskLoopRunReasonSucceeded indicates that all of the TaskRuns created from the Run completed successfully
 	TaskLoopRunReasonSucceeded TaskLoopRunReason = "Succeeded"
 
-	// TaskLoopRunReasonCancelled indicates that a Run was cancelled.
-	TaskLoopRunReasonCancelled TaskLoopRunReason = "TaskLoopRunCancelled"
-
 	// TaskLoopRunReasonCouldntCancel indicates that a Run was cancelled but attempting to update
 	// the running TaskRun as cancelled failed.
 	TaskLoopRunReasonCouldntCancel TaskLoopRunReason = "TaskLoopRunCouldntCancel"

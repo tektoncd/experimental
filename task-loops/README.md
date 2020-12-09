@@ -182,6 +182,13 @@ A `Run` definition supports the following fields:
   - [`spec`][kubernetes-overview] - Specifies the configuration for the `Run`.
     - [`ref`](#specifying-the-taskloop) - Specifies the type and name of the `TaskLoop` to execute.
     - [`params`](#specifying-parameters) - Specifies the execution parameters for the `Task`.
+- Optional:
+  - [`serviceAccountName`](#specifying-workspaces-service-account-and-pod-template) - Specifies a `ServiceAccount`
+    object that provides custom credentials.
+  - [`workspaces`](#specifying-workspaces-service-account-and-pod-template) - Specifies the physical volumes to use for the
+    [`Workspaces`](workspaces.md) required by the `Task`.
+  - [`podTemplate`](#specifying-workspaces-service-account-and-pod-template) - Specifies a [`Pod` template](podtemplates.md) to use
+    to configure pods created by the `TaskRun`s.
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
@@ -212,6 +219,11 @@ The parameters are passed through as is to each `TaskRun` with the exception of 
 * In the `Run`, the iteration parameter value must be an array.
 * A `TaskRun` is created for each array element with the iterate parameter value set to the element.
 * In the `Task` the iteration parameter type must be `string`.
+
+#### Specifying workspaces, service account, and pod template
+
+A `Run` object can specify workspaces, a service account name, or a pod template.
+These are passed through as is to each `TaskRun`.
 
 ### Monitoring execution status
 
@@ -274,8 +286,6 @@ These limitations may be addressed in future issues based on community feedback.
 
 * `Task` results are not collected into `Run` results (`run.status.results`).
     However the results of each `TaskRun` can be seen in the TaskRun status under `run.status.extraFields`.  
-
-* `Run` does not support specifying workspaces, pipeline resources, a service account name or a pod template.
 
 * There are no metrics specific to `Run`.
 

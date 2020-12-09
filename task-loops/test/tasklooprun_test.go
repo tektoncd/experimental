@@ -823,7 +823,7 @@ func TestCancelTaskLoopRun(t *testing.T) {
 
 		t.Logf("Waiting for Run %s in namespace %s to be cancelled", run.Name, namespace)
 		if err := WaitForRunState(ctx, c, run.Name, runTimeout,
-			FailedWithReason(taskloopv1alpha1.TaskLoopRunReasonCancelled.String(), run.Name), "RunCancelled"); err != nil {
+			FailedWithReason(v1alpha1.RunReasonCancelled, run.Name), "RunCancelled"); err != nil {
 			t.Errorf("Error waiting for Run %q to finished: %s", run.Name, err)
 		}
 
@@ -1092,7 +1092,7 @@ func checkEvents(ctx context.Context, t *testing.T, c *clients, run *v1alpha1.Ru
 func collectMatchingEvents(ctx context.Context, kubeClient *knativetest.KubeClient, namespace string, kinds map[string][]string) ([]*corev1.Event, error) {
 	var events []*corev1.Event
 
-	watchEvents, err := kubeClient.Kube.CoreV1().Events(namespace).Watch(ctx, metav1.ListOptions{})
+	watchEvents, err := kubeClient.CoreV1().Events(namespace).Watch(ctx, metav1.ListOptions{})
 	// close watchEvents channel
 	defer watchEvents.Stop()
 	if err != nil {
