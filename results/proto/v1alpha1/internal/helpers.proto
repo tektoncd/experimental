@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package tekton.results.v1alpha1;
-option go_package = "github.com/tektoncd/experimental/results/proto/v1alpha1/results_go_proto";
-
-message ListPageIdentifier{
-  string result_name = 1;
-  string filter = 2;
-}
