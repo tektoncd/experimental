@@ -41,7 +41,7 @@ def get_tekton_plural(tekton):
     return tekton_plural
 
 def check_entity(entity):
-    valid_entities = ['task', 'taskrun', 'pipeline', 'pipelinerun']
+    valid_entities = ['task', 'taskrun', 'pipeline', 'pipelinerun', 'pipelineresource']
     if entity not in valid_entities:
         raise RuntimeError("The entity %s is not support, currently supported entities: %s" %
                            (entity, valid_entities))
