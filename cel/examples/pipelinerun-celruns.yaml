@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: example-pr-
+spec:
+  serviceAccountName: 'default'
+  pipelineSpec:
+    params:
+      - name: red
+        type: string
+      - name: type
+        type: string
+    tasks:
+      - name: is-red
+        taskRef:
+          apiVersion: cel.dev/v1alpha1
+          kind: CEL
+        params:
+          - name: red
+            value: "$(params.red)"
+      - name: get-type
+        taskRef:
+          apiVersion: cel.dev/v1alpha1
+          kind: CEL
+        params:
+          - name: type
+            value: "$(params.type)"
+      - name: echo-is-red
+        when:
+          - input: "$(tasks.is-red.results.red)"
+            operator: in
+            values: ["true"]
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: echo ISRED!
+      - name: echo-get-type
+        when:
+          - input: "$(tasks.get-type.results.type)"
+            operator: in
+            values: ["int"]
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: echo ISINT!
+  params:
+    - name: red
+      value: "{'blue': '0x000080', 'red': '0xFF0000'}['red'] == '0xFF0000'"
+    - name: type
+      value: "type(1)"
