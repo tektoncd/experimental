@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: wait-run-
+spec:
+  ref:
+    apiVersion: example.dev/v0
+    kind: Wait
+  params:
+  - name: duration
+    value: 10s
