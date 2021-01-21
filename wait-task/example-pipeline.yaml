@@ -1,0 +1,27 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: custom-task-pipeline
+spec:
+  tasks:
+  - name: before
+    taskSpec:
+      steps:
+      - image: busybox
+        script: echo before wait
+
+  - name: wait
+    taskRef:
+      apiVersion: example.dev/v0
+      kind: Wait
+    params:
+    - name: duration
+      value: 10s
+    runAfter: ['before']
+
+  - name: after
+    taskSpec:
+      steps:
+      - image: busybox
+        script: echo after wait
+    runAfter: ['wait']
