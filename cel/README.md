@@ -158,7 +158,7 @@ Spec:
     Name:   is-red
     Value:  {'blue': '0x000080', 'red': '0xFF0000'}['red'] == '0xFF0000'
   Ref:
-    API Version:         cel.dev/v1alpha1
+    API Version:         cel.tekton.dev/v1alpha1
     Kind:                CEL
   Service Account Name:  default
 Status:
@@ -197,7 +197,7 @@ Metadata:
 # […]
 Spec:
   Ref:
-    API Version:         cel.dev/v1alpha1
+    API Version:         cel.tekton.dev/v1alpha1
     Kind:                CEL
   Service Account Name:  default
 Status:

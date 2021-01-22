@@ -4,7 +4,7 @@ metadata:
   generateName: celrun-get-type-
 spec:
   ref:
-    apiVersion: cel.dev/v1alpha1
+    apiVersion: cel.tekton.dev/v1alpha1
     kind: CEL
   params:
     - name: expression

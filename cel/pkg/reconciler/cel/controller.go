@@ -29,7 +29,7 @@ import (
 
 const (
 	ControllerName = "cel-controller"
-	apiVersion     = "cel.dev/v1alpha1"
+	apiVersion     = "cel.tekton.dev/v1alpha1"
 	kind           = "CEL"
 )
 

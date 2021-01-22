@@ -13,14 +13,14 @@ spec:
     tasks:
       - name: is-red
         taskRef:
-          apiVersion: cel.dev/v1alpha1
+          apiVersion: cel.tekton.dev/v1alpha1
           kind: CEL
         params:
           - name: red
             value: "$(params.red)"
       - name: get-type
         taskRef:
-          apiVersion: cel.dev/v1alpha1
+          apiVersion: cel.tekton.dev/v1alpha1
           kind: CEL
         params:
           - name: type
