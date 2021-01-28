@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: hello-world
+spec:
+  tasks:
+    - name: echo-hello-world
+      taskSpec:
+        steps:
+          - name: echo
+            image: ubuntu
+            script: |
+              #!/usr/bin/env bash
+              echo "Hello World!"
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: piprun-
+spec:
+  ref:
+    apiVersion: tekton.dev/v1beta1
+    kind: Pipeline
+    name: hello-world
