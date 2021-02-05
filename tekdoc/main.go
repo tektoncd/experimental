@@ -19,79 +19,92 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"text/template"
+
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
 )
 
-var (
-	filename = flag.String("f", "", "Name of the file to parse")
-)
+// Take a file path, parse it as YAML -> v1beta1.Task
 
-func main() {
+func readTask(name string) (v1beta1.Task, error) {
 
-	// TODO: take a file path, parse it as YAML -> v1alpha1.Task
-	flag.Parse()
-	dat, err := ioutil.ReadFile(*filename)
+	var task v1beta1.Task
+	dat, err := ioutil.ReadFile(name)
 	if err != nil {
-		log.Fatalf("error reading file: %v", err)
+		return task, fmt.Errorf("error reading file: %w", err)
 	}
-
-	var task v1alpha1.Task
-
 	if _, _, err := scheme.Codecs.UniversalDeserializer().Decode(dat, nil, &task); err != nil {
-		log.Fatal(err)
+		return task, fmt.Errorf("error decoding task: %w", err)
 	}
 
-	// TODO: use Go templates to print v1alpha1.Task as Markdown
-	if task.Spec.Inputs != nil {
+	return task, nil
+}
+
+// Use Go templates to print v1beta1.Task as Markdown
+
+func printTask(w io.Writer, task v1beta1.Task) error {
+	if task.Spec.Params != nil {
 
 		tmpl := template.Must(template.New("test").Parse(`# {{.Name}}
 ## Install the Task
-kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/{{.Name}}/{{.Name}}.yaml
-### Input:-
+kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/task/{{.Name}}/0.1/{{.Name}}.yaml
+### Parameters:-
 `))
-		if err := tmpl.Execute(os.Stdout, task); err != nil {
-			log.Fatalf("error executing the template: %v", err)
+		if err := tmpl.Execute(w, task); err != nil {
+			return fmt.Errorf("error executing the template: %w", err)
 		}
+	}
 
-		if task.Spec.Inputs.Params != nil {
+	if task.Spec.Params != nil {
 
-			t := `{{range .}}- {{.Name}}, {{.Description}}
+		t := `{{range .}}- {{.Name}}, {{.Description}}, (default: {{.Default}}) 
 {{end}}`
-			tmpl := template.Must(template.New("test").Parse(t))
-			if err := tmpl.Execute(os.Stdout, task.Spec.Inputs.Params); err != nil {
-				log.Fatalf("error executing the template: %v", err)
-			}
+		tmpl := template.Must(template.New("test").Parse(t))
+		if err := tmpl.Execute(w, task.Spec.Params); err != nil {
+			return fmt.Errorf("error executing the template: %w", err)
 		}
+	}
 
-		if task.Spec.Inputs.Resources != nil {
+	if task.Spec.Resources.Inputs != nil {
 
-			t := `### Resources:-
-{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}	
+		t := `### Resources:-
+{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}
 {{end}}`
-			tmpl := template.Must(template.New("test").Parse(t))
-			if err := tmpl.Execute(os.Stdout, task.Spec.Inputs.Resources); err != nil {
-				log.Fatalf("error executing the template: %v", err)
-			}
+		tmpl := template.Must(template.New("test").Parse(t))
+		if err := tmpl.Execute(w, task.Spec.Resources.Inputs); err != nil {
+			return fmt.Errorf("error executing the template: %w", err)
 		}
+	}
 
-		if task.Spec.Outputs != nil {
+	if task.Spec.Resources.Outputs != nil {
 
-			t := `### Output:-
-{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}	
+		t := `### Output:-
+{{range .}}- {{.ResourceDeclaration.Name}}, {{.ResourceDeclaration.Type}}
 {{end}}`
-			tmpl := template.Must(template.New("test").Parse(t))
-			err := tmpl.Execute(os.Stdout, task.Spec.Outputs.Resources)
-			if err != nil {
-				log.Fatalf("error executing the template: %v", err)
-			}
+		tmpl := template.Must(template.New("test").Parse(t))
+		if err := tmpl.Execute(w, task.Spec.Resources.Outputs); err != nil {
+			return fmt.Errorf("error executing the template: %w", err)
 		}
-	} else {
-		fmt.Println("There is no task input")
+	}
+	return nil
+}
+
+func main() {
+
+	flag.Parse()
+
+	task, err := readTask(os.Args[1])
+	if err != nil {
+		log.Fatalln("failed to read Task:", err)
+	}
+
+	if err := printTask(os.Stdout, task); err != nil {
+		log.Fatalln("failed to render Task:", err)
 	}
 }
 
