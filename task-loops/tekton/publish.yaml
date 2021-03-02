@@ -69,7 +69,7 @@ spec:
 
       # Login to $(params.imageRegistry)
       DOCKER_CONFIG=$(cat ${CONTAINER_REGISTY_CREDENTIALS} | \
-        crane auth login -u _json_key --password-stdin (params.imageRegistry) 2>&1 | \
+        crane auth login -u _json_key --password-stdin $(params.imageRegistry) 2>&1 | \
         sed 's,^.*logged in via \(.*\)$,\1,g')
 
       # Auth with account credentials for all regions.
