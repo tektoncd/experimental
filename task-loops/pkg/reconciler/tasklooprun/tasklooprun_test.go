@@ -389,6 +389,34 @@ var runTaskLoopWithInlineTask = &v1alpha1.Run{
 	},
 }
 
+var runWithIterateParamNotAnArray = &v1alpha1.Run{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "run-taskloop",
+		Namespace: "foo",
+		Labels: map[string]string{
+			"myRunLabel": "myRunLabelValue",
+		},
+		Annotations: map[string]string{
+			"myRunAnnotation": "myRunAnnotationValue",
+		},
+	},
+	Spec: v1alpha1.RunSpec{
+		Params: []v1beta1.Param{{
+			// Value of iteration parameter must be an array so this is an error.
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1\nitem2"},
+		}, {
+			Name:  "additional-parameter",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
+		}},
+		Ref: &v1alpha1.TaskRef{
+			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
+			Kind:       taskloop.TaskLoopControllerName,
+			Name:       "a-taskloop",
+		},
+	},
+}
+
 var runWithMissingTaskLoopName = &v1alpha1.Run{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "bad-run-taskloop-missing",
@@ -425,28 +453,6 @@ var runWithMissingIterateParam = &v1alpha1.Run{
 	Spec: v1alpha1.RunSpec{
 		// current-item, which is the iterate parameter, is missing from parameters
 		Params: []v1beta1.Param{{
-			Name:  "additional-parameter",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
-		}},
-		Ref: &v1alpha1.TaskRef{
-			APIVersion: taskloopv1alpha1.SchemeGroupVersion.String(),
-			Kind:       taskloop.TaskLoopControllerName,
-			Name:       "a-taskloop",
-		},
-	},
-}
-
-var runWithIterateParamNotAnArray = &v1alpha1.Run{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "bad-run-iterate-param-not-an-array",
-		Namespace: "foo",
-	},
-	Spec: v1alpha1.RunSpec{
-		Params: []v1beta1.Param{{
-			// Value of iteration parameter must be an array so this is an error.
-			Name:  "current-item",
-			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
-		}, {
 			Name:  "additional-parameter",
 			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
 		}},
@@ -771,6 +777,24 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
 		expectedTaskruns: []*v1beta1.TaskRun{failed(expectedTaskRunIteration1), running(expectedTaskRunIteration2)}, // no new TaskRun
 		expectedEvents:   []string{"Normal Running Iterations completed: 1"},
+	}, {
+		name:             "Reconcile a run where the iterate parameter is not an array",
+		task:             aTask,
+		taskloop:         aTaskLoop,
+		run:              runWithIterateParamNotAnArray,
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunIteration1}, // The first taskrun was started
+		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
+	}, {
+		name:             "Reconcile a run that allows limited concurrency where the iterate parameter is not an array",
+		task:             aTask,
+		taskloop:         withConcurrencyLimit(aTaskLoop, concurrencyLimit2),
+		run:              runWithIterateParamNotAnArray,
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunIteration1, expectedTaskRunIteration2}, // The first taskrun was started
+		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
 	}}
 
 	for _, tc := range testcases {
@@ -883,15 +907,6 @@ func TestReconcileTaskLoopRunFailures(t *testing.T) {
 		wantEvents: []string{
 			"Normal Started ",
 			`Warning Failed Cannot determine number of iterations: The iterate parameter "current-item" was not found`,
-		},
-	}, {
-		name:     "iterate parameter not an array",
-		taskloop: aTaskLoop,
-		run:      runWithIterateParamNotAnArray,
-		reason:   taskloopv1alpha1.TaskLoopRunReasonFailedValidation,
-		wantEvents: []string{
-			"Normal Started ",
-			`Warning Failed Cannot determine number of iterations: The value of the iterate parameter "current-item" is not an array`,
 		},
 	}}
 
