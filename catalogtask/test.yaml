@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: clone-and-test
+spec:
+  workspaces:
+    - name: shared
+  tasks:
+    - name: clone-repo
+      taskRef:
+        apiVersion: catalogtask.tekton.dev/v1alpha1
+        kind: Task
+        name: git-clone--0.3
+      params:
+        - name: url
+          value: https://github.com/tektoncd/pipeline.git
+      workspaces:
+        - name: output
+          workspace: shared
+
+    - name: unit-test
+      taskRef:
+        apiVersion: catalogtask.tekton.dev/v1alpha1
+        kind: Task
+        name: golang-test--0.1
+      runAfter: ["clone-repo"]
+      params:
+        - name: package
+          value: github.com/tektoncd/pipeline
+        - name: context
+          value: ""
+      workspaces:
+        - name: source
+          workspace: shared
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: testpr
+spec:
+  pipelineRef:
+    name: clone-and-test
+  workspaces:
+    - name: shared
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 256M

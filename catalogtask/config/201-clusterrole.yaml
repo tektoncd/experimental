@@ -1,0 +1,27 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tekton-resolver-cluster-access
+rules:
+  # Resolvers need to be able to read and write Runs,TaskRuns and Pipelines.
+  # Any of these resources may be read-from or created by a Resolver.
+  - apiGroups: ["tekton.dev"]
+    resources: ["runs", "taskruns", "pipelineruns"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+
+  - apiGroups: ["tekton.dev"]
+    resources: ["runs/finalizers"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["tekton.dev"]
+    resources: ["runs/status"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+
+  # Controller needs cluster access to leases for leader election.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+
+  # Controller needs permission to emit events associated with Run CRs.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
