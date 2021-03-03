@@ -93,7 +93,8 @@ The `iterateParam` field specifies the name of the `Task` parameter which varies
 This is what controls the loop.
 
 * The parameter type as defined in the `Task` must be `string`.
-* The parameter value as defined in the `Run` must be an array.
+* The parameter value as defined in the `Run` can be an `array` or a `string`. Strings will be split into arrays, one
+  element for each line in the original string.
 
 For example, suppose you have a `Task` that runs tests based on a parameter name called `test-type`.
 
@@ -150,6 +151,38 @@ In the first `TaskRun` the parameter `test-type` would be set to `codeanalysis`.
 In the second `TaskRun` the parameter `test-type` would be set to `unittests`.
 In the third `TaskRun` the parameter `test-type` would be set to `e2etests`.
 
+Using a parameter of type `string` is particularly useful when the array of options is
+dynamically generated:
+
+```yaml
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: pipeline-with-tests
+spec:
+  tasks:
+    - name: test-selector
+      taskSpec:
+         results:
+           - name: listoftests
+             description: the list of tests to execute
+         steps:
+           - name: producer
+             image: busybox
+             script: |
+               # Some logic to select tests
+               echo "codeanalysis" > $(results.listoftests.path)
+               echo "unittests" >> $(results.listoftests.path)
+    - name: loop
+      taskRef:
+        apiVersion: custom.tekton.dev/v1alpha1
+        kind: TaskLoop
+        name: testloop
+      params:
+        - name: test-type
+          value: $(tasks.test-selector.results.listoftests)
+```
+
 #### Specifying a timeout
 
 You can use the `timeout` field to set each `TaskRun`'s timeout value.
@@ -204,7 +237,7 @@ metadata:
   generateName: run-
 spec:
   params:
-    # […]
+    # [â€¦]
   ref:
     apiVersion: custom.tekton.dev/v1alpha1
     kind: TaskLoop
@@ -235,7 +268,7 @@ apiVersion: tekton.dev/v1alpha1
 kind: Run
 metadata:
   generateName: run-
-# […]
+# [â€¦]
 status:
   completionTime: "2020-09-24T17:33:10Z"
   conditions:
@@ -271,7 +304,7 @@ kind: Run
 metadata:
   name: run-loop
 spec:
-  # […]
+  # [â€¦]
   status: "RunCancelled"
 ```
 

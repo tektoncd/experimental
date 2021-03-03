@@ -23,6 +23,7 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -461,12 +462,11 @@ func computeIterations(run *v1alpha1.Run, tls *taskloopv1alpha1.TaskLoopSpec) (i
 	numberOfIterations := -1
 	for _, p := range run.Spec.Params {
 		if p.Name == tls.IterateParam {
-			if p.Value.Type == v1beta1.ParamTypeArray {
-				numberOfIterations = len(p.Value.ArrayVal)
-				break
-			} else {
-				return 0, fmt.Errorf("The value of the iterate parameter %q is not an array", tls.IterateParam)
+			if p.Value.Type == v1beta1.ParamTypeString {
+				// If we got a string param, split it into an array, one item per line
+				p.Value.ArrayVal = strings.Split(strings.TrimSuffix(p.Value.StringVal, "\n"), "\n")
 			}
+			numberOfIterations = len(p.Value.ArrayVal)
 		}
 	}
 	if numberOfIterations == -1 {
@@ -479,6 +479,10 @@ func getParameters(run *v1alpha1.Run, tls *taskloopv1alpha1.TaskLoopSpec, iterat
 	out := make([]v1beta1.Param, len(run.Spec.Params))
 	for i, p := range run.Spec.Params {
 		if p.Name == tls.IterateParam {
+			if p.Value.Type == v1beta1.ParamTypeString {
+				// If we got a string param, split it into an array, one item per line
+				p.Value.ArrayVal = strings.Split(strings.TrimSuffix(p.Value.StringVal, "\n"), "\n")
+			}
 			out[i] = v1beta1.Param{
 				Name:  p.Name,
 				Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: p.Value.ArrayVal[iteration-1]},
