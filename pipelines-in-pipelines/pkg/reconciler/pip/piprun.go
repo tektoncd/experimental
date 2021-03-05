@@ -20,6 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"time"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -36,8 +39,6 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
-	"reflect"
-	"time"
 )
 
 const (
@@ -195,7 +196,7 @@ func getObjectMeta(run *v1alpha1.Run) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:            run.Name,
 		Namespace:       run.Namespace,
-		OwnerReferences: run.OwnerReferences,
+		OwnerReferences: []metav1.OwnerReference{run.GetOwnerReference()},
 		Labels:          getPipelineRunLabels(run),
 		Annotations:     getPipelineRunAnnotations(run),
 	}

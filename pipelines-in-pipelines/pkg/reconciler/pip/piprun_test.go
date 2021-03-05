@@ -19,6 +19,10 @@ package pip
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/pipelines-in-pipelines/test"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -28,6 +32,7 @@ import (
 	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ktesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
@@ -36,9 +41,6 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
-	"strings"
-	"testing"
-	"time"
 )
 
 func getPipController(t *testing.T, d test.Data) (test.Assets, func()) {
@@ -187,6 +189,8 @@ var p = &v1beta1.Pipeline{
 	},
 }
 
+var blockOwnerDeletion = true
+var isController = true
 var pr = &v1beta1.PipelineRun{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-with-pipeline",
@@ -194,6 +198,15 @@ var pr = &v1beta1.PipelineRun{
 		Labels: map[string]string{
 			"tekton.dev/pipeline": "pipeline",
 			"tekton.dev/run":      "run-with-pipeline",
+		},
+		OwnerReferences: []v1.OwnerReference{
+			{
+				APIVersion:         "tekton.dev/v1alpha1",
+				Kind:               "Run",
+				Name:               "run-with-pipeline",
+				Controller:         &isController,
+				BlockOwnerDeletion: &blockOwnerDeletion,
+			},
 		},
 		Annotations: map[string]string{},
 	},
