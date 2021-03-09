@@ -188,7 +188,7 @@ spec:
       serviceAccountName: wait-task-controller
       containers:
       - name: wait-task-controller
-        image: ko://github.com/tektoncd/experimental/wait-task
+        image: ko://github.com/tektoncd/experimental/wait-task/cmd/controller
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging
