@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events"
 	"go.uber.org/zap"
+	"gomodules.xyz/jsonpatch/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
@@ -48,6 +50,10 @@ const (
 	// ReasonRunFailedCreatingPipelineRun indicates that the reason for failure status is that Run failed
 	// to create PipelineRun
 	ReasonRunFailedCreatingPipelineRun = "ReasonRunFailedCreatingPipelineRun"
+
+	// ReasonRunFailedCancelPipelineRun indicates that the reason for failure status is that Run failed
+	// to cancel PipelineRun
+	ReasonRunFailedCancelPipelineRun = "ReasonRunFailedCancelPipelineRun"
 )
 
 // Reconciler implements controller.Reconciler for Run resources.
@@ -59,6 +65,19 @@ type Reconciler struct {
 
 // Check that our Reconciler implements Interface
 var _ run.Interface = (*Reconciler)(nil)
+var cancelPipelineRunPatchBytes []byte
+
+func init() {
+	var err error
+	cancelPipelineRunPatchBytes, err = json.Marshal([]jsonpatch.JsonPatchOperation{{
+		Operation: "add",
+		Path:      "/spec/status",
+		Value:     v1beta1.PipelineRunSpecStatusCancelled,
+	}})
+	if err != nil {
+		log.Fatalf("failed to marshal PipelineRun cancel patch bytes: %v", err)
+	}
+}
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) reconciler.Event {
@@ -88,6 +107,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 
 	if run.IsDone() {
 		logger.Infof("Run %s/%s is done", run.Namespace, run.Name)
+		return nil
+	}
+
+	if run.IsCancelled() {
+		_, err := r.pipelineClientSet.TektonV1beta1().PipelineRuns(run.Namespace).Patch(ctx, run.Name, types.JSONPatchType, cancelPipelineRunPatchBytes, metav1.PatchOptions{}, "")
+		if err != nil {
+			run.Status.MarkRunFailed(ReasonRunFailedCancelPipelineRun,
+				"Run got an error cancelling pipelineRun - %v", err)
+		}
+
+		run.Status.MarkRunFailed(v1alpha1.RunReasonCancelled,
+			"Run %s/%s was cancelled", run.Namespace, run.Name)
+
 		return nil
 	}
 
