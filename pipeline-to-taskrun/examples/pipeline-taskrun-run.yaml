@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: pipeline-taskrun-run-
+spec:
+  ref:
+    apiVersion: tekton.dev/v1alpha1
+    kind: PipelineToTaskRun
+    name: clone-test-upload
+  params:
+    - name: git-url
+      value: "https://github.com/tektoncd/chains"
+    - name: package
+      value: "github.com/tektoncd/chains/pkg"
+    - name: packages
+      value: "./pkg/..."
+    - name: gcs-location
+      value: "gs://christies-empty-bucket"
+  workspaces:
+    - name: where-it-all-happens
+      persistentVolumeClaim:
+        claimName: pvc
+    - name: gcs-creds
+      secret:
+        secretName: mikey
+

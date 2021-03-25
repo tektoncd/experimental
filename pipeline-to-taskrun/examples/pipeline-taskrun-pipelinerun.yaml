@@ -1,0 +1,56 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: pipeline-taskrun-pipelinerun-
+spec:
+  workspaces:
+    - name: where-it-all-happens
+      persistentVolumeClaim:
+        claimName: pvc
+    - name: gcs-creds
+      secret:
+        secretName: mikey
+  pipelineSpec:
+    workspaces:
+      - name: where-it-all-happens
+      - name: gcs-creds
+    tasks:
+      - name: before
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: |
+                #!/usr/bin/env bash
+                echo "Hello before Pipeline to TaskRun!"
+      - name: pipeline-as-taskrun
+        taskRef:
+          apiVersion: tekton.dev/v1alpha1
+          kind: PipelineToTaskRun
+          name: clone-test-upload
+        runAfter:
+          - before
+        params:
+          - name: git-url
+            value: "https://github.com/tektoncd/chains"
+          - name: package
+            value: "github.com/tektoncd/chains/pkg"
+          - name: packages
+            value: "./pkg/..."
+          - name: gcs-location
+            value: "gs://christies-empty-bucket"
+        workspaces:
+          - name: where-it-all-happens
+            workspace: where-it-all-happens
+          - name: gcs-creds
+            workspace: gcs-creds
+      - name: after
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: |
+                #!/usr/bin/env bash
+                echo "Bye after Pipeline to TaskRun!"
+        runAfter:
+          - pipeline-as-taskrun

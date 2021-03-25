@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: clone-test-upload
+spec:
+  params:
+    - name: git-url
+    - name: package
+    - name: packages
+    - name: gcs-location
+  workspaces:
+    - name: where-it-all-happens
+    - name: gcs-creds
+  tasks:
+    - name: grab-source
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.git-url)
+      workspaces:
+        - name: output
+          workspace: where-it-all-happens
+    - name: run-tests
+      runAfter: [grab-source]
+      taskRef:
+        name: golang-test
+      params:
+        - name: package
+          value: $(params.package)
+        - name: packages
+          # HACKS to write the test results to a file
+          # alternatives: write a Task that writes output to a file, capture stdout
+          # (in the pipeline), and/or capture logs
+          value: "$(params.packages) > $(workspaces.source.path)/test-results"
+      workspaces:
+        - name: source
+          workspace: where-it-all-happens
+    - name: upload-results
+      runAfter: [run-tests]
+      taskRef:
+        name: gcs-upload
+      workspaces:
+        - name: source
+          workspace: where-it-all-happens
+        - name: credentials
+          workspace: gcs-creds
+      params:
+        - name: path
+          value: "test-results"
+        - name: location
+          value: $(params.gcs-location)

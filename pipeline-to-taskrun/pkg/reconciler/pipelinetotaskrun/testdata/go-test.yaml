@@ -1,0 +1,59 @@
+# https://github.com/tektoncd/catalog/blob/main/task/golang-test/0.1/golang-test.yaml
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: golang-test
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: test
+    tekton.dev/displayName: "golang test"
+spec:
+  description: >-
+    This Task is Golang task to test Go projects.
+
+  params:
+    - name: package
+      description: package (and its children) under test
+    - name: packages
+      description: "packages to test (default: ./...)"
+      default: "./..."
+    - name: context
+      description: path to the directory to use as context.
+      default: "."
+    - name: version
+      description: golang version to use for tests
+      default: "latest"
+    - name: flags
+      description: flags to use for the test command
+      default: -race -cover -v
+    - name: GOOS
+      description: "running program's operating system target"
+      default: linux
+    - name: GOARCH
+      description: "running program's architecture target"
+      default: amd64
+    - name: GO111MODULE
+      description: "value of module support"
+      default: auto
+  workspaces:
+    - name: source
+  steps:
+    - name: unit-test
+      image: docker.io/library/golang:$(params.version)
+      # using yaml block chomping to strip newline, otherwise trailing newlines are present
+      # when the script block is in the middle of the file and absent when at the end of the file
+      script: |-
+        SRC_PATH="$GOPATH/src/$(params.package)/$(params.context)"
+        mkdir -p $SRC_PATH
+        cp -R "$(workspaces.source.path)"/"$(params.context)"/* $SRC_PATH
+        cd $SRC_PATH
+        go test $(params.flags) $(params.packages)
+      env:
+        - name: GOOS
+          value: "$(params.GOOS)"
+        - name: GOARCH
+          value: "$(params.GOARCH)"
+        - name: GO111MODULE
+          value: "$(params.GO111MODULE)"

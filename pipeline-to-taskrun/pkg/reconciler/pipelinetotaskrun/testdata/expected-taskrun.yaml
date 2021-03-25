@@ -1,0 +1,242 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: some-run
+  namespace: some-ns
+  labels:
+    tekton.dev/run: some-run
+  ownerReferences:
+  - apiVersion: tekton.dev/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Run
+    name: some-run
+spec:
+  params:
+  - name: grab-source-url
+    value: https://github.com/tektoncd/chains
+  - name: run-tests-package
+    value: github.com/tektoncd/chains/pkg
+  - name: run-tests-packages
+    value: ./pkg/... > $(workspaces.where-it-all-happens.path)/test-results
+  - name: upload-results-path
+    value: test-results
+  - name: upload-results-location
+    value: gs://christies-empty-bucket
+  serviceAccountName: default
+  taskSpec:
+    params:
+    - description: git url to clone
+      name: grab-source-url
+      type: string
+    - default: ""
+      description: git revision to checkout (branch, tag, sha, ref…)
+      name: grab-source-revision
+      type: string
+    - default: ""
+      description: (optional) git refspec to fetch before checking out revision
+      name: grab-source-refspec
+      type: string
+    - default: "true"
+      description: defines if the resource should initialize and fetch the submodules
+      name: grab-source-submodules
+      type: string
+    - default: "1"
+      description: performs a shallow clone where only the most recent commit(s) will
+        be fetched
+      name: grab-source-depth
+      type: string
+    - default: "true"
+      description: defines if http.sslVerify should be set to true or false in the
+        global git config
+      name: grab-source-sslVerify
+      type: string
+    - default: ""
+      description: subdirectory inside the "output" workspace to clone the git repo
+        into
+      name: grab-source-subdirectory
+      type: string
+    - default: ""
+      description: defines which directories patterns to match or exclude when performing
+        a sparse checkout
+      name: grab-source-sparseCheckoutDirectories
+      type: string
+    - default: "true"
+      description: clean out the contents of the repo's destination directory (if
+        it already exists) before trying to clone the repo there
+      name: grab-source-deleteExisting
+      type: string
+    - default: ""
+      description: git HTTP proxy server for non-SSL requests
+      name: grab-source-httpProxy
+      type: string
+    - default: ""
+      description: git HTTPS proxy server for SSL requests
+      name: grab-source-httpsProxy
+      type: string
+    - default: ""
+      description: git no proxy - opt out of proxying HTTP/HTTPS requests
+      name: grab-source-noProxy
+      type: string
+    - default: "true"
+      description: log the commands used during execution
+      name: grab-source-verbose
+      type: string
+    - default: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.21.0
+      description: the image used where the git-init binary is
+      name: grab-source-gitInitImage
+      type: string
+    - description: package (and its children) under test
+      name: run-tests-package
+      type: string
+    - default: ./...
+      description: 'packages to test (default: ./...)'
+      name: run-tests-packages
+      type: string
+    - default: .
+      description: path to the directory to use as context.
+      name: run-tests-context
+      type: string
+    - default: latest
+      description: golang version to use for tests
+      name: run-tests-version
+      type: string
+    - default: -race -cover -v
+      description: flags to use for the test command
+      name: run-tests-flags
+      type: string
+    - default: linux
+      description: running program's operating system target
+      name: run-tests-GOOS
+      type: string
+    - default: amd64
+      description: running program's architecture target
+      name: run-tests-GOARCH
+      type: string
+    - default: auto
+      description: value of module support
+      name: run-tests-GO111MODULE
+      type: string
+    - description: The path to files or directories relative to the source workspace
+        that you'd like to upload.
+      name: upload-results-path
+      type: string
+    - description: The address (including "gs://") where you'd like to upload files
+        to.
+      name: upload-results-location
+      type: string
+    - default: service_account.json
+      description: The path inside the credentials workspace to the GOOGLE_APPLICATION_CREDENTIALS
+        key file.
+      name: upload-results-serviceAccountPath
+      type: string
+    results:
+    - description: The precise commit SHA that was fetched by this Task
+      name: commit
+    - description: The precise URL that was fetched by this Task
+      name: url
+    steps:
+    - image: $(params.grab-source-gitInitImage)
+      name: grab-source-clone
+      resources: {}
+      # using yaml block chomping to strip newline, otherwise trailing newlines are present
+      # when the script block is in the middle of the file and absent when at the end of the file
+      script: |-
+        #!/bin/sh
+        set -eu -o pipefail
+        if [[ "$(params.grab-source-verbose)" == "true" ]] ; then
+          set -x
+        fi
+        CHECKOUT_DIR="$(workspaces.where-it-all-happens.path)/$(params.grab-source-subdirectory)"
+        cleandir() {
+          # Delete any existing contents of the repo directory if it exists.
+          #
+          # We don't just "rm -rf $CHECKOUT_DIR" because $CHECKOUT_DIR might be "/"
+          # or the root of a mounted volume.
+          if [[ -d "$CHECKOUT_DIR" ]] ; then
+            # Delete non-hidden files and directories
+            rm -rf "$CHECKOUT_DIR"/*
+            # Delete files and directories starting with . but excluding ..
+            rm -rf "$CHECKOUT_DIR"/.[!.]*
+            # Delete files and directories starting with .. plus any other character
+            rm -rf "$CHECKOUT_DIR"/..?*
+          fi
+        }
+        if [[ "$(params.grab-source-deleteExisting)" == "true" ]] ; then
+          cleandir
+        fi
+        test -z "$(params.grab-source-httpProxy)" || export HTTP_PROXY=$(params.grab-source-httpProxy)
+        test -z "$(params.grab-source-httpsProxy)" || export HTTPS_PROXY=$(params.grab-source-httpsProxy)
+        test -z "$(params.grab-source-noProxy)" || export NO_PROXY=$(params.grab-source-noProxy)
+        /ko-app/git-init \
+          -url "$(params.grab-source-url)" \
+          -revision "$(params.grab-source-revision)" \
+          -refspec "$(params.grab-source-refspec)" \
+          -path "$CHECKOUT_DIR" \
+          -sslVerify="$(params.grab-source-sslVerify)" \
+          -submodules="$(params.grab-source-submodules)" \
+          -depth "$(params.grab-source-depth)" \
+          -sparseCheckoutDirectories "$(params.grab-source-sparseCheckoutDirectories)"
+        cd "$CHECKOUT_DIR"
+        RESULT_SHA="$(git rev-parse HEAD)"
+        EXIT_CODE="$?"
+        if [ "$EXIT_CODE" != 0 ] ; then
+          exit $EXIT_CODE
+        fi
+        # ensure we don't add a trailing newline to the result
+        echo -n "$RESULT_SHA" > $(results.commit.path)
+        echo -n "$(params.grab-source-url)" > $(results.url.path)
+    - env:
+      - name: GOOS
+        value: $(params.run-tests-GOOS)
+      - name: GOARCH
+        value: $(params.run-tests-GOARCH)
+      - name: GO111MODULE
+        value: $(params.run-tests-GO111MODULE)
+      image: docker.io/library/golang:$(params.run-tests-version)
+      name: run-tests-unit-test
+      resources: {}
+      # using yaml block chomping to strip newline, otherwise trailing newlines are present
+      # when the script block is in the middle of the file and absent when at the end of the file
+      script: |-
+        SRC_PATH="$GOPATH/src/$(params.run-tests-package)/$(params.run-tests-context)"
+        mkdir -p $SRC_PATH
+        cp -R "$(workspaces.where-it-all-happens.path)"/"$(params.run-tests-context)"/* $SRC_PATH
+        cd $SRC_PATH
+        go test $(params.run-tests-flags) $(params.run-tests-packages)
+    - image: gcr.io/google.com/cloudsdktool/cloud-sdk:310.0.0@sha256:cb03669fcdb9191d55a6200f2911fff3baec0b8c39b156d95b68aabe975ac506
+      name: upload-results-upload
+      resources: {}
+      # using yaml block chomping to strip newline, otherwise trailing newlines are present
+      # when the script block is in the middle of the file and absent when at the end of the file
+      script: |-
+        #!/usr/bin/env bash
+        set -xe
+
+        CRED_PATH="$(workspaces.gcs-creds.path)/$(params.upload-results-serviceAccountPath)"
+        SOURCE="$(workspaces.where-it-all-happens.path)/$(params.upload-results-path)"
+
+        if [[ -f "$CRED_PATH" ]]; then
+          GOOGLE_APPLICATION_CREDENTIALS="$CRED_PATH"
+        fi
+
+        if [[ "${GOOGLE_APPLICATION_CREDENTIALS}" != "" ]]; then
+          echo GOOGLE_APPLICATION_CREDENTIALS is set, activating Service Account...
+          gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+        fi
+
+        if [[ -d "$SOURCE" ]]; then
+          gsutil -m rsync -d -r "$SOURCE" "$(params.upload-results-location)"
+        else
+          gsutil cp "$SOURCE" "$(params.upload-results-location)"
+        fi
+    workspaces:
+    - name: where-it-all-happens
+    - name: gcs-creds
+  workspaces:
+  - name: where-it-all-happens
+    persistentVolumeClaim:
+      claimName: pvc
+  - name: gcs-creds
+    secret:
+      secretName: mikey
