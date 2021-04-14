@@ -7,14 +7,14 @@
 | Status  | {{ range .Status.Conditions }}{{.Reason}}{{end}} |
 | Details | {{ range .Status.Conditions }}{{.Message}}{{end}} |
 | Start   | {{ .Status.StartTime.UTC }} |
-| End     | {{ .Status.CompletionTime.UTC }} |
+| End     | {{ with .Status.CompletionTime -}} {{ .UTC }} {{- end }} |
 
 ## Steps
 
-| Name | Status | Start | End
-| ---- | ------ | ----- | ---
+| Name | Status | Start | End |
+| ---- | ------ | ----- | --- |
 {{ range .Status.Steps -}}
-| {{.Name}} |  {{.ContainerState.Terminated.Reason}} | {{.ContainerState.Terminated.StartedAt.UTC}} | {{.ContainerState.Terminated.FinishedAt.UTC}}
+| {{.Name}} | {{ with .ContainerState.Terminated -}} {{.Reason}} | {{.StartedAt.UTC}} | {{.FinishedAt.UTC}} {{- else }} | | {{- end }} |
 {{- end}}
 
 ```

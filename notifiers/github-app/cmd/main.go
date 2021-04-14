@@ -43,11 +43,11 @@ import (
 	"knative.dev/pkg/signals"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	_ "knative.dev/pkg/system/testing"
 )
 
 var (
-	namespace  = flag.String("namespace", corev1.NamespaceAll, "Namespace to restrict informer to. Optional, defaults to all namespaces.")
-	kubeconfig = flag.String("kubeconfig", filepath.Join(os.Getenv("HOME"), ".kube", "config"), "Location of kubeconfig. If not set, InCluster config is assumed.")
+	namespace = flag.String("namespace", corev1.NamespaceAll, "Namespace to restrict informer to. Optional, defaults to all namespaces.")
 )
 
 func main() {
@@ -77,7 +77,8 @@ func main() {
 		log.Fatalf("error creating tekton client: %v", err)
 	}
 
-	sharedmain.MainWithContext(injection.WithNamespaceScope(signals.NewContext(), *namespace), "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	ctx := sharedmain.WithHADisabled(signals.NewContext())
+	sharedmain.MainWithContext(injection.WithNamespaceScope(ctx, *namespace), "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 		logger := logging.FromContext(ctx)
 		taskRunInformer := taskruninformer.Get(ctx)
 
