@@ -4,16 +4,16 @@
 | Kind    | TaskRun
 | Namespace   | default
 | Name    | echo-6b4fn-echo-xrxq4
-| Status  | Succeeded |
-| Details | All Steps have completed executing |
+| Status  |  |
+| Details |  |
 | Start   | 2020-08-27 15:21:37 +0000 UTC |
-| End     | 2020-08-27 15:21:46 +0000 UTC |
+| End     |  |
 
 ## Steps
 
 | Name | Status | Start | End |
 | ---- | ------ | ----- | --- |
-| hello | Completed | 2020-08-27 15:21:44 +0000 UTC | 2020-08-27 15:21:44 +0000 UTC |
+| hello |  | | |
 
 ```
 resources: {}

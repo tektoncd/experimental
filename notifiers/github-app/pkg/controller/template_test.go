@@ -15,25 +15,39 @@
 package controller
 
 import (
+	"fmt"
 	"io/ioutil"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/diff"
 )
 
 func TestTemplateRender(t *testing.T) {
-	tr := taskrun()
-	got, err := render(tr)
+
+	paths, err := filepath.Glob("testdata/*.yaml")
 	if err != nil {
-		t.Fatalf("error rendering template: %v", err)
+		t.Fatalf("error reading filepaths: %v", err)
 	}
 
-	want, err := ioutil.ReadFile("testdata/taskrun.md.golden")
-	if err != nil {
-		t.Fatalf("error reading desired result markdown: %v", err)
-	}
+	for _, path := range paths {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			tr := taskrun(path)
+			got, err := render(tr)
+			if err != nil {
+				t.Fatalf("error rendering template: %v", err)
+			}
 
-	if string(want) != got {
-		t.Errorf("-want,+got: %s", diff.StringDiff(string(want), got))
+			golden := fmt.Sprintf("%s.md.golden", strings.TrimSuffix(path, ".yaml"))
+			want, err := ioutil.ReadFile(golden)
+			if err != nil {
+				t.Fatalf("error reading desired result markdown: %v", err)
+			}
+
+			if string(want) != got {
+				t.Errorf("-want,+got:\n%s", diff.StringDiff(string(want), got))
+			}
+		})
 	}
 }

@@ -68,7 +68,7 @@ func TestGitHubAppReconciler_Reconcile(t *testing.T) {
 	ghclient.BaseURL = mustParseURL(srv.URL + "/")
 
 	// Create fake k8s/tekton clients.
-	tr := taskrun()
+	tr := taskrun("testdata/taskrun.yaml")
 	tekton := faketekton.NewSimpleClientset(tr)
 	informer := informers.NewSharedInformerFactory(tekton, 0)
 	informer.Tekton().V1beta1().TaskRuns().Informer().GetIndexer().Add(tr)
