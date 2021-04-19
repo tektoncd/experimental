@@ -60,7 +60,7 @@ func NewController(namespace string) func(context.Context, configmap.Watcher) *c
 		})
 
 		logger.Info("Setting up event handlers")
-
+		// fun_true := func(obj interface{}) bool { return true }
 		// Add event handler for Runs
 		runInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 			FilterFunc: pipelinecontroller.FilterRunRef(taskloopv1alpha1.SchemeGroupVersion.String(), taskloop.TaskLoopControllerName),

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/tektoncd/pipeline/pkg/apis/validate"
@@ -49,6 +50,8 @@ func validateTask(ctx context.Context, tls *TaskLoopSpec) *apis.FieldError {
 	if (tls.TaskRef != nil && tls.TaskRef.Name != "") && tls.TaskSpec != nil {
 		return apis.ErrMultipleOneOf("spec.taskRef", "spec.taskSpec")
 	}
+	fmt.Errorf("The validation will fail, as the mechanism to create taskloop" +
+		" object from RunSpec.Spec is not in place.")
 	// Check that one of taskRef and taskSpec is present.
 	if (tls.TaskRef == nil || tls.TaskRef.Name == "") && tls.TaskSpec == nil {
 		return apis.ErrMissingOneOf("spec.taskRef", "spec.taskSpec")

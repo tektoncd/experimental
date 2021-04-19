@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: simpletask
+  name: simpletask2
 spec:
   params:
     - name: word
@@ -15,25 +15,10 @@ spec:
         #!/usr/bin/env bash
         echo "$(params.word)$(params.suffix)"
 ---
-apiVersion: custom.tekton.dev/v1alpha1
-kind: TaskLoop
-metadata:
-  name: simpletaskloop
-spec:
-  # Task to run (inline taskSpec also works)
-  taskRef:
-    name: simpletask
-  # Parameter that contains the values to iterate
-  iterateParam: word
-  # Timeout (defaults to global default timeout, usually 1h00m; use "0" for no timeout)
-  timeout: 60s
-  # Retries for task failure
-  retries: 2
----
 apiVersion: tekton.dev/v1alpha1
 kind: Run
 metadata:
-  name: simpletasklooprun
+  name: simpletasklooprun2
 spec:
   params:
     - name: word
@@ -43,7 +28,16 @@ spec:
         - roll
     - name: suffix
       value: ing
-  ref:
+  spec:
     apiVersion: custom.tekton.dev/v1alpha1
     kind: TaskLoop
-    name: simpletaskloop
+    spec:
+      # Task to run (inline taskSpec also works)
+      taskRef:
+        name: simpletask2
+      # Parameter that contains the values to iterate
+      iterateParam: word
+      # Timeout (defaults to global default timeout, usually 1h00m; use "0" for no timeout)
+      timeout: 60s
+      # Retries for task failure
+      retries: 2

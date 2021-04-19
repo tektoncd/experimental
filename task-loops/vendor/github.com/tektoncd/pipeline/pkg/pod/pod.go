@@ -40,7 +40,8 @@ const (
 	// ResultsDir is the folder used by default to create the results file
 	ResultsDir = "/tekton/results"
 
-	taskRunLabelKey = pipeline.GroupName + pipeline.TaskRunLabelKey
+	// TaskRunLabelKey is the name of the label added to the Pod to identify the TaskRun
+	TaskRunLabelKey = pipeline.GroupName + pipeline.TaskRunLabelKey
 )
 
 // These are effectively const, but Go doesn't have such an annotation.
@@ -276,7 +277,7 @@ func (b *Builder) Build(ctx context.Context, taskRun *v1beta1.TaskRun, taskSpec 
 				*metav1.NewControllerRef(taskRun, groupVersionKind),
 			},
 			Annotations: podAnnotations,
-			Labels:      MakeLabels(taskRun),
+			Labels:      makeLabels(taskRun),
 		},
 		Spec: corev1.PodSpec{
 			RestartPolicy:                corev1.RestartPolicyNever,
@@ -301,8 +302,8 @@ func (b *Builder) Build(ctx context.Context, taskRun *v1beta1.TaskRun, taskSpec 
 	}, nil
 }
 
-// MakeLabels constructs the labels we will propagate from TaskRuns to Pods.
-func MakeLabels(s *v1beta1.TaskRun) map[string]string {
+// makeLabels constructs the labels we will propagate from TaskRuns to Pods.
+func makeLabels(s *v1beta1.TaskRun) map[string]string {
 	labels := make(map[string]string, len(s.ObjectMeta.Labels)+1)
 	// NB: Set this *before* passing through TaskRun labels. If the TaskRun
 	// has a managed-by label, it should override this default.
@@ -314,7 +315,7 @@ func MakeLabels(s *v1beta1.TaskRun) map[string]string {
 
 	// NB: Set this *after* passing through TaskRun Labels. If the TaskRun
 	// specifies this label, it should be overridden by this value.
-	labels[taskRunLabelKey] = s.Name
+	labels[TaskRunLabelKey] = s.Name
 	return labels
 }
 
