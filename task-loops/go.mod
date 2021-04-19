@@ -20,7 +20,7 @@ require (
 replace (
 	contrib.go.opencensus.io/exporter/stackdriver => contrib.go.opencensus.io/exporter/stackdriver v0.13.4
 	github.com/Azure/azure-sdk-for-go => github.com/Azure/azure-sdk-for-go v38.2.0+incompatible
-	github.com/tektoncd/pipeline => github.com/scrapcodes/pipeline v0.23.1-0.20210416113956-a5d48318ae7d
+	github.com/tektoncd/pipeline => github.com/scrapcodes/pipeline v0.23.1-0.20210419124732-3f2ca540366f
 )
 
 // Pin k8s deps to v0.18.8
