@@ -15,6 +15,7 @@ branches failures such that a `Task` failure in one branch does not stop executi
     - [Configuring a `Pipeline` in a `Run`](#configuring-a-pipeline-in-a-run)
     - [Configuring a `Pipeline` in a `Pipeline`](#configuring-a-pipeline-in-a-pipeline)
     - [Monitoring Execution Status](#monitoring-execution-status)
+    - [Propagating `Results` from `PipelineRun` to `Run`](#propagating-results-from-pipelinerun-to-run)
   - [Uninstall](#uninstall)
   - [Contributions](#contributions)
 
@@ -409,6 +410,163 @@ Events:
   Normal  Running    18m   PipelineRun  Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 2, Skipped: 0
   Normal  Running    18m   PipelineRun  Tasks Completed: 1 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0
   Normal  Succeeded  18m   PipelineRun  Tasks Completed: 2 (Failed: 0, Cancelled 0), Skipped: 0
+```
+
+### Propagating `Results` from `PipelineRun` to `Run`
+
+[`PipelineRuns` emit a list of `Results`](https://github.com/tektoncd/pipeline/blob/main/docs/pipelines.md#emitting-results-from-a-pipeline), 
+that summarize the most important `Results` from its `TaskRuns`.
+
+After the `PipelineRun` has successfully executed, the `Run` would be populated with `RunResults` that map to the `PipelineRunResults`. 
+
+Propagating `Results` ensures that they can be reused in the `Run` and in subsequent `Tasks` if configured as a `Pipeline` in a `Pipeline`. 
+
+When we apply the [example](examples/run-with-pipeline-with-results.yaml), a `Run` is executed, which creates a 
+`PipelineRun` that emits `PipelineRunResults`:
+
+```yaml
+$ kubectl describe pipelineruns.tekton.dev piprun-f6t27
+
+Name:         piprun-f6t27
+Namespace:    default
+Labels:       tekton.dev/pipeline=hello-world
+              tekton.dev/run=piprun-f6t27
+Annotations:  <none>
+API Version:  tekton.dev/v1beta1
+Kind:         PipelineRun
+Metadata:
+  Creation Timestamp:  2021-05-04T13:29:08Z
+  Owner References:
+    API Version:           tekton.dev/v1alpha1
+    Block Owner Deletion:  true
+    Controller:            true
+    Kind:                  Run
+    Name:                  piprun-f6t27
+    UID:                   123456789
+  Resource Version:        123456789
+  Self Link:               /apis/tekton.dev/v1beta1/namespaces/default/pipelineruns/piprun-f6t27
+  UID:                     123456789
+Spec:
+  Pipeline Ref:
+    API Version:         tekton.dev
+    Name:                hello-world
+  Service Account Name:  default
+  Timeout:               1h0m0s
+Status:
+  Completion Time:  2021-05-04T13:29:12Z
+  Conditions:
+    Last Transition Time:  2021-05-04T13:29:12Z
+    Message:               Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0
+    Reason:                Succeeded
+    Status:                True
+    Type:                  Succeeded
+  Pipeline Results:
+    Name:   message
+    Value:  Hello World!
+  Pipeline Spec:
+    Results:
+      Description:
+      Name:         message
+      Value:        $(tasks.generate-hello-world.results.message)
+    Tasks:
+      Name:  generate-hello-world
+      Task Spec:
+        Metadata:
+        Results:
+          Description:
+          Name:         message
+        Steps:
+          Image:  alpine
+          Name:   generate-message
+          Resources:
+          Script:  echo -n "Hello World!" > $(results.message.path)
+
+  Start Time:  2021-05-04T13:29:08Z
+  Task Runs:
+    piprun-f6t27-generate-hello-world-nbg2q:
+      Pipeline Task Name:  generate-hello-world
+      Status:
+        Completion Time:  2021-05-04T13:29:12Z
+        Conditions:
+          Last Transition Time:  2021-05-04T13:29:12Z
+          Message:               All Steps have completed executing
+          Reason:                Succeeded
+          Status:                True
+          Type:                  Succeeded
+        Pod Name:                piprun-f6t27-generate-hello-world-nbg2q-pod-2knvc
+        Start Time:              2021-05-04T13:29:08Z
+        Steps:
+          Container:  step-generate-message
+          Image ID:   docker-pullable://alpine@sha256:123456789
+          Name:       generate-message
+          Terminated:
+            Container ID:  docker://123456789
+            Exit Code:     0
+            Finished At:   2021-05-04T13:29:12Z
+            Message:       [{"key":"message","value":"Hello World!","type":"TaskRunResult"}]
+            Reason:        Completed
+            Started At:    2021-05-04T13:29:12Z
+        Task Results:
+          Name:   message
+          Value:  Hello World!
+        Task Spec:
+          Results:
+            Description:
+            Name:         message
+          Steps:
+            Image:  alpine
+            Name:   generate-message
+            Resources:
+            Script:  echo -n "Hello World!" > $(results.message.path)
+
+Events:
+  Type    Reason     Age   From         Message
+  ----    ------     ----  ----         -------
+  Normal  Started    14m   PipelineRun
+  Normal  Running    14m   PipelineRun  Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0
+  Normal  Succeeded  14m   PipelineRun  Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0
+```
+
+Then the `PipelineRunResults` are propagated to the `Run`:
+
+```yaml
+$ kubectl describe runs.tekton.dev piprun-f6t27
+
+Name:         piprun-f6t27
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  tekton.dev/v1alpha1
+Kind:         Run
+Metadata:
+  Creation Timestamp:  2021-05-04T13:29:02Z
+  Generate Name:       piprun-
+  # […]  
+Spec:
+  Ref:
+    API Version:         tekton.dev/v1beta1
+    Kind:                Pipeline
+    Name:                hello-world
+  Service Account Name:  default
+Status:
+  Completion Time:  2021-05-04T13:29:55Z
+  Conditions:
+    Last Transition Time:  2021-05-04T13:29:55Z
+    Message:               Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0
+    Reason:                Succeeded
+    Status:                True
+    Type:                  Succeeded
+  Extra Fields:            <nil>
+  Observed Generation:     1
+  Results:
+    Name:      message
+    Value:     Hello World!
+  Start Time:  2021-05-04T13:29:08Z
+Events:
+  Type    Reason     Age    From            Message
+  ----    ------     ----   ----            -------
+  Normal  Started    10m    pip-controller
+  Normal  Succeeded  9m58s  pip-controller  Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0
 ```
 
 ## Uninstall
