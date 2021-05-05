@@ -146,6 +146,7 @@ func updateRunStatus(ctx context.Context, run *v1alpha1.Run, pipelineRun *v1beta
 	if c.IsTrue() {
 		logger.Infof("PipelineRun created by Run %s/%s has succeeded", run.Namespace, run.Name)
 		run.Status.MarkRunSucceeded(c.Reason, c.Message)
+		propagateResults(run, pipelineRun)
 	} else if c.IsFalse() {
 		logger.Infof("PipelineRun created by Run %s/%s has failed", run.Namespace, run.Name)
 		run.Status.MarkRunFailed(c.Reason, c.Message)
@@ -158,6 +159,16 @@ func updateRunStatus(ctx context.Context, run *v1alpha1.Run, pipelineRun *v1beta
 	}
 
 	return nil
+}
+
+func propagateResults(run *v1alpha1.Run, pipelineRun *v1beta1.PipelineRun) {
+	pipelineResults := pipelineRun.Status.PipelineResults
+	for _, pipelineResult := range pipelineResults {
+		run.Status.Results = append(run.Status.Results, v1alpha1.RunResult{
+			Name:  pipelineResult.Name,
+			Value: pipelineResult.Value,
+		})
+	}
 }
 
 func validate(run *v1alpha1.Run) (errs *apis.FieldError) {

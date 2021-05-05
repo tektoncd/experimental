@@ -170,6 +170,15 @@ func failed(pr *v1beta1.PipelineRun) *v1beta1.PipelineRun {
 	return prWithStatus
 }
 
+func withResults(pr *v1beta1.PipelineRun, name string, value string) *v1beta1.PipelineRun {
+	prWithStatus := pr.DeepCopy()
+	prWithStatus.Status.PipelineResults = append(prWithStatus.Status.PipelineResults, v1beta1.PipelineRunResult{
+		Name:  name,
+		Value: value,
+	})
+	return prWithStatus
+}
+
 var p = &v1beta1.Pipeline{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "pipeline",
@@ -338,6 +347,21 @@ func TestReconcilePipRun(t *testing.T) {
 			"Normal Started ",
 			"Warning Failed Run can't be run because it has an invalid spec - missing field(s): name",
 			"Warning InternalError 1 error occurred",
+		},
+	}, {
+		name:           "Reconcile a run with a successful PipelineRun containing PipelineRunResults",
+		pipeline:       p,
+		run:            runWithPipeline,
+		pipelineRun:    successful(withResults(pr, "foo", "bar")),
+		expectedStatus: corev1.ConditionTrue,
+		expectedReason: v1beta1.PipelineRunReasonSuccessful,
+		expectedResults: []v1alpha1.RunResult{{
+			Name:  "foo",
+			Value: "bar",
+		}},
+		expectedEvents: []string{
+			"Normal Started ",
+			"Normal Succeeded ",
 		},
 	}}
 	for _, tc := range testcases {
