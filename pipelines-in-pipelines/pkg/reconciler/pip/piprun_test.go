@@ -272,6 +272,12 @@ var runWithoutAPIVersion = &v1alpha1.Run{
 	},
 }
 
+func requestCancel(run *v1alpha1.Run) *v1alpha1.Run {
+	runWithCancelStatus := run.DeepCopy()
+	runWithCancelStatus.Spec.Status = v1alpha1.RunSpecStatusCancelled
+	return runWithCancelStatus
+}
+
 func TestReconcilePipRun(t *testing.T) {
 	testcases := []struct {
 		name                string
@@ -339,6 +345,17 @@ func TestReconcilePipRun(t *testing.T) {
 			"Warning Failed Run can't be run because it has an invalid spec - missing field(s): name",
 			"Warning InternalError 1 error occurred",
 		},
+	}, {
+		name:            "Cancel a run with a running PipelineRun",
+		pipeline:        p,
+		run:             requestCancel(runWithPipeline),
+		pipelineRun:     running(pr),
+		expectedStatus:  corev1.ConditionFalse,
+		expectedReason:  v1alpha1.RunReasonCancelled,
+		expectedMessage: "Run foo/run-with-pipeline was cancelled",
+		expectedEvents: []string{
+			"Normal Started ",
+		},
 	}}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -379,7 +396,6 @@ func TestReconcilePipRun(t *testing.T) {
 			}
 
 			checkRunCondition(t, run, tc.expectedStatus, tc.expectedReason.String(), tc.expectedMessage)
-
 			if err := checkEvents(testAssets.Recorder, tc.name, tc.expectedEvents); err != nil {
 				t.Errorf(err.Error())
 			}

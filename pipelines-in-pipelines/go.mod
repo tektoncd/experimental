@@ -7,6 +7,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/tektoncd/pipeline v0.20.0
 	go.uber.org/zap v1.16.0
+	gomodules.xyz/jsonpatch/v2 v2.1.0
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.18.12
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
