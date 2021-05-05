@@ -19,6 +19,7 @@ package pod
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/tektoncd/pipeline/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
@@ -35,6 +36,8 @@ const (
 	credsInitHomeMountPrefix = "tekton-creds-init-home"
 	sshKnownHosts            = "known_hosts"
 )
+
+var dnsLabel1123Forbidden = regexp.MustCompile("[^a-zA-Z0-9-]+")
 
 // credsInit reads secrets available to the given service account and
 // searches for annotations matching a specific format (documented in
@@ -70,6 +73,9 @@ func credsInit(ctx context.Context, serviceAccountName, namespace string, kubecl
 	var volumes []corev1.Volume
 	args := []string{}
 	for _, secretEntry := range sa.Secrets {
+		if secretEntry.Name == "" {
+			continue
+		}
 		secret, err := kubeclient.CoreV1().Secrets(namespace).Get(ctx, secretEntry.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, nil, nil, err
@@ -88,7 +94,10 @@ func credsInit(ctx context.Context, serviceAccountName, namespace string, kubecl
 		}
 
 		if matched {
-			name := names.SimpleNameGenerator.RestrictLengthWithRandomSuffix(fmt.Sprintf("tekton-internal-secret-volume-%s", secret.Name))
+			// While secret names can use RFC1123 DNS subdomain name rules, the volume mount
+			// name required the stricter DNS label standard, for example no dots anymore.
+			sanitizedName := dnsLabel1123Forbidden.ReplaceAllString(secret.Name, "-")
+			name := names.SimpleNameGenerator.RestrictLengthWithRandomSuffix(fmt.Sprintf("tekton-internal-secret-volume-%s", sanitizedName))
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				Name:      name,
 				MountPath: credentials.VolumeName(secret.Name),
