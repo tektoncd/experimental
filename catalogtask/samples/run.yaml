@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  name: catalog-ref-test
+  namespace: default
+spec:
+  ref:
+    apiVersion: catalogtask.tekton.dev/v1alpha1
+    kind: Task
+    name: git-clone--0.3
+  params:
+  - name: url
+    value: https://github.com/tektoncd/pipeline.git
+  workspaces:
+  - name: output
+    emptyDir: {}

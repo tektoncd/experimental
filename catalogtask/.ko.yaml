@@ -1,0 +1,1 @@
+defaultBaseImage: alpine/git:v2.30.1
