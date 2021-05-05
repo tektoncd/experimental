@@ -22,8 +22,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func taskrun() *v1beta1.TaskRun {
-	b, err := ioutil.ReadFile("testdata/taskrun.yaml")
+func taskrun(path string) *v1beta1.TaskRun {
+	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(fmt.Errorf("error reading input taskrun: %v", err))
 	}

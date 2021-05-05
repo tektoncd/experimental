@@ -41,7 +41,7 @@ func TestUpsertCheckRun(t *testing.T) {
 	client.BaseURL = mustParseURL(srv.URL + "/")
 
 	ctx := context.Background()
-	tr := taskrun()
+	tr := taskrun("testdata/taskrun.yaml")
 	output := &github.CheckRunOutput{
 		Summary: github.String("foo"),
 	}
