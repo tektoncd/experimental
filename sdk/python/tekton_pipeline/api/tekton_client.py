@@ -60,11 +60,11 @@ class TektonClient(object):
 
         try:
             outputs = self.api_instance.create_namespaced_custom_object(
-                constants.TEKTON_GROUP,
-                constants.TEKTON_VERSION,
-                namespace,
-                plural,
-                body)
+                group=constants.TEKTON_GROUP,
+                version=constants.PIPELINERESOURCE_VERSION if plural == 'pipelineresource' else constants.TEKTON_VERSION,
+                namespace=namespace,
+                plural=plural,
+                body=body)
         except client.rest.ApiException as e:
             raise RuntimeError(
                 "Exception when calling CustomObjectsApi->create_namespaced_custom_object:\
@@ -97,11 +97,11 @@ class TektonClient(object):
         else:
             try:
                 return self.api_instance.get_namespaced_custom_object(
-                    constants.TEKTON_GROUP,
-                    constants.TEKTON_VERSION,
-                    namespace,
-                    plural,
-                    name)
+                    group=constants.TEKTON_GROUP,
+                    version=constants.PIPELINERESOURCE_VERSION if plural == 'pipelineresource' else constants.TEKTON_VERSION,
+                    namespace=namespace,
+                    plural=plural,
+                    name=name)
             except client.rest.ApiException as e:
                 raise RuntimeError(
                     "Exception when calling CustomObjectsApi->get_namespaced_custom_object:\
@@ -126,12 +126,12 @@ class TektonClient(object):
 
         try:
             return self.api_instance.patch_namespaced_custom_object(
-                constants.TEKTON_GROUP,
-                constants.TEKTON_VERSION,
-                namespace,
-                plural,
-                name,
-                body)
+                group=constants.TEKTON_GROUP,
+                version=constants.PIPELINERESOURCE_VERSION if plural == 'pipelineresource' else constants.TEKTON_VERSION,
+                namespace=namespace,
+                plural=plural,
+                name=name,
+                body=body)
         except client.rest.ApiException as e:
             raise RuntimeError(
                 "Exception when calling CustomObjectsApi->patch_namespaced_custom_object:\
@@ -154,11 +154,11 @@ class TektonClient(object):
 
         try:
             return self.api_instance.delete_namespaced_custom_object(
-                constants.TEKTON_GROUP,
-                constants.TEKTON_VERSION,
-                namespace,
-                plural,
-                name)
+                group=constants.TEKTON_GROUP,
+                version=constants.PIPELINERESOURCE_VERSION if plural == 'pipelineresource' else constants.TEKTON_VERSION,
+                namespace=namespace,
+                plural=plural,
+                name=name)
         except client.rest.ApiException as e:
             raise RuntimeError(
                 "Exception when calling CustomObjectsApi->delete_namespaced_custom_object:\
