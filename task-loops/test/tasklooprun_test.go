@@ -1045,8 +1045,6 @@ func checkConcurrency(t *testing.T, expectedConcurrency *int, run *v1alpha1.Run,
 	// Check that the Run's start and completion times are set appropriately.
 	if run.Status.StartTime == nil {
 		t.Errorf("The Run start time is not set!")
-	} else if firstCreationTime.Before(run.Status.StartTime) {
-		t.Errorf("The Run start time %v is after the first TaskRun's creation time %v", run.Status.StartTime, firstCreationTime)
 	}
 	if run.Status.CompletionTime == nil {
 		t.Errorf("The Run completion time is not set!")
