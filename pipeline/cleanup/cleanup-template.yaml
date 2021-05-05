@@ -6,40 +6,102 @@ spec:
   params:
   - name: namespace
     description: Namespace to cleanup to in the target cluster
-  - name: clusterResource
-    description: Name of the cluster resource that points to the target cluster
   - name: keep
     description: Amount of old resources to keep
     default: "200"
+  - name: filename
+    description: Filename for the kubeconfig file
+    default: "kubeconfig"
+  - name: name
+    description: Name of the cluster
+  - name: url
+    description: Address of the target cluster
+  - name: username
+    description: Username for basic authentication to the cluster
+  - name: cadata
+    description: Contains PEM-encoded certificate authority certificates
+    default: ""
+  - name: clientKeyData
+    description: Contains PEM-encoded data from a client key file for TLS
+    default: ""
+  - name: clientCertificateData
+    description: Contains PEM-encoded data from a client cert file for TLS
+    default: ""
   resourcetemplates:
   - apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
+    kind: PipelineRun
     metadata:
       name: cleanup-runs-$(tt.params.namespace)-$(uid)
     spec:
       serviceAccountName: tekton-cleaner
-      taskSpec:
-        params:
-        - name: keep
-        - name: namespace
-        steps:
-        - name: cleanup-pr-tr
-          image: gcr.io/tekton-releases/dogfooding/tkn
-          script: |
-            #!/bin/sh
-            set -ex
-            # A safety check, to avoid deleting too much!
-            if [[ $(params.keep) -eq 0 || $(params.keep) == "" ]]; then
-              echo "This task cannot be used to delete *all* resources from a cluster" >&2
-              echo "Please specifcy a value for keep > 0"
-              exit 1
-            fi
-            # Cleanup pipelineruns first, as this will delete tasksruns too
-            tkn pr delete -n $(params.namespace) --keep $(params.keep)
-            # Keep double the amount of tr, for standalone trs
-            tkn tr delete -n $(params.namespace) --keep $(( $(params.keep) * 2 ))
+      pipelineSpec:
+        workspaces:
+          - name: shared-workspace
+        tasks:
+          - name: kubeconfig-creator
+            taskRef: kubeconfig-creator
+            workspaces:
+              - name: output
+                workspace: shared-workspace
+            params:
+              - name: name
+              - name: username
+              - name: url
+              - name: cadata
+              - name: clientKeyData
+              - name: clientCertificateData
+          - name: cleanup-pr-tr
+            taskSpec:
+              params:
+              - name: filename
+              - name: keep
+              - name: namespace
+              steps:
+              - name: cleanup-pr-tr
+                image: gcr.io/tekton-releases/dogfooding/tkn
+                script: |
+                  #!/bin/sh
+                  set -ex
+                  # connect to the proper cluster
+                  export KUBECONFIG="$(workspaces.input.path)/$(inputs.params.filename)"
+                  # A safety check, to avoid deleting too much!
+                  if [[ $(params.keep) -eq 0 || $(params.keep) == "" ]]; then
+                    echo "This task cannot be used to delete *all* resources from a cluster" >&2
+                    echo "Please specifcy a value for keep > 0"
+                    exit 1
+                  fi
+                  # Cleanup pipelineruns first, as this will delete tasksruns too
+                  tkn pr delete -n $(params.namespace) --keep $(params.keep)
+                  # Keep double the amount of tr, for standalone trs
+                  tkn tr delete -n $(params.namespace) --keep $(( $(params.keep) * 2 ))
+            workspaces:
+              - name: input
+                workspace: shared-workspace
+            params:
+              - name: filename
+                value: kubeconfig
+            runAfter:
+              - kubeconfig-creator
       params:
-      - name: keep
-        value: $(tt.params.keep)
-      - name: namespace
-        value: $(tt.params.namespace)
+        - name: keep
+          value: $(tt.params.keep)
+        - name: namespace
+          value: $(tt.params.namespace)
+        - name: filename
+          value: $(tt.params.filename)
+        - name: name
+          value: $(tt.params.name)
+        - name: url
+          value: $(tt.params.url)
+        - name: username
+          value: $(tt.params.username)
+        - name: cadata
+          value: $(tt.params.cadata)
+        - name: clientKeyData
+          value: $(tt.params.clientKeyData)
+        - name: clientCertificateData
+          value: $(tt.params.clientCertificateData)
+      workspaces:
+        - name: shared-workspace
+          persistentvolumeclaim:
+            claimName: kubeconfig-pvc
