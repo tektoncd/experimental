@@ -78,6 +78,8 @@ var (
 )
 
 func init() {
+	fmt.Printf("initing controller at %v", time.Now())
+
 	var err error
 	patches := []jsonpatch.JsonPatchOperation{{
 		Operation: "add",
@@ -99,13 +101,22 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) pkgre
 
 	// Check that the Run references a TaskLoop CRD.  The logic is controller.go should ensure that only this type of Run
 	// is reconciled this controller but it never hurts to do some bullet-proofing.
-	if run.Spec.Ref == nil ||
-		run.Spec.Ref.APIVersion != taskloopv1alpha1.SchemeGroupVersion.String() ||
-		run.Spec.Ref.Kind != taskloop.TaskLoopControllerName {
-		logger.Errorf("Received control for a Run %s/%s that does not reference a TaskLoop custom CRD", run.Namespace, run.Name)
+	isInvalidRef := run.Spec.Ref != nil &&
+		(run.Spec.Ref.APIVersion != taskloopv1alpha1.SchemeGroupVersion.String() ||
+			run.Spec.Ref.Kind != taskloop.TaskLoopControllerName)
+	isInvalidSpec := run.Spec.Spec != nil &&
+		(run.Spec.Spec.APIVersion != taskloopv1alpha1.SchemeGroupVersion.String() ||
+			run.Spec.Spec.Kind != taskloop.TaskLoopControllerName)
+	eitherSpecOrRef := (run.Spec.Spec == nil && run.Spec.Ref == nil) ||
+		(run.Spec.Spec != nil && run.Spec.Ref != nil)
+	if eitherSpecOrRef {
+		logger.Errorf("one of spec.spec or spec.ref must be specified", run.Namespace, run.Name)
 		return nil
 	}
-
+	if isInvalidRef || isInvalidSpec {
+		logger.Errorf("received control for a Run %s/%s that does not reference a TaskLoop custom CRD", run.Namespace, run.Name)
+		return nil
+	}
 	// If the Run has not started, initialize the Condition and set the start time.
 	if !run.HasStarted() {
 		logger.Infof("Starting new Run %s/%s", run.Namespace, run.Name)
@@ -158,7 +169,6 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) pkgre
 
 	afterCondition := run.Status.GetCondition(apis.ConditionSucceeded)
 	events.Emit(ctx, beforeCondition, afterCondition, run)
-
 	// Only transient errors that should retry the reconcile are returned.
 	return merr
 }
@@ -286,6 +296,15 @@ func (c *Reconciler) getTaskLoop(ctx context.Context, run *v1alpha1.Run) (*metav
 		}
 		taskLoopMeta = tl.ObjectMeta
 		taskLoopSpec = tl.Spec
+	} else if run.Spec.Spec != nil {
+		err := json.Unmarshal(run.Spec.Spec.Spec.Raw, &taskLoopSpec)
+		if err != nil {
+			run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonCouldntGetTaskLoop.String(),
+				"Error unmarshalling TaskLoop for Run %s/%s: %s",
+				run.Namespace, run.Name, err)
+			return nil, nil, fmt.Errorf("Error unmarshalling TaskLoop for Run %s: %w", fmt.Sprintf("%s/%s", run.Namespace, run.Name), err)
+		}
+		taskLoopMeta = metav1.ObjectMeta{Name: run.Name}
 	} else {
 		// Run does not require name but for TaskLoop it does.
 		run.Status.MarkRunFailed(taskloopv1alpha1.TaskLoopRunReasonCouldntGetTaskLoop.String(),

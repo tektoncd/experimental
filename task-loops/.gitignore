@@ -54,5 +54,5 @@ test/pullrequest/pullrequest-init
 /.bin/
 /bin/
 
-# allow vendor
-!vendor/
+# disallow vendor
+vendor/
