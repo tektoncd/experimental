@@ -1,0 +1,32 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: ClusterInterceptor
+metadata:
+  name: hmac
+spec:
+  clientConfig:
+    service:
+      name: tekton-triggers-experimental-interceptor
+      namespace: tekton-pipelines
+      path: /hmac
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: ClusterInterceptor
+metadata:
+  name: jwt
+spec:
+  clientConfig:
+    service:
+      name: tekton-triggers-experimental-interceptor
+      namespace: tekton-pipelines
+      path: /jwt
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: ClusterInterceptor
+metadata:
+  name: rego
+spec:
+  clientConfig:
+    service:
+      name: tekton-triggers-experimental-interceptor
+      namespace: tekton-pipelines
+      path: /rego
