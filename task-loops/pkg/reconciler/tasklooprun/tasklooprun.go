@@ -318,10 +318,7 @@ func (c *Reconciler) createTaskRun(ctx context.Context, logger *zap.SugaredLogge
 		}}
 
 	if tls.TaskRef != nil {
-		tr.Spec.TaskRef = &v1beta1.TaskRef{
-			Name: tls.TaskRef.Name,
-			Kind: tls.TaskRef.Kind,
-		}
+		tr.Spec.TaskRef = tls.TaskRef.DeepCopy()
 	} else if tls.TaskSpec != nil {
 		tr.Spec.TaskSpec = tls.TaskSpec
 	}

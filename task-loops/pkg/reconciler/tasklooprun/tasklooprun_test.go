@@ -327,6 +327,23 @@ var aTaskLoop = &taskloopv1alpha1.TaskLoop{
 	},
 }
 
+var aTaskLoopWithBundle = &taskloopv1alpha1.TaskLoop{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "a-taskloop",
+		Namespace: "foo",
+		Labels: map[string]string{
+			"myTaskLoopLabel": "myTaskLoopLabelValue",
+		},
+		Annotations: map[string]string{
+			"myTaskLoopAnnotation": "myTaskLoopAnnotationValue",
+		},
+	},
+	Spec: taskloopv1alpha1.TaskLoopSpec{
+		TaskRef:      &v1beta1.TaskRef{Name: "a-task", Bundle: "a-bundle"},
+		IterateParam: "current-item",
+	},
+}
+
 var aTaskLoopWithInlineTask = &taskloopv1alpha1.TaskLoop{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "a-taskloop-with-inline-task",
@@ -500,6 +517,42 @@ var expectedTaskRunIteration1 = &v1beta1.TaskRun{
 	},
 }
 
+var expectedTaskRunWithBundle = &v1beta1.TaskRun{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "run-taskloop-00001-", // does not include random suffix
+		Namespace: "foo",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion:         "tekton.dev/v1alpha1",
+			Kind:               "Run",
+			Name:               "run-taskloop",
+			Controller:         &trueB,
+			BlockOwnerDeletion: &trueB,
+		}},
+		Labels: map[string]string{
+			"custom.tekton.dev/taskLoop":          "a-taskloop",
+			"tekton.dev/run":                      "run-taskloop",
+			"custom.tekton.dev/taskLoopIteration": "1",
+			"myTaskLoopLabel":                     "myTaskLoopLabelValue",
+			"myRunLabel":                          "myRunLabelValue",
+		},
+		Annotations: map[string]string{
+			"myTaskLoopAnnotation": "myTaskLoopAnnotationValue",
+			"myRunAnnotation":      "myRunAnnotationValue",
+		},
+	},
+	Spec: v1beta1.TaskRunSpec{
+		TaskRef: &v1beta1.TaskRef{Name: "a-task", Bundle: "a-bundle"},
+		Params: []v1beta1.Param{{
+			Name:  "current-item",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "item1"},
+		}, {
+			Name:  "additional-parameter",
+			Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "stuff"},
+		}},
+		ServiceAccountName: "default",
+	},
+}
+
 var expectedTaskRunIteration2 = &v1beta1.TaskRun{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-taskloop-00002-", // does not include random suffix
@@ -627,6 +680,16 @@ func TestReconcileTaskLoopRun(t *testing.T) {
 		expectedStatus:   corev1.ConditionUnknown,
 		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
 		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunIteration1},
+		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
+	}, {
+		name:             "Reconcile a new run with a taskloop that references a task with Bundle",
+		task:             aTask,
+		taskloop:         aTaskLoopWithBundle,
+		run:              runTaskLoop,
+		taskruns:         []*v1beta1.TaskRun{},
+		expectedStatus:   corev1.ConditionUnknown,
+		expectedReason:   taskloopv1alpha1.TaskLoopRunReasonRunning,
+		expectedTaskruns: []*v1beta1.TaskRun{expectedTaskRunWithBundle},
 		expectedEvents:   []string{"Normal Started", "Normal Running Iterations completed: 0"},
 	}, {
 		name:             "Reconcile a new run with a taskloop that contains an inline task",
