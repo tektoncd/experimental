@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: celrun-with-context-
+spec:
+  ref:
+    apiVersion: cel.tekton.dev/v1alpha1
+    kind: CEL
+  params:
+    - name: name
+      value: "'hello'"
+    - name: types
+      value: "type(name)"
+    - name: expression-use-context
+      value: "name + ' is type of ' + types"

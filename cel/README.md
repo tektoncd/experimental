@@ -135,6 +135,37 @@ spec:
 
 For more information about specifying `Parameters`, read [specifying parameters](https://github.com/tektoncd/pipeline/blob/master/docs/pipelines.md#specifying-parameters).
 
+### Use context variables in CEL expression
+
+Besides use plain text in CEL expression we can also adopt `context variables`, means we can use `parameter` defined previously in subsequent `parameter`, like this:
+```yaml
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: celrun-with-context-
+spec:
+  ref:
+    apiVersion: cel.tekton.dev/v1alpha1
+    kind: CEL
+  params:
+    - name: name
+      value: "'hello'"
+    - name: types
+      value: "type(name)"
+    - name: expression-use-context
+      value: "name + ' is type of ' + types"
+```
+
+The expression: `"name + ' is type of ' + types"` adopt `name` and `types` which defined previously as part of the expression.
+so the result should be: "hello is type of string".
+
+*CATION*: 
+- Take care of the order of the `parameter`s, the subsequent one will depends on the previous ones.
+- To refer to previous `parameter`, use the name of `parameter` directly in the expression, and use single quotation marks for static string, I mean `'name'`.
+
+See [example](examples/celrun-with-context.yaml) here.
+
+
 ### Monitoring execution status
 
 As the `Run` executes, its `status` field accumulates information about the execution status of the `Run` in general.

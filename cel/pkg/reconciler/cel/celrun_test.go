@@ -19,12 +19,17 @@ package cel
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/cel/test"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test/diff"
+
+	"strings"
+	"testing"
+	"time"
 
 	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
@@ -36,9 +41,6 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestReconcileCelRun(t *testing.T) {
@@ -103,6 +105,45 @@ func TestReconcileCelRun(t *testing.T) {
 				}, {
 					Name:  "expr2",
 					Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "3 == 3"},
+				}},
+				Ref: &v1alpha1.TaskRef{
+					APIVersion: apiVersion,
+					Kind:       kind,
+					Name:       "a-celrun",
+				},
+			},
+		},
+		expectedStatus:  corev1.ConditionTrue,
+		expectedReason:  ReasonEvaluationSuccess,
+		expectedMessage: "CEL expressions were evaluated successfully",
+		expectedResults: []v1alpha1.RunResult{{
+			Name:  "expr1",
+			Value: "int",
+		}, {
+			Name:  "expr2",
+			Value: "true",
+		}},
+		expectedEvents: []string{"Normal RunReconciled Run reconciled: \"foo/cel-run\""},
+	}, {
+		name: "expressions with context variables successful",
+		run: &v1alpha1.Run{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cel-run",
+				Namespace: "foo",
+				Labels: map[string]string{
+					"myTestLabel": "myTestLabelValue",
+				},
+				Annotations: map[string]string{
+					"myTestAnnotation": "myTestAnnotationValue",
+				},
+			},
+			Spec: v1alpha1.RunSpec{
+				Params: []v1beta1.Param{{
+					Name:  "expr1",
+					Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "type(100)"},
+				}, {
+					Name:  "expr2",
+					Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "expr1 == 'int'"},
 				}},
 				Ref: &v1alpha1.TaskRef{
 					APIVersion: apiVersion,

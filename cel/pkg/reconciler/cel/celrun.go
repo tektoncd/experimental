@@ -19,7 +19,9 @@ package cel
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/checker/decls"
 	"github.com/google/cel-go/common/types"
 	"github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1alpha1/run"
 	"knative.dev/pkg/apis"
@@ -94,6 +96,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 	}
 
 	var runResults []v1alpha1.RunResult
+	contextExpressions := map[string]interface{}{}
+
 	for _, param := range run.Spec.Params {
 		// Combine the Parse and Check phases CEL program compilation to produce an Ast and associated issues
 		ast, iss := env.Compile(param.Value.StringVal)
@@ -114,7 +118,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 		}
 
 		// Evaluate the CEL expression (Ast)
-		out, _, err := prg.Eval(map[string]interface{}{})
+		out, _, err := prg.Eval(contextExpressions)
 		if err != nil {
 			logger.Errorf("CEL expression %s could not be evaluated when reconciling Run %s/%s: %v", param.Name, run.Namespace, run.Name, err)
 			run.Status.MarkRunFailed(ReasonEvaluationError,
@@ -128,6 +132,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 			Name:  param.Name,
 			Value: fmt.Sprintf("%s", out.ConvertToType(types.StringType).Value()),
 		})
+		contextExpressions[param.Name] = fmt.Sprintf("%s", out.ConvertToType(types.StringType).Value())
+		env, err = env.Extend(cel.Declarations(decls.NewVar(param.Name, decls.Any)))
+		if err != nil {
+			logger.Errorf("CEL expression %s could not be add to context env when reconciling Run %s/%s: %v", param.Name, run.Namespace, run.Name, err)
+			run.Status.MarkRunFailed(ReasonEvaluationError,
+				"CEL expression %s could not be add to context env", param.Name, err)
+			return nil
+		}
 	}
 
 	// All CEL expressions were evaluated successfully
