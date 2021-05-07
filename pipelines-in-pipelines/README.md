@@ -36,6 +36,12 @@ NAME                              READY   STATUS    RESTARTS   AGE
 pip-controller-654bdc4cc8-7bvvn   1/1     Running   0          3m4s
 ```
 
+Alternatively, install it from the nightly release using:
+
+```commandline
+kubectl apply --filename https://storage.cloud.google.com/tekton-releases-nightly/pipelines-in-pipelines/latest/release.yaml
+```
+
 ## Usage
 
 ### Configuring a `Pipeline` in a `Run`
