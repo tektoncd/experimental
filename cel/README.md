@@ -29,6 +29,12 @@ NAME                              READY   STATUS    RESTARTS   AGE
 cel-controller-654bdc4cc8-7bvvn   1/1     Running   0          3m4s
 ```
 
+Alternatively, install it from the nightly release using:
+
+```commandline
+kubectl apply --filename https://storage.cloud.google.com/tekton-releases-nightly/cel/latest/release.yaml
+```
+
 ## Usage
 
 To evaluate a CEL expressions using `Custom Tasks`, we need to define a [`Run`](https://github.com/tektoncd/pipeline/blob/master/docs/runs.md)
