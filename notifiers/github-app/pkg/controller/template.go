@@ -16,6 +16,7 @@ package controller
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
 	"text/template"
 
@@ -24,6 +25,9 @@ import (
 )
 
 var (
+	//go:embed template.md
+	fs embed.FS
+
 	summaryTmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"yaml": func(o interface{}) (string, error) {
 			b, err := yaml.Marshal(o)
@@ -32,7 +36,7 @@ var (
 			}
 			return string(b), nil
 		},
-	}).ParseFiles("template.md"))
+	}).ParseFS(fs, "*"))
 )
 
 func render(tr *v1beta1.TaskRun) (string, error) {

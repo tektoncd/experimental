@@ -81,11 +81,9 @@ func TestGitHubAppReconciler_Reconcile(t *testing.T) {
 	r := &GitHubAppReconciler{
 		Logger:        zaptest.NewLogger(t).Sugar(),
 		TaskRunLister: informer.Tekton().V1beta1().TaskRuns().Lister(),
-		InstallationClient: func(installationID int64) *github.Client {
-			return ghclient
-		},
-		Tekton:     tekton.TektonV1beta1(),
-		Kubernetes: k8s,
+		GitHub:        NewStatic(ghclient),
+		Tekton:        tekton.TektonV1beta1(),
+		Kubernetes:    k8s,
 	}
 
 	ctx := context.Background()

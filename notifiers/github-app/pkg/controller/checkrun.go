@@ -21,10 +21,53 @@ import (
 
 	"github.com/google/go-github/v32/github"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
+
+func (r *GitHubAppReconciler) HandleCheckRun(ctx context.Context, log *zap.SugaredLogger, tr *v1beta1.TaskRun) error {
+	gh, err := r.GitHub.NewClient(tr.Annotations[key("installation")])
+	if err != nil {
+		return err
+	}
+
+	// Render out GitHub CheckRun output.
+	body, err := render(tr)
+	if err != nil {
+		log.Errorf("error rendering TaskRun: %v", err)
+		return err
+	}
+	logs, err := getLogs(ctx, r.Kubernetes, tr)
+	if err != nil {
+		log.Errorf("get logs: %v", err)
+		return err
+	}
+
+	// Update or create the CheckRun.
+	cr, err := UpsertCheckRun(ctx, gh, tr, &github.CheckRunOutput{
+		Title:   github.String(tr.Name),
+		Summary: github.String(body),
+		Text:    github.String(logs),
+	})
+	if err != nil {
+		log.Errorf("UpsertCheckRun: %v", err)
+		return err
+	}
+
+	// Update TaskRun with CheckRun ID so that we can determine if there's an
+	// existing CheckRun for the TaskRun in future updates.
+	// TODO: Prevent a 2nd round of reconciliation for this annotation update?
+	if id := strconv.FormatInt(cr.GetID(), 10); id != tr.Annotations[key("checkrun")] {
+		tr.Annotations[key("checkrun")] = id
+		if _, err := r.Tekton.TaskRuns(tr.GetNamespace()).Update(tr); err != nil {
+			log.Errorf("TaskRun.Update: %v", err)
+			return err
+		}
+	}
+	return nil
+}
 
 // UpsertCheckRun updates or creates a check run for the given TaskRun.
 func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.TaskRun, output *github.CheckRunOutput) (*github.CheckRun, error) {

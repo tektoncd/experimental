@@ -19,18 +19,19 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 
-	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v32/github"
 	githubcontroller "github.com/tektoncd/experimental/notifiers/github-app/pkg/controller"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1beta1"
 	taskruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/taskrun"
+	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -53,13 +54,10 @@ var (
 func main() {
 	flag.Parse()
 
-	appID, err := strconv.ParseInt(os.Getenv("GITHUB_APP_ID"), 10, 64)
+	ctx := sharedmain.WithHADisabled(signals.NewContext())
+	github, err := githubClient(ctx)
 	if err != nil {
-		log.Fatalf("error parsing ${GITHUB_APP_ID} (%s): %v", os.Getenv("GITHUB_APP_ID"), err)
-	}
-	at, err := ghinstallation.NewAppsTransportKeyFromFile(http.DefaultTransport, appID, os.Getenv("GITHUB_APP_KEY"))
-	if err != nil {
-		log.Fatalf("error reading GitHub App private key: %v", err)
+		log.Fatalf("error creating github client: %v", err)
 	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
@@ -77,7 +75,6 @@ func main() {
 		log.Fatalf("error creating tekton client: %v", err)
 	}
 
-	ctx := sharedmain.WithHADisabled(signals.NewContext())
 	sharedmain.MainWithContext(injection.WithNamespaceScope(ctx, *namespace), "watcher", func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 		logger := logging.FromContext(ctx)
 		taskRunInformer := taskruninformer.Get(ctx)
@@ -85,11 +82,9 @@ func main() {
 		c := &githubcontroller.GitHubAppReconciler{
 			Logger:        logger,
 			TaskRunLister: taskRunInformer.Lister(),
-			InstallationClient: func(installationID int64) *github.Client {
-				return github.NewClient(&http.Client{Transport: ghinstallation.NewFromAppsTransport(at, installationID)})
-			},
-			Kubernetes: k8s,
-			Tekton:     tekton,
+			GitHub:        github,
+			Kubernetes:    k8s,
+			Tekton:        tekton,
 		}
 		impl := controller.NewImpl(c, c.Logger, pipeline.TaskRunControllerName)
 
@@ -100,4 +95,20 @@ func main() {
 
 		return impl
 	})
+}
+
+func githubClient(ctx context.Context) (*githubcontroller.GitHubClientFactory, error) {
+	if id := os.Getenv("GITHUB_APP_ID"); id != "" {
+		appID, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing ${GITHUB_APP_ID} (%s): %v", os.Getenv("GITHUB_APP_ID"), err)
+		}
+		return githubcontroller.NewApp(http.DefaultTransport, appID, os.Getenv("GITHUB_APP_KEY"))
+	} else {
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+		)
+		tc := oauth2.NewClient(ctx, ts)
+		return githubcontroller.NewStatic(github.NewClient(tc)), nil
+	}
 }

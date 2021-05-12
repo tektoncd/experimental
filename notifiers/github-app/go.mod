@@ -1,6 +1,6 @@
 module github.com/tektoncd/experimental/notifiers/github-app
 
-go 1.14
+go 1.16
 
 require (
 	github.com/bradleyfalzon/ghinstallation v1.1.1
@@ -8,6 +8,7 @@ require (
 	github.com/google/go-github/v32 v32.1.0
 	github.com/tektoncd/pipeline v0.17.2
 	go.uber.org/zap v1.16.0
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	k8s.io/api v0.19.3
 	k8s.io/apiextensions-apiserver v0.19.3 // indirect
 	k8s.io/apimachinery v0.19.3
