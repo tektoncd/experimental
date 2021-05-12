@@ -21,9 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 
-	"github.com/google/go-github/v32/github"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1beta1"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
@@ -36,11 +34,11 @@ import (
 
 // GitHubAppReconciler updates CheckRun results for PipelineRun outputs.
 type GitHubAppReconciler struct {
-	Logger             *zap.SugaredLogger
-	TaskRunLister      listers.TaskRunLister
-	InstallationClient func(installationID int64) *github.Client
-	Kubernetes         kubernetes.Interface
-	Tekton             tektonclient.TektonV1beta1Interface
+	Logger        *zap.SugaredLogger
+	TaskRunLister listers.TaskRunLister
+	GitHub        *GitHubClientFactory
+	Kubernetes    kubernetes.Interface
+	Tekton        tektonclient.TektonV1beta1Interface
 }
 
 // Reconcile creates or updates the check run.
@@ -64,52 +62,12 @@ func (r *GitHubAppReconciler) Reconcile(ctx context.Context, reconcileKey string
 
 	log.Info("Sending update")
 
-	// Create new GitHub client from existing App Transport + Installation
-	id := tr.Annotations[key("installation")]
-	if id == "" {
-		log.Info("not a GitHub App task, skipping")
-		return nil
+	// If no installation is associated, assume a non-GitHub App status.
+	if id := tr.Annotations[key("installation")]; id == "" {
+		return r.HandleStatus(ctx, tr)
 	}
-	n, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		return err
-	}
-	gh := r.InstallationClient(n)
-
-	// Render out GitHub CheckRun output.
-	body, err := render(tr)
-	if err != nil {
-		log.Errorf("error rendering TaskRun: %v", err)
-		return err
-	}
-	logs, err := getLogs(ctx, r.Kubernetes, tr)
-	if err != nil {
-		log.Errorf("get logs: %v", err)
-		return err
-	}
-
-	// Update or create the CheckRun.
-	cr, err := UpsertCheckRun(ctx, gh, tr, &github.CheckRunOutput{
-		Title:   github.String(tr.Name),
-		Summary: github.String(body),
-		Text:    github.String(logs),
-	})
-	if err != nil {
-		log.Errorf("UpsertCheckRun: %v", err)
-		return err
-	}
-
-	// Update TaskRun with CheckRun ID so that we can determine if there's an
-	// existing CheckRun for the TaskRun in future updates.
-	// TODO: Prevent a 2nd round of reconciliation for this annotation update?
-	if id := strconv.FormatInt(cr.GetID(), 10); id != tr.Annotations[key("checkrun")] {
-		tr.Annotations[key("checkrun")] = id
-		if _, err := r.Tekton.TaskRuns(tr.GetNamespace()).Update(tr); err != nil {
-			log.Errorf("TaskRun.Update: %v", err)
-			return err
-		}
-	}
-	return nil
+	// Create Check Run with GitHub App
+	return r.HandleCheckRun(ctx, log, tr)
 }
 
 func getLogs(ctx context.Context, client kubernetes.Interface, tr *v1beta1.TaskRun) (string, error) {
