@@ -26,6 +26,9 @@
 export DISABLE_MD_LINTING=1
 export TEST_FOLDER=$(pwd)
 
+# This project still uses Godep - disable Go modules.
+export GO111MODULE=off
+
 source $(dirname $0)/../../vendor/github.com/tektoncd/plumbing/scripts/presubmit-tests.sh
 
 function get_yq() {
