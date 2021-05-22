@@ -1,1 +1,0 @@
-export { WebhookDisplayTable } from './WebhookDisplayTable';
