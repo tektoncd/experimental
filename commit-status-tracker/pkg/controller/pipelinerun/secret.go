@@ -39,7 +39,7 @@ func getAuthSecret(c client.Client, ns string) (string, error) {
 		return "", fmt.Errorf("failed to getAuthSecret, error getting secret '%s' in namespace '%s': '%q'", secretName(), ns, err)
 	}
 
-	tokenData, ok := secret.Data[secretID]
+	tokenData, ok := secret.Data[secretID()]
 	if !ok {
 		return "", fmt.Errorf("failed to getAuthSecret, secret %s does not have a 'token' key", ns)
 	}
