@@ -146,7 +146,7 @@ certificate verification, do not use this if you don't need to.
 # Customizing the secret used to authenticate requests
 
 It's possible to provide an environment variable `STATUS_TRACKER_SECRET` to
-override the default secret name which is `commit-status-tracker-git-secret` and STATUS_TRACKER_SECRET_ID override the default secretID which is `token`.
+override the default secret name which is `commit-status-tracker-git-secret` and `STATUS_TRACKER_SECRET_ID` override the default secretID which is `token`.
 
 ## Prerequisites
 
