@@ -26,9 +26,10 @@ import (
 
 const (
 	secretNameEnvVar = "STATUS_TRACKER_SECRET"
+	secretIDEnvVar	 = "STATUS_TRACKER_SECRET_ID"
 
 	defaultSecretName = "commit-status-tracker-git-secret"
-	secretID          = "token"
+	defaultSecretID   = "token"
 )
 
 func getAuthSecret(c client.Client, ns string) (string, error) {
@@ -57,4 +58,11 @@ func secretName() string {
 		return v
 	}
 	return defaultSecretName
+}
+
+func secretID() string {
+	if v := os.Getenv(secretIDEnvVar); v != "" {
+		return v
+	}
+	return defaultSecretID
 }
