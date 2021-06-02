@@ -22,7 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/markbates/inflect"
+	"github.com/gobuffalo/flect"
 	"go.uber.org/zap"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,8 +77,7 @@ func (ac *reconciler) Reconcile(ctx context.Context, key string) error {
 	logger := logging.FromContext(ctx)
 
 	if !ac.IsLeaderFor(ac.key) {
-		logger.Debugf("Skipping key %q, not the leader.", ac.key)
-		return nil
+		return controller.NewSkipKey(key)
 	}
 
 	// Look up the webhook secret, and fetch the CA cert bundle.
@@ -101,7 +100,7 @@ func (ac *reconciler) reconcileValidatingWebhook(ctx context.Context, caCert []b
 
 	rules := make([]admissionregistrationv1.RuleWithOperations, 0, len(ac.handlers))
 	for gvk := range ac.handlers {
-		plural := strings.ToLower(inflect.Pluralize(gvk.Kind))
+		plural := strings.ToLower(flect.Pluralize(gvk.Kind))
 
 		rules = append(rules, admissionregistrationv1.RuleWithOperations{
 			Operations: []admissionregistrationv1.OperationType{
