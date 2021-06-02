@@ -33,7 +33,7 @@ spec:
 apiVersion: tekton.dev/v1alpha1
 kind: Run
 metadata:
-  generateName: simpletasklooprun
+  name: simpletasklooprun
 spec:
   params:
     - name: word
