@@ -1,0 +1,18 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tekton-cloudevents-controller
+  namespace: tekton-cloudevents
+  labels:
+    app.kubernetes.io/component: tekton-cloudevents-controller
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-cloudevents
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["list", "watch"]
+  # The controller needs access to these configmaps for logging information and runtime configuration.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+    resourceNames: ["config-logging", "config-observability", "config-leader-election"]

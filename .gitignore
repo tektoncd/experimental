@@ -33,3 +33,6 @@ coverage/
 
 # Kodata
 kodata
+
+# Idea 
+*.idea
