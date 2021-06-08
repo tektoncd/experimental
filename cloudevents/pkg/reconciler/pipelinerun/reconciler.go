@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package reconciler
+package pipelinerun
 
 import (
 	"context"
+	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/reconciler/events"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
@@ -80,12 +80,6 @@ func (t CDEventType) String() string {
 type Reconciler struct {
 	cloudEventClient cloudevent.CEClient
 	tracker          tracker.Interface
-}
-
-func NewController(ctx context.Context) *Reconciler {
-	return &Reconciler{
-		cloudEventClient: cloudevent.Get(ctx),
-	}
 }
 
 // ReconcileKind implements Interface.ReconcileKind.
