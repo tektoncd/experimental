@@ -17,43 +17,12 @@ limitations under the License.
 package main
 
 import (
-	"context"
-	"github.com/tektoncd/pipeline/pkg/apis/config"
-	"k8s.io/client-go/tools/cache"
-	"knative.dev/pkg/logging"
-
-	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler"
-	pipelineruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/pipelinerun"
- 	pipelinerunreconciler "github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1beta1/pipelinerun"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
+	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/pipelinerun"
 	"knative.dev/pkg/injection/sharedmain"
 )
 
 const pipelineRunControllerName = "cloudevents-pipelinerun-controller"
 
 func main() {
-	sharedmain.Main(pipelineRunControllerName, newPipelineRunController)
-}
-
-func newPipelineRunController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	logger := logging.FromContext(ctx)
-	pipelineRunInformer := pipelineruninformer.Get(ctx)
-
-	c := reconciler.NewController(ctx)
-	impl := pipelinerunreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
-		configStore := config.NewStore(logger.Named("config-store"))
-		return controller.Options{
-			AgentName: "cloudevents-pipelinerun-controller",
-			ConfigStore: configStore,
-		}
-	})
-
-	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    impl.Enqueue,
-		UpdateFunc: controller.PassNew(impl.Enqueue),
-		DeleteFunc: impl.Enqueue,
-	})
-
-	return impl
+	sharedmain.Main(pipelineRunControllerName, pipelinerun.NewController())
 }

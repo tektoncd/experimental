@@ -1,0 +1,266 @@
+package pipelinerun
+
+import (
+	"context"
+	"fmt"
+	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
+	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
+	"github.com/tektoncd/pipeline/test"
+	"github.com/tektoncd/pipeline/test/names"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+	cminformer "knative.dev/pkg/configmap/informer"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
+	"knative.dev/pkg/system"
+	"regexp"
+	"testing"
+	"time"
+)
+
+type PipelineRunTest struct {
+	test.Data  `json:"inline"`
+	Test       *testing.T
+	TestAssets test.Assets
+	Cancel     func()
+}
+
+func (prt PipelineRunTest) reconcileRun(namespace, pipelineRunName string, wantEvents []string, permanentError bool) (*v1beta1.PipelineRun, test.Clients) {
+	prt.Test.Helper()
+	c := prt.TestAssets.Controller
+	clients := prt.TestAssets.Clients
+
+	reconcileError := c.Reconciler.Reconcile(prt.TestAssets.Ctx, namespace+"/"+pipelineRunName)
+	if permanentError {
+		// When a PipelineRun is invalid and can't run, we expect a permanent error that will
+		// tell the Reconciler to not keep trying to reconcile.
+		if reconcileError == nil {
+			prt.Test.Fatalf("Expected an error to be returned by Reconcile, got nil instead")
+		}
+		if controller.IsPermanentError(reconcileError) != permanentError {
+			prt.Test.Fatalf("Expected the error to be permanent: %v but got: %v", permanentError, controller.IsPermanentError(reconcileError))
+		}
+	} else if reconcileError != nil {
+		prt.Test.Fatalf("Error reconciling: %s", reconcileError)
+	}
+	// Check that the PipelineRun was reconciled correctly
+	reconciledRun, err := clients.Pipeline.TektonV1beta1().PipelineRuns(namespace).Get(prt.TestAssets.Ctx, pipelineRunName, metav1.GetOptions{})
+	if err != nil {
+		prt.Test.Fatalf("Somehow had error getting reconciled run out of fake client: %s", err)
+	}
+
+	return reconciledRun, clients
+}
+
+func checkCloudEvents(t *testing.T, fce *cloudevent.FakeClient, testName string, wantEvents []string) error {
+	t.Helper()
+	return eventFromChannel(fce.Events, testName, wantEvents)
+}
+
+func eventFromChannel(c chan string, testName string, wantEvents []string) error {
+	// We get events from a channel, so the timeout is here to avoid waiting
+	// on the channel forever if fewer than expected events are received.
+	// We only hit the timeout in case of failure of the test, so the actual value
+	// of the timeout is not so relevant, it's only used when tests are going to fail.
+	// on the channel forever if fewer than expected events are received
+	timer := time.NewTimer(10 * time.Millisecond)
+	foundEvents := []string{}
+	for ii := 0; ii < len(wantEvents)+1; ii++ {
+		// We loop over all the events that we expect. Once they are all received
+		// we exit the loop. If we never receive enough events, the timeout takes us
+		// out of the loop.
+		select {
+		case event := <-c:
+			foundEvents = append(foundEvents, event)
+			if ii > len(wantEvents)-1 {
+				return fmt.Errorf("received event \"%s\" for %s but not more expected", event, testName)
+			}
+			wantEvent := wantEvents[ii]
+			matching, err := regexp.MatchString(wantEvent, event)
+			if err == nil {
+				if !matching {
+					return fmt.Errorf("expected event \"%s\" but got \"%s\" instead for %s", wantEvent, event, testName)
+				}
+			} else {
+				return fmt.Errorf("something went wrong matching the event: %s", err)
+			}
+		case <-timer.C:
+			if len(foundEvents) > len(wantEvents) {
+				return fmt.Errorf("received %d events for %s but %d expected. Found events: %#v", len(foundEvents), testName, len(wantEvents), foundEvents)
+			}
+		}
+	}
+	return nil
+}
+
+func ensureConfigurationConfigMapsExist(d *test.Data) {
+	var defaultsExists bool
+	for _, cm := range d.ConfigMaps {
+		if cm.Name == config.GetDefaultsConfigName() {
+			defaultsExists = true
+		}
+	}
+	if !defaultsExists {
+		d.ConfigMaps = append(d.ConfigMaps, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: config.GetDefaultsConfigName(), Namespace: system.Namespace()},
+			Data:       map[string]string{},
+		})
+	}
+}
+
+// getPipelineRunController returns an instance of the PipelineRun controller/reconciler that has been seeded with
+// d, where d represents the state of the system (existing resources) needed for the test.
+func getPipelineRunController(t *testing.T, d test.Data) (test.Assets, func()) {
+	// unregisterMetrics()
+	ctx, _ := ttesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	ensureConfigurationConfigMapsExist(&d)
+	c, informers := test.SeedTestData(t, ctx, d)
+	configMapWatcher := cminformer.NewInformedWatcher(c.Kube, system.Namespace())
+
+	ctl := NewController()(ctx, configMapWatcher)
+
+	if la, ok := ctl.Reconciler.(reconciler.LeaderAware); ok {
+		la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {})
+	}
+	if err := configMapWatcher.Start(ctx.Done()); err != nil {
+		t.Fatalf("error starting configmap watcher: %v", err)
+	}
+
+	return test.Assets{
+		Logger:     logging.FromContext(ctx),
+		Controller: ctl,
+		Clients:    c,
+		Informers:  informers,
+		Recorder:   controller.GetEventRecorder(ctx).(*record.FakeRecorder),
+		Ctx:        ctx,
+	}, cancel
+}
+
+// newPipelineRunTest returns PipelineRunTest with a new PipelineRun controller created with specified state through data
+// This PipelineRunTest can be reused for multiple PipelineRuns by calling reconcileRun for each pipelineRun
+func newPipelineRunTest(data test.Data, t *testing.T) *PipelineRunTest {
+	t.Helper()
+	testAssets, cancel := getPipelineRunController(t, data)
+	return &PipelineRunTest{
+		Data:       data,
+		Test:       t,
+		TestAssets: testAssets,
+		Cancel:     cancel,
+	}
+}
+
+// TestReconcile_CloudEvents runs reconcile with a cloud event sink configured
+// to ensure that events are sent in different cases
+func TestReconcile_CloudEvents(t *testing.T) {
+	names.TestingSeed()
+
+	prs := []*v1beta1.PipelineRun{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pipelinerun",
+				Namespace: "foo",
+				SelfLink:  "/pipeline/1234",
+			},
+			Spec: v1beta1.PipelineRunSpec{
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "test-pipeline",
+				},
+			},
+		},
+	}
+	ps := []*v1beta1.Pipeline{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pipeline",
+				Namespace: "foo",
+			},
+			Spec: v1beta1.PipelineSpec{
+				Tasks: []v1beta1.PipelineTask{
+					{
+						Name: "test-1",
+						TaskRef: &v1beta1.TaskRef{
+							Name: "test-task",
+						},
+					},
+				},
+			},
+		},
+	}
+	ts := []*v1beta1.Task{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pipeline",
+				Namespace: "foo",
+			},
+			Spec: v1beta1.TaskSpec{
+				Steps: []v1beta1.Step{
+					{
+						Container: corev1.Container{
+							Name:    "simple-step",
+							Image:   "foo",
+							Command: []string{"/mycmd"},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "foo",
+									Value: "bar",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	cms := []*corev1.ConfigMap{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: config.GetDefaultsConfigName(), Namespace: system.Namespace()},
+			Data: map[string]string{
+				"default-cloud-events-sink": "http://synk:8080",
+			},
+		},
+	}
+
+	d := test.Data{
+		PipelineRuns: prs,
+		Pipelines:    ps,
+		Tasks:        ts,
+		ConfigMaps:   cms,
+	}
+	prt := newPipelineRunTest(d, t)
+	defer prt.Cancel()
+
+	wantEvents := []string{
+		"Normal Started",
+		"Normal Running Tasks Completed: 0",
+	}
+	_, clients := prt.reconcileRun("foo", "test-pipelinerun", wantEvents, false)
+
+	//// This PipelineRun is in progress now and the status should reflect that
+	//condition := reconciledRun.Status.GetCondition(apis.ConditionSucceeded)
+	//if condition == nil || condition.Status != corev1.ConditionUnknown {
+	//	t.Errorf("Expected PipelineRun status to be in progress, but was %v", condition)
+	//}
+	//if condition != nil && condition.Reason != v1beta1.PipelineRunReasonRunning.String() {
+	//	t.Errorf("Expected reason %q but was %s", v1beta1.PipelineRunReasonRunning.String(), condition.Reason)
+	//}
+
+	//if len(reconciledRun.Status.TaskRuns) != 1 {
+	//	t.Errorf("Expected PipelineRun status to include the TaskRun status items that can run immediately: %v", reconciledRun.Status.TaskRuns)
+	//}
+
+	wantCloudEvents := []string{
+		`(?s)dev.tekton.event.pipelinerun.started.v1.*test-pipelinerun`,
+		`(?s)dev.tekton.event.pipelinerun.running.v1.*test-pipelinerun`,
+	}
+	ceClient := clients.CloudEvents.(cloudevent.FakeClient)
+	err := checkCloudEvents(t, &ceClient, "reconcile-cloud-events", wantCloudEvents)
+	if !(err == nil) {
+		t.Errorf(err.Error())
+	}
+}
