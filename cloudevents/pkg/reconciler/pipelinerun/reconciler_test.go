@@ -164,28 +164,6 @@ func newPipelineRunTest(data test.Data, t *testing.T) *PipelineRunTest {
 func TestReconcile_CloudEvents(t *testing.T) {
 	names.TestingSeed()
 
-	objectStatus := duckv1beta1.Status{
-		Conditions: []apis.Condition{{
-			Type:   apis.ConditionSucceeded,
-			Status: corev1.ConditionUnknown,
-			Reason: v1beta1.PipelineRunReasonRunning.String(),
-			Message: "running...",
-		}},
-	}
-	prs := []*v1beta1.PipelineRun{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-pipelinerun",
-				Namespace: "foo",
-			},
-			Spec: v1beta1.PipelineRunSpec{
-				PipelineRef: &v1beta1.PipelineRef{
-					Name: "test-pipeline",
-				},
-			},
-			Status: v1beta1.PipelineRunStatus{Status: objectStatus},
-		},
-	}
 	ps := []*v1beta1.Pipeline{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -237,25 +215,93 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			},
 		},
 	}
+	testcases := []struct{
+		name 		    string
+		condition 	    *apis.Condition
+		wantCloudEvents []string
+		startTime      bool
+	}{{
+		name:            "Pipeline with no condition",
+		condition:       nil,
+		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.started.v1.*test-pipelinerun`},
+		startTime:       false,
+	}, {
+		name:            "Pipeline with running condition",
+		condition:       &apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionUnknown,
+			Reason: v1beta1.PipelineRunReasonRunning.String(),
+		},
+		startTime:       true,
+		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.running.v1.*test-pipelinerun`},
+	}, {
+		name:            "Pipeline with finished true condition",
+		condition:       &apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionTrue,
+			Reason: v1beta1.PipelineRunReasonSuccessful.String(),
+		},
+		startTime:       true,
+		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.successful.v1.*test-pipelinerun`},
+	}, {
+		name:            "Pipeline with finished false condition",
+		condition:       &apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionFalse,
+			Reason: v1beta1.PipelineRunReasonCancelled.String(),
+		},
+		startTime:       true,
+		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.failed.v1.*test-pipelinerun`},
+	}}
 
-	d := test.Data{
-		PipelineRuns: prs,
-		Pipelines:    ps,
-		Tasks:        ts,
-		ConfigMaps:   cms,
-	}
-	prt := newPipelineRunTest(d, t)
-	defer prt.Cancel()
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
 
-	wantEvents := []string{}
-	_, clients := prt.reconcileRun("foo", "test-pipelinerun", wantEvents, false)
+			objectStatus := duckv1beta1.Status{
+				Conditions: []apis.Condition{},
+			}
+			pipelineStatusFields := v1beta1.PipelineRunStatusFields{}
+			if tc.condition != nil {
+				objectStatus.Conditions = append(objectStatus.Conditions, *tc.condition)
+			}
+			if tc.startTime {
+				pipelineStatusFields.StartTime = &metav1.Time{Time: time.Now()}
+			}
+			prs := []*v1beta1.PipelineRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pipelinerun",
+						Namespace: "foo",
+					},
+					Spec: v1beta1.PipelineRunSpec{
+						PipelineRef: &v1beta1.PipelineRef{
+							Name: "test-pipeline",
+						},
+					},
+					Status: v1beta1.PipelineRunStatus{
+						Status: objectStatus,
+						PipelineRunStatusFields: pipelineStatusFields,
+					},
+				},
+			}
 
-	wantCloudEvents := []string{
-		`(?s)dev.tekton.event.pipelinerun.running.v1.*test-pipelinerun`,
-	}
-	ceClient := clients.CloudEvents.(cloudevent.FakeClient)
-	err := checkCloudEvents(t, &ceClient, "reconcile-cloud-events", wantCloudEvents)
-	if !(err == nil) {
-		t.Errorf(err.Error())
+			d := test.Data{
+				PipelineRuns: prs,
+				Pipelines:    ps,
+				Tasks:        ts,
+				ConfigMaps:   cms,
+			}
+			prt := newPipelineRunTest(d, t)
+			defer prt.Cancel()
+
+			wantEvents := []string{}
+			_, clients := prt.reconcileRun("foo", "test-pipelinerun", wantEvents, false)
+
+			ceClient := clients.CloudEvents.(cloudevent.FakeClient)
+			err := checkCloudEvents(t, &ceClient, "reconcile-cloud-events", tc.wantCloudEvents)
+			if !(err == nil) {
+				t.Errorf(err.Error())
+			}
+		})
 	}
 }
