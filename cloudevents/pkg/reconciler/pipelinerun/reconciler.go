@@ -92,6 +92,22 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 	condition := pr.Status.GetCondition(apis.ConditionSucceeded)
 	logger.Debugf("Emitting cloudevent for %s, condition: %s", pr.Name, condition)
 
+	// It could be that there is no condition yet.
+	// Because of the way the PipelineRun controller works, the start condition is
+	// often not set, as the PipelineRun will reach "Running" before the first reconcile
+	// cycle is complete. Because of that, we must emulate here the behaviour of the
+	// PipelineRun controller, and initialise conditions. The fact that this is being
+	// reconciled does not imply that the PipelineRun is being reconciled by the PipelineRun
+	// controller has well, so this is only a temporary fix for the initial PoC.
+	if !pr.HasStarted() && !pr.IsPending() {
+		pr.Status.InitializeConditions()
+		// In case node time was not synchronized, when controller has been scheduled to other nodes.
+		if pr.Status.StartTime.Sub(pr.CreationTimestamp.Time) < 0 {
+			logger.Warnf("PipelineRun %s createTimestamp %s is after the pipelineRun started %s", pr.GetNamespacedName().String(), pr.CreationTimestamp, pr.Status.StartTime)
+			pr.Status.StartTime = &pr.CreationTimestamp
+		}
+	}
+
 	events.Emit(ctx, pr)
 
 	return nil
