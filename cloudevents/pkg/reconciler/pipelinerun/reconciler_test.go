@@ -3,6 +3,12 @@ package pipelinerun
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"regexp"
+	"testing"
+	"time"
+
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
@@ -18,9 +24,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
-	"regexp"
-	"testing"
-	"time"
+	_ "knative.dev/pkg/system/testing"
 )
 
 type PipelineRunTest struct {
@@ -160,18 +164,26 @@ func newPipelineRunTest(data test.Data, t *testing.T) *PipelineRunTest {
 func TestReconcile_CloudEvents(t *testing.T) {
 	names.TestingSeed()
 
+	objectStatus := duckv1beta1.Status{
+		Conditions: []apis.Condition{{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionUnknown,
+			Reason: v1beta1.PipelineRunReasonRunning.String(),
+			Message: "running...",
+		}},
+	}
 	prs := []*v1beta1.PipelineRun{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-pipelinerun",
 				Namespace: "foo",
-				SelfLink:  "/pipeline/1234",
 			},
 			Spec: v1beta1.PipelineRunSpec{
 				PipelineRef: &v1beta1.PipelineRef{
 					Name: "test-pipeline",
 				},
 			},
+			Status: v1beta1.PipelineRunStatus{Status: objectStatus},
 		},
 	}
 	ps := []*v1beta1.Pipeline{
@@ -235,27 +247,10 @@ func TestReconcile_CloudEvents(t *testing.T) {
 	prt := newPipelineRunTest(d, t)
 	defer prt.Cancel()
 
-	wantEvents := []string{
-		"Normal Started",
-		"Normal Running Tasks Completed: 0",
-	}
+	wantEvents := []string{}
 	_, clients := prt.reconcileRun("foo", "test-pipelinerun", wantEvents, false)
 
-	//// This PipelineRun is in progress now and the status should reflect that
-	//condition := reconciledRun.Status.GetCondition(apis.ConditionSucceeded)
-	//if condition == nil || condition.Status != corev1.ConditionUnknown {
-	//	t.Errorf("Expected PipelineRun status to be in progress, but was %v", condition)
-	//}
-	//if condition != nil && condition.Reason != v1beta1.PipelineRunReasonRunning.String() {
-	//	t.Errorf("Expected reason %q but was %s", v1beta1.PipelineRunReasonRunning.String(), condition.Reason)
-	//}
-
-	//if len(reconciledRun.Status.TaskRuns) != 1 {
-	//	t.Errorf("Expected PipelineRun status to include the TaskRun status items that can run immediately: %v", reconciledRun.Status.TaskRuns)
-	//}
-
 	wantCloudEvents := []string{
-		`(?s)dev.tekton.event.pipelinerun.started.v1.*test-pipelinerun`,
 		`(?s)dev.tekton.event.pipelinerun.running.v1.*test-pipelinerun`,
 	}
 	ceClient := clients.CloudEvents.(cloudevent.FakeClient)
