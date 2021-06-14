@@ -22,18 +22,19 @@ func TestEmit(t *testing.T) {
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionUnknown,
 			Reason: v1beta1.PipelineRunReasonStarted.String(),
+			Message: "just starting",
 		}},
 	}
 	object := &v1beta1.PipelineRun{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PipelineRun",
+			APIVersion: "tekton.dev/v1beta",
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			SelfLink: "/pipelineruns/test1",
+			Name: "test1",
+			Namespace: "test",
 		},
 		Status: v1beta1.PipelineRunStatus{Status: objectStatus},
-	}
-	after := &apis.Condition{
-		Type:    apis.ConditionSucceeded,
-		Status:  corev1.ConditionUnknown,
-		Message: "just starting",
 	}
 	testcases := []struct {
 		name           string
@@ -58,22 +59,24 @@ func TestEmit(t *testing.T) {
 	}}
 
 	for _, tc := range testcases {
-		// Setup the context and seed test data
-		ctx, _ := rtesting.SetupFakeContext(t)
-		ctx = cloudevent.WithClient(ctx, &cloudevent.FakeClientBehaviour{SendSuccessfully: true})
-		fakeClient := cloudevent.Get(ctx).(cloudevent.FakeClient)
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup the context and seed test data
+			ctx, _ := rtesting.SetupFakeContext(t)
+			ctx = cloudevent.WithClient(ctx, &cloudevent.FakeClientBehaviour{SendSuccessfully: true})
+			fakeClient := cloudevent.Get(ctx).(cloudevent.FakeClient)
 
-		// Setup the config and add it to the context
-		defaults, _ := config.NewDefaultsFromMap(tc.data)
-		cfg := &config.CEConfig{
-			Defaults: defaults,
-		}
-		ctx = config.ToContext(ctx, cfg)
+			// Setup the config and add it to the context
+			defaults, _ := config.NewDefaultsFromMap(tc.data)
+			cfg := &config.CEConfig{
+				Defaults: defaults,
+			}
+			ctx = config.ToContext(ctx, cfg)
 
-		events.Emit(ctx, nil, after, object)
-		if err := checkCloudEvents(t, &fakeClient, tc.name, tc.wantCloudEvent); err != nil {
-			t.Fatalf(err.Error())
-		}
+			events.Emit(ctx, object)
+			if err := checkCloudEvents(t, &fakeClient, tc.name, tc.wantCloudEvent); err != nil {
+				t.Fatalf(err.Error())
+			}
+		})
 	}
 }
 

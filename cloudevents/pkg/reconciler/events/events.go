@@ -1,36 +1,46 @@
+/*
+Copyright 2019 The Tekton Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package events
 
 import (
 	"context"
-	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
+
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
 	"knative.dev/pkg/logging"
 )
 
-// Emit emits events for object
-// Two types of events are supported, k8s and cloud events.
+// Emit emits cloud events for object
 //
-// k8s events are always sent if afterCondition is different from beforeCondition
-// Cloud events are always sent if enabled, i.e. if a sink is available
-func Emit(ctx context.Context, beforeCondition *apis.Condition, afterCondition *apis.Condition, object runtime.Object) {
+// Cloud events are sent if enabled if a sink is available
+func Emit(ctx context.Context, object runtime.Object) {
 	logger := logging.FromContext(ctx)
 	configs := config.FromContextOrDefaults(ctx)
-	sendCloudEvents := configs.Defaults.DefaultCloudEventsSink != ""
-	if sendCloudEvents {
-		ctx = cloudevents.ContextWithTarget(ctx, configs.Defaults.DefaultCloudEventsSink)
+	sendCloudEvents := (configs.Defaults.DefaultCloudEventsSink != "")
+	if !sendCloudEvents {
+		return
 	}
+	ctx = cloudevents.ContextWithTarget(ctx, configs.Defaults.DefaultCloudEventsSink)
 
-	if sendCloudEvents {
-		// Only send events if the new condition represents a change
-		if !equality.Semantic.DeepEqual(beforeCondition, afterCondition) {
-			err := cloudevent.SendCloudEventWithRetries(ctx, object)
-			if err != nil {
-				logger.Warnf("Failed to emit cloud events %v", err.Error())
-			}
-		}
+	logger.Debugf("Sending events for %s to %s", object, configs.Defaults.DefaultCloudEventsSink)
+	err := cloudevent.SendCloudEventWithRetries(ctx, object)
+	if err != nil {
+		logger.Warnf("Failed to emit cloud events %v", err.Error())
 	}
 }

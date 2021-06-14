@@ -19,9 +19,9 @@ package pipelinerun
 import (
 	"context"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
-	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/logging"
 	kreconciler "knative.dev/pkg/reconciler"
@@ -88,43 +88,11 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 	ctx = cloudevent.ToContext(ctx, c.cloudEventClient)
 	logger.Infof("Reconciling %s", pr.Name)
 
-	// Read the initial condition
-	before := pr.Status.GetCondition(apis.ConditionSucceeded)
+	// Read and log the condition
+	condition := pr.Status.GetCondition(apis.ConditionSucceeded)
+	logger.Debugf("Emitting cloudevent for %s, condition: %s", pr.Name, condition)
 
-	if !pr.HasStarted() && !pr.IsDone() { //&& !pr.IsPending() {
-		afterCondition := pr.Status.GetCondition(apis.ConditionSucceeded)
-		events.Emit(ctx, nil, afterCondition, pr)
+	events.Emit(ctx, pr)
 
-		// We already sent an event for start, so update `before` with the current status
-		before = pr.Status.GetCondition(apis.ConditionSucceeded)
-	}
-
-	if pr.IsDone() {
-		c.finishReconcileUpdateEmitEvents(ctx, pr, before, nil)
-		return nil
-	}
-
-	if pr.IsCancelled() {
-		c.finishReconcileUpdateEmitEvents(ctx, pr, before, nil)
-		return nil
-	}
-
-	if err := c.tracker.TrackReference(tracker.Reference{
-		APIVersion: v1beta1.SchemeGroupVersion.String(),
-		Kind:       "TaskRun",
-		Namespace:  pr.GetNamespace(),
-		Name:       pr.GetName(),
-	}, pr); err != nil {
-		logger.Errorf("Failed to create tracker for TaskRuns for PipelineRun %s: %v", pr.Name, err)
-		c.finishReconcileUpdateEmitEvents(ctx, pr, before, err)
-		return nil
-	}
-
-	c.finishReconcileUpdateEmitEvents(ctx, pr, before, nil)
-	return kreconciler.NewEvent(corev1.EventTypeNormal, "PipelineRun CloudEvents Reconciled", "pipelienRun cloudevents reconciled: \"%s/%s\"", pr.Namespace, pr.Name)
-}
-
-func (c *Reconciler) finishReconcileUpdateEmitEvents(ctx context.Context, pr *v1beta1.PipelineRun, beforeCondition *apis.Condition, previousError error) {
-	afterCondition := pr.Status.GetCondition(apis.ConditionSucceeded)
-	events.Emit(ctx, beforeCondition, afterCondition, pr)
+	return nil
 }
