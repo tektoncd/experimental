@@ -19,9 +19,9 @@ import (
 func TestEmit(t *testing.T) {
 	objectStatus := duckv1beta1.Status{
 		Conditions: []apis.Condition{{
-			Type:   apis.ConditionSucceeded,
-			Status: corev1.ConditionUnknown,
-			Reason: v1beta1.PipelineRunReasonStarted.String(),
+			Type:    apis.ConditionSucceeded,
+			Status:  corev1.ConditionUnknown,
+			Reason:  v1beta1.PipelineRunReasonStarted.String(),
 			Message: "just starting",
 		}},
 	}
@@ -31,7 +31,7 @@ func TestEmit(t *testing.T) {
 			APIVersion: "tekton.dev/v1beta",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test1",
+			Name:      "test1",
 			Namespace: "test",
 		},
 		Status: v1beta1.PipelineRunStatus{Status: objectStatus},
