@@ -34,6 +34,7 @@ func Emit(ctx context.Context, object runtime.Object) {
 	configs := config.FromContextOrDefaults(ctx)
 	sendCloudEvents := (configs.Defaults.DefaultCloudEventsSink != "")
 	if !sendCloudEvents {
+		logger.Warnf("No DefaultCloudEventsSink set: %s", configs.Defaults.DefaultCloudEventsSink)
 		return
 	}
 	ctx = cloudevents.ContextWithTarget(ctx, configs.Defaults.DefaultCloudEventsSink)
