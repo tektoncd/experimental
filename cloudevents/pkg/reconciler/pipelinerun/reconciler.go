@@ -88,7 +88,6 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 	ctx = cloudevent.ToContext(ctx, c.cloudEventClient)
 	logger.Infof("Reconciling %s", pr.Name)
 
-
 	// Create a copy of the pr object, else the controller would try and sync back any change we made
 	prEvents := *pr.DeepCopy()
 

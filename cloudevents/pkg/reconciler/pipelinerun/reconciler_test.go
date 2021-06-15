@@ -215,19 +215,19 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			},
 		},
 	}
-	testcases := []struct{
-		name 		    string
-		condition 	    *apis.Condition
+	testcases := []struct {
+		name            string
+		condition       *apis.Condition
 		wantCloudEvents []string
-		startTime      bool
+		startTime       bool
 	}{{
 		name:            "Pipeline with no condition",
 		condition:       nil,
 		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.started.v1.*test-pipelinerun`},
 		startTime:       false,
 	}, {
-		name:            "Pipeline with running condition",
-		condition:       &apis.Condition{
+		name: "Pipeline with running condition",
+		condition: &apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionUnknown,
 			Reason: v1beta1.PipelineRunReasonRunning.String(),
@@ -235,8 +235,8 @@ func TestReconcile_CloudEvents(t *testing.T) {
 		startTime:       true,
 		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.running.v1.*test-pipelinerun`},
 	}, {
-		name:            "Pipeline with finished true condition",
-		condition:       &apis.Condition{
+		name: "Pipeline with finished true condition",
+		condition: &apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionTrue,
 			Reason: v1beta1.PipelineRunReasonSuccessful.String(),
@@ -244,8 +244,8 @@ func TestReconcile_CloudEvents(t *testing.T) {
 		startTime:       true,
 		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.successful.v1.*test-pipelinerun`},
 	}, {
-		name:            "Pipeline with finished false condition",
-		condition:       &apis.Condition{
+		name: "Pipeline with finished false condition",
+		condition: &apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionFalse,
 			Reason: v1beta1.PipelineRunReasonCancelled.String(),
@@ -279,7 +279,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 						},
 					},
 					Status: v1beta1.PipelineRunStatus{
-						Status: objectStatus,
+						Status:                  objectStatus,
 						PipelineRunStatusFields: pipelineStatusFields,
 					},
 				},
