@@ -223,7 +223,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 	}{{
 		name:            "Pipeline with no condition",
 		condition:       nil,
-		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.started.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{`(?s)cd.pipelinerun.queued.v1.*test-pipelinerun`},
 		startTime:       false,
 	}, {
 		name: "Pipeline with running condition",
@@ -233,7 +233,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			Reason: v1beta1.PipelineRunReasonRunning.String(),
 		},
 		startTime:       true,
-		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.running.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{`(?s)cd.pipelinerun.started.v1.*test-pipelinerun`},
 	}, {
 		name: "Pipeline with finished true condition",
 		condition: &apis.Condition{
@@ -242,7 +242,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			Reason: v1beta1.PipelineRunReasonSuccessful.String(),
 		},
 		startTime:       true,
-		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.successful.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{`(?s)cd.pipelinerun.finished.v1.*test-pipelinerun`},
 	}, {
 		name: "Pipeline with finished false condition",
 		condition: &apis.Condition{
@@ -251,7 +251,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			Reason: v1beta1.PipelineRunReasonCancelled.String(),
 		},
 		startTime:       true,
-		wantCloudEvents: []string{`(?s)dev.tekton.event.pipelinerun.failed.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{`(?s)cd.pipelinerun.finished.v1.*test-pipelinerun`},
 	}}
 
 	for _, tc := range testcases {

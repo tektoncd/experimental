@@ -23,9 +23,9 @@ import (
 type EventStatus string
 
 const (
-	StatusRunning EventStatus = "Running"
+	StatusRunning  EventStatus = "Running"
 	StatusFinished EventStatus = "Finished"
-	StatusError EventStatus = "Error"
+	StatusError    EventStatus = "Error"
 )
 
 // CEClient matches the `Client` interface from github.com/cloudevents/sdk-go/v2/cloudevents
@@ -73,6 +73,11 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 			switch c.Reason {
 			case v1beta1.TaskRunReasonStarted.String():
 				eventType.Type = cdeevents.TaskRunStartedEventV1
+			case v1beta1.TaskRunReasonRunning.String():
+				eventType.Type = cdeevents.TaskRunStartedEventV1
+			// Unknown status, unknown reason -> no event type
+			default:
+				return nil, fmt.Errorf("unknown status with unknown reason %s", c.Reason)
 			}
 		case *v1beta1.PipelineRun:
 			switch c.Reason {
@@ -80,6 +85,9 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 				eventType.Type = cdeevents.PipelineRunQueuedEventV1
 			case v1beta1.PipelineRunReasonRunning.String():
 				eventType.Type = cdeevents.PipelineRunStartedEventV1
+			// Unknown status, unknown reason -> no event type
+			default:
+				return nil, fmt.Errorf("unknown status with unknown reason %s", c.Reason)
 			}
 		}
 	case c.IsTrue():

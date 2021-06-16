@@ -17,5 +17,4 @@ type objectWithCondition interface {
 
 	// GetStatusCondition returns a ConditionAccessor for the status of the RunsToCompletion
 	GetStatusCondition() apis.ConditionAccessor
-
 }
