@@ -3,7 +3,6 @@ module github.com/tektoncd/experimental/cloudevents
 go 1.15
 
 require (
-	github.com/cdfoundation/sig-events v0.0.0-20210615132203-8e93cb616045 // indirect
 	github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210615132203-8e93cb616045
 	github.com/cloudevents/sdk-go/v2 v2.3.1
 	github.com/google/go-cmp v0.5.5
