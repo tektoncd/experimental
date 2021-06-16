@@ -55,7 +55,7 @@ func TestEmit(t *testing.T) {
 		name:           "with sink",
 		data:           map[string]string{"default-cloud-events-sink": "http://mysink"},
 		wantEvent:      "Normal Started",
-		wantCloudEvent: `(?s)dev.tekton.event.pipelinerun.started.v1.*test1`,
+		wantCloudEvent: `(?s)cd.pipelinerun.queued.v1.*test1`,
 	}}
 
 	for _, tc := range testcases {
