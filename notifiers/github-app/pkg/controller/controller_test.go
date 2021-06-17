@@ -94,7 +94,7 @@ func TestGitHubAppReconciler_Reconcile(t *testing.T) {
 		t.Fatalf("no call made to github!")
 	}
 
-	tr, err := tekton.TektonV1beta1().TaskRuns(tr.Namespace).Get(tr.Name, metav1.GetOptions{})
+	tr, err := tekton.TektonV1beta1().TaskRuns(tr.Namespace).Get(ctx, tr.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("could not find TaskRun post-reconcile: %v", err)
 	}

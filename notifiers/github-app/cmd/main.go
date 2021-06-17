@@ -23,7 +23,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/google/go-github/v32/github"
@@ -35,9 +34,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/environment"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
@@ -60,7 +59,9 @@ func main() {
 		log.Fatalf("error creating github client: %v", err)
 	}
 
-	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
+	// creates the in-cluster config
+	env := &environment.ClientConfig{}
+	config, err := env.GetRESTConfig()
 	if err != nil {
 		log.Fatalf("error getting kubernetes client config: %v", err)
 	}
