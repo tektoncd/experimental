@@ -71,7 +71,7 @@ func (r *GitHubAppReconciler) Reconcile(ctx context.Context, reconcileKey string
 }
 
 func getLogs(ctx context.Context, client kubernetes.Interface, tr *v1beta1.TaskRun) (string, error) {
-	pod, err := client.CoreV1().Pods(tr.Namespace).Get(tr.Status.PodName, metav1.GetOptions{})
+	pod, err := client.CoreV1().Pods(tr.Namespace).Get(ctx, tr.Status.PodName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -79,7 +79,7 @@ func getLogs(ctx context.Context, client kubernetes.Interface, tr *v1beta1.TaskR
 	b := new(bytes.Buffer)
 	for _, c := range pod.Spec.Containers {
 		b.WriteString(fmt.Sprintf("# %s\n```\n", c.Name))
-		rc, err := client.CoreV1().Pods(tr.Namespace).GetLogs(tr.Status.PodName, &corev1.PodLogOptions{Container: c.Name}).Stream()
+		rc, err := client.CoreV1().Pods(tr.Namespace).GetLogs(tr.Status.PodName, &corev1.PodLogOptions{Container: c.Name}).Stream(ctx)
 		if err != nil {
 			return "", err
 		}

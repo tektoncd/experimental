@@ -61,7 +61,7 @@ func (r *GitHubAppReconciler) HandleCheckRun(ctx context.Context, log *zap.Sugar
 	// TODO: Prevent a 2nd round of reconciliation for this annotation update?
 	if id := strconv.FormatInt(cr.GetID(), 10); id != tr.Annotations[key("checkrun")] {
 		tr.Annotations[key("checkrun")] = id
-		if _, err := r.Tekton.TaskRuns(tr.GetNamespace()).Update(tr); err != nil {
+		if _, err := r.Tekton.TaskRuns(tr.GetNamespace()).Update(ctx, tr, metav1.UpdateOptions{}); err != nil {
 			log.Errorf("TaskRun.Update: %v", err)
 			return err
 		}

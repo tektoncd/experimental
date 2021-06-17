@@ -1,0 +1,49 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: tekton-ci
+  name: knative-config
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["config-logging", "config-leader-election", "config-observability"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: knative-config
+  namespace: tekton-ci
+subjects:
+- kind: ServiceAccount
+  name: github-notifier
+  namespace: tekton-ci
+roleRef:
+  kind: Role
+  name: knative-config
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tekton-pipeline-ro
+rules:
+- apiGroups: ["tekton.dev"]
+  resources: ["taskruns", "pipelineruns"]
+  verbs: ["list", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-pipeline-ro
+subjects:
+- kind: ServiceAccount
+  name: github-notifier
+  namespace: tekton-ci
+roleRef:
+  kind: ClusterRole
+  name: tekton-pipeline-ro
+  apiGroup: rbac.authorization.k8s.io
