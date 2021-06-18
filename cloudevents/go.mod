@@ -7,7 +7,7 @@ require (
 	github.com/cloudevents/sdk-go/v2 v2.3.1
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.5.1 // indirect
-	github.com/google/uuid v1.2.0
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/tektoncd/pipeline v0.24.3
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2
