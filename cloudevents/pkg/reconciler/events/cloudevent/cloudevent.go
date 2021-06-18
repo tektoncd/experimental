@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The Tekton Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package cloudevent
 
 import (
@@ -27,6 +43,12 @@ const (
 	StatusFinished EventStatus = "Finished"
 	StatusError    EventStatus = "Error"
 )
+
+var eventCreators = []cdEventCreator{
+	eventForObjectWithCondition,
+	artifactPackagedEvenForObjectWithCondition,
+	artifactPublishedEvenForObjectWithCondition,
+}
 
 // CEClient matches the `Client` interface from github.com/cloudevents/sdk-go/v2/cloudevents
 type CEClient cloudevents.Client
@@ -60,7 +82,11 @@ type EventType struct {
 
 // getEventType returns the event type and status
 func getEventType(runObject objectWithCondition) (*EventType, error) {
-	c := runObject.GetStatusCondition().GetCondition(apis.ConditionSucceeded)
+	statusCondition := runObject.GetStatusCondition()
+	if statusCondition == nil {
+		return nil, fmt.Errorf("no condition for ConditionSucceeded in %T", runObject)
+	}
+	c := statusCondition.GetCondition(apis.ConditionSucceeded)
 	if c == nil {
 		return nil, fmt.Errorf("no condition for ConditionSucceeded in %T", runObject)
 	}
@@ -115,17 +141,19 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 // eventForObjectWithCondition creates a new event based for a objectWithCondition,
 // or return an error if not possible.
 func eventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Event, error) {
-	var event cloudevents.Event
-	var err error
-	meta := runObject.GetObjectMeta()
-	data, err := getEventData(runObject)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		event cloudevents.Event
+		err   error
+	)
 	etype, err := getEventType(runObject)
 	if err != nil {
 		return nil, err
 	}
+	data, err := getEventData(runObject)
+	if err != nil {
+		return nil, err
+	}
+	meta := runObject.GetObjectMeta()
 	switch runObject.(type) {
 	case *v1beta1.TaskRun:
 		event, err = cdeevents.CreateTaskRunEvent(etype.Type, string(meta.GetUID()), meta.GetName(), "", data)
@@ -139,8 +167,15 @@ func eventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Ev
 		}
 	}
 	event.SetSubject(runObject.GetObjectMeta().GetName())
+	event.SetSource(getSource(runObject))
+
+	return &event, nil
+}
+
+func getSource(runObject objectWithCondition) string {
 	source := runObject.GetObjectMeta().GetSelfLink()
 	if source == "" {
+		meta := runObject.GetObjectMeta()
 		gvk := runObject.GetObjectKind().GroupVersionKind()
 		source = fmt.Sprintf("/apis/%s/%s/namespaces/%s/%s/%s",
 			gvk.Group,
@@ -149,9 +184,7 @@ func eventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Ev
 			gvk.Kind,
 			meta.GetName())
 	}
-	event.SetSource(source)
-
-	return &event, nil
+	return source
 }
 
 // SendCloudEventWithRetries sends a cloud event for the specified resource.
@@ -167,16 +200,26 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 	if o, ok = object.(objectWithCondition); !ok {
 		return errors.New("input object does not satisfy objectWithCondition")
 	}
-	logger := logging.FromContext(ctx)
 	ceClient := cloudevent.Get(ctx)
 	if ceClient == nil {
 		return errors.New("no cloud events client found in the context")
 	}
-	event, err := eventForObjectWithCondition(o)
-	if err != nil {
-		return err
+	for _, eventCreator := range eventCreators {
+		event, err := eventCreator(o)
+		if err != nil {
+			return err
+		}
+		err = sendCloudEventWithRetries(ctx, object, event)
+		if err != nil {
+			logging.FromContext(ctx).Warnf("got error %s while sending event %T", err, event)
+		}
 	}
+	return nil
+}
 
+func sendCloudEventWithRetries(ctx context.Context, object runtime.Object, event *cloudevents.Event) error {
+	logger := logging.FromContext(ctx)
+	ceClient := cloudevent.Get(ctx)
 	wasIn := make(chan error)
 	go func() {
 		wasIn <- nil
@@ -191,6 +234,5 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 			}
 		}
 	}()
-
 	return <-wasIn
 }

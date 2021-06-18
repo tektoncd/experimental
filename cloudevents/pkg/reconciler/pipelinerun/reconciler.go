@@ -30,49 +30,6 @@ import (
 
 type CDEventType string
 
-const (
-//// Environment Annotation
-//cdEnv = "tekton.dev/cd.environment.v1"
-//// Environment Annotation Values
-//cdEnvCreated = "created"
-//cdEnvModified = "modified"
-//cdEnvDeleted = "deleted"
-//
-//// Service Annotation
-//cdSvc = "tekton.dev/cd.service.v1"
-//// states
-//cdSvcStarted = "deployed"
-//cdSvcUpgraded = "upgraded"
-//cdSvcRolledback = "rolledback"
-//cdSvcRemoved = "removed"
-//
-//// TaskRun Annotation
-//cdTR = "tekton.dev/cd.taskrun.v1"
-//// states
-//cdTRStarted = "started"
-//cdTRFinished = "finished"
-//cdTRQueued = "queued"
-//
-//// Repository Annotation
-//cdRepo = "tekton.dev/cd.repository.v1"
-//// states
-//cdRepoCreated = "created"
-//cdRepoModified = "modified"
-//cdRepoDeleted = "deleted"
-
-//// PipelineRun Annotations
-//cdPipelineRunID = "cd.tekton.dev/pipelinerun.v1/id"
-//// states
-//cdPRStarted = "started"
-//cdPRFinished = "finished"
-//cdPRQueued = "queued"
-//
-//// PipelineRun events
-//PipelineRunStartedEventV1 CDEventType = "cd.pipelinerun.started.v1"
-//PipelineRunFinishedEventV1 CDEventType = "cd.pipelinerun.finished.v1"
-//PipelineRunQueuedEventV1 CDEventType = "cd.pipelinerun.queued.v1"
-)
-
 func (t CDEventType) String() string {
 	return string(t)
 }

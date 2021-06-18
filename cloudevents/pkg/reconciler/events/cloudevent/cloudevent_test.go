@@ -219,3 +219,10 @@ func TestEventForPipelineRun(t *testing.T) {
 		})
 	}
 }
+
+func TestEventTypeInvalidType(t *testing.T) {
+	eventType, err := eventForObjectWithCondition(myObjectWithCondition{})
+	if err == nil {
+		t.Fatalf("expected an error, got nil and eventType %s", eventType)
+	}
+}
