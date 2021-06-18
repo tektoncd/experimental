@@ -3,6 +3,7 @@ package pipelinerun
 import (
 	"context"
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
+	cloudeventscache "github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	pipelineruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/pipelinerun"
 	pipelinerunreconciler "github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1beta1/pipelinerun"
@@ -23,6 +24,7 @@ func NewController() func(context.Context, configmap.Watcher) *controller.Impl {
 		pipelineRunInformer := pipelineruninformer.Get(ctx)
 		c := &Reconciler{
 			cloudEventClient: cloudeventclient.Get(ctx),
+			cacheClient: cloudeventscache.Get(ctx),
 		}
 		impl := pipelinerunreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
 			configStore := config.NewStore(logger.Named("config-store"))
