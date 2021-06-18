@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The Tekton Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pipelinerun
 
 import (
@@ -10,8 +26,9 @@ import (
 	"time"
 
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
+	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cloudevent"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
+	pipelinecloudevent "github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"
 	"github.com/tektoncd/pipeline/test/names"
@@ -34,7 +51,7 @@ type PipelineRunTest struct {
 	Cancel     func()
 }
 
-func (prt PipelineRunTest) reconcileRun(namespace, pipelineRunName string, wantEvents []string, permanentError bool) (*v1beta1.PipelineRun, test.Clients) {
+func (prt PipelineRunTest) reconcileRun(namespace, pipelineRunName string, permanentError bool) (*v1beta1.PipelineRun, test.Clients) {
 	prt.Test.Helper()
 	c := prt.TestAssets.Controller
 	clients := prt.TestAssets.Clients
@@ -61,7 +78,7 @@ func (prt PipelineRunTest) reconcileRun(namespace, pipelineRunName string, wantE
 	return reconciledRun, clients
 }
 
-func checkCloudEvents(t *testing.T, fce *cloudevent.FakeClient, testName string, wantEvents []string) error {
+func checkCloudEvents(t *testing.T, fce *pipelinecloudevent.FakeClient, testName string, wantEvents []string) error {
 	t.Helper()
 	return eventFromChannel(fce.Events, testName, wantEvents)
 }
@@ -220,6 +237,8 @@ func TestReconcile_CloudEvents(t *testing.T) {
 		condition       *apis.Condition
 		wantCloudEvents []string
 		startTime       bool
+		annotations     map[string]string
+		results         map[string]string
 	}{{
 		name:            "Pipeline with no condition",
 		condition:       nil,
@@ -252,6 +271,26 @@ func TestReconcile_CloudEvents(t *testing.T) {
 		},
 		startTime:       true,
 		wantCloudEvents: []string{`(?s)cd.pipelinerun.finished.v1.*test-pipelinerun`},
+	}, {
+		name: "Pipeline with finished successfully, artifact annotations",
+		condition: &apis.Condition{
+			Type:   apis.ConditionSucceeded,
+			Status: corev1.ConditionTrue,
+			Reason: v1beta1.PipelineRunReasonSuccessful.String(),
+		},
+		startTime: true,
+		annotations: map[string]string{
+			cloudevent.CDEventAnnotationTypeKey: string(cloudevent.ArtifactPackagedEventAnnotation),
+		},
+		results: map[string]string{
+			"cd.artifact.id":      "456",
+			"cd.artifact.name":    "image1",
+			"cd.artifact.version": "v123",
+		},
+		wantCloudEvents: []string{
+			`(?s)cd.pipelinerun.finished.v1.*test-pipelinerun`,
+			`(?s)cd.artifact.packaged.v1.*image1.*test-pipelinerun`,
+		},
 	}}
 
 	for _, tc := range testcases {
@@ -267,23 +306,38 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			if tc.startTime {
 				pipelineStatusFields.StartTime = &metav1.Time{Time: time.Now()}
 			}
-			prs := []*v1beta1.PipelineRun{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-pipelinerun",
-						Namespace: "foo",
-					},
-					Spec: v1beta1.PipelineRunSpec{
-						PipelineRef: &v1beta1.PipelineRef{
-							Name: "test-pipeline",
-						},
-					},
-					Status: v1beta1.PipelineRunStatus{
-						Status:                  objectStatus,
-						PipelineRunStatusFields: pipelineStatusFields,
+			pr := v1beta1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pipelinerun",
+					Namespace: "foo",
+				},
+				Spec: v1beta1.PipelineRunSpec{
+					PipelineRef: &v1beta1.PipelineRef{
+						Name: "test-pipeline",
 					},
 				},
+				Status: v1beta1.PipelineRunStatus{
+					Status:                  objectStatus,
+					PipelineRunStatusFields: pipelineStatusFields,
+				},
 			}
+			// Set annotations, if any
+			if tc.annotations != nil {
+				if pr.ObjectMeta.Annotations == nil {
+					pr.ObjectMeta.Annotations = map[string]string{}
+				}
+				for k, v := range tc.annotations {
+					pr.ObjectMeta.Annotations[k] = v
+				}
+			}
+			// Set results, if any
+			if tc.results != nil {
+				for k, v := range tc.results {
+					trr := v1beta1.PipelineRunResult{Name: k, Value: v}
+					pr.Status.PipelineResults = append(pr.Status.PipelineResults, trr)
+				}
+			}
+			prs := []*v1beta1.PipelineRun{&pr}
 
 			d := test.Data{
 				PipelineRuns: prs,
@@ -294,12 +348,11 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			prt := newPipelineRunTest(d, t)
 			defer prt.Cancel()
 
-			wantEvents := []string{}
-			_, clients := prt.reconcileRun("foo", "test-pipelinerun", wantEvents, false)
+			_, clients := prt.reconcileRun("foo", "test-pipelinerun", false)
 
-			ceClient := clients.CloudEvents.(cloudevent.FakeClient)
+			ceClient := clients.CloudEvents.(pipelinecloudevent.FakeClient)
 			err := checkCloudEvents(t, &ceClient, "reconcile-cloud-events", tc.wantCloudEvents)
-			if !(err == nil) {
+			if err != nil {
 				t.Errorf(err.Error())
 			}
 		})
