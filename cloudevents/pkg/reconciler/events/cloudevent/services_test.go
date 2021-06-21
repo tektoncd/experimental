@@ -28,40 +28,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func getTaskRunByConditionAndResults(status corev1.ConditionStatus, reason string, annotations map[string]string, results map[string]string) *v1beta1.TaskRun {
-	taskRun := getTaskRunByCondition(status, reason)
-	taskRunResults := []v1beta1.TaskRunResult{}
-	for key, value := range results {
-		taskRunResults = append(taskRunResults, v1beta1.TaskRunResult{
-			Name:  key,
-			Value: value,
-		})
-	}
-	taskRun.Status.TaskRunResults = taskRunResults
-	taskRun.ObjectMeta.Annotations = annotations
-	return taskRun
-}
-
-func getPipelineRunByConditionAndResults(status corev1.ConditionStatus, reason string, annotations map[string]string, results map[string]string) *v1beta1.PipelineRun {
-	pipelineRun := getPipelineRunByCondition(status, reason)
-	pipelineRunResults := []v1beta1.PipelineRunResult{}
-	for key, value := range results {
-		pipelineRunResults = append(pipelineRunResults, v1beta1.PipelineRunResult{
-			Name:  key,
-			Value: value,
-		})
-	}
-	pipelineRun.Status.PipelineResults = pipelineRunResults
-	pipelineRun.ObjectMeta.Annotations = annotations
-	return pipelineRun
-}
-
 var (
-	artifactPackagedEventType  = &EventType{Type: cdeevents.ArtifactPackagedEventV1}
-	artifactPublishedEventType = &EventType{Type: cdeevents.ArtifactPublishedEventV1}
+	serviceDeployedEventType   = &EventType{Type: cdeevents.ServiceDeployedEventV1}
+	serviceRolledbackEventType = &EventType{Type: cdeevents.ServiceRolledbackEventV1}
 )
 
-func TestArtifactEventsForTaskRun(t *testing.T) {
+func TestServiceEventsForTaskRun(t *testing.T) {
 	taskRunTests := []struct {
 		desc      string
 		taskRun   *v1beta1.TaskRun
@@ -75,7 +47,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
-			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
+			map[string]string{ServiceDeployedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -83,7 +55,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
-			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
+			map[string]string{ServiceDeployedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -91,7 +63,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
-			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
+			map[string]string{ServiceDeployedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: false,
 	}}
@@ -100,7 +72,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := getArtifactPackagedEventType(c.taskRun)
+			got, err := getServiceDeployedEventType(c.taskRun)
 			if err != nil {
 				if !c.wantError {
 					t.Fatalf("I did not expect an error but I got %s", err)
@@ -109,7 +81,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 				if c.wantError {
 					t.Fatalf("I did expect an error but I got %s", got)
 				}
-				if d := cmp.Diff(artifactPackagedEventType, got); d != "" {
+				if d := cmp.Diff(serviceDeployedEventType, got); d != "" {
 					t.Errorf("Wrong Event Type %s", diff.PrintWantGot(d))
 				}
 			}
@@ -117,7 +89,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 	}
 }
 
-func TestArtifactEventsForPipelineRun(t *testing.T) {
+func TestServiceEventsForPipelineRun(t *testing.T) {
 	pipelineRunTests := []struct {
 		desc        string
 		pipelineRun *v1beta1.PipelineRun
@@ -131,7 +103,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -139,7 +111,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -147,7 +119,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: false,
 	}}
@@ -156,7 +128,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := getArtifactPublishedEventType(c.pipelineRun)
+			got, err := getServiceRolledbackEventType(c.pipelineRun)
 			if err != nil {
 				if !c.wantError {
 					t.Fatalf("I did not expect an error but I got %s", err)
@@ -165,7 +137,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 				if c.wantError {
 					t.Fatalf("I did expect an error but I got %s", got)
 				}
-				if d := cmp.Diff(artifactPublishedEventType, got); d != "" {
+				if d := cmp.Diff(serviceRolledbackEventType, got); d != "" {
 					t.Errorf("Wrong Event Type %s", diff.PrintWantGot(d))
 				}
 			}
@@ -173,7 +145,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 	}
 }
 
-func TestGetArtifactEventDataPipelineRun(t *testing.T) {
+func TestGetServiceEventDataPipelineRun(t *testing.T) {
 	pipelineRunTests := []struct {
 		desc        string
 		pipelineRun *v1beta1.PipelineRun
@@ -184,26 +156,26 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
-				"cd.artifact.name":    "testArtifact",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
 			}),
 		wantData: CDECloudEventData{
-			"artifactId":      "test123",
-			"artifactVersion": "v123",
-			"artifactName":    "testArtifact"},
+			"serviceEnvId":   "test123",
+			"serviceVersion": "v123",
+			"serviceName":    "testService"},
 		wantError: false,
 	}, {
 		desc: "pipelinerun with default results, missing",
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
 			}),
 		wantData:  nil,
 		wantError: true,
@@ -213,18 +185,18 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
-				ArtifactPublishedEventAnnotation.String():                   "",
-				artifactMappings["artifactId"].annotationResultNameKey:      "builtImage",
-				artifactMappings["artifactVersion"].annotationResultNameKey: "tag"},
+				ServiceRolledbackEventAnnotation.String():                 "",
+				serviceMappings["serviceEnvId"].annotationResultNameKey:   "cluster",
+				serviceMappings["serviceVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
-				"builtImage":       "test123",
-				"cd.artifact.name": "testimage",
-				"tag":              "v123",
+				"cluster":         "test123",
+				"cd.service.name": "testimage",
+				"tag":             "v123",
 			}),
 		wantData: CDECloudEventData{
-			"artifactId":      "test123",
-			"artifactVersion": "v123",
-			"artifactName":    "testimage"},
+			"serviceEnvId":   "test123",
+			"serviceVersion": "v123",
+			"serviceName":    "testimage"},
 		wantError: false,
 	}, {
 		desc: "pipelinerun with overwritten results, missing an overwritten one",
@@ -232,12 +204,12 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
-				ArtifactPublishedEventAnnotation.String():                   "",
-				artifactMappings["artifactId"].annotationResultNameKey:      "builtImage",
-				artifactMappings["artifactVersion"].annotationResultNameKey: "tag"},
+				ServiceRolledbackEventAnnotation.String():                 "",
+				serviceMappings["serviceEnvId"].annotationResultNameKey:   "builtImage",
+				serviceMappings["serviceVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
-				"builtImage":       "test123",
-				"cd.artifact.name": "testimage",
+				"builtImage":      "test123",
+				"cd.service.name": "testimage",
 			}),
 		wantData:  nil,
 		wantError: true,
@@ -247,7 +219,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := getArtifactEventData(c.pipelineRun)
+			got, err := getServiceEventData(c.pipelineRun)
 			if err != nil {
 				if !c.wantError {
 					t.Fatalf("I did not expect an error but I got %s", err)
@@ -265,7 +237,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 	}
 }
 
-func TestGetArtifactEventDataTaskRun(t *testing.T) {
+func TestGetServiceEventDataTaskRun(t *testing.T) {
 	taskRunTests := []struct {
 		desc      string
 		taskRun   *v1beta1.TaskRun
@@ -276,26 +248,26 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
-				"cd.artifact.name":    "testArtifact",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
 			}),
 		wantData: CDECloudEventData{
-			"artifactId":      "test123",
-			"artifactVersion": "v123",
-			"artifactName":    "testArtifact"},
+			"serviceEnvId":   "test123",
+			"serviceVersion": "v123",
+			"serviceName":    "testService"},
 		wantError: false,
 	}, {
 		desc: "taskrun with default results, missing",
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
 			}),
 		wantData:  nil,
 		wantError: true,
@@ -305,18 +277,18 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
-				ArtifactPublishedEventAnnotation.String():                   "",
-				artifactMappings["artifactId"].annotationResultNameKey:      "builtImage",
-				artifactMappings["artifactVersion"].annotationResultNameKey: "tag"},
+				ServiceRolledbackEventAnnotation.String():                 "",
+				serviceMappings["serviceEnvId"].annotationResultNameKey:   "builtImage",
+				serviceMappings["serviceVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
-				"builtImage":       "test123",
-				"cd.artifact.name": "testimage",
-				"tag":              "v123",
+				"builtImage":      "test123",
+				"cd.service.name": "testimage",
+				"tag":             "v123",
 			}),
 		wantData: CDECloudEventData{
-			"artifactId":      "test123",
-			"artifactVersion": "v123",
-			"artifactName":    "testimage"},
+			"serviceEnvId":   "test123",
+			"serviceVersion": "v123",
+			"serviceName":    "testimage"},
 		wantError: false,
 	}, {
 		desc: "taskrun with overwritten results, missing an overwritten one",
@@ -324,12 +296,12 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
-				ArtifactPublishedEventAnnotation.String():                   "",
-				artifactMappings["artifactId"].annotationResultNameKey:      "builtImage",
-				artifactMappings["artifactVersion"].annotationResultNameKey: "tag"},
+				ServiceRolledbackEventAnnotation.String():                 "",
+				serviceMappings["serviceEnvId"].annotationResultNameKey:   "builtImage",
+				serviceMappings["serviceVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
-				"builtImage":       "test123",
-				"cd.artifact.name": "testimage",
+				"builtImage":      "test123",
+				"cd.service.name": "testimage",
 			}),
 		wantData:  nil,
 		wantError: true,
@@ -339,7 +311,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := getArtifactEventData(c.taskRun)
+			got, err := getServiceEventData(c.taskRun)
 			if err != nil {
 				if !c.wantError {
 					t.Fatalf("I did not expect an error but I got %s", err)
@@ -357,50 +329,50 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 	}
 }
 
-func TestArtifactPublishedEvent(t *testing.T) {
-	artifactPublishedTests := []struct {
+func TestServiceRolledbackEvent(t *testing.T) {
+	serviceRolledbackTests := []struct {
 		desc                string
 		object              interface{}
 		wantEventExtensions map[string]interface{}
 	}{{
-		desc: "artifact event for taskrun",
+		desc: "service event for taskrun",
 		object: getTaskRunByConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
-				"cd.artifact.name":    "testArtifact",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
 			}),
 		wantEventExtensions: map[string]interface{}{
-			"artifactid":      "test123",
-			"artifactversion": "v123",
-			"artifactname":    "testArtifact",
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
 		},
 	}, {
-		desc: "artifact event for pipelinerun",
+		desc: "service event for pipelinerun",
 		object: getPipelineRunByConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
-			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
+			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
-				"cd.artifact.name":    "testArtifact",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
 			}),
 		wantEventExtensions: map[string]interface{}{
-			"artifactid":      "test123",
-			"artifactversion": "v123",
-			"artifactname":    "testArtifact",
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
 		},
 	}}
 
-	for _, c := range artifactPublishedTests {
+	for _, c := range serviceRolledbackTests {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := artifactPublishedEventForObjectWithCondition(c.object.(objectWithCondition))
+			got, err := serviceRolledbackEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {
 				t.Fatalf("I did not expect an error but I got %s", err)
 			} else {
@@ -413,52 +385,168 @@ func TestArtifactPublishedEvent(t *testing.T) {
 	}
 }
 
-func TestArtifactPackagedEvent(t *testing.T) {
-	artifactPackagedTests := []struct {
+func TestServiceDeployedEvent(t *testing.T) {
+	serviceDeployedTests := []struct {
 		desc                string
 		object              interface{}
 		wantEventExtensions map[string]interface{}
 	}{{
-		desc: "artifact event for taskrun",
+		desc: "service event for taskrun",
 		object: getTaskRunByConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{
-				ArtifactPackagedEventAnnotation.String(): ""},
+				ServiceDeployedEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
-				"cd.artifact.name":    "testArtifact",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
 			}),
 		wantEventExtensions: map[string]interface{}{
-			"artifactid":      "test123",
-			"artifactversion": "v123",
-			"artifactname":    "testArtifact",
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
 		},
 	}, {
-		desc: "artifact event for pipelinerun",
+		desc: "service event for pipelinerun",
 		object: getPipelineRunByConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{
-				ArtifactPackagedEventAnnotation.String(): ""},
+				ServiceDeployedEventAnnotation.String(): ""},
 			map[string]string{
-				"cd.artifact.id":      "test123",
-				"cd.artifact.version": "v123",
-				"cd.artifact.name":    "testArtifact",
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
 			}),
 		wantEventExtensions: map[string]interface{}{
-			"artifactid":      "test123",
-			"artifactversion": "v123",
-			"artifactname":    "testArtifact",
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
 		},
 	}}
 
-	for _, c := range artifactPackagedTests {
+	for _, c := range serviceDeployedTests {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := artifactPackagedEventForObjectWithCondition(c.object.(objectWithCondition))
+			got, err := serviceDeployedEventForObjectWithCondition(c.object.(objectWithCondition))
+			if err != nil {
+				t.Fatalf("I did not expect an error but I got %s", err)
+			} else {
+				extensions := got.Extensions()
+				if d := cmp.Diff(c.wantEventExtensions, extensions); d != "" {
+					t.Errorf("Wrong Event Extenstions %s", diff.PrintWantGot(d))
+				}
+			}
+		})
+	}
+}
+
+func TestServiceUpgradedEvent(t *testing.T) {
+	serviceDeployedTests := []struct {
+		desc                string
+		object              interface{}
+		wantEventExtensions map[string]interface{}
+	}{{
+		desc: "service event for taskrun",
+		object: getTaskRunByConditionAndResults(
+			corev1.ConditionTrue,
+			v1beta1.TaskRunReasonSuccessful.String(),
+			map[string]string{
+				ServiceUpgradedEventAnnotation.String(): ""},
+			map[string]string{
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
+			}),
+		wantEventExtensions: map[string]interface{}{
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
+		},
+	}, {
+		desc: "service event for pipelinerun",
+		object: getPipelineRunByConditionAndResults(
+			corev1.ConditionTrue,
+			v1beta1.PipelineRunReasonSuccessful.String(),
+			map[string]string{
+				ServiceUpgradedEventAnnotation.String(): ""},
+			map[string]string{
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
+			}),
+		wantEventExtensions: map[string]interface{}{
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
+		},
+	}}
+
+	for _, c := range serviceDeployedTests {
+		t.Run(c.desc, func(t *testing.T) {
+			names.TestingSeed()
+
+			got, err := serviceUpgradedEventForObjectWithCondition(c.object.(objectWithCondition))
+			if err != nil {
+				t.Fatalf("I did not expect an error but I got %s", err)
+			} else {
+				extensions := got.Extensions()
+				if d := cmp.Diff(c.wantEventExtensions, extensions); d != "" {
+					t.Errorf("Wrong Event Extenstions %s", diff.PrintWantGot(d))
+				}
+			}
+		})
+	}
+}
+
+func TestServiceRemovedEvent(t *testing.T) {
+	serviceDeployedTests := []struct {
+		desc                string
+		object              interface{}
+		wantEventExtensions map[string]interface{}
+	}{{
+		desc: "service event for taskrun",
+		object: getTaskRunByConditionAndResults(
+			corev1.ConditionTrue,
+			v1beta1.TaskRunReasonSuccessful.String(),
+			map[string]string{
+				ServiceRemovedEventAnnotation.String(): ""},
+			map[string]string{
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
+			}),
+		wantEventExtensions: map[string]interface{}{
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
+		},
+	}, {
+		desc: "service event for pipelinerun",
+		object: getPipelineRunByConditionAndResults(
+			corev1.ConditionTrue,
+			v1beta1.PipelineRunReasonSuccessful.String(),
+			map[string]string{
+				ServiceRemovedEventAnnotation.String(): ""},
+			map[string]string{
+				"cd.service.envId":   "test123",
+				"cd.service.version": "v123",
+				"cd.service.name":    "testService",
+			}),
+		wantEventExtensions: map[string]interface{}{
+			"serviceenvid":   "test123",
+			"serviceversion": "v123",
+			"servicename":    "testService",
+		},
+	}}
+
+	for _, c := range serviceDeployedTests {
+		t.Run(c.desc, func(t *testing.T) {
+			names.TestingSeed()
+
+			got, err := serviceRemovedEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {
 				t.Fatalf("I did not expect an error but I got %s", err)
 			} else {
