@@ -24,22 +24,20 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-var (
-	mappings = map[string]resultMapping{
-		"artifactId": {
-			defaultResultName:       "cd.artifact.id",
-			annotationResultNameKey: "cd.events/results.artifact.id",
-		},
-		"artifactName": {
-			defaultResultName:       "cd.artifact.name",
-			annotationResultNameKey: "cd.events/results.artifact.name",
-		},
-		"artifactVersion": {
-			defaultResultName:       "cd.artifact.version",
-			annotationResultNameKey: "cd.events/results.artifact.version",
-		},
-	}
-)
+var artifactMappings = map[string]resultMapping{
+	"artifactId": {
+		defaultResultName:       "cd.artifact.id",
+		annotationResultNameKey: "cd.events/results.artifact.id",
+	},
+	"artifactName": {
+		defaultResultName:       "cd.artifact.name",
+		annotationResultNameKey: "cd.events/results.artifact.name",
+	},
+	"artifactVersion": {
+		defaultResultName:       "cd.artifact.version",
+		annotationResultNameKey: "cd.events/results.artifact.version",
+	},
+}
 
 const ArtifactPackagedEventAnnotation cdEventAnnotationType = "cd.artifact.packaged"
 const ArtifactPublishedEventAnnotation cdEventAnnotationType = "cd.artifact.published"
@@ -87,7 +85,7 @@ func getArtifactEventData(runObject objectWithCondition) (CDECloudEventData, err
 	if err != nil {
 		return nil, err
 	}
-	for mappingName, mapping := range mappings {
+	for mappingName, mapping := range artifactMappings {
 		mappingValue, err := resultForMapping(runObject, mapping)
 		if err != nil {
 			return nil, err
@@ -107,7 +105,7 @@ func getArtifactPublishedEventData(runObject objectWithCondition) (CDECloudEvent
 	return getArtifactEventData(runObject)
 }
 
-func artifactPackagedEvenForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Event, error) {
+func artifactPackagedEventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Event, error) {
 	etype, err := getArtifactPackagedEventType(runObject)
 	if err != nil {
 		return nil, err
@@ -130,7 +128,7 @@ func artifactPackagedEvenForObjectWithCondition(runObject objectWithCondition) (
 	return &event, nil
 }
 
-func artifactPublishedEvenForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Event, error) {
+func artifactPublishedEventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Event, error) {
 	etype, err := getArtifactPublishedEventType(runObject)
 	if err != nil {
 		return nil, err

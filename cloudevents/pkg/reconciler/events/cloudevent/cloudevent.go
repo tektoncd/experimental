@@ -46,8 +46,8 @@ const (
 
 var eventCreators = []cdEventCreator{
 	eventForObjectWithCondition,
-	artifactPackagedEvenForObjectWithCondition,
-	artifactPublishedEvenForObjectWithCondition,
+	artifactPackagedEventForObjectWithCondition,
+	artifactPublishedEventForObjectWithCondition,
 }
 
 // CEClient matches the `Client` interface from github.com/cloudevents/sdk-go/v2/cloudevents
