@@ -20,11 +20,12 @@ type objectWithCondition interface {
 	GetStatusCondition() apis.ConditionAccessor
 }
 
-// cdEventAnnotationKey is the name of the annotations used to store the kind of CD Event
-const CDEventAnnotationTypeKey string = "cd.events/type"
-
 // cdEventAnnotationType is an ENUM with all possible values for cdEventAnnotationKey
 type cdEventAnnotationType string
+
+func (cdea cdEventAnnotationType) String() string {
+	return string(cdea)
+}
 
 // cdEventCreate is a function that creates a cd event from an objectWithCondition
 type cdEventCreator func(runObject objectWithCondition) (*cloudevents.Event, error)
