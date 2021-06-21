@@ -75,7 +75,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
-			map[string]string{CDEventAnnotationTypeKey: string(ArtifactPackagedEventAnnotation)},
+			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -83,7 +83,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
-			map[string]string{CDEventAnnotationTypeKey: string(ArtifactPackagedEventAnnotation)},
+			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -91,7 +91,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
-			map[string]string{CDEventAnnotationTypeKey: string(ArtifactPackagedEventAnnotation)},
+			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: false,
 	}}
@@ -131,7 +131,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
-			map[string]string{CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -139,7 +139,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
-			map[string]string{CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: true,
 	}, {
@@ -147,7 +147,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
-			map[string]string{CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{}),
 		wantError: false,
 	}}
@@ -184,8 +184,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
-			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",
@@ -201,8 +200,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		pipelineRun: getPipelineRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
-			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",
@@ -215,7 +213,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
-				CDEventAnnotationTypeKey:                            string(ArtifactPublishedEventAnnotation),
+				ArtifactPublishedEventAnnotation.String():           "",
 				mappings["artifactId"].annotationResultNameKey:      "builtImage",
 				mappings["artifactVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
@@ -234,7 +232,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
-				CDEventAnnotationTypeKey:                            string(ArtifactPublishedEventAnnotation),
+				ArtifactPublishedEventAnnotation.String():           "",
 				mappings["artifactId"].annotationResultNameKey:      "builtImage",
 				mappings["artifactVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
@@ -278,8 +276,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
-			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",
@@ -295,8 +292,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		taskRun: getTaskRunByConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
-			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",
@@ -309,7 +305,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
-				CDEventAnnotationTypeKey:                            string(ArtifactPublishedEventAnnotation),
+				ArtifactPublishedEventAnnotation.String():           "",
 				mappings["artifactId"].annotationResultNameKey:      "builtImage",
 				mappings["artifactVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
@@ -328,7 +324,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
-				CDEventAnnotationTypeKey:                            string(ArtifactPublishedEventAnnotation),
+				ArtifactPublishedEventAnnotation.String():           "",
 				mappings["artifactId"].annotationResultNameKey:      "builtImage",
 				mappings["artifactVersion"].annotationResultNameKey: "tag"},
 			map[string]string{
@@ -371,8 +367,7 @@ func TestArtifactPublishedEvent(t *testing.T) {
 		object: getTaskRunByConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
-			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",
@@ -388,8 +383,7 @@ func TestArtifactPublishedEvent(t *testing.T) {
 		object: getPipelineRunByConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
-			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPublishedEventAnnotation)},
+			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",
@@ -430,7 +424,7 @@ func TestArtifactPackagedEvent(t *testing.T) {
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPackagedEventAnnotation)},
+				ArtifactPackagedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",
@@ -447,7 +441,7 @@ func TestArtifactPackagedEvent(t *testing.T) {
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{
-				CDEventAnnotationTypeKey: string(ArtifactPackagedEventAnnotation)},
+				ArtifactPackagedEventAnnotation.String(): ""},
 			map[string]string{
 				"cd.artifact.id":      "test123",
 				"cd.artifact.version": "v123",

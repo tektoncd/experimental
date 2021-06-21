@@ -280,7 +280,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 		},
 		startTime: true,
 		annotations: map[string]string{
-			cloudevent.CDEventAnnotationTypeKey: string(cloudevent.ArtifactPackagedEventAnnotation),
+			cloudevent.ArtifactPackagedEventAnnotation.String(): "",
 		},
 		results: map[string]string{
 			"cd.artifact.id":      "456",

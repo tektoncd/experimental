@@ -66,23 +66,19 @@ func getArtifactEventType(runObject objectWithCondition, cdEventType cdeevents.C
 // getArtifactPackagedEventType returns a CDF Artifact Packaged EventType if objectWithCondition meets conditions
 func getArtifactPackagedEventType(runObject objectWithCondition) (*EventType, error) {
 	annotations := runObject.GetObjectMeta().GetAnnotations()
-	if name, ok := annotations[CDEventAnnotationTypeKey]; ok {
-		if name == string(ArtifactPackagedEventAnnotation) {
-			return getArtifactEventType(runObject, cdeevents.ArtifactPackagedEventV1)
-		}
+	if _, ok := annotations[ArtifactPackagedEventAnnotation.String()]; ok {
+		return getArtifactEventType(runObject, cdeevents.ArtifactPackagedEventV1)
 	}
-	return nil, fmt.Errorf("no %s annotation found", CDEventAnnotationTypeKey)
+	return nil, fmt.Errorf("no %s annotation found", ArtifactPackagedEventAnnotation.String())
 }
 
 // getArtifactPublishedEventType returns a CDF Artifact Published EventType if objectWithCondition meets conditions
 func getArtifactPublishedEventType(runObject objectWithCondition) (*EventType, error) {
 	annotations := runObject.GetObjectMeta().GetAnnotations()
-	if name, ok := annotations[CDEventAnnotationTypeKey]; ok {
-		if name == string(ArtifactPublishedEventAnnotation) {
-			return getArtifactEventType(runObject, cdeevents.ArtifactPublishedEventV1)
-		}
+	if _, ok := annotations[ArtifactPublishedEventAnnotation.String()]; ok {
+		return getArtifactEventType(runObject, cdeevents.ArtifactPublishedEventV1)
 	}
-	return nil, fmt.Errorf("no %s annotation found", CDEventAnnotationTypeKey)
+	return nil, fmt.Errorf("no %s annotation found", ArtifactPublishedEventAnnotation.String())
 }
 
 // getArtifactEventData
@@ -130,6 +126,7 @@ func artifactPackagedEvenForObjectWithCondition(runObject objectWithCondition) (
 	if err != nil {
 		return nil, err
 	}
+	event.SetSource(getSource(runObject))
 	return &event, nil
 }
 
@@ -152,5 +149,6 @@ func artifactPublishedEvenForObjectWithCondition(runObject objectWithCondition) 
 	if err != nil {
 		return nil, err
 	}
+	event.SetSource(getSource(runObject))
 	return &event, nil
 }
