@@ -48,6 +48,10 @@ var eventCreators = []cdEventCreator{
 	eventForObjectWithCondition,
 	artifactPackagedEventForObjectWithCondition,
 	artifactPublishedEventForObjectWithCondition,
+	serviceRemovedEventForObjectWithCondition,
+	serviceUpgradedEventForObjectWithCondition,
+	serviceDeployedEventForObjectWithCondition,
+	serviceRolledbackEventForObjectWithCondition,
 }
 
 // CEClient matches the `Client` interface from github.com/cloudevents/sdk-go/v2/cloudevents
@@ -207,7 +211,8 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 	for _, eventCreator := range eventCreators {
 		event, err := eventCreator(o)
 		if err != nil {
-			return err
+			logging.FromContext(ctx).Warnf("no event to send %s", err)
+			continue
 		}
 		err = sendCloudEventWithRetries(ctx, object, event)
 		if err != nil {
