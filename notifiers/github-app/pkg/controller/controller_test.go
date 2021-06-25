@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v32/github"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	informers "github.com/tektoncd/pipeline/pkg/client/informers/externalversions"
 	"go.uber.org/zap/zaptest"
@@ -101,4 +102,28 @@ func TestGitHubAppReconciler_Reconcile(t *testing.T) {
 	if tr.Annotations[key("checkrun")] != "1234" {
 		t.Fatalf("%s: want %s, got %s", key("checkrun"), "1234", tr.Annotations[key("checkrun")])
 	}
+}
+
+// TestGitHubAppReconciler_Noop tests that we can successfully handle unrelated
+// TaskRuns (e.g. ones without annotations).
+func TestGitHubAppReconciler_Noop(t *testing.T) {
+	tr := &v1beta1.TaskRun{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "foo",
+			Namespace: "ns",
+		},
+	}
+	tekton := faketekton.NewSimpleClientset(tr)
+	informer := informers.NewSharedInformerFactory(tekton, 0)
+	informer.Tekton().V1beta1().TaskRuns().Informer().GetIndexer().Add(tr)
+
+	r := &GitHubAppReconciler{
+		Logger:        zaptest.NewLogger(t).Sugar(),
+		Tekton:        tekton.TektonV1beta1(),
+		TaskRunLister: informer.Tekton().V1beta1().TaskRuns().Lister(),
+	}
+	if err := r.Reconcile(context.Background(), tr.GetNamespacedName().String()); err != nil {
+		t.Error(err)
+	}
+
 }

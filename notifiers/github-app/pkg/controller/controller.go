@@ -60,6 +60,11 @@ func (r *GitHubAppReconciler) Reconcile(ctx context.Context, reconcileKey string
 	}
 	log = log.With(zap.String("uid", string(tr.UID)))
 
+	if tr.Annotations[key("owner")] == "" || tr.Annotations[key("repo")] == "" {
+		log.Info("no GitHub annotations found, skipping.")
+		return nil
+	}
+
 	log.Info("Sending update")
 
 	// If no installation is associated, assume a non-GitHub App status.
