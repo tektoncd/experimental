@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 	"k8s.io/apimachinery/pkg/util/json"
 	"time"
 
@@ -229,6 +230,15 @@ func sendCloudEventWithRetries(ctx context.Context, object runtime.Object, event
 	go func() {
 		wasIn <- nil
 		logger.Debugf("Sending cloudevent of type %q", event.Type())
+		// check cache if cloudevent is already sent
+		cloudEventSent ,err := cache.IsCloudEventSent(ctx, event)
+		if err != nil {
+			logger.Panicf("error while checking cache : "  + err.Error())
+		}
+		if cloudEventSent {
+			logger.Infof("cloudevent '"+event.String() +"' already sent")
+			return
+		}
 		if result := ceClient.Send(cloudevents.ContextWithRetriesExponentialBackoff(ctx, 10*time.Millisecond, 10), *event); !cloudevents.IsACK(result) {
 			logger.Warnf("Failed to send cloudevent: %s", result.Error())
 			recorder := controller.GetEventRecorder(ctx)
@@ -237,6 +247,9 @@ func sendCloudEventWithRetries(ctx context.Context, object runtime.Object, event
 			} else {
 				recorder.Event(object, corev1.EventTypeWarning, "Cloud Event Failure", result.Error())
 			}
+		}
+		if err := cache.AddEventSentToCache(ctx, event); err != nil {
+			logger.Panicf("error while adding sent event to cache : "  + err.Error())
 		}
 	}()
 	return <-wasIn

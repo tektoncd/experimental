@@ -141,10 +141,6 @@ github.com/blendle/zapdriver v1.3.1/go.mod h1:mdXfREi6u5MArG4j9fewC+FGnXaBR+T4Ox
 github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b/go.mod h1:ac9efd0D1fsDb3EJvhqgXRbFx7bs2wqZ10HQPeU8U/Q=
 github.com/c2h5oh/datasize v0.0.0-20171227191756-4eba002a5eae/go.mod h1:S/7n9copUssQ56c7aAgHqftWO4LTf4xY6CGWt8Bc+3M=
 github.com/casbin/casbin/v2 v2.1.2/go.mod h1:YcPU1XXisHhLzuxH9coDNf2FbKpjGlbCg3n9yuLkIJQ=
-github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210615132203-8e93cb616045 h1:7OxBfPTKazzqkATM4vnqXC8CBdzsDuIKial39YilRjw=
-github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210615132203-8e93cb616045/go.mod h1:xghRV+aIAccdyXaxtjeIxY/JhE8jrnEzBI6Ut+ZVS2Y=
-github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210616124232-6d6ea603dad5 h1:S6xY+fPVldKDy7qcxFPqegdaPOoM579S2Wvvw7pmE7Y=
-github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210616124232-6d6ea603dad5/go.mod h1:xghRV+aIAccdyXaxtjeIxY/JhE8jrnEzBI6Ut+ZVS2Y=
 github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210619194635-1b767876db95 h1:My49U1iBg9IvCwWx/8ohRmXf8H4NMzdNduwyobwC3vc=
 github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210619194635-1b767876db95/go.mod h1:xghRV+aIAccdyXaxtjeIxY/JhE8jrnEzBI6Ut+ZVS2Y=
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
@@ -738,7 +734,6 @@ github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
-github.com/tektoncd/experimental v0.7.0 h1:gxk3GF3hAq7JS1ysmgbMkjTsnWhX/Muw3mNU5fSmUpo=
 github.com/tektoncd/pipeline v0.24.3 h1:hfMDwkAa5D4BMKUI0ojivXa1Vw5ls+N3KROtwK8sNd0=
 github.com/tektoncd/pipeline v0.24.3/go.mod h1:8yXwJvaRU+cDH6fjwJFvKFOnB/WYHrRUD66TTR7l1eg=
 github.com/tektoncd/plumbing v0.0.0-20210514044347-f8a9689d5bd5/go.mod h1:WTWwsg91xgm+jPOKoyKVK/yRYxnVDlUYeDlypB1lDdQ=
