@@ -18,7 +18,7 @@ package cache
 
 import (
 	"context"
-	"github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru/simplelru"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
@@ -34,26 +34,26 @@ type CacheKey struct{}
 func withCacheClient(ctx context.Context, cfg *rest.Config) context.Context {
 	logger := logging.FromContext(ctx)
 
-	cacheClient, err := lru.New(128)
+	cacheClient, err := simplelru.NewLRU(128, nil)
+	logger.Infof("CACHE CLIENT %+v",cacheClient)
 	if err != nil {
-		logger.Error("unable to create cacheClient :"+err.Error())
+		logger.Error("unable to create cacheClient :" + err.Error())
 	}
 
-	return context.WithValue(ctx, CacheKey{}, cacheClient)
+	return ToContext(ctx, cacheClient)
 }
 
 // Get extracts the cloudEventClient client from the context.
-func Get(ctx context.Context) *lru.Cache {
+func Get(ctx context.Context) *simplelru.LRU {
 	untyped := ctx.Value(CacheKey{})
 	if untyped == nil {
-		logging.FromContext(ctx).Errorf(
-			"Unable to fetch client from context.")
+		logging.FromContext(ctx).Errorf("Unable to fetch client from context.")
 		return nil
 	}
-	return untyped.(*lru.Cache)
+	return untyped.(*simplelru.LRU)
 }
 
 // ToContext adds the cloud events client to the context
-func ToContext(ctx context.Context, c *lru.Cache) context.Context {
+func ToContext(ctx context.Context, c *simplelru.LRU) context.Context {
 	return context.WithValue(ctx, CacheKey{}, c)
 }

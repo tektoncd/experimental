@@ -18,8 +18,9 @@ package pipelinerun
 
 import (
 	"context"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
+	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
@@ -37,7 +38,7 @@ func (t CDEventType) String() string {
 
 type Reconciler struct {
 	cloudEventClient cloudevent.CEClient
-	cacheClient 	 *lru.Cache
+	cacheClient      *simplelru.LRU
 	tracker          tracker.Interface
 }
 
@@ -45,6 +46,7 @@ type Reconciler struct {
 func (c *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun) kreconciler.Event {
 	logger := logging.FromContext(ctx)
 	ctx = cloudevent.ToContext(ctx, c.cloudEventClient)
+	ctx = cache.ToContext(ctx, c.cacheClient)
 	logger.Infof("Reconciling %s", pr.Name)
 
 	// Create a copy of the pr object, else the controller would try and sync back any change we made

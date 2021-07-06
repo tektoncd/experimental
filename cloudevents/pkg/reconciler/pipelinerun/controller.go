@@ -24,7 +24,7 @@ func NewController() func(context.Context, configmap.Watcher) *controller.Impl {
 		pipelineRunInformer := pipelineruninformer.Get(ctx)
 		c := &Reconciler{
 			cloudEventClient: cloudeventclient.Get(ctx),
-			cacheClient: cloudeventscache.Get(ctx),
+			cacheClient:      cloudeventscache.Get(ctx),
 		}
 		impl := pipelinerunreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
 			configStore := config.NewStore(logger.Named("config-store"))
