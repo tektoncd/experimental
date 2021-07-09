@@ -98,6 +98,26 @@ The annotations are:
     <td>No</td>
     <td>""</td>
   </tr>
+  <tr>
+    <th>
+     tekton.dev/git-repo
+    </th>
+    <td>
+      If provided together with <i>tekton.dev/git-revision</i> detecting the git repository from PiplineResource is skipped and given repository url is used
+    </td>
+    <td>No</td>
+    <td></td>
+  </tr>
+  <tr>
+    <th>
+     tekton.dev/git-revision
+    </th>
+    <td>
+      If provided together with <i>tekton.dev/git-repo</i> detecting the git repository from PiplineResource is skipped and given commit sha is used
+    </td>
+    <td>No</td>
+    <td></td>
+  </tr>
 </table>
 
 ## Detecting the Git Repository
@@ -109,6 +129,8 @@ It looks for a single `PipelineResource` of type `git` and pulls the *url* and *
 If no suitable `PipelineResource` is found, then this will be logged as an
 error, and _not_ retried.
 
+To override this behaviour (e.g. to support `Pipelines` which uses the _git-clone_ `Task`)
+provide a git repository url and a commit sha via annotations
 ## Private Git repository hosts
 
 You'll need to configure the deployment:
