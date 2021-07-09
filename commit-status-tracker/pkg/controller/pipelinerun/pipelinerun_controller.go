@@ -123,18 +123,30 @@ func (r *ReconcilePipelineRun) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.Info("not a notifiable pipeline run")
 		return reconcile.Result{}, nil
 	}
-
-	res, err := findGitResource(pipelineRun)
-	if err != nil {
-		reqLogger.Error(err, "failed to find a git resource")
-		return reconcile.Result{}, nil
+	var repoURL string
+	var sha string
+	gitRepoAnnotated := isGitRepoConfiguredViaAnnotation(pipelineRun)
+	gitRevisionAnnotated := isGitRevisionConfiguredViaAnnotation(pipelineRun)
+	if (gitRepoAnnotated && ! gitRevisionAnnotated) || (!gitRepoAnnotated && gitRevisionAnnotated) {
+		reqLogger.Info(  "failed to use git repository and git revision from annotations. tekton.dev/git-repo or tekton.dev/git-revision missing")
 	}
-	repoURL, sha, err := getRepoAndSHA(res)
-	if err != nil {
-		reqLogger.Error(err, "failed to parse the URL and SHA correctly")
-		return reconcile.Result{}, nil
+	if gitRepoAnnotated && gitRevisionAnnotated {
+		repoURL = getAnnotationByName(pipelineRun, gitRepoToReportTo,"")
+		sha = getAnnotationByName(pipelineRun, gitRevision,"")
+	} else {
+		res, err := findGitResource(pipelineRun)
+		if err != nil {
+			reqLogger.Error(err, "failed to find a git resource")
+			return reconcile.Result{}, nil
+		}
+		repoURLFromResource, shaFromResource, err := getRepoAndSHA(res)
+		if err != nil {
+			reqLogger.Error(err, "failed to parse the URL and SHA correctly")
+			return reconcile.Result{}, nil
+		}
+		repoURL = repoURLFromResource
+		sha = shaFromResource
 	}
-
 	repo, err := extractRepoPath(repoURL)
 	if err != nil {
 		reqLogger.Error(err, "failed to extract repository path")
@@ -163,7 +175,7 @@ func (r *ReconcilePipelineRun) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, nil
 	}
 	commitStatusInput := getCommitStatusInput(pipelineRun)
-	reqLogger.Info("creating a commit status for", "resource", res, "repo", repo, "sha", sha, "status", commitStatusInput)
+	reqLogger.Info("creating a commit status for",  "repo", repo, "sha", sha, "status", commitStatusInput)
 	_, _, err = client.Repositories.CreateStatus(ctx, repo, sha, commitStatusInput)
 	if err != nil {
 		reqLogger.Error(err, "failed to create the commit status")
@@ -214,4 +226,14 @@ func makeInsecureClient(token string) *http.Client {
 			},
 		},
 	}
+}
+
+func isGitRepoConfiguredViaAnnotation(pr *pipelinesv1alpha1.PipelineRun) bool {
+	_, isMapContainsKey := pr.Annotations[gitRepoToReportTo]
+	return isMapContainsKey
+}
+
+func isGitRevisionConfiguredViaAnnotation(pr *pipelinesv1alpha1.PipelineRun) bool {
+	_, isMapContainsKey := pr.Annotations[gitRevision]
+	return isMapContainsKey
 }

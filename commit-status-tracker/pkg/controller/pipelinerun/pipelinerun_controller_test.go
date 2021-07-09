@@ -80,6 +80,45 @@ func TestPipelineRunControllerPendingState(t *testing.T) {
 	}
 }
 
+// TestPipelineRunControllerWithGitRepoAndRevisionViaAnnotation runs ReconcilePipelineRun.Reconcile() against a
+// fake client that tracks PipelineRun objects.
+func TestPipelineRunControllerWithGitRepoAndRevisionViaAnnotation(t *testing.T) {
+	logf.SetLogger(logf.ZapLogger(true))
+	pipelineRun := makePipelineRunWithResources()
+	applyOpts(
+		pipelineRun,
+		tb.PipelineRunAnnotation(notifiableName, "true"),
+		tb.PipelineRunAnnotation(statusContextName, "test-context"),
+		tb.PipelineRunAnnotation(statusDescriptionName, "testing"),
+		tb.PipelineRunAnnotation(gitRepoToReportTo, testRepoURL),
+		tb.PipelineRunAnnotation(gitRevision, "master"),
+		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
+			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
+
+	objs := []runtime.Object{
+		pipelineRun,
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
+	}
+	r, data := makeReconciler(t, testRepoURL, pipelineRun, objs...)
+
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      pipelineRunName,
+			Namespace: testNamespace,
+		},
+	}
+	res, err := r.Reconcile(req)
+	fatalIfError(t, err, "reconcile: (%v)", err)
+	if res.Requeue {
+		t.Fatal("reconcile requeued request")
+	}
+	wanted := &scm.Status{State: scm.StatePending, Label: "test-context", Desc: "testing", Target: ""}
+	status := data.Statuses["master"][0]
+	if !reflect.DeepEqual(status, wanted) {
+		t.Fatalf("commit-status notification got %#v, wanted %#v\n", status, wanted)
+	}
+}
+
 // TestPipelineRunReconcileWithPreviousPending tests a PipelineRun that
 // we've already sent a pending notification.
 func TestPipelineRunReconcileWithPreviousPending(t *testing.T) {
@@ -239,6 +278,72 @@ func TestPipelineRunReconcileWithNoGitRepository(t *testing.T) {
 		tb.PipelineRunAnnotation(notifiableName, "true"),
 		tb.PipelineRunAnnotation(statusContextName, "test-context"),
 		tb.PipelineRunAnnotation(statusDescriptionName, "testing"),
+		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
+			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
+	objs := []runtime.Object{
+		pipelineRun,
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
+	}
+	r, data := makeReconciler(t, "", pipelineRun, objs...)
+
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      pipelineRunName,
+			Namespace: testNamespace,
+		},
+	}
+	res, err := r.Reconcile(req)
+	fatalIfError(t, err, "reconcile: (%v)", err)
+	if res.Requeue {
+		t.Fatal("reconcile requeued request")
+	}
+	assertNoStatusesRecorded(t, data)
+}
+
+// TestPipelineRunReconcileWithGitRepoAnnotationButGitRevisionMissing tests a notifable PipelineRun
+// with "tekton.dev/git-repo" and no "tekton.des/git-revision" annotation.
+func TestPipelineRunReconcileWithGitRepoAnnotationButGitRevisionMissing(t *testing.T) {
+	logf.SetLogger(logf.ZapLogger(true))
+	pipelineRun := makePipelineRunWithResources()
+	applyOpts(
+		pipelineRun,
+		tb.PipelineRunAnnotation(notifiableName, "true"),
+		tb.PipelineRunAnnotation(statusContextName, "test-context"),
+		tb.PipelineRunAnnotation(statusDescriptionName, "testing"),
+		tb.PipelineRunAnnotation(gitRepoToReportTo, testRepoURL),
+		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
+			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
+	objs := []runtime.Object{
+		pipelineRun,
+		makeSecret(defaultSecretName, map[string][]byte{"token": []byte(testToken)}),
+	}
+	r, data := makeReconciler(t, "", pipelineRun, objs...)
+
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      pipelineRunName,
+			Namespace: testNamespace,
+		},
+	}
+	res, err := r.Reconcile(req)
+	fatalIfError(t, err, "reconcile: (%v)", err)
+	if res.Requeue {
+		t.Fatal("reconcile requeued request")
+	}
+	assertNoStatusesRecorded(t, data)
+}
+
+// TestPipelineRunReconcileWithGitRevisionAnnotationButGitRepoMissing tests a notifable PipelineRun
+// with "tekton.dev/git-revision" and no "tekton.dev/git-repo" annotation.
+func TestPipelineRunReconcileWithGitRevisionAnnotationButGitRepoMissing(t *testing.T) {
+	logf.SetLogger(logf.ZapLogger(true))
+	pipelineRun := makePipelineRunWithResources()
+	applyOpts(
+		pipelineRun,
+		tb.PipelineRunAnnotation(notifiableName, "true"),
+		tb.PipelineRunAnnotation(statusContextName, "test-context"),
+		tb.PipelineRunAnnotation(statusDescriptionName, "testing"),
+		tb.PipelineRunAnnotation(gitRevision, "master"),
 		tb.PipelineRunStatus(tb.PipelineRunStatusCondition(
 			apis.Condition{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown})))
 	objs := []runtime.Object{

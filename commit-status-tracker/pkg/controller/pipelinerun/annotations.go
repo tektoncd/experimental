@@ -21,4 +21,8 @@ const (
 
 	// TODO: This could also come from a ConfigMap based on the context.
 	statusDescriptionName = "tekton.dev/status-description"
+
+	// Annotations to override PipelineResource discovery behaviour
+	gitRepoToReportTo = "tekton.dev/git-repo"
+	gitRevision       = "tekton.dev/git-revision"
 )
