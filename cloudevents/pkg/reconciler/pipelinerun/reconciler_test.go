@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"regexp"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
+	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cloudevent"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	pipelinecloudevent "github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
@@ -36,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	cminformer "knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -139,6 +141,8 @@ func ensureConfigurationConfigMapsExist(d *test.Data) {
 func getPipelineRunController(t *testing.T, d test.Data) (test.Assets, func()) {
 	// unregisterMetrics()
 	ctx, _ := ttesting.SetupFakeContext(t)
+	cacheClient, _ := simplelru.NewLRU(128, nil)
+	ctx = cache.ToContext(ctx, cacheClient)
 	ctx, cancel := context.WithCancel(ctx)
 	ensureConfigurationConfigMapsExist(&d)
 	c, informers := test.SeedTestData(t, ctx, d)
