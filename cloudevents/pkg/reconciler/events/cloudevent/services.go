@@ -127,6 +127,7 @@ func serviceEventFromType(eventType *EventType, runObject objectWithCondition) (
 	if err != nil {
 		return nil, err
 	}
+	event.SetSubject(runObject.GetObjectMeta().GetName())
 	event.SetSource(getSource(runObject))
 	return &event, nil
 }

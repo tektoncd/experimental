@@ -124,6 +124,7 @@ func artifactPackagedEventForObjectWithCondition(runObject objectWithCondition) 
 	if err != nil {
 		return nil, err
 	}
+	event.SetSubject(runObject.GetObjectMeta().GetName())
 	event.SetSource(getSource(runObject))
 	return &event, nil
 }
@@ -147,6 +148,7 @@ func artifactPublishedEventForObjectWithCondition(runObject objectWithCondition)
 	if err != nil {
 		return nil, err
 	}
+	event.SetSubject(runObject.GetObjectMeta().GetName())
 	event.SetSource(getSource(runObject))
 	return &event, nil
 }
