@@ -170,25 +170,24 @@ func eventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Ev
 			return nil, err
 		}
 	}
-	event.SetSubject(runObject.GetObjectMeta().GetName())
+	event.SetSubject(meta.GetName())
 	event.SetSource(getSource(runObject))
 
 	return &event, nil
 }
 
 func getSource(runObject objectWithCondition) string {
-	source := runObject.GetObjectMeta().GetSelfLink()
-	if source == "" {
-		meta := runObject.GetObjectMeta()
-		gvk := runObject.GetObjectKind().GroupVersionKind()
-		source = fmt.Sprintf("/apis/%s/%s/namespaces/%s/%s/%s",
-			gvk.Group,
-			gvk.Version,
-			meta.GetNamespace(),
-			gvk.Kind,
-			meta.GetName())
+	meta := runObject.GetObjectMeta()
+	var kindString string
+	switch runObject.(type) {
+	case *v1beta1.TaskRun:
+		kindString = "taskrun"
+	case *v1beta1.PipelineRun:
+		kindString = "pipelinerun"
 	}
-	return source
+	return fmt.Sprintf("/tekton/namespaces/%s/%s",
+		meta.GetNamespace(),
+		kindString)
 }
 
 // SendCloudEventWithRetries sends a cloud event for the specified resource.
@@ -197,6 +196,7 @@ func getSource(runObject objectWithCondition) string {
 // It accepts a runtime.Object to avoid making objectWithCondition public since
 // it's only used within the events/cloudevents packages.
 func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error {
+	logging.FromContext(ctx).Infof("send event for object of kind: %s", object.GetObjectKind())
 	var (
 		o  objectWithCondition
 		ok bool
