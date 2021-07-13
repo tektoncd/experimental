@@ -1,38 +1,36 @@
 package cache
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	lru "github.com/hashicorp/golang-lru"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // AddEventSentToCache adds the particular object to cache marking it as sent
-func AddEventSentToCache(ctx context.Context, event *cloudevents.Event) error {
-	cacheClient := Get(ctx)
+func AddEventSentToCache(cacheClient *lru.Cache, event *cloudevents.Event) error {
 	if cacheClient == nil {
 		return errors.New("cache client is nil")
 	}
-	cacheClient.Add(eventKey(event), nil)
+	cacheClient.Add(EventKey(event), nil)
 	return nil
 }
 
 // IsCloudEventSent checks if the event exists in the cache
-func IsCloudEventSent(ctx context.Context, event *cloudevents.Event) (bool, error) {
-	cacheClient := Get(ctx)
+func IsCloudEventSent(cacheClient *lru.Cache, event *cloudevents.Event) (bool, error) {
 	if cacheClient == nil {
 		return false, errors.New("cache client is nil")
 	}
-	return cacheClient.Contains(eventKey(event)), nil
+	return cacheClient.Contains(EventKey(event)), nil
 }
 
 // eventKey defines whether an event is considered different from another
 // in future we might want to let specific event types override this
-func eventKey(event *cloudevents.Event) string {
+func EventKey(event *cloudevents.Event) string {
 	var (
-		data map[string]interface{}
+		data         map[string]interface{}
 		resourceType string
 		resourceName string
 	)

@@ -21,7 +21,6 @@ metadata:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-cloudevents
 data:
-  default-cloud-events-sink: http://sockeye.default.10.108.51.172.nip.io/
   _example: |
     ################################
     #                              #
