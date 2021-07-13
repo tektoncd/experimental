@@ -19,12 +19,12 @@ package pipelinerun
 import (
 	"context"
 	"fmt"
+	lru "github.com/hashicorp/golang-lru"
 	"knative.dev/pkg/apis"
 	"regexp"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cloudevent"
@@ -141,7 +141,7 @@ func ensureConfigurationConfigMapsExist(d *test.Data) {
 func getPipelineRunController(t *testing.T, d test.Data) (test.Assets, func()) {
 	// unregisterMetrics()
 	ctx, _ := ttesting.SetupFakeContext(t)
-	cacheClient, _ := simplelru.NewLRU(128, nil)
+	cacheClient, _ := lru.New(128)
 	ctx = cache.ToContext(ctx, cacheClient)
 	ctx, cancel := context.WithCancel(ctx)
 	ensureConfigurationConfigMapsExist(&d)

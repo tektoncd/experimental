@@ -18,7 +18,7 @@ package pipelinerun
 
 import (
 	"context"
-	"github.com/hashicorp/golang-lru/simplelru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 
@@ -38,7 +38,7 @@ func (t CDEventType) String() string {
 
 type Reconciler struct {
 	cloudEventClient cloudevent.CEClient
-	cacheClient      *simplelru.LRU
+	cacheClient      *lru.Cache
 	tracker          tracker.Interface
 }
 
