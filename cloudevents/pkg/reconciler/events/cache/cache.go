@@ -6,7 +6,7 @@ import (
 	"fmt"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	lru "github.com/hashicorp/golang-lru"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 // AddEventSentToCache adds the particular object to cache marking it as sent
@@ -30,19 +30,27 @@ func IsCloudEventSent(cacheClient *lru.Cache, event *cloudevents.Event) (bool, e
 // in future we might want to let specific event types override this
 func EventKey(event *cloudevents.Event) string {
 	var (
-		data         map[string]interface{}
-		resourceType string
-		resourceName string
+		data              map[string]interface{}
+		resourceType      string
+		resourceName      string
+		resourceNamespace string
 	)
 	json.Unmarshal(event.Data(), &data)
 	for k, v := range data {
-		if k == "pipelinerun" || k == "taskrun" {
-			resourceType = k
-			var meta metav1.ObjectMeta
-			json.Unmarshal([]byte(v.(string)), &meta)
-			resourceName = meta.Name
+		resourceType = k
+		switch k {
+		case "taskrun":
+			var run v1beta1.TaskRun
+			json.Unmarshal([]byte(v.(string)), &run)
+			resourceName = run.Name
+			resourceNamespace = run.Namespace
+		case "pipelinerun":
+			var run v1beta1.PipelineRun
+			json.Unmarshal([]byte(v.(string)), &run)
+			resourceName = run.Name
+			resourceNamespace = run.Namespace
 		}
 	}
 	eventType := event.Type()
-	return fmt.Sprintf("%s/%s/%s", eventType, resourceType, resourceName)
+	return fmt.Sprintf("%s/%s/%s/%s", eventType, resourceType, resourceNamespace, resourceName)
 }
