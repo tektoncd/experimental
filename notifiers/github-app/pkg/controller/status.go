@@ -20,19 +20,26 @@ func (r *GitHubAppReconciler) HandleStatus(ctx context.Context, tr *v1beta1.Task
 	repo := tr.Annotations[key("repo")]
 	commit := tr.Annotations[key("commit")]
 
-	var description *string
-	if m := tr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetMessage(); m != "" {
-		description = github.String(m)
-	}
-
 	status := &github.RepoStatus{
 		State:       state(tr.Status),
-		Description: description,
+		Description: truncateDesc(tr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetMessage()),
 		TargetURL:   github.String(dashboardURL(tr)),
 		Context:     github.String(tr.GetName()),
 	}
 	_, _, err = client.Repositories.CreateStatus(ctx, owner, repo, commit, status)
 	return err
+}
+
+// truncateDesc truncates a given string to fit within GitHub status character
+// limits (140 chars).
+func truncateDesc(m string) *string {
+	if m == "" {
+		return nil
+	}
+	if len(m) > 140 {
+		m = (m)[:137] + "..."
+	}
+	return &m
 }
 
 func dashboardURL(tr *v1beta1.TaskRun) string {
