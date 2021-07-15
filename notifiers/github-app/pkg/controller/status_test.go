@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -67,5 +69,34 @@ func TestDashboardURL(t *testing.T) {
 	got := dashboardURL(taskrun("testdata/taskrun.yaml"))
 	if want != got {
 		t.Errorf("want: %s, got: %s", want, got)
+	}
+}
+
+func TestTruncateDescription(t *testing.T) {
+	for _, tc := range []struct {
+		in   string
+		want *string
+	}{
+		{
+			in:   "",
+			want: nil,
+		},
+		{
+			in:   "~",
+			want: github.String("~"),
+		},
+		{
+			in:   strings.Repeat("~", 140),
+			want: github.String(strings.Repeat("~", 140)),
+		},
+		{
+			in:   strings.Repeat("~", 141),
+			want: github.String(strings.Repeat("~", 137) + "..."),
+		},
+	} {
+		out := truncateDesc(tc.in)
+		if !reflect.DeepEqual(out, tc.want) {
+			t.Errorf("truncDesc(%s) = %v, want %v", tc.in, out, tc.want)
+		}
 	}
 }
