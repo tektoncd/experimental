@@ -1,6 +1,6 @@
 # Task Loop Extension
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/kubernetes/experimental/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 The Task Loop Extension for Tekton allows users to run a `Task` in a loop with varying parameter values.
 This functionality is provided by a controller that implements the [Tekton Custom Task interface](https://github.com/tektoncd/pipeline/blob/master/docs/runs.md).

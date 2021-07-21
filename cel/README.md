@@ -1,7 +1,7 @@
 
 # Common Expression Language
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/kubernetes/experimental/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 This is an experimental project that provides support for Common Expression Language (CEL) in Tekton Pipelines.
 The functionality is provided by a controller that implements the Custom Task interface. Its use cases include 
