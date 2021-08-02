@@ -1,0 +1,10 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Workflow
+metadata:
+  name: example-workflow
+spec:
+  pipeline:
+    ref: my-pipeline
+  params:
+    - name: default-repo
+      default: my-repo
