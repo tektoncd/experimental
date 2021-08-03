@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ class V1beta1ConditionCheckStatus(object):
         'start_time': 'startTime'
     }
 
-    def __init__(self, annotations=None, check=None, completion_time=None, conditions=None, observed_generation=None, pod_name=None, start_time=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, annotations=None, check=None, completion_time=None, conditions=None, observed_generation=None, pod_name='', start_time=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1ConditionCheckStatus - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()

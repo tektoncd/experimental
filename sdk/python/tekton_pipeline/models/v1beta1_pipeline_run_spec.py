@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,6 +57,7 @@ class V1beta1PipelineRunSpec(object):
         'status': 'str',
         'task_run_specs': 'list[V1beta1PipelineTaskRunSpec]',
         'timeout': 'V1Duration',
+        'timeouts': 'V1beta1TimeoutFields',
         'workspaces': 'list[V1beta1WorkspaceBinding]'
     }
 
@@ -71,10 +72,11 @@ class V1beta1PipelineRunSpec(object):
         'status': 'status',
         'task_run_specs': 'taskRunSpecs',
         'timeout': 'timeout',
+        'timeouts': 'timeouts',
         'workspaces': 'workspaces'
     }
 
-    def __init__(self, params=None, pipeline_ref=None, pipeline_spec=None, pod_template=None, resources=None, service_account_name=None, service_account_names=None, status=None, task_run_specs=None, timeout=None, workspaces=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, params=None, pipeline_ref=None, pipeline_spec=None, pod_template=None, resources=None, service_account_name=None, service_account_names=None, status=None, task_run_specs=None, timeout=None, timeouts=None, workspaces=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1PipelineRunSpec - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
@@ -90,6 +92,7 @@ class V1beta1PipelineRunSpec(object):
         self._status = None
         self._task_run_specs = None
         self._timeout = None
+        self._timeouts = None
         self._workspaces = None
         self.discriminator = None
 
@@ -113,6 +116,8 @@ class V1beta1PipelineRunSpec(object):
             self.task_run_specs = task_run_specs
         if timeout is not None:
             self.timeout = timeout
+        if timeouts is not None:
+            self.timeouts = timeouts
         if workspaces is not None:
             self.workspaces = workspaces
 
@@ -335,6 +340,27 @@ class V1beta1PipelineRunSpec(object):
         """
 
         self._timeout = timeout
+
+    @property
+    def timeouts(self):
+        """Gets the timeouts of this V1beta1PipelineRunSpec.  # noqa: E501
+
+
+        :return: The timeouts of this V1beta1PipelineRunSpec.  # noqa: E501
+        :rtype: V1beta1TimeoutFields
+        """
+        return self._timeouts
+
+    @timeouts.setter
+    def timeouts(self, timeouts):
+        """Sets the timeouts of this V1beta1PipelineRunSpec.
+
+
+        :param timeouts: The timeouts of this V1beta1PipelineRunSpec.  # noqa: E501
+        :type: V1beta1TimeoutFields
+        """
+
+        self._timeouts = timeouts
 
     @property
     def workspaces(self):

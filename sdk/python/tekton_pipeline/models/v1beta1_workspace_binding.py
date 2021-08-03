@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ class V1beta1WorkspaceBinding(object):
         'volume_claim_template': 'volumeClaimTemplate'
     }
 
-    def __init__(self, config_map=None, empty_dir=None, name=None, persistent_volume_claim=None, secret=None, sub_path=None, volume_claim_template=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, config_map=None, empty_dir=None, name='', persistent_volume_claim=None, secret=None, sub_path=None, volume_claim_template=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1WorkspaceBinding - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()

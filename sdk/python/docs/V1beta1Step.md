@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **image_pull_policy** | **str** | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images | [optional] 
 **lifecycle** | [**V1Lifecycle**](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Lifecycle.md) |  | [optional] 
 **liveness_probe** | [**V1Probe**](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Probe.md) |  | [optional] 
-**name** | **str** | Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique name (DNS_LABEL). Cannot be updated. | 
+**name** | **str** | Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique name (DNS_LABEL). Cannot be updated. | [default to '']
 **ports** | [**list[V1ContainerPort]**](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1ContainerPort.md) | List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default \&quot;0.0.0.0\&quot; address inside a container will be accessible from the network. Cannot be updated. | [optional] 
 **readiness_probe** | [**V1Probe**](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Probe.md) |  | [optional] 
 **resources** | [**V1ResourceRequirements**](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1ResourceRequirements.md) |  | [optional] 
@@ -28,6 +28,7 @@ Name | Type | Description | Notes
 **volume_devices** | [**list[V1VolumeDevice]**](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1VolumeDevice.md) | volumeDevices is the list of block devices to be used by the container. | [optional] 
 **volume_mounts** | [**list[V1VolumeMount]**](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1VolumeMount.md) | Pod volumes to mount into the container&#39;s filesystem. Cannot be updated. | [optional] 
 **working_dir** | **str** | Container&#39;s working directory. If not specified, the container runtime&#39;s default will be used, which might be configured in the container image. Cannot be updated. | [optional] 
+**workspaces** | [**list[V1beta1WorkspaceUsage]**](V1beta1WorkspaceUsage.md) | This is an alpha field. You must set the \&quot;enable-api-fields\&quot; feature flag to \&quot;alpha\&quot; for this field to be supported.  Workspaces is a list of workspaces from the Task that this Step wants exclusive access to. Adding a workspace to this list means that any other Step or Sidecar that does not also request this Workspace will not have access to it. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

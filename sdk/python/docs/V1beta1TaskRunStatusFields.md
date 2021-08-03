@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **cloud_events** | [**list[V1beta1CloudEventDelivery]**](V1beta1CloudEventDelivery.md) | CloudEvents describe the state of each cloud event requested via a CloudEventResource. | [optional] 
 **completion_time** | [**V1Time**](V1Time.md) |  | [optional] 
-**pod_name** | **str** | PodName is the name of the pod responsible for executing this task&#39;s steps. | 
+**pod_name** | **str** | PodName is the name of the pod responsible for executing this task&#39;s steps. | [default to '']
 **resources_result** | [**list[V1beta1PipelineResourceResult]**](V1beta1PipelineResourceResult.md) | Results from Resources built during the taskRun. currently includes the digest of build container images | [optional] 
 **retries_status** | [**list[V1beta1TaskRunStatus]**](V1beta1TaskRunStatus.md) | RetriesStatus contains the history of TaskRunStatus in case of a retry in order to keep record of failures. All TaskRunStatus stored in RetriesStatus will have no date within the RetriesStatus as is redundant. | [optional] 
 **sidecars** | [**list[V1beta1SidecarState]**](V1beta1SidecarState.md) | The list has one entry per sidecar in the manifest. Each entry is represents the imageid of the corresponding sidecar. | [optional] 

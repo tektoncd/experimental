@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class V1beta1CloudEventDeliveryState(object):
         'sent_at': 'sentAt'
     }
 
-    def __init__(self, condition=None, message=None, retry_count=None, sent_at=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, condition=None, message='', retry_count=0, sent_at=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1CloudEventDeliveryState - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()

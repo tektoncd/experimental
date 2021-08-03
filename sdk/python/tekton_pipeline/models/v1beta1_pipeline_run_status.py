@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ class V1beta1PipelineRunStatus(object):
         'observed_generation': 'int',
         'pipeline_results': 'list[V1beta1PipelineRunResult]',
         'pipeline_spec': 'V1beta1PipelineSpec',
+        'runs': 'dict(str, V1beta1PipelineRunRunStatus)',
         'skipped_tasks': 'list[V1beta1SkippedTask]',
         'start_time': 'V1Time',
         'task_runs': 'dict(str, V1beta1PipelineRunTaskRunStatus)'
@@ -65,12 +66,13 @@ class V1beta1PipelineRunStatus(object):
         'observed_generation': 'observedGeneration',
         'pipeline_results': 'pipelineResults',
         'pipeline_spec': 'pipelineSpec',
+        'runs': 'runs',
         'skipped_tasks': 'skippedTasks',
         'start_time': 'startTime',
         'task_runs': 'taskRuns'
     }
 
-    def __init__(self, annotations=None, completion_time=None, conditions=None, observed_generation=None, pipeline_results=None, pipeline_spec=None, skipped_tasks=None, start_time=None, task_runs=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, annotations=None, completion_time=None, conditions=None, observed_generation=None, pipeline_results=None, pipeline_spec=None, runs=None, skipped_tasks=None, start_time=None, task_runs=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1PipelineRunStatus - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
@@ -82,6 +84,7 @@ class V1beta1PipelineRunStatus(object):
         self._observed_generation = None
         self._pipeline_results = None
         self._pipeline_spec = None
+        self._runs = None
         self._skipped_tasks = None
         self._start_time = None
         self._task_runs = None
@@ -99,6 +102,8 @@ class V1beta1PipelineRunStatus(object):
             self.pipeline_results = pipeline_results
         if pipeline_spec is not None:
             self.pipeline_spec = pipeline_spec
+        if runs is not None:
+            self.runs = runs
         if skipped_tasks is not None:
             self.skipped_tasks = skipped_tasks
         if start_time is not None:
@@ -239,6 +244,29 @@ class V1beta1PipelineRunStatus(object):
         """
 
         self._pipeline_spec = pipeline_spec
+
+    @property
+    def runs(self):
+        """Gets the runs of this V1beta1PipelineRunStatus.  # noqa: E501
+
+        map of PipelineRunRunStatus with the run name as the key  # noqa: E501
+
+        :return: The runs of this V1beta1PipelineRunStatus.  # noqa: E501
+        :rtype: dict(str, V1beta1PipelineRunRunStatus)
+        """
+        return self._runs
+
+    @runs.setter
+    def runs(self, runs):
+        """Sets the runs of this V1beta1PipelineRunStatus.
+
+        map of PipelineRunRunStatus with the run name as the key  # noqa: E501
+
+        :param runs: The runs of this V1beta1PipelineRunStatus.  # noqa: E501
+        :type: dict(str, V1beta1PipelineRunRunStatus)
+        """
+
+        self._runs = runs
 
     @property
     def skipped_tasks(self):

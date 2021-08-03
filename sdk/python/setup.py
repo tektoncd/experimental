@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name='tekton-pipeline',
-    version='0.1.2',
+    version='0.1.3',
     author="Tekton Authors",
     author_email='hejinchi@cn.ibm.com',
     license="Apache License Version 2.0",

@@ -14,6 +14,7 @@ Name | Type | Description | Notes
 **status** | **str** | Used for cancelling a pipelinerun (and maybe more later on) | [optional] 
 **task_run_specs** | [**list[V1beta1PipelineTaskRunSpec]**](V1beta1PipelineTaskRunSpec.md) | TaskRunSpecs holds a set of runtime specs | [optional] 
 **timeout** | [**V1Duration**](V1Duration.md) |  | [optional] 
+**timeouts** | [**V1beta1TimeoutFields**](V1beta1TimeoutFields.md) |  | [optional] 
 **workspaces** | [**list[V1beta1WorkspaceBinding]**](V1beta1WorkspaceBinding.md) | Workspaces holds a set of workspace bindings that must match names with those declared in the pipeline. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

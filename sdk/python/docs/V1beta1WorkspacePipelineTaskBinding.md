@@ -4,9 +4,9 @@ WorkspacePipelineTaskBinding describes how a workspace passed into the pipeline 
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**name** | **str** | Name is the name of the workspace as declared by the task | 
+**name** | **str** | Name is the name of the workspace as declared by the task | [default to '']
 **sub_path** | **str** | SubPath is optionally a directory on the volume which should be used for this binding (i.e. the volume will be mounted at this sub directory). | [optional] 
-**workspace** | **str** | Workspace is the name of the workspace declared by the pipeline | 
+**workspace** | **str** | Workspace is the name of the workspace declared by the pipeline | [default to '']
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

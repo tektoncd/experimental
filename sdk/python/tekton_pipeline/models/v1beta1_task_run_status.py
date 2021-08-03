@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ class V1beta1TaskRunStatus(object):
         'task_spec': 'taskSpec'
     }
 
-    def __init__(self, annotations=None, cloud_events=None, completion_time=None, conditions=None, observed_generation=None, pod_name=None, resources_result=None, retries_status=None, sidecars=None, start_time=None, steps=None, task_results=None, task_spec=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, annotations=None, cloud_events=None, completion_time=None, conditions=None, observed_generation=None, pod_name='', resources_result=None, retries_status=None, sidecars=None, start_time=None, steps=None, task_results=None, task_spec=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1TaskRunStatus - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()

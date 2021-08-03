@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ class V1beta1PipelineTaskOutputResource(object):
         'resource': 'resource'
     }
 
-    def __init__(self, name=None, resource=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, name='', resource='', local_vars_configuration=None):  # noqa: E501
         """V1beta1PipelineTaskOutputResource - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()

@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ class V1beta1TaskRunSpec(object):
                             and the value is json key in definition.
     """
     openapi_types = {
+        'debug': 'V1beta1TaskRunDebug',
         'params': 'list[V1beta1Param]',
         'pod_template': 'PodTemplate',
         'resources': 'V1beta1TaskRunResources',
@@ -59,6 +60,7 @@ class V1beta1TaskRunSpec(object):
     }
 
     attribute_map = {
+        'debug': 'debug',
         'params': 'params',
         'pod_template': 'podTemplate',
         'resources': 'resources',
@@ -70,12 +72,13 @@ class V1beta1TaskRunSpec(object):
         'workspaces': 'workspaces'
     }
 
-    def __init__(self, params=None, pod_template=None, resources=None, service_account_name=None, status=None, task_ref=None, task_spec=None, timeout=None, workspaces=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, debug=None, params=None, pod_template=None, resources=None, service_account_name='', status=None, task_ref=None, task_spec=None, timeout=None, workspaces=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1TaskRunSpec - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
         self.local_vars_configuration = local_vars_configuration
 
+        self._debug = None
         self._params = None
         self._pod_template = None
         self._resources = None
@@ -87,6 +90,8 @@ class V1beta1TaskRunSpec(object):
         self._workspaces = None
         self.discriminator = None
 
+        if debug is not None:
+            self.debug = debug
         if params is not None:
             self.params = params
         if pod_template is not None:
@@ -105,6 +110,27 @@ class V1beta1TaskRunSpec(object):
             self.timeout = timeout
         if workspaces is not None:
             self.workspaces = workspaces
+
+    @property
+    def debug(self):
+        """Gets the debug of this V1beta1TaskRunSpec.  # noqa: E501
+
+
+        :return: The debug of this V1beta1TaskRunSpec.  # noqa: E501
+        :rtype: V1beta1TaskRunDebug
+        """
+        return self._debug
+
+    @debug.setter
+    def debug(self, debug):
+        """Sets the debug of this V1beta1TaskRunSpec.
+
+
+        :param debug: The debug of this V1beta1TaskRunSpec.  # noqa: E501
+        :type: V1beta1TaskRunDebug
+        """
+
+        self._debug = debug
 
     @property
     def params(self):
