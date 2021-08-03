@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class V1beta1WorkspacePipelineTaskBinding(object):
         'workspace': 'workspace'
     }
 
-    def __init__(self, name=None, sub_path=None, workspace=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, name='', sub_path=None, workspace='', local_vars_configuration=None):  # noqa: E501
         """V1beta1WorkspacePipelineTaskBinding - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()

@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -70,7 +70,8 @@ class V1beta1Step(object):
         'tty': 'bool',
         'volume_devices': 'list[V1VolumeDevice]',
         'volume_mounts': 'list[V1VolumeMount]',
-        'working_dir': 'str'
+        'working_dir': 'str',
+        'workspaces': 'list[V1beta1WorkspaceUsage]'
     }
 
     attribute_map = {
@@ -97,10 +98,11 @@ class V1beta1Step(object):
         'tty': 'tty',
         'volume_devices': 'volumeDevices',
         'volume_mounts': 'volumeMounts',
-        'working_dir': 'workingDir'
+        'working_dir': 'workingDir',
+        'workspaces': 'workspaces'
     }
 
-    def __init__(self, args=None, command=None, env=None, env_from=None, image=None, image_pull_policy=None, lifecycle=None, liveness_probe=None, name=None, ports=None, readiness_probe=None, resources=None, script=None, security_context=None, startup_probe=None, stdin=None, stdin_once=None, termination_message_path=None, termination_message_policy=None, timeout=None, tty=None, volume_devices=None, volume_mounts=None, working_dir=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, args=None, command=None, env=None, env_from=None, image=None, image_pull_policy=None, lifecycle=None, liveness_probe=None, name='', ports=None, readiness_probe=None, resources=None, script=None, security_context=None, startup_probe=None, stdin=None, stdin_once=None, termination_message_path=None, termination_message_policy=None, timeout=None, tty=None, volume_devices=None, volume_mounts=None, working_dir=None, workspaces=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1Step - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
@@ -130,6 +132,7 @@ class V1beta1Step(object):
         self._volume_devices = None
         self._volume_mounts = None
         self._working_dir = None
+        self._workspaces = None
         self.discriminator = None
 
         if args is not None:
@@ -179,6 +182,8 @@ class V1beta1Step(object):
             self.volume_mounts = volume_mounts
         if working_dir is not None:
             self.working_dir = working_dir
+        if workspaces is not None:
+            self.workspaces = workspaces
 
     @property
     def args(self):
@@ -719,6 +724,29 @@ class V1beta1Step(object):
         """
 
         self._working_dir = working_dir
+
+    @property
+    def workspaces(self):
+        """Gets the workspaces of this V1beta1Step.  # noqa: E501
+
+        This is an alpha field. You must set the \"enable-api-fields\" feature flag to \"alpha\" for this field to be supported.  Workspaces is a list of workspaces from the Task that this Step wants exclusive access to. Adding a workspace to this list means that any other Step or Sidecar that does not also request this Workspace will not have access to it.  # noqa: E501
+
+        :return: The workspaces of this V1beta1Step.  # noqa: E501
+        :rtype: list[V1beta1WorkspaceUsage]
+        """
+        return self._workspaces
+
+    @workspaces.setter
+    def workspaces(self, workspaces):
+        """Sets the workspaces of this V1beta1Step.
+
+        This is an alpha field. You must set the \"enable-api-fields\" feature flag to \"alpha\" for this field to be supported.  Workspaces is a list of workspaces from the Task that this Step wants exclusive access to. Adding a workspace to this list means that any other Step or Sidecar that does not also request this Workspace will not have access to it.  # noqa: E501
+
+        :param workspaces: The workspaces of this V1beta1Step.  # noqa: E501
+        :type: list[V1beta1WorkspaceUsage]
+        """
+
+        self._workspaces = workspaces
 
     def to_dict(self):
         """Returns the model properties as a dict"""

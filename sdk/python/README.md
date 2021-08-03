@@ -71,6 +71,7 @@ Class | Method | Description
  - [V1beta1PipelineRunConditionCheckStatus](docs/V1beta1PipelineRunConditionCheckStatus.md)
  - [V1beta1PipelineRunList](docs/V1beta1PipelineRunList.md)
  - [V1beta1PipelineRunResult](docs/V1beta1PipelineRunResult.md)
+ - [V1beta1PipelineRunRunStatus](docs/V1beta1PipelineRunRunStatus.md)
  - [V1beta1PipelineRunSpec](docs/V1beta1PipelineRunSpec.md)
  - [V1beta1PipelineRunSpecServiceAccountName](docs/V1beta1PipelineRunSpecServiceAccountName.md)
  - [V1beta1PipelineRunStatus](docs/V1beta1PipelineRunStatus.md)
@@ -85,6 +86,7 @@ Class | Method | Description
  - [V1beta1PipelineTaskParam](docs/V1beta1PipelineTaskParam.md)
  - [V1beta1PipelineTaskResources](docs/V1beta1PipelineTaskResources.md)
  - [V1beta1PipelineTaskRun](docs/V1beta1PipelineTaskRun.md)
+ - [V1beta1TaskRunDebug](docs/V1beta1TaskRunDebug.md)
  - [V1beta1PipelineTaskRunSpec](docs/V1beta1PipelineTaskRunSpec.md)
  - [V1beta1PipelineWorkspaceDeclaration](docs/V1beta1PipelineWorkspaceDeclaration.md)
  - [V1beta1ResultRef](docs/V1beta1ResultRef.md)
@@ -110,9 +112,9 @@ Class | Method | Description
  - [V1beta1TaskRunStatus](docs/V1beta1TaskRunStatus.md)
  - [V1beta1TaskRunStatusFields](docs/V1beta1TaskRunStatusFields.md)
  - [V1beta1TaskSpec](docs/V1beta1TaskSpec.md)
+ - [V1beta1TimeoutFields](docs/V1beta1TimeoutFields.md)
  - [V1beta1WhenExpression](docs/V1beta1WhenExpression.md)
  - [V1beta1WorkspaceBinding](docs/V1beta1WorkspaceBinding.md)
  - [V1beta1WorkspaceDeclaration](docs/V1beta1WorkspaceDeclaration.md)
  - [V1beta1WorkspacePipelineTaskBinding](docs/V1beta1WorkspacePipelineTaskBinding.md)
-
 

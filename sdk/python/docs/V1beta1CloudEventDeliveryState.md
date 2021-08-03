@@ -5,8 +5,8 @@ CloudEventDeliveryState reports the state of a cloud event to be sent.
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **condition** | **str** | Current status | [optional] 
-**message** | **str** | Error is the text of error (if any) | 
-**retry_count** | **int** | RetryCount is the number of attempts of sending the cloud event | 
+**message** | **str** | Error is the text of error (if any) | [default to '']
+**retry_count** | **int** | RetryCount is the number of attempts of sending the cloud event | [default to 0]
 **sent_at** | [**V1Time**](V1Time.md) |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

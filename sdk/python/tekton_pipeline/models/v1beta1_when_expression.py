@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,22 +49,16 @@ class V1beta1WhenExpression(object):
     openapi_types = {
         'input': 'str',
         'operator': 'str',
-        'values': 'list[str]',
-        'input': 'str',
-        'operator': 'str',
         'values': 'list[str]'
     }
 
     attribute_map = {
-        'input': 'Input',
-        'operator': 'Operator',
-        'values': 'Values',
         'input': 'input',
         'operator': 'operator',
         'values': 'values'
     }
 
-    def __init__(self, input=None, operator=None, values=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, input='', operator='', values=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1WhenExpression - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
@@ -73,89 +67,11 @@ class V1beta1WhenExpression(object):
         self._input = None
         self._operator = None
         self._values = None
-        self._input = None
-        self._operator = None
-        self._values = None
         self.discriminator = None
 
-        if input is not None:
-            self.input = input
-        if operator is not None:
-            self.operator = operator
-        if values is not None:
-            self.values = values
         self.input = input
         self.operator = operator
         self.values = values
-
-    @property
-    def input(self):
-        """Gets the input of this V1beta1WhenExpression.  # noqa: E501
-
-        DeprecatedInput for backwards compatibility with <v0.17 it is the string for guard checking which can be a static input or an output from a parent Task  # noqa: E501
-
-        :return: The input of this V1beta1WhenExpression.  # noqa: E501
-        :rtype: str
-        """
-        return self._input
-
-    @input.setter
-    def input(self, input):
-        """Sets the input of this V1beta1WhenExpression.
-
-        DeprecatedInput for backwards compatibility with <v0.17 it is the string for guard checking which can be a static input or an output from a parent Task  # noqa: E501
-
-        :param input: The input of this V1beta1WhenExpression.  # noqa: E501
-        :type: str
-        """
-
-        self._input = input
-
-    @property
-    def operator(self):
-        """Gets the operator of this V1beta1WhenExpression.  # noqa: E501
-
-        DeprecatedOperator for backwards compatibility with <v0.17 it represents a DeprecatedInput's relationship to the DeprecatedValues  # noqa: E501
-
-        :return: The operator of this V1beta1WhenExpression.  # noqa: E501
-        :rtype: str
-        """
-        return self._operator
-
-    @operator.setter
-    def operator(self, operator):
-        """Sets the operator of this V1beta1WhenExpression.
-
-        DeprecatedOperator for backwards compatibility with <v0.17 it represents a DeprecatedInput's relationship to the DeprecatedValues  # noqa: E501
-
-        :param operator: The operator of this V1beta1WhenExpression.  # noqa: E501
-        :type: str
-        """
-
-        self._operator = operator
-
-    @property
-    def values(self):
-        """Gets the values of this V1beta1WhenExpression.  # noqa: E501
-
-        DeprecatedValues for backwards compatibility with <v0.17 it represents a DeprecatedInput's relationship to the DeprecatedValues  # noqa: E501
-
-        :return: The values of this V1beta1WhenExpression.  # noqa: E501
-        :rtype: list[str]
-        """
-        return self._values
-
-    @values.setter
-    def values(self, values):
-        """Sets the values of this V1beta1WhenExpression.
-
-        DeprecatedValues for backwards compatibility with <v0.17 it represents a DeprecatedInput's relationship to the DeprecatedValues  # noqa: E501
-
-        :param values: The values of this V1beta1WhenExpression.  # noqa: E501
-        :type: list[str]
-        """
-
-        self._values = values
 
     @property
     def input(self):

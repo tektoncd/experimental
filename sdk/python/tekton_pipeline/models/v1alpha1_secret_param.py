@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class V1alpha1SecretParam(object):
         'secret_name': 'secretName'
     }
 
-    def __init__(self, field_name=None, secret_key=None, secret_name=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, field_name='', secret_key='', secret_name='', local_vars_configuration=None):  # noqa: E501
         """V1alpha1SecretParam - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()

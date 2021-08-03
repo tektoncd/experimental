@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
 
 from __future__ import absolute_import
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 # import apis into sdk package
 
@@ -73,6 +73,7 @@ from tekton_pipeline.models.v1beta1_pipeline_run import V1beta1PipelineRun
 from tekton_pipeline.models.v1beta1_pipeline_run_condition_check_status import V1beta1PipelineRunConditionCheckStatus
 from tekton_pipeline.models.v1beta1_pipeline_run_list import V1beta1PipelineRunList
 from tekton_pipeline.models.v1beta1_pipeline_run_result import V1beta1PipelineRunResult
+from tekton_pipeline.models.v1beta1_pipeline_run_run_status import V1beta1PipelineRunRunStatus
 from tekton_pipeline.models.v1beta1_pipeline_run_spec import V1beta1PipelineRunSpec
 from tekton_pipeline.models.v1beta1_pipeline_run_spec_service_account_name import V1beta1PipelineRunSpecServiceAccountName
 from tekton_pipeline.models.v1beta1_pipeline_run_status import V1beta1PipelineRunStatus
@@ -103,6 +104,7 @@ from tekton_pipeline.models.v1beta1_task_resource_binding import V1beta1TaskReso
 from tekton_pipeline.models.v1beta1_task_resources import V1beta1TaskResources
 from tekton_pipeline.models.v1beta1_task_result import V1beta1TaskResult
 from tekton_pipeline.models.v1beta1_task_run import V1beta1TaskRun
+from tekton_pipeline.models.v1beta1_task_run_debug import V1beta1TaskRunDebug
 from tekton_pipeline.models.v1beta1_task_run_inputs import V1beta1TaskRunInputs
 from tekton_pipeline.models.v1beta1_task_run_list import V1beta1TaskRunList
 from tekton_pipeline.models.v1beta1_task_run_outputs import V1beta1TaskRunOutputs
@@ -112,10 +114,12 @@ from tekton_pipeline.models.v1beta1_task_run_spec import V1beta1TaskRunSpec
 from tekton_pipeline.models.v1beta1_task_run_status import V1beta1TaskRunStatus
 from tekton_pipeline.models.v1beta1_task_run_status_fields import V1beta1TaskRunStatusFields
 from tekton_pipeline.models.v1beta1_task_spec import V1beta1TaskSpec
+from tekton_pipeline.models.v1beta1_timeout_fields import V1beta1TimeoutFields
 from tekton_pipeline.models.v1beta1_when_expression import V1beta1WhenExpression
 from tekton_pipeline.models.v1beta1_workspace_binding import V1beta1WorkspaceBinding
 from tekton_pipeline.models.v1beta1_workspace_declaration import V1beta1WorkspaceDeclaration
 from tekton_pipeline.models.v1beta1_workspace_pipeline_task_binding import V1beta1WorkspacePipelineTaskBinding
+from tekton_pipeline.models.v1beta1_workspace_usage import V1beta1WorkspaceUsage
 
 from tekton_pipeline.api.tekton_client import TektonClient
 from tekton_pipeline.constants import constants

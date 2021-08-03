@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ class PodTemplate(object):
         'dns_config': 'V1PodDNSConfig',
         'dns_policy': 'str',
         'enable_service_links': 'bool',
+        'host_aliases': 'list[V1HostAlias]',
         'host_network': 'bool',
         'image_pull_secrets': 'list[V1LocalObjectReference]',
         'node_selector': 'dict(str, str)',
@@ -69,6 +70,7 @@ class PodTemplate(object):
         'dns_config': 'dnsConfig',
         'dns_policy': 'dnsPolicy',
         'enable_service_links': 'enableServiceLinks',
+        'host_aliases': 'hostAliases',
         'host_network': 'hostNetwork',
         'image_pull_secrets': 'imagePullSecrets',
         'node_selector': 'nodeSelector',
@@ -80,7 +82,7 @@ class PodTemplate(object):
         'volumes': 'volumes'
     }
 
-    def __init__(self, affinity=None, automount_service_account_token=None, dns_config=None, dns_policy=None, enable_service_links=None, host_network=None, image_pull_secrets=None, node_selector=None, priority_class_name=None, runtime_class_name=None, scheduler_name=None, security_context=None, tolerations=None, volumes=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, affinity=None, automount_service_account_token=None, dns_config=None, dns_policy=None, enable_service_links=None, host_aliases=None, host_network=None, image_pull_secrets=None, node_selector=None, priority_class_name=None, runtime_class_name=None, scheduler_name=None, security_context=None, tolerations=None, volumes=None, local_vars_configuration=None):  # noqa: E501
         """PodTemplate - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
@@ -91,6 +93,7 @@ class PodTemplate(object):
         self._dns_config = None
         self._dns_policy = None
         self._enable_service_links = None
+        self._host_aliases = None
         self._host_network = None
         self._image_pull_secrets = None
         self._node_selector = None
@@ -112,6 +115,8 @@ class PodTemplate(object):
             self.dns_policy = dns_policy
         if enable_service_links is not None:
             self.enable_service_links = enable_service_links
+        if host_aliases is not None:
+            self.host_aliases = host_aliases
         if host_network is not None:
             self.host_network = host_network
         if image_pull_secrets is not None:
@@ -241,6 +246,29 @@ class PodTemplate(object):
         """
 
         self._enable_service_links = enable_service_links
+
+    @property
+    def host_aliases(self):
+        """Gets the host_aliases of this PodTemplate.  # noqa: E501
+
+        HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts file if specified. This is only valid for non-hostNetwork pods.  # noqa: E501
+
+        :return: The host_aliases of this PodTemplate.  # noqa: E501
+        :rtype: list[V1HostAlias]
+        """
+        return self._host_aliases
+
+    @host_aliases.setter
+    def host_aliases(self, host_aliases):
+        """Sets the host_aliases of this PodTemplate.
+
+        HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts file if specified. This is only valid for non-hostNetwork pods.  # noqa: E501
+
+        :param host_aliases: The host_aliases of this PodTemplate.  # noqa: E501
+        :type: list[V1HostAlias]
+        """
+
+        self._host_aliases = host_aliases
 
     @property
     def host_network(self):

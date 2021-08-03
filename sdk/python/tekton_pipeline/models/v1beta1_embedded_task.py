@@ -1,4 +1,4 @@
-# Copyright 2020 The Tekton Authors
+# Copyright 2021 The Tekton Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,12 +47,15 @@ class V1beta1EmbeddedTask(object):
                             and the value is json key in definition.
     """
     openapi_types = {
+        'api_version': 'str',
         'description': 'str',
+        'kind': 'str',
         'metadata': 'V1beta1PipelineTaskMetadata',
         'params': 'list[V1beta1ParamSpec]',
         'resources': 'V1beta1TaskResources',
         'results': 'list[V1beta1TaskResult]',
         'sidecars': 'list[V1beta1Sidecar]',
+        'spec': 'K8sIoApimachineryPkgRuntimeRawExtension',
         'step_template': 'V1Container',
         'steps': 'list[V1beta1Step]',
         'volumes': 'list[V1Volume]',
@@ -60,38 +63,48 @@ class V1beta1EmbeddedTask(object):
     }
 
     attribute_map = {
+        'api_version': 'apiVersion',
         'description': 'description',
+        'kind': 'kind',
         'metadata': 'metadata',
         'params': 'params',
         'resources': 'resources',
         'results': 'results',
         'sidecars': 'sidecars',
+        'spec': 'spec',
         'step_template': 'stepTemplate',
         'steps': 'steps',
         'volumes': 'volumes',
         'workspaces': 'workspaces'
     }
 
-    def __init__(self, description=None, metadata=None, params=None, resources=None, results=None, sidecars=None, step_template=None, steps=None, volumes=None, workspaces=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, api_version=None, description=None, kind=None, metadata=None, params=None, resources=None, results=None, sidecars=None, spec=None, step_template=None, steps=None, volumes=None, workspaces=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1EmbeddedTask - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
         self.local_vars_configuration = local_vars_configuration
 
+        self._api_version = None
         self._description = None
+        self._kind = None
         self._metadata = None
         self._params = None
         self._resources = None
         self._results = None
         self._sidecars = None
+        self._spec = None
         self._step_template = None
         self._steps = None
         self._volumes = None
         self._workspaces = None
         self.discriminator = None
 
+        if api_version is not None:
+            self.api_version = api_version
         if description is not None:
             self.description = description
+        if kind is not None:
+            self.kind = kind
         if metadata is not None:
             self.metadata = metadata
         if params is not None:
@@ -102,6 +115,8 @@ class V1beta1EmbeddedTask(object):
             self.results = results
         if sidecars is not None:
             self.sidecars = sidecars
+        if spec is not None:
+            self.spec = spec
         if step_template is not None:
             self.step_template = step_template
         if steps is not None:
@@ -110,6 +125,27 @@ class V1beta1EmbeddedTask(object):
             self.volumes = volumes
         if workspaces is not None:
             self.workspaces = workspaces
+
+    @property
+    def api_version(self):
+        """Gets the api_version of this V1beta1EmbeddedTask.  # noqa: E501
+
+
+        :return: The api_version of this V1beta1EmbeddedTask.  # noqa: E501
+        :rtype: str
+        """
+        return self._api_version
+
+    @api_version.setter
+    def api_version(self, api_version):
+        """Sets the api_version of this V1beta1EmbeddedTask.
+
+
+        :param api_version: The api_version of this V1beta1EmbeddedTask.  # noqa: E501
+        :type: str
+        """
+
+        self._api_version = api_version
 
     @property
     def description(self):
@@ -133,6 +169,27 @@ class V1beta1EmbeddedTask(object):
         """
 
         self._description = description
+
+    @property
+    def kind(self):
+        """Gets the kind of this V1beta1EmbeddedTask.  # noqa: E501
+
+
+        :return: The kind of this V1beta1EmbeddedTask.  # noqa: E501
+        :rtype: str
+        """
+        return self._kind
+
+    @kind.setter
+    def kind(self, kind):
+        """Sets the kind of this V1beta1EmbeddedTask.
+
+
+        :param kind: The kind of this V1beta1EmbeddedTask.  # noqa: E501
+        :type: str
+        """
+
+        self._kind = kind
 
     @property
     def metadata(self):
@@ -244,6 +301,27 @@ class V1beta1EmbeddedTask(object):
         """
 
         self._sidecars = sidecars
+
+    @property
+    def spec(self):
+        """Gets the spec of this V1beta1EmbeddedTask.  # noqa: E501
+
+
+        :return: The spec of this V1beta1EmbeddedTask.  # noqa: E501
+        :rtype: K8sIoApimachineryPkgRuntimeRawExtension
+        """
+        return self._spec
+
+    @spec.setter
+    def spec(self, spec):
+        """Sets the spec of this V1beta1EmbeddedTask.
+
+
+        :param spec: The spec of this V1beta1EmbeddedTask.  # noqa: E501
+        :type: K8sIoApimachineryPkgRuntimeRawExtension
+        """
+
+        self._spec = spec
 
     @property
     def step_template(self):
