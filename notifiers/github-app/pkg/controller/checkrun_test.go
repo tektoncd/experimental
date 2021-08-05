@@ -35,50 +35,65 @@ import (
 )
 
 func TestUpsertCheckRun(t *testing.T) {
-	mux := http.NewServeMux()
-	srv := httptest.NewServer(mux)
-	client := github.NewClient(srv.Client())
-	client.BaseURL = mustParseURL(srv.URL + "/")
-
 	ctx := context.Background()
-	tr := taskrun("testdata/taskrun.yaml")
+
 	output := &github.CheckRunOutput{
 		Summary: github.String("foo"),
 	}
 
-	t.Run("Create", func(t *testing.T) {
-		mux.HandleFunc("/repos/tektoncd/test/check-runs", validateCheckRun(t, &github.CheckRun{
-			Name:        github.String("default/echo-6b4fn-echo-xrxq4"),
-			HeadSHA:     github.String("db165c3a71dc45d096aebd0f49f07ec565ad1e08"),
-			ExternalID:  github.String("/apis/tekton.dev/v1beta1/namespaces/default/taskruns/echo-6b4fn-echo-xrxq4"),
-			DetailsURL:  github.String("https://tekton.dev"),
-			Status:      github.String("completed"),
-			Conclusion:  github.String("success"),
-			StartedAt:   &github.Timestamp{Time: time.Date(2020, 8, 27, 15, 21, 37, 0, time.FixedZone("Z", 0))},
-			CompletedAt: &github.Timestamp{Time: time.Date(2020, 8, 27, 15, 21, 46, 0, time.FixedZone("Z", 0))},
-			Output:      output,
-		}))
-		if _, err := UpsertCheckRun(ctx, client, tr, output); err != nil {
-			t.Fatalf("UpsertCheckRun: %v", err)
-		}
-	})
+	for _, tc := range []struct {
+		nameAnnotation string
+		wantName       string
+	}{
+		{
+			nameAnnotation: "",
+			wantName:       "default/echo-6b4fn-echo-xrxq4",
+		},
+		{
+			nameAnnotation: "tacocat",
+			wantName:       "tacocat",
+		},
+	} {
+		t.Run(tc.nameAnnotation, func(t *testing.T) {
+			mux := http.NewServeMux()
+			srv := httptest.NewServer(mux)
+			client := github.NewClient(srv.Client())
+			client.BaseURL = mustParseURL(srv.URL + "/")
 
-	t.Run("Update", func(t *testing.T) {
-		tr.Annotations[key("checkrun")] = "1234"
-		mux.HandleFunc("/repos/tektoncd/test/check-runs/1234", validateCheckRun(t, &github.CheckRun{
-			Name:        github.String("echo-6b4fn-echo-xrxq4"),
-			HeadSHA:     github.String("db165c3a71dc45d096aebd0f49f07ec565ad1e08"),
-			ExternalID:  github.String("/apis/tekton.dev/v1beta1/namespaces/default/taskruns/echo-6b4fn-echo-xrxq4"),
-			DetailsURL:  github.String("https://tekton.dev"),
-			Status:      github.String("completed"),
-			Conclusion:  github.String("success"),
-			CompletedAt: &github.Timestamp{Time: time.Date(2020, 8, 27, 15, 21, 46, 0, time.FixedZone("Z", 0))},
-			Output:      output,
-		}))
-		if _, err := UpsertCheckRun(ctx, client, tr, output); err != nil {
-			t.Fatalf("UpsertCheckRun: %v", err)
-		}
-	})
+			tr := taskrun("testdata/taskrun.yaml")
+			tr.Annotations[key("name")] = tc.nameAnnotation
+
+			cr := &github.CheckRun{
+				Name:        github.String(tc.wantName),
+				HeadSHA:     github.String("db165c3a71dc45d096aebd0f49f07ec565ad1e08"),
+				ExternalID:  github.String("/apis/tekton.dev/v1beta1/namespaces/default/taskruns/echo-6b4fn-echo-xrxq4"),
+				DetailsURL:  github.String("https://tekton.dev"),
+				Status:      github.String("completed"),
+				Conclusion:  github.String("success"),
+				StartedAt:   &github.Timestamp{Time: time.Date(2020, 8, 27, 15, 21, 37, 0, time.FixedZone("Z", 0))},
+				CompletedAt: &github.Timestamp{Time: time.Date(2020, 8, 27, 15, 21, 46, 0, time.FixedZone("Z", 0))},
+				Output:      output,
+			}
+			t.Run("Create", func(t *testing.T) {
+				mux.HandleFunc("/repos/tektoncd/test/check-runs", validateCheckRun(t, cr))
+				if _, err := UpsertCheckRun(ctx, client, tr, output); err != nil {
+					t.Fatalf("UpsertCheckRun: %v", err)
+				}
+			})
+
+			t.Run("Update", func(t *testing.T) {
+				tr.Annotations[key("checkrun")] = "1234"
+
+				// StartedAt isn't set on update.
+				cr.StartedAt = nil
+
+				mux.HandleFunc("/repos/tektoncd/test/check-runs/1234", validateCheckRun(t, cr))
+				if _, err := UpsertCheckRun(ctx, client, tr, output); err != nil {
+					t.Fatalf("UpsertCheckRun: %v", err)
+				}
+			})
+		})
+	}
 }
 
 func mustParseURL(s string) *url.URL {

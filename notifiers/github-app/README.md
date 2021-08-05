@@ -5,9 +5,11 @@ integration values to post information back to GitHub.
 
 This runs in 2 modes:
 
-- GitHub App : Converts the TaskRun into a [CheckRun](https://docs.github.com/en/rest/guides/getting-started-with-the-checks-api) with
-corresponding status and logs.
-- GitHub OAuth : Converts the TaskRun into a [Status](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-status-checks).
+- GitHub App : Converts the TaskRun into a
+  [CheckRun](https://docs.github.com/en/rest/guides/getting-started-with-the-checks-api)
+  with corresponding status and logs.
+- GitHub OAuth : Converts the TaskRun into a
+  [Status](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-status-checks).
 
 This does not do anything to grant the running TaskRun access to GitHub
 credentials (e.g. for cloning the repo) -
@@ -20,12 +22,13 @@ fine-grained installation permissions).
 The controller uses annotations with the prefix `github.integrations.tekton.dev`
 to identify and track TaskRuns to publish.
 
-| Annotation                                  | Description                                                                                                                                                                                                                                                         |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Annotation                                  | Description                                                                                                                                                                                                                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | github.integrations.tekton.dev/installation | (GitHub App only) GitHub App Installation ID. This can be found in GitHub webhook events under the [`installations.id` field](https://docs.github.com/en/enterprise-server@2.20/developers/webhooks-and-events/webhook-events-and-payloads#webhook-payload-object-common-properties). |
-| github.integrations.tekton.dev/owner        | GitHub org or user who owns the repo (for `github.com/tektoncd/test`, this should be `tektoncd`).                                                                                                                                                                   |
-| github.integrations.tekton.dev/repo         | GitHub repo name (for `github.com/tektoncd/test`, this should be `test`).                                                                                                                                                                                           |
-| github.integrations.tekton.dev/checkrun     | (GitHub App / output only) GitHub CheckRun ID. If set, the controller will update this CheckRun instead of creating a new one.                                                                                                                                                   |
+| github.integrations.tekton.dev/owner        | GitHub org or user who owns the repo (for `github.com/tektoncd/test`, this should be `tektoncd`).                                                                                                                                                                                     |
+| github.integrations.tekton.dev/repo         | GitHub repo name (for `github.com/tektoncd/test`, this should be `test`).                                                                                                                                                                                                             |
+| github.integrations.tekton.dev/checkrun     | (GitHub App / output only) GitHub CheckRun ID. If set, the controller will update this CheckRun instead of creating a new one.                                                                                                                                                        |
+| github.integrations.tekton.dev/name         | Display name to use for GitHub CheckRun/Status. If not specified, defaults to the Tasks name.                                                                                                                                                                                         |
 
 For an example a full TaskRun with the initial annotations set, see
 [pkg/controller/testdata/taskrun.yaml](pkg/controller/testdata/taskrun.yaml)
@@ -33,10 +36,11 @@ For an example a full TaskRun with the initial annotations set, see
 
 ## Running the controller
 
-| Environment Variable | Description                                                                                                                                                            |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GITHUB_APP_ID        | ID of your GitHub App. Can be found under https://github.com/settings/apps > Edit > General > About > App ID                                                           |
-| GITHUB_APP_KEY       | Path to the [private key of your GitHub App](https://docs.github.com/en/free-pro-team@latest/developers/apps/authenticating-with-github-apps#generating-a-private-key) |
+| Environment Variable | Description                                                                                                                                                                                                                |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GITHUB_APP_ID        | ID of your GitHub App. Can be found under https://github.com/settings/apps > Edit > General > About > App ID                                                                                                               |
+| GITHUB_APP_KEY       | Path to the [private key of your GitHub App](https://docs.github.com/en/free-pro-team@latest/developers/apps/authenticating-with-github-apps#generating-a-private-key)                                                     |
 | GITHUB_TOKEN         | GitHub Personal Access Token (https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). We strongly recommend **not** using your own personal GitHub Account - use a bot user instead. |
 
-If both GitHub App and GitHub OAuth variables are provided, the controller will use GitHub App.
+If both GitHub App and GitHub OAuth variables are provided, the controller will
+use GitHub App.

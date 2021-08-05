@@ -74,6 +74,10 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 	owner := tr.Annotations[key("owner")]
 	repo := tr.Annotations[key("repo")]
 	commit := tr.Annotations[key("commit")]
+	name := tr.Annotations[key("name")]
+	if name == "" {
+		name = tr.GetNamespacedName().String()
+	}
 
 	status, conclusion := status(tr.Status)
 
@@ -85,7 +89,7 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 		}
 		cr, _, err := client.Checks.UpdateCheckRun(ctx, owner, repo, n, github.UpdateCheckRunOptions{
 			ExternalID:  github.String(tr.GetSelfLink()),
-			Name:        tr.Name,
+			Name:        name,
 			Status:      github.String(status),
 			Conclusion:  github.String(conclusion),
 			HeadSHA:     github.String(commit),
@@ -103,7 +107,7 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 	// There's no existing CheckRun - create.
 	cr, _, err := client.Checks.CreateCheckRun(ctx, tr.Annotations[key("owner")], tr.Annotations[key("repo")], github.CreateCheckRunOptions{
 		ExternalID:  github.String(tr.GetSelfLink()),
-		Name:        tr.GetNamespacedName().String(),
+		Name:        name,
 		Status:      github.String(status),
 		Conclusion:  github.String(conclusion),
 		HeadSHA:     tr.Annotations[key("commit")],
