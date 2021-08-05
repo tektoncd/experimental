@@ -15,28 +15,46 @@ import (
 )
 
 func TestHandleStatus(t *testing.T) {
-	mux := http.NewServeMux()
-	srv := httptest.NewServer(mux)
-	client := github.NewClient(srv.Client())
-	client.BaseURL = mustParseURL(srv.URL + "/")
-
-	r := &GitHubAppReconciler{
-		GitHub: NewStatic(client),
-	}
-
 	ctx := context.Background()
-	tr := taskrun("testdata/taskrun.yaml")
 
-	mux.HandleFunc("/repos/tektoncd/test/statuses/db165c3a71dc45d096aebd0f49f07ec565ad1e08",
-		validateStatus(t, &github.RepoStatus{
-			State:       github.String(StateSuccess),
-			Description: github.String("All Steps have completed executing"),
-			TargetURL:   github.String(dashboardURL(tr)),
-			Context:     github.String("echo-6b4fn-echo-xrxq4"),
-		}),
-	)
-	if err := r.HandleStatus(ctx, tr); err != nil {
-		t.Fatalf("HandleStatus: %v", err)
+	for _, tc := range []struct {
+		nameAnnotation string
+		wantName       string
+	}{
+		{
+			nameAnnotation: "",
+			wantName:       "default/echo-6b4fn-echo-xrxq4",
+		},
+		{
+			nameAnnotation: "tacocat",
+			wantName:       "tacocat",
+		},
+	} {
+		t.Run(tc.nameAnnotation, func(t *testing.T) {
+			mux := http.NewServeMux()
+			srv := httptest.NewServer(mux)
+			client := github.NewClient(srv.Client())
+			client.BaseURL = mustParseURL(srv.URL + "/")
+
+			r := &GitHubAppReconciler{
+				GitHub: NewStatic(client),
+			}
+
+			tr := taskrun("testdata/taskrun.yaml")
+			tr.Annotations[key("name")] = tc.nameAnnotation
+
+			mux.HandleFunc("/repos/tektoncd/test/statuses/db165c3a71dc45d096aebd0f49f07ec565ad1e08",
+				validateStatus(t, &github.RepoStatus{
+					State:       github.String(StateSuccess),
+					Description: github.String("All Steps have completed executing"),
+					TargetURL:   github.String(dashboardURL(tr)),
+					Context:     github.String(tc.wantName),
+				}),
+			)
+			if err := r.HandleStatus(ctx, tr); err != nil {
+				t.Fatalf("HandleStatus: %v", err)
+			}
+		})
 	}
 }
 

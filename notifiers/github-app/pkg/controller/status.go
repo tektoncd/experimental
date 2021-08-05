@@ -19,12 +19,16 @@ func (r *GitHubAppReconciler) HandleStatus(ctx context.Context, tr *v1beta1.Task
 	owner := tr.Annotations[key("owner")]
 	repo := tr.Annotations[key("repo")]
 	commit := tr.Annotations[key("commit")]
+	name := tr.Annotations[key("name")]
+	if name == "" {
+		name = tr.GetNamespacedName().String()
+	}
 
 	status := &github.RepoStatus{
 		State:       state(tr.Status),
 		Description: truncateDesc(tr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetMessage()),
 		TargetURL:   github.String(dashboardURL(tr)),
-		Context:     github.String(tr.GetName()),
+		Context:     github.String(name),
 	}
 	_, _, err = client.Repositories.CreateStatus(ctx, owner, repo, commit, status)
 	return err
