@@ -42,7 +42,6 @@ func newController(ctx context.Context, cmw configmap.Watcher) *controller.Impl 
 			AgentName: controllerName,
 		}
 	})
-	c.EnqueueAfter = impl.EnqueueAfter
 
 	runinformer.Get(ctx).Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: tkncontroller.FilterRunRef("example.dev/v0", "Wait"),

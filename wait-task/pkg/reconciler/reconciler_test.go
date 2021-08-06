@@ -25,6 +25,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/controller"
 )
 
 var validRef = &v1alpha1.TaskRef{
@@ -48,28 +49,33 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 	rec := &Reconciler{}
-	// Mock the EnqueueAfter method to sleep, then call ReconcileKind
-	// again. This will get called after ReconcileKind is called the first
-	// time, below. After reconciling again, check that the status is as
-	// expected.
-	rec.EnqueueAfter = func(_ interface{}, d time.Duration) {
-		time.Sleep(d)
-		rec.ReconcileKind(ctx, r)
-
-		if !r.IsSuccessful() {
-			t.Errorf("Run was not successful after second reconcile: %v", r.Status.GetCondition(apis.ConditionSucceeded).Status)
-		}
-
-		// Reconciling into the final completed state should take <2s.
-		dur := r.Status.CompletionTime.Time.Sub(r.Status.StartTime.Time)
-		if dur > 2*time.Second {
-			t.Fatalf("completion_time - start_time > 2s: %s", dur)
-		}
-	}
 
 	// Start reconciling the Run.
-	// This will not return until the second Reconcile is done.
-	rec.ReconcileKind(ctx, r)
+	if err := rec.ReconcileKind(ctx, r); err == nil {
+		t.Fatal("wanted error, got nil")
+	} else if ok, dur := controller.IsRequeueKey(err); !ok {
+		t.Fatalf("wanted requeue error, got %v", err)
+	} else {
+		// Simulate EnqueueAfter
+		time.Sleep(dur)
+	}
+
+	// Reconcile again after sleeping.
+	if err := rec.ReconcileKind(ctx, r); err != nil {
+		t.Fatalf("ReconcileKind() = %v", err)
+	}
+
+	// At this point it should have been successful.
+	if !r.IsSuccessful() {
+		t.Errorf("Run was not successful after second reconcile: %v", r.Status.GetCondition(apis.ConditionSucceeded).Status)
+	}
+
+	// Reconciling into the final completed state should take <2s.
+	dur := r.Status.CompletionTime.Time.Sub(r.Status.StartTime.Time)
+	if dur > 2*time.Second {
+		t.Fatalf("completion_time - start_time > 2s: %s", dur)
+	}
+
 }
 
 func TestReconcile_Failure(t *testing.T) {
@@ -142,15 +148,13 @@ func TestReconcile_Failure(t *testing.T) {
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
 			ctx := context.Background()
-			rec := &Reconciler{
-				EnqueueAfter: func(interface{}, time.Duration) {
-					t.Fatal("EnqueueAfter called")
-				},
-			}
+			rec := &Reconciler{}
 
 			// Start reconciling the Run.
 			// This will not return until the second Reconcile is done.
-			rec.ReconcileKind(ctx, c.r)
+			if err := rec.ReconcileKind(ctx, c.r); err != nil {
+				t.Fatalf("ReconcileKind() = %v", err)
+			}
 
 			if !c.r.IsDone() {
 				t.Fatal("Run was not done")
