@@ -21,15 +21,13 @@ import (
 	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	kreconciler "knative.dev/pkg/reconciler"
 )
 
-type Reconciler struct {
-	EnqueueAfter func(interface{}, time.Duration)
-}
+type Reconciler struct{}
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1alpha1.Run) kreconciler.Event {
@@ -89,8 +87,9 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1alpha1.Run) kreconc
 		r.Status.MarkRunSucceeded("DurationElapsed", "The wait duration has elapsed")
 	} else {
 		// Enqueue another check when the timeout should be elapsed.
-		c.EnqueueAfter(r, time.Until(r.Status.StartTime.Time.Add(dur)))
+		return controller.NewRequeueAfter(time.Until(r.Status.StartTime.Time.Add(dur)))
 	}
 
-	return kreconciler.NewEvent(corev1.EventTypeNormal, "RunReconciled", "Run reconciled: \"%s/%s\"", r.Namespace, r.Name)
+	// Don't emit events on nop-reconciliations, it causes scale problems.
+	return nil
 }
