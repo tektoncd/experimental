@@ -76,7 +76,7 @@ metadata:
 secrets:
   - name: webhook-secret
 ```
-With the service account, you also need to create a role to follow certain roles and the role binding. See the [example](https://github.com/tektoncd/triggers/tree/master/examples/role-resources/triggerbinding-roles) to create your own.
+With the service account, you also need to create a role to follow certain roles and the role binding. See the [example](https://github.com/tektoncd/triggers/blob/main/examples/rbac.yaml) to create your own.
 Use `kubectl apply` to create these resources on the cluster as well.
 
 **Please Note: If you use Kaniko in the task, you need to make the service account have enough credentials to push images.  On GKE, it has been configured already. You can ignore this.**
@@ -143,4 +143,4 @@ If you want to run Pipeline with Trigger, it is optional to set up the commit sh
 
 The resource template used in the TriggerTemplate is also the Tekton PipelineRun. The difference from the one described before is that the value of parameters in this PipelineRun is coming from TriggerTemplate. When generating the EventListener, the interceptors of processing GitHub push and pull request events are included in the triggers. The EventListener connects the TriggerBinding and TriggerTemplate. When the HTTP based events with JSON payloads comes, it creates the Template resources accordingly.
 
-To run the pipeline with Triggers, except for the dependent catalog tasks, other dependencies like [webhook secret](#webhook-secret), [service account](#service-account), [role-based access control (RBAC)](https://github.com/tektoncd/triggers/blob/master/examples/role-resources/triggerbinding-roles/role.yaml) are also required.
+To run the pipeline with Triggers, except for the dependent catalog tasks, other dependencies like [webhook secret](#webhook-secret), [service account](#service-account), [role-based access control (RBAC)](https://github.com/tektoncd/triggers/blob/main/examples/rbac.yaml) are also required.
