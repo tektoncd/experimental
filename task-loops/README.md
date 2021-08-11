@@ -219,9 +219,10 @@ A `Run` definition supports the following fields:
   - [`serviceAccountName`](#specifying-workspaces-service-account-and-pod-template) - Specifies a `ServiceAccount`
     object that provides custom credentials.
   - [`workspaces`](#specifying-workspaces-service-account-and-pod-template) - Specifies the physical volumes to use for the
-    [`Workspaces`](workspaces.md) required by the `Task`.
-  - [`podTemplate`](#specifying-workspaces-service-account-and-pod-template) - Specifies a [`Pod` template](podtemplates.md) to use
-    to configure pods created by the `TaskRun`s.
+    [`Workspaces`](https://github.com/tektoncd/pipeline/blob/main/docs/workspaces.md) required by the `Task`.
+  - [`podTemplate`](#specifying-workspaces-service-account-and-pod-template) - Specifies a
+    [`Pod` template](https://github.com/tektoncd/pipeline/blob/main/docs/podtemplates.md)
+    to use to configure pods created by the `TaskRun`s.
 
 [kubernetes-overview]:
   https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#required-fields
@@ -261,7 +262,8 @@ These are passed through as is to each `TaskRun`.
 ### Monitoring execution status
 
 As your `Run` executes, its `status` field accumulates information on the execution of each `TaskRun` as well as the `Run` as a whole.
-This information includes the complete [status of each `TaskRun`](taskruns.md#monitoring-execution-status) under `status.extraFields.taskRuns`.
+This information includes the complete [status of each `TaskRun`](https://github.com/tektoncd/pipeline/blob/main/docs/taskruns.md#monitoring-execution-status)
+under `status.extraFields.taskRuns`.
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
