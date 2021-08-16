@@ -17,6 +17,6 @@ PRs are welcome, and will follow
 Once [your experimental project proposal has been accepted](https://github.com/tektoncd/community/blob/main/process.md#proposing-projects):
 
 - Create a new folder for your project
+- Add an [OWNERS](https://github.com/tektoncd/community/blob/master/process.md#OWNERS) file only in the initial pull request so that the project owners can approve subsequent pull requests for your project
 - Add a README describing your project
-- Add an [OWNERS](https://github.com/tektoncd/community/blob/master/process.md#OWNERS) file
 - Add your project [to the list of projects in presubmit-tests.sh](https://github.com/tektoncd/experimental/blob/main/test/presubmit-tests.sh#L61)
