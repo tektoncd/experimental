@@ -1,0 +1,56 @@
+apiVersion: custom.tekton.dev/v1alpha1
+kind: CELEval
+metadata:
+  name: is-red
+spec:
+  expressions:
+    - name: red
+      value: "{'blue': '0x000080', 'red': '0xFF0000'}['red'] == '0xFF0000'"
+---
+apiVersion: custom.tekton.dev/v1alpha1
+kind: CELEval
+metadata:
+  name: get-type
+spec:
+  expressions:
+    - name: type
+      value: "type(1)"
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: example-pr-
+spec:
+  serviceAccountName: 'default'
+  pipelineSpec:
+    tasks:
+      - name: is-red
+        taskRef:
+          apiVersion: custom.tekton.dev/v1alpha1
+          kind: CELEval
+          name: is-red
+      - name: echo-is-red
+        when:
+          - input: "$(tasks.is-red.results.red)"
+            operator: in
+            values: ["true"]
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: echo ISRED!
+      - name: get-type
+        taskRef:
+          apiVersion: custom.tekton.dev/v1alpha1
+          kind: CELEval
+          name: get-type
+      - name: echo-get-type
+        when:
+          - input: "$(tasks.get-type.results.type)"
+            operator: in
+            values: ["int"]
+        taskSpec:
+          steps:
+            - name: echo
+              image: ubuntu
+              script: echo ISINT!

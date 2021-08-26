@@ -1,0 +1,18 @@
+apiVersion: custom.tekton.dev/v1alpha1
+kind: CELEval
+metadata:
+  name: get-type
+spec:
+  expressions:
+    - name: expression
+      value: "type(1)"
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: get-type-
+spec:
+  ref:
+    apiVersion: custom.tekton.dev/v1alpha1
+    kind: CELEval
+    name: get-type

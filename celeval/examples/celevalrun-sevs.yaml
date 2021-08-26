@@ -1,0 +1,23 @@
+apiVersion: custom.tekton.dev/v1alpha1
+kind: CELEval
+metadata:
+  name: sevs
+spec:
+  variables:
+    - name: job_priority
+      value: "high"
+    - name: alert_enable
+      value: "true"
+  expressions:
+    - name: job_severity
+      value: "job_priority in ['high', 'normal'] ? 'sev-1' : 'sev-2'"
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: sevs-
+spec:
+  ref:
+    apiVersion: custom.tekton.dev/v1alpha1
+    kind: CELEval
+    name: sevs

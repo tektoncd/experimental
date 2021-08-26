@@ -1,0 +1,24 @@
+apiVersion: custom.tekton.dev/v1alpha1
+kind: CELEval
+metadata:
+  name: colors
+spec:
+  expressions:
+    - name: red
+      value: "{'blue': '0x000080', 'red': '0xFF0000'}['red']"
+    - name: blue
+      value: "{'blue': '0x000080', 'red': '0xFF0000'}['blue']"
+    - name: is-red
+      value: "{'blue': '0x000080', 'red': '0xFF0000'}['red'] == '0xFF0000'"
+    - name: is-blue
+      value: "{'blue': '0x000080', 'red': '0xFF0000'}['blue'] == '0xFF0000'"
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  generateName: colors-
+spec:
+  ref:
+    apiVersion: custom.tekton.dev/v1alpha1
+    kind: CELEval
+    name: colors
