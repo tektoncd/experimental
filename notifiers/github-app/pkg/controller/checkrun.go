@@ -74,9 +74,9 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 	owner := tr.Annotations[key("owner")]
 	repo := tr.Annotations[key("repo")]
 	commit := tr.Annotations[key("commit")]
-	name := tr.Annotations[key("name")]
-	if name == "" {
-		name = tr.GetNamespacedName().String()
+	name, err := nameFor(tr)
+	if err != nil {
+		return nil, err
 	}
 
 	status, conclusion := status(tr.Status)
