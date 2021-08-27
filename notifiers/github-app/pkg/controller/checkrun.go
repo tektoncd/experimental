@@ -79,6 +79,12 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 		return nil, err
 	}
 
+	url, err := dashboardURL(tr)
+
+	if err != nil {
+		return nil, err
+	}
+
 	status, conclusion := status(tr.Status)
 
 	if id, ok := tr.Annotations[key("checkrun")]; ok {
@@ -95,8 +101,7 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 			HeadSHA:     github.String(commit),
 			Output:      output,
 			CompletedAt: ghtime(tr.Status.CompletionTime),
-			// TODO: Replace with Task-specific URL
-			DetailsURL: github.String("https://tekton.dev"),
+			DetailsURL:  github.String(url),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("CreateCheck: %w", err)
@@ -114,8 +119,7 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 		Output:      output,
 		StartedAt:   ghtime(tr.Status.StartTime),
 		CompletedAt: ghtime(tr.Status.CompletionTime),
-		// TODO: Replace with Task-specific URL
-		DetailsURL: github.String("https://tekton.dev"),
+		DetailsURL:  github.String(url),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("CreateCheck: %w", err)
