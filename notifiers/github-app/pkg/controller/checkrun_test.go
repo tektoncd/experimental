@@ -67,7 +67,7 @@ func TestUpsertCheckRun(t *testing.T) {
 				Name:        github.String(tc.wantName),
 				HeadSHA:     github.String("db165c3a71dc45d096aebd0f49f07ec565ad1e08"),
 				ExternalID:  github.String("/apis/tekton.dev/v1beta1/namespaces/default/taskruns/echo-6b4fn-echo-xrxq4"),
-				DetailsURL:  github.String("https://tekton.dev"),
+				DetailsURL:  github.String("https://dashboard.dogfooding.tekton.dev/#/namespaces/default/taskruns/echo-6b4fn-echo-xrxq4"),
 				Status:      github.String("completed"),
 				Conclusion:  github.String("success"),
 				StartedAt:   &github.Timestamp{Time: time.Date(2020, 8, 27, 15, 21, 37, 0, time.FixedZone("Z", 0))},

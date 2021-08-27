@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/go-github/v32/github"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -24,10 +23,16 @@ func (r *GitHubAppReconciler) HandleStatus(ctx context.Context, tr *v1beta1.Task
 		return err
 	}
 
+	url, err := dashboardURL(tr)
+
+	if err != nil {
+		return err
+	}
+
 	status := &github.RepoStatus{
 		State:       state(tr.Status),
 		Description: truncateDesc(tr.GetStatusCondition().GetCondition(apis.ConditionSucceeded).GetMessage()),
-		TargetURL:   github.String(dashboardURL(tr)),
+		TargetURL:   github.String(url),
 		Context:     github.String(name),
 	}
 	_, _, err = client.Repositories.CreateStatus(ctx, owner, repo, commit, status)
@@ -44,11 +49,6 @@ func truncateDesc(m string) *string {
 		m = (m)[:137] + "..."
 	}
 	return &m
-}
-
-func dashboardURL(tr *v1beta1.TaskRun) string {
-	// TODO: generalize host, object type.
-	return fmt.Sprintf("https://dashboard.dogfooding.tekton.dev/#/namespaces/%s/taskruns/%s", tr.GetNamespace(), tr.GetName())
 }
 
 const (

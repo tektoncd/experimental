@@ -43,11 +43,13 @@ func TestHandleStatus(t *testing.T) {
 			tr := taskrun("testdata/taskrun.yaml")
 			tr.Annotations[key("name")] = tc.nameAnnotation
 
+			url, _ := dashboardURL(tr)
+
 			mux.HandleFunc("/repos/tektoncd/test/statuses/db165c3a71dc45d096aebd0f49f07ec565ad1e08",
 				validateStatus(t, &github.RepoStatus{
 					State:       github.String(StateSuccess),
 					Description: github.String("All Steps have completed executing"),
-					TargetURL:   github.String(dashboardURL(tr)),
+					TargetURL:   github.String(url),
 					Context:     github.String(tc.wantName),
 				}),
 			)
@@ -79,14 +81,6 @@ func validateStatus(t *testing.T, want *github.RepoStatus) func(rw http.Response
 			rw.WriteHeader(http.StatusInternalServerError)
 			rw.Write([]byte(err.Error()))
 		}
-	}
-}
-
-func TestDashboardURL(t *testing.T) {
-	want := "https://dashboard.dogfooding.tekton.dev/#/namespaces/default/taskruns/echo-6b4fn-echo-xrxq4"
-	got := dashboardURL(taskrun("testdata/taskrun.yaml"))
-	if want != got {
-		t.Errorf("want: %s, got: %s", want, got)
 	}
 }
 
