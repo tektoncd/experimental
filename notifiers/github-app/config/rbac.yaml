@@ -39,7 +39,7 @@ rules:
     resources:
       - "pods/log"
       - "pods"
-    verbs: ["list", "get"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
