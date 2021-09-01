@@ -58,7 +58,7 @@ function should_test_folder() {
 # Get list of changed files
 initialize_environment
 
-projects="catalogs cel commit-status-tracker generators helm hub oci pipeline/cleanup pipelines-in-pipelines tekdoc task-loops notifiers/github-app cloudevents"
+projects="catalogs cel commit-status-tracker generators helm hub oci pipeline/cleanup pipelines-in-pipelines pipeline-to-taskrun tekdoc task-loops notifiers/github-app cloudevents"
 inanyprojectregex=$(echo "^${projects// /\/.* ^}\/.*" | sed 's/ /\\|/g')
 
 for proj in $projects; do
