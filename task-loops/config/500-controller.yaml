@@ -67,8 +67,7 @@ spec:
         - name: CONFIG_OBSERVABILITY_NAME
           value: config-observability
         - name: METRICS_DOMAIN
-          value: tekton.dev/pipeline
+          value: experimental.tekton.dev/task-loops
         securityContext:
           allowPrivilegeEscalation: false
           runAsUser: 1001
-

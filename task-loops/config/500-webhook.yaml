@@ -70,7 +70,7 @@ spec:
         - name: WEBHOOK_SECRET_NAME
           value: tekton-taskloop-webhook-certs
         - name: METRICS_DOMAIN
-          value: tekton.dev/pipeline
+          value: experimental.tekton.dev/task-loops
         securityContext:
           allowPrivilegeEscalation: false
           runAsUser: 1001
