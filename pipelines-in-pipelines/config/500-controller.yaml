@@ -60,6 +60,8 @@ spec:
             # values in the "configmaps" "get" rule.
             - name: CONFIG_LOGGING_NAME
               value: config-logging
+            - name: METRICS_DOMAIN
+              value: experimental.tekton.dev/pipelines-in-pipelines
       volumes:
         - name: config-logging
           configMap:

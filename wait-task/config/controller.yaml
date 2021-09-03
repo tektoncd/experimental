@@ -202,6 +202,8 @@ spec:
         # values in the "configmaps" "get" rule.
         - name: CONFIG_LOGGING_NAME
           value: config-logging
+        - name: METRICS_DOMAIN
+          value: experimental.tekton.dev/wait-task
       volumes:
         - name: config-logging
           configMap:
