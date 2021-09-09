@@ -25,7 +25,7 @@ python setup.py install --user
 
 ## Getting Started
 
-Please follow the [installation procedure](#installation--usage) and then run the [examples](examples/taskrun.ipynb)
+Please follow the [installation procedure](#installation--usage) and then run the [examples](examples/tekton_pipeline_python_sdk_sample.ipynb)
 
 
 ## Documentation for API Endpoints
