@@ -68,7 +68,7 @@ spec:
         - name: context
           value: $(params.subfolder)
         - name: flags
-          value: -v -mod=vendor
+          value: -v
       workspaces:
         - name: source
           workspace: workarea
@@ -79,13 +79,11 @@ spec:
         name: golang-build
       params:
         - name: package
-          value: $(params.package)
-        - name: packages
-          value: ./$(params.subfolder)/cmd/...
+          value: $(params.package)/$(params.subfolder)
       workspaces:
         - name: source
           workspace: workarea
-          subpath: git
+          subpath: git/task-loops
     - name: publish-images
       runAfter: [build, unit-tests]
       taskRef:
