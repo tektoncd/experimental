@@ -1,0 +1,11 @@
+kind: ResourceRequest
+apiVersion: resolution.tekton.dev/v1alpha1
+metadata:
+  name: fetch-pipelineref
+  labels:
+    resolution.tekton.dev/type: in-cluster
+spec:
+  params:
+    kind: Pipeline
+    name: p
+    namespace: default

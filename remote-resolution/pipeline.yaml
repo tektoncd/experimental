@@ -1,0 +1,12 @@
+kind: Pipeline
+apiVersion: tekton.dev/v1beta1
+metadata:
+  name: p
+spec:
+  tasks:
+  - name: fetch-from-git
+    taskSpec:
+      steps:
+      - image: alpine/git
+        script: |
+          git clone https://github.com/tektoncd/results

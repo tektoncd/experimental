@@ -1,0 +1,25 @@
+{
+    "apiVersion": "tekton.dev/v1beta1",
+    "kind": "Pipeline",
+    "metadata": {
+        "name": "p"
+    },
+    "spec": {
+        "tasks": [
+            {
+                "name": "fetch-from-git",
+                "taskSpec": {
+                    "metadata": {},
+                    "spec": null,
+                    "steps": [
+                        {
+                            "image": "alpine@sha256:69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490daf8a",
+                            "name": "",
+                            "resources": {}
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

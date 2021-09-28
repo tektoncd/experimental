@@ -1,0 +1,13 @@
+kind: PipelineRun
+apiVersion: tekton.dev/v1beta1
+metadata:
+  name: pr-in-cluster
+  annotations:
+    resolution.tekton.dev/resolver: in-cluster
+    in-cluster.kind: Pipeline
+    in-cluster.namespace: default
+    in-cluster.name: p
+spec:
+  status: PipelineRunPending
+  pipelineRef:
+    name: p

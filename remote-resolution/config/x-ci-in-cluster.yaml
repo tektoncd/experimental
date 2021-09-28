@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: ClusterInterceptor
+metadata:
+  name: in-cluster-resolver
+spec:
+  clientConfig:
+    service:
+      name: "in-cluster-interceptor-svc"
+      namespace: "tekton-remote-resolution"
+      path: "/"
+      port: 8082

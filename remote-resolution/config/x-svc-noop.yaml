@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: noop-interceptor-svc
+  namespace: tekton-remote-resolution
+spec:
+  selector:
+    app: controller
+  ports:
+  - protocol: TCP
+    port: 8083

@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: ClusterInterceptor
+metadata:
+  name: noop-resolver
+spec:
+  clientConfig:
+    service:
+      name: "noop-interceptor-svc"
+      namespace: "tekton-remote-resolution"
+      path: "/"
+      port: 8083

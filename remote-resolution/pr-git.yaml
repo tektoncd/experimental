@@ -1,0 +1,13 @@
+kind: PipelineRun
+apiVersion: tekton.dev/v1beta1
+metadata:
+  name: pr-git
+  annotations:
+    resolution.tekton.dev/resolver: git
+    git.repo: https://github.com/sbwsg/experimental
+    git.commit: 326ad1a1432b2144fb50f2bfd56875181a407c6b
+    git.path: /remote-resolution/pipeline.yaml
+spec:
+  status: PipelineRunPending
+  pipelineRef:
+    name: p

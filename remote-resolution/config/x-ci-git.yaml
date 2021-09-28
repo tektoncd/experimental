@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: ClusterInterceptor
+metadata:
+  name: git-resolver
+spec:
+  clientConfig:
+    service:
+      name: "git-interceptor-svc"
+      namespace: "tekton-remote-resolution"
+      path: "/"
+      port: 8081
