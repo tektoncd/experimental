@@ -88,9 +88,7 @@ spec:
     - name: GOPATH
       value: /workspace/go
     - name: GO111MODULE
-      value: "off"
-    - name: GOFLAGS
-      value: "-mod=vendor"
+      value: "on"
     script: |
       #!/usr/bin/env sh
       set -ex
@@ -110,6 +108,7 @@ spec:
       # probably get it wrong), we'll just targz up the whole vendor tree and
       # include it. As of 9/20/2019, this amounts to about 11MB of additional
       # data in each image.
+      go mod vendor
       TMPDIR=$(mktemp -d)
       tar cfz ${TMPDIR}/source.tar.gz vendor/
       for d in cmd/*; do
