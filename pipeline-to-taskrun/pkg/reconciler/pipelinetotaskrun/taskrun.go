@@ -37,6 +37,20 @@ func getMergedTaskRun(run *v1alpha1.Run, pSpec *v1beta1.PipelineSpec, taskSpecs 
 		})
 	}
 
+	// if an optional workspace isn't provided, we don't need to remap it but we still need to declare it
+	// in order for any variable interpolation to work
+	optionalWS, err := getUnboundOptionalWorkspaces(taskSpecs, newWorkspaceMapping)
+	if err != nil {
+		return nil, fmt.Errorf("invalid workspace binding for %s wasn't caught by validation: %v", run.Name, err)
+	}
+	for _, ws := range optionalWS {
+		tr.Spec.TaskSpec.Workspaces = append(tr.Spec.TaskSpec.Workspaces, v1beta1.WorkspaceDeclaration{
+			Name:        ws.Name,
+			Description: ws.Description,
+			Optional:    ws.Optional,
+		})
+	}
+
 	for _, pTask := range sequenceWithAppliedParams {
 		pti, err := NewPipelineTaskInfo(pTask, taskSpecs)
 		if err != nil {

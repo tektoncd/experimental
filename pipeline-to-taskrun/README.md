@@ -81,6 +81,7 @@ Currently supported features:
 * Sequential tasks (specified using [`runAfter`](https://github.com/tektoncd/pipeline/blob/main/docs/pipelines.md#using-the-runafter-parameter))
 * [String params](https://github.com/tektoncd/pipeline/blob/main/docs/pipelines.md#specifying-parameters)
 * [Workspaces](https://github.com/tektoncd/pipeline/blob/main/docs/pipelines.md#specifying-workspaces)
+  * Including [optional workspaces](https://github.com/tektoncd/pipeline/blob/main/docs/workspaces.md#optional-workspaces)
 
 ### Potential future features
 
@@ -100,7 +101,6 @@ These features may be added in the future:
 * Workspace features:
   * [mountPaths](https://github.com/tektoncd/pipeline/blob/main/docs/workspaces.md#using-workspaces-in-tasks)
   * [subPaths](https://github.com/tektoncd/pipeline/blob/main/docs/workspaces.md#using-workspaces-in-pipelines)
-  * [optional](https://github.com/tektoncd/pipeline/blob/main/docs/workspaces.md#optional-workspaces)
   * [readOnly](https://github.com/tektoncd/pipeline/blob/main/docs/workspaces.md#using-workspaces-in-tasks)
   * [isolated](https://github.com/tektoncd/pipeline/blob/main/docs/workspaces.md#isolating-workspaces-to-specific-steps-or-sidecars)
   * In addition further thought will have to be given to support workspaces that combine

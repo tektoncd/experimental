@@ -22,6 +22,8 @@ spec:
   workspaces:
     - name: output
       description: The git repo will be cloned onto the volume backing this workspace
+    - name: ssh-directory
+      optional: true
   params:
     - name: url
       description: git url to clone
@@ -89,6 +91,8 @@ spec:
       # when the script block is in the middle of the file and absent when at the end of the file
       script: |-
         #!/bin/sh
+        echo "$(workspaces.ssh-directory.bound)"
+
         set -eu -o pipefail
         if [[ "$(params.verbose)" == "true" ]] ; then
           set -x

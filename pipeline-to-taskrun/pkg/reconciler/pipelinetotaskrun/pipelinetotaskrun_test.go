@@ -656,29 +656,6 @@ spec:
         claimName: pvc
 `),
 	}, {
-		name:            "optional workspaces - TODO(community#447)",
-		expectedErrText: []string{"optional"},
-		pipeline: test.MustParsePipeline(t, `
-metadata:
-  name: pipeline
-  namespace: foo
-spec:
-  tasks:
-  - name: use-workspace
-    taskSpec:
-      steps:
-      - image: ubuntu
-      workspaces:
-      - name: task-workspace
-        optional: true
-    workspaces:
-    - name: task-workspace
-      workspace: pipeline-workspace
-  workspaces:
-  - name: pipeline-workspace
-`),
-		run: test.MustParseRun(t, run),
-	}, {
 		name:            "embedded tasks with labels and annotations - TODO(community#447)",
 		expectedErrText: []string{"label", "annotation"},
 		pipeline: test.MustParsePipeline(t, `

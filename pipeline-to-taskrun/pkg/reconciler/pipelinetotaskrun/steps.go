@@ -165,6 +165,11 @@ func (pti PipelineTaskInfo) RenameWorkspaces(newMapping map[string]string) Pipel
 	// create a mapping of the replacements that can be used to update the steps
 	replacements := map[string]string{}
 	for oldName, newName := range newMapping {
+		// this value will be blank for optional workspaces that aren't provided
+		// for those we shouldn't do any replacement
+		if newName == "" {
+			continue
+		}
 		// we need to explicitly replace every known workspace variable
 		for _, variable := range []string{"path", "bound", "claim", "volume"} {
 			// this is the format that ApplyReplacements expects the replacements to arrive in; it infers the surrounding

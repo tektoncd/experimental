@@ -143,6 +143,8 @@ spec:
       # when the script block is in the middle of the file and absent when at the end of the file
       script: |-
         #!/bin/sh
+        echo "$(workspaces.ssh-directory.bound)"
+
         set -eu -o pipefail
         if [[ "$(params.grab-source-verbose)" == "true" ]] ; then
           set -x
@@ -233,6 +235,8 @@ spec:
     workspaces:
     - name: where-it-all-happens
     - name: gcs-creds
+    - name: ssh-directory
+      optional: true
   workspaces:
   - name: where-it-all-happens
     persistentVolumeClaim:
