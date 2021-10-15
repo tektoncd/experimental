@@ -18,6 +18,8 @@ spec:
   workspaces:
     - name: credentials
       description: A secret with a service account key to use as GOOGLE_APPLICATION_CREDENTIALS.
+      # The task won't work without this workspace, but we're setting it to optional to make sure we test the case where an optional workspace is provided
+      optional: true
     - name: source
       description: A workspace where files will be uploaded from.
   params:

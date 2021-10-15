@@ -36,6 +36,8 @@ spec:
     workspaces:
     - name: source
       workspace: where-it-all-happens
+    - name: secret
+      workspace: gcs-creds
   - name: upload-results
     workspaces:
     - name: source
@@ -53,6 +55,7 @@ spec:
 		},
 		"run-tests": {
 			"source": "where-it-all-happens",
+			"secret": "gcs-creds",
 		},
 		"upload-results": {
 			"source":      "where-it-all-happens",
@@ -89,5 +92,81 @@ spec:
 
 	if d := cmp.Diff(expectedMapping, mapping); d != "" {
 		t.Errorf("Did not get expected workspace mapping: %v", diff.PrintWantGot(d))
+	}
+}
+
+func TestGetUnboundOptionalWorkspaces(t *testing.T) {
+	mapping := PipelineTaskToWorkspaces{
+		"grab-source": {
+			"output": "where-it-all-happens",
+		},
+		"run-tests": {
+			"source": "where-it-all-happens",
+			"secret": "gcs-creds",
+		},
+		"upload-results": {
+			"source":      "where-it-all-happens",
+			"credentials": "gcs-creds",
+		},
+	}
+	tasks := []*v1beta1.Task{
+		test.MustParseTask(t, `
+spec:
+  workspaces:
+  - name: output
+  - name: ssh-directory
+    optional: true
+`),
+		test.MustParseTask(t, `
+spec:
+  workspaces:
+  - name: source
+  - name: secret
+    optional: true
+`),
+		test.MustParseTask(t, `
+spec:
+  workspaces:
+  - name: source
+  - name: credentials
+`),
+	}
+	taskSpecs := map[string]*v1beta1.TaskSpec{
+		"grab-source":    &tasks[0].Spec,
+		"run-tests":      &tasks[1].Spec,
+		"upload-results": &tasks[2].Spec,
+	}
+	expectedOptionalWS := []v1beta1.WorkspaceDeclaration{
+		taskSpecs["grab-source"].Workspaces[1],
+	}
+
+	optionalWS, err := getUnboundOptionalWorkspaces(taskSpecs, mapping)
+	if err != nil {
+		t.Fatalf("Did not expect error when getting optional workspaces but got %v", err)
+	}
+
+	if d := cmp.Diff(expectedOptionalWS, optionalWS); d != "" {
+		t.Errorf("Did not get expected optional workspaces: %v", diff.PrintWantGot(d))
+	}
+}
+
+func TestGetUnboundOptionalWorkspacesInvalid(t *testing.T) {
+	mapping := PipelineTaskToWorkspaces{
+		"grab-source": {},
+	}
+	tasks := []*v1beta1.Task{
+		test.MustParseTask(t, `
+spec:
+  workspaces:
+  - name: output
+`),
+	}
+	taskSpecs := map[string]*v1beta1.TaskSpec{
+		"grab-source": &tasks[0].Spec,
+	}
+
+	_, err := getUnboundOptionalWorkspaces(taskSpecs, mapping)
+	if err == nil {
+		t.Fatalf("Expected error when required workspace is not bound but got none")
 	}
 }

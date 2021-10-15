@@ -412,6 +412,7 @@ func TestRenameWorkspaces(t *testing.T) {
   - name: grab-source-clone
     image: some-git-image
     script: |
+      echo $(workspaces.optional.bound)
       echo $(workspaces.foobar.bound)
       echo $(workspaces.foobar.claim)
       echo $(workspaces.foobar.volume)
@@ -430,6 +431,7 @@ func TestRenameWorkspaces(t *testing.T) {
   - name: grab-source-clone
     image: some-git-image
     script: |
+      echo $(workspaces.optional.bound)
       echo $(workspaces.the-ultimate-volume.bound)
       echo $(workspaces.the-ultimate-volume.claim)
       echo $(workspaces.the-ultimate-volume.volume)
@@ -438,7 +440,7 @@ func TestRenameWorkspaces(t *testing.T) {
   - name: commit
     description: "The precise commit SHA that was fetched by this Task"
 `)
-	newMapping := map[string]string{"foobar": "the-ultimate-volume"}
+	newMapping := map[string]string{"foobar": "the-ultimate-volume", "optional": ""}
 	updatedPti := pti.RenameWorkspaces(newMapping)
 	if d := cmp.Diff(expected, updatedPti); d != "" {
 		t.Errorf("didn't get expected updated info. Diff: %s", diff.PrintWantGot(d))

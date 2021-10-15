@@ -99,9 +99,6 @@ func validateTaskSpec(taskSpec *v1beta1.TaskSpec) error {
 		if w.ReadOnly {
 			return fmt.Errorf("readOnly workspaces are not supported but %s is readOnly", w.Name)
 		}
-		if w.Optional {
-			return fmt.Errorf("optional workspaces are not supported but %s is optional", w.Name)
-		}
 	}
 	for _, p := range taskSpec.Params {
 		if p.Type == v1beta1.ParamTypeArray {
