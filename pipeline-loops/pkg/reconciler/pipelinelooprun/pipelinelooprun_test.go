@@ -238,7 +238,7 @@ func checkRunStatus(t *testing.T, run *v1alpha1.Run, expectedStatus map[string]p
 			t.Errorf("Run status for PipelineRun %s has iteration number %d instead of %d",
 				expectedPipelineRunName, actualPipelineRunStatus.Iteration, expectedPipelineRunStatus.Iteration)
 		}
-		if d := cmp.Diff(expectedPipelineRunStatus.Status, actualPipelineRunStatus.Status, cmpopts.IgnoreTypes(apis.Condition{}.LastTransitionTime.Inner.Time)); d != "" {
+		if d := cmp.Diff(expectedPipelineRunStatus.Status, actualPipelineRunStatus.Status, cmpopts.IgnoreFields(apis.Condition{}, "LastTransitionTime.Inner.Time")); d != "" {
 			t.Errorf("Run status for PipelineRun %s is incorrect. Diff %s", expectedPipelineRunName, diff.PrintWantGot(d))
 		}
 	}

@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 /*
@@ -715,7 +716,7 @@ func TestTaskLoopRun(t *testing.T) {
 					t.Errorf("TaskRun %s does not have expected labels. Diff %s", actualTaskRun.Name, diff.PrintWantGot(d))
 				}
 				if d := cmp.Diff(expectedTaskRun.Status.Status.Conditions, actualTaskRun.Status.Status.Conditions,
-					cmpopts.IgnoreTypes(apis.Condition{}.Message, apis.Condition{}.LastTransitionTime)); d != "" {
+					cmpopts.IgnoreFields(apis.Condition{}, "Message", "LastTransitionTime")); d != "" {
 					t.Errorf("TaskRun %s does not have expected status condition. Diff %s", actualTaskRun.Name, diff.PrintWantGot(d))
 				}
 
@@ -728,7 +729,7 @@ func TestTaskLoopRun(t *testing.T) {
 					t.Errorf("Run status does not include TaskRun status for TaskRun %s", actualTaskRun.Name)
 				} else {
 					if d := cmp.Diff(expectedTaskRun.Status.Status.Conditions, taskRunStatusInTaskLoopRun.Status.Status.Conditions,
-						cmpopts.IgnoreTypes(apis.Condition{}.Message, apis.Condition{}.LastTransitionTime)); d != "" {
+						cmpopts.IgnoreFields(apis.Condition{}, "Message", "LastTransitionTime")); d != "" {
 						t.Errorf("Run status for TaskRun %s does not have expected status condition. Diff %s",
 							actualTaskRun.Name, diff.PrintWantGot(d))
 					}
