@@ -277,7 +277,7 @@ func checkRunStatus(t *testing.T, run *v1alpha1.Run, expectedStatus map[string]t
 					t.Errorf("Run status for TaskRun %s has iteration number %d instead of %d",
 						actualTaskRunName, actualTaskRunStatus.Iteration, expectedTaskRunStatus.Iteration)
 				}
-				if d := cmp.Diff(expectedTaskRunStatus.Status, actualTaskRunStatus.Status, cmpopts.IgnoreTypes(apis.Condition{}.LastTransitionTime.Inner.Time)); d != "" {
+				if d := cmp.Diff(expectedTaskRunStatus.Status, actualTaskRunStatus.Status, cmpopts.IgnoreFields(apis.Condition{}, "LastTransitionTime.Inner.Time")); d != "" {
 					t.Errorf("Run status for TaskRun %s is incorrect. Diff %s", actualTaskRunName, diff.PrintWantGot(d))
 				}
 				break
