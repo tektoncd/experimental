@@ -48,6 +48,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: KUBERNETES_MIN_VERSION
               value: 1.18.0
+            - name: METRICS_DOMAIN
+              value: experimental.tekton.dev/github-notifier
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
