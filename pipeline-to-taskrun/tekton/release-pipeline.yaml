@@ -83,7 +83,7 @@ spec:
       workspaces:
         - name: source
           workspace: workarea
-          subpath: git/$(params.subfolder)
+          subpath: git/pipeline-to-taskrun
     - name: publish-images
       runAfter: [build, unit-tests]
       taskRef:
