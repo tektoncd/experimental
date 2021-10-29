@@ -140,7 +140,7 @@ spec:
         IMAGES_PATH=${IMAGES_PATH}/$(params.subfolder)
       fi
 
-      for cmd in controller webhook
+      for cmd in controller
       do
         IMAGES="${IMAGES} ${IMAGES_PATH}/cmd/${cmd}:$(params.versionTag)"
       done
