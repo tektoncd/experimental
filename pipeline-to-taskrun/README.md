@@ -18,6 +18,8 @@ the pattern of:
   * [Invoke from a `Pipeline`](#invoke-from-a-pipeline)
 * [Supported Pipeline Features](#supported-pipeline-features)
 * [Install](#install)
+  * [From nightly release](#from-nightly-release)
+  * [Build and install](#build-and-install)
 * [Examples](#examples)
 * [Tests](#tests)
 
@@ -355,6 +357,16 @@ spec:
 ```
 
 ## Install
+
+### From nightly release
+
+This controller is published nightly via automation in [tetkon](./tekton). Install the latest nightly release with:
+
+```
+kubectl apply --filename https://storage.cloud.google.com/tekton-releases-nightly/pipeline-to-taskrun/latest/release.yaml
+```
+
+### Build and install
 
 1. Install and configure [`ko`](https://github.com/google/ko).
 
