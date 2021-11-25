@@ -3,8 +3,8 @@ module github.com/tektoncd/experimental/cel
 go 1.15
 
 require (
-	github.com/google/cel-go v0.7.0
-	github.com/google/go-cmp v0.5.4
+	github.com/google/cel-go v0.9.0
+	github.com/google/go-cmp v0.5.5
 	github.com/tektoncd/pipeline v0.20.0
 	go.uber.org/zap v1.16.0
 	k8s.io/api v0.20.2
