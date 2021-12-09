@@ -363,7 +363,7 @@ spec:
 This controller is published nightly via automation in [tetkon](./tekton). Install the latest nightly release with:
 
 ```
-kubectl apply --filename https://storage.cloud.google.com/tekton-releases-nightly/pipeline-to-taskrun/latest/release.yaml
+kubectl apply --filename https://storage.googleapis.com/tekton-releases-nightly/pipeline-to-taskrun/latest/release.yaml
 ```
 
 ### Build and install
