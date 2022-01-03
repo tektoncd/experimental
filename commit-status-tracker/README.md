@@ -172,10 +172,10 @@ override the default secret name which is `commit-status-tracker-git-secret`.
 
 ## Prerequisites
 
-- [go][go_tool] version v1.13+.
+- [go][go_tool] version v1.16+.
 - [docker][docker_tool] version 17.03+
 - [kubectl][kubectl_tool] v1.11.3+
-- [operator-sdk][operator_sdk]
+- [operator-sdk][operator_sdk] v1.15
 - Access to a Kubernetes v1.11.3+ cluster
 
 ## Getting Started
@@ -201,18 +201,13 @@ $ go mod tidy
 Build the operator image and push it to a public registry, such as quay.io:
 
 ```
-$ export IMAGE=quay.io/example-inc/commit-status-tracker:v0.0.1
-$ operator-sdk build $IMAGE
-$ docker push $IMAGE
+$ make IMAGE=quay.io/example-inc/commit-status-tracker:v0.0.1 docker-push
 ```
 
 ### Using the image
 
 ```shell
-# Update the operator manifest to use the built image name (if you are performing these steps on OSX, see note below)
-$ sed -i 's|REPLACE_IMAGE|quay.io/example-inc/commit-status-tracker:v0.0.1|g' deploy/operator.yaml
-# On OSX use:
-$ sed -i "" 's|REPLACE_IMAGE|quay.io/example-inc/commit-status-tracker:v0.0.1|g' deploy/operator.yaml
+$ make IMAGE=quay.io/example-inc/commit-status-tracker:v0.0.1 bundle
 ```
 
 **NOTE** The `quay.io/example-inc/commit-status-tracker:v0.0.1` is an example. You should build and push the image for your repository.
@@ -228,19 +223,13 @@ $ kubectl apply -f kubectl apply -f https://github.com/tektoncd/pipeline/release
 And then you can install the statuses operator with:
 
 ```shell
-$ kubectl create -f deploy/service_account.yaml
-$ kubectl create -f deploy/role.yaml
-$ kubectl create -f deploy/role_binding.yaml
-$ kubectl create -f deploy/operator.yaml
+$ make IMAGE=quay.io/example-inc/commit-status-tracker:v0.0.1 deploy
 ```
 
 ### Uninstalling
 
 ```shell
-$ kubectl delete -f deploy/service_account.yaml
-$ kubectl delete -f deploy/role.yaml
-$ kubectl delete -f deploy/role_binding.yaml
-$ kubectl delete -f deploy/operator.yaml
+$ make IMAGE=quay.io/example-inc/commit-status-tracker:v0.0.1 undeploy
 ```
 
 ### Troubleshooting
@@ -248,13 +237,13 @@ $ kubectl delete -f deploy/operator.yaml
 Use the following command to check the operator logs.
 
 ```shell
-$ kubectl logs commit-status-tracker
+$ kubectl logs deployments/commit-status-tracker-controller-manager -n commit-status-tracker-system -c manager
 ```
 
 ### Running Tests
 
 ```shell
-$ go test -v ./...
+$ make test
 ```
 
 [go_tool]: https://golang.org/dl/

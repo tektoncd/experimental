@@ -1,0 +1,47 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: commit-status-tracker.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions: {}
+  description: Tracks PipelineRuns and TaskRuns and sends it status back to Git
+  displayName: tekton-commit-status-tracker
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - tekton
+  - commit-status
+  - tracker
+  - pipeline
+  - task
+  - pipelinerun
+  - taskrun
+  - status
+  - commit
+  links:
+  - name: Commit Status Tracker
+    url: https://commit-status-tracker.domain
+  maturity: alpha
+  provider:
+    name: tekton.dev
+    url: tekton.dev
+  version: 0.0.0
