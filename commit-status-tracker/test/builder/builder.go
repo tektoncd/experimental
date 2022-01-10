@@ -36,6 +36,7 @@ type PipelineResourceBindingOp func(*v1beta1.PipelineResourceBinding)
 // PipelineRun creates a new v1beta1 PipelineRun.
 func PipelineRun(name, namespace string, ops ...PipelineRunOp) *v1beta1.PipelineRun {
 	pr := &v1beta1.PipelineRun{
+		TypeMeta: metav1.TypeMeta{Kind: "PipelineRun", APIVersion: "tekton.dev/v1beta1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

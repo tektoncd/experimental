@@ -51,74 +51,15 @@ The revision here should be the full commit SHA from the HEAD of a branch associ
 
 The annotations are:
 
-<table style="width=100%" border="1">
-  <tr>
-    <th>Name</th>
-    <th>Description</th>
-    <th>Required</th>
-    <th>Default</th>
-  </tr>
-  <tr>
-    <th>
-      tekton.dev/git-status
-    </th>
-    <td>
-      This indicates that this <code>PipelineRun</code> should trigger commit-status notifications.
-    </td>
-    <td><b>Yes</b></td>
-    <td></td>
-  </tr>
-  <tr>
-    <th>
-      tekton.dev/status-context
-    </th>
-    <td>
-      This is the <a href="https://developer.github.com/v3/repos/statuses/#create-a-status">context</a> that will be reported, you can require named contexts in your branch protection rules.
-    </td>
-    <td>No</td>
-    <td>"default"</td>
-  </tr>
-  <tr>
-    <th>
-      tekton.dev/status-description
-    </th>
-    <td>
-      This is used as the description of the context, not the commit.
-    </td>
-    <td>No</td>
-    <td>""</td>
-  </tr>
-  <tr>
-    <th>
-     tekton.dev/status-target-url
-    </th>
-    <td>
-      If provided, then this will be linked in the GitHub web UI, this could be used to link to logs or output.
-    </td>
-    <td>No</td>
-    <td>""</td>
-  </tr>
-  <tr>
-    <th>
-     tekton.dev/git-repo
-    </th>
-    <td>
-      If provided together with <i>tekton.dev/git-revision</i> detecting the git repository from PiplineResource is skipped and given repository url is used
-    </td>
-    <td>No</td>
-    <td></td>
-  </tr>
-  <tr>
-    <th>
-     tekton.dev/git-revision
-    </th>
-    <td>
-      If provided together with <i>tekton.dev/git-repo</i> detecting the git repository from PiplineResource is skipped and given commit sha is used
-    </td>
-    <td>No</td>
-    <td></td>
-  </tr>
-</table>
+| Name                          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Required | Default   |
+|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------|
+| tekton.dev/git-status         | This indicates that this <code>PipelineRun</code> should trigger commit-status notifications.                                                                                                                                                                                                                                                                                                                                                                                                                     | Yes      |           |
+| tekton.dev/status-context     | This is the [context](https://developer.github.com/v3/repos/statuses/#create-a-status) that will be reported, you can require named contexts in your branch protection rules.                                                                                                                                                                                                                                                                                                                                     | No       | "default" |
+| tekton.dev/status-description | This is used as the description of the context, not the commit.                                                                                                                                                                                                                                                                                                                                                                                                                                                   | No       | ""        |
+| tekton.dev/status-target-url  | If provided, then this will be linked in the GitHub web UI, this could be used to link to logs or output. You can use text/template templating syntax to generate URL and access the namespace and name of the pipelinerun. e.g. `https://dashboard.dogfooding.tekton.dev/#/namespaces/{{ .Namespace }}/pipelineruns/{{ .Name }}` for tekton dashboard or `https://console-openshift-console.apps-crc.testing/k8s/ns/{{ .Namespace }}/{{ .Group }}~{{ .Version }}~{{ .Kind }}/{{ .Name }}` for openshift-console. | No       | ""        |
+| tekton.dev/git-repo           | If provided together with <i>tekton.dev/git-revision</i> detecting the git repository from PiplineResource is skipped and given repository url is used                                                                                                                                                                                                                                                                                                                                                            | No       |           |
+| tekton.dev/git-revision       | If provided together with <i>tekton.dev/git-repo</i> detecting the git repository from PiplineResource is skipped and given commit sha is used                                                                                                                                                                                                                                                                                                                                                                    | No       |           |
+
 
 ## Detecting the Git Repository
 
@@ -169,6 +110,8 @@ certificate verification, do not use this if you don't need to.
 
 It's possible to provide an environment variable `STATUS_TRACKER_SECRET` to
 override the default secret name which is `commit-status-tracker-git-secret`.
+
+
 
 ## Prerequisites
 
