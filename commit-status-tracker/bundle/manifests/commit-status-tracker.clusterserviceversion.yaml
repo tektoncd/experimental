@@ -93,7 +93,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: controller:latest
+                image: tekton.dev/commit-status-tracker:latest
                 livenessProbe:
                   httpGet:
                     path: /healthz
