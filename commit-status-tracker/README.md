@@ -144,7 +144,7 @@ $ go mod tidy
 Build the operator image and push it to a public registry, such as quay.io:
 
 ```
-$ make IMAGE=quay.io/example-inc/commit-status-tracker:v0.0.1 docker-push
+$ make IMAGE=quay.io/example-inc/commit-status-tracker:v0.0.1 oci-push
 ```
 
 ### Using the image
