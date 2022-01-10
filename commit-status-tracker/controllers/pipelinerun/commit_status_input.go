@@ -31,7 +31,7 @@ func getCommitStatusInput(pr *pipelinev1.PipelineRun) *scm.StatusInput {
 		State:  convertState(getPipelineRunState(pr)),
 		Label:  getAnnotationByName(pr, statusContextName, "default"),
 		Desc:   getAnnotationByName(pr, statusDescriptionName, ""),
-		Target: getAnnotationByName(pr, statusTargetURLName, ""),
+		Target: dashboardURL(pr),
 	}
 }
 
