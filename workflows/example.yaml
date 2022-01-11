@@ -1,0 +1,54 @@
+apiVersion: experimental.tekton.dev/v1alpha1
+kind: Workflow
+metadata:
+  name: npm-publish
+spec:
+  secrets: # Declare secrets
+  - name: npm-publish-token
+    ref: npm-publish-token # Refers to a K8s secret with this name
+  - name: git-clone-secret
+    ref: git-clone-secret
+
+  params:
+  - name: url
+    default: https://github.com/tektoncd/pipeline
+  - name: commit-sha
+    default: main
+
+  workspaces:
+  - name: clone-secret # Mount secret into a workspace
+    secret: "$(secrets.git-clone-secret)"
+  - name: source
+    volumeClaimTemplate: # Current Tekton Workspace syntax. We can simplify
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  pipeline:
+    spec:
+      params:
+      - name: abc
+      tasks:
+      - name: git-clone
+        taskRef:
+          name: git-clone
+        params:
+        - name: abc
+          value: "$(params.def)"
+        workspaces:
+        - name: "output"
+          workspace: "source"
+        - name: "ssh-directory"
+          workspace: clone-secret
+      - name: "publish-npm"
+        runAfter: [ "fetch-source" ]
+        workspaces:
+        - name: "source"
+          workspace: "source"
+        taskRef:
+          name: npm-publish
+        params:
+        - name: publish-secret
+          value: "$(secrets.npm-publish-token)"
