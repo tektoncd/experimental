@@ -26,12 +26,12 @@ FROM registry.access.redhat.com/ubi8-minimal@sha256:e0814339ffc6c933652bed0c5f8b
 ENV OPERATOR=/usr/local/bin/commit-status-tracker \
     USER_UID=1001 \
     USER_NAME=commit-status-tracker
-COPY --from=builder /workspace/bin/manager ${OPERATOR}
 
+COPY --from=builder /workspace/manager ${OPERATOR}
 COPY docker-scripts/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
 
 
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
 USER ${USER_UID}
 

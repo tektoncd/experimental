@@ -82,6 +82,7 @@ func NewReconciler(mgr manager.Manager) *PipelinerunReconciler {
 //+kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/status,verbs=get
 //+kubebuilder:rbac:groups=tekton.dev,resources=taskruns,verbs=get;list;watch
 //+kubebuilder:rbac:groups=tekton.dev,resources=taskruns/status,verbs=get
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
 // Reconcile reads that state of the cluster for a PipelineRun object and makes changes based on the state read
 // and what is in the PipelineRun.Spec
