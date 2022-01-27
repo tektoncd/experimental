@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/scheme"
 	"io"
 	"io/ioutil"
+
+	"github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/scheme"
+	"github.com/tektoncd/experimental/workflows/pkg/convert"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
@@ -55,15 +57,14 @@ func runWorkflow(fileName string) error {
 			return fmt.Errorf("error decoding workflow: %v", err)
 		}
 	}
-
-	pr, err := w.ToPipelineRun()
+	tt, err := convert.ToPipelineRun(w)
 	if err != nil {
-		return fmt.Errorf("error workflow to pipelinerun: %w", err)
+		return fmt.Errorf("error converting to pipelineRun: %s", err)
 	}
-	pry, err := yaml.Marshal(pr)
+	tty, err := yaml.Marshal(tt)
 	if err != nil {
-		return fmt.Errorf("error convering pipelinerun to yaml: %w", err)
+		return fmt.Errorf("error convering pipelineRun to yaml: %w", err)
 	}
-	fmt.Printf("%s", pry)
+	fmt.Printf("%s", tty)
 	return nil
 }

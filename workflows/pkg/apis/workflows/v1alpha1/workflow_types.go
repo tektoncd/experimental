@@ -14,10 +14,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
-
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	WorkflowsNamespace = "tekton-workflows"
 )
 
 // +genclient
@@ -40,8 +43,14 @@ type Workflow struct {
 
 // WorkflowSpec describes the desired state of the Workflow
 type WorkflowSpec struct {
-	// TODO: Repositories
-	Secrets []Secret `json:"secrets,omitempty"`
+	// Repos defines a set of Git repos required for this Workflow
+	// Repos   []Repo   `json:"repos,omitempty"`
+
+	// Secrets defines any secrets that this Workflow needs
+	// Secrets []Secret `json:"secrets,omitempty"`
+
+	// Triggers is a list of triggers that can trigger this workflow
+	Triggers []Trigger `json:"triggers,omitempty"`
 
 	// Params define the default values for params in the Pipeline that can be
 	// overridden in a WorkflowRun or (in the future) from an incoming event.
@@ -56,12 +65,12 @@ type WorkflowSpec struct {
 	// +optional
 	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
 
-	// Workspaces is a list of workspaces that the Pipeline needs
+	// Workspaces is a list of workspaces that the Pipeline in this workflow needs
 	// TODO: Auto-setup a Workspace across multiple
 	Workspaces []WorkflowWorkspaceBinding `json:"workspaces"`
 
 	// TODO: Timeout ?
-	Timeout pipelinev1beta1.TimeoutFields `json:"timeout,omitempty"`
+	Timeout *pipelinev1beta1.TimeoutFields `json:"timeout,omitempty"`
 	// TODO: queue_ttl -> pending_timeout
 }
 
@@ -83,7 +92,25 @@ type WorkflowList struct {
 // Only one of the following must be provided
 // TODO: Add validation
 type PipelineRef struct {
+	// Spec is a PipelineSpec that defines the pipeline to be run for this Workflow
+	// Mutually exclusive with Git
 	Spec pipelinev1beta1.PipelineSpec `json:"spec,omitempty"`
+
+	// Git defines the location of a Tekton Pipeline inside a git repository
+	// Mutually exclusive with Spec
+	Git PipelineRefGit `json:"git,omitempty"`
+}
+
+// PipelineRefGit refers to the location of a pipeline within a git repository at a particular commit/revision
+type PipelineRefGit struct {
+	// URL is the URL of the git repo containing the pipeline
+	URL string `json:"url"`
+
+	// Revision is the git revision to fetch the pipeline from
+	Revision string `json:"revision"`
+
+	// PathInRepo is the path to the pipeline file in the git repo at the revision
+	PathInRepo string `json:"pathInRepo"`
 }
 
 // WorkflowWorkspaceBinding maps a Pipeline's declared Workspaces
@@ -91,9 +118,7 @@ type PipelineRef struct {
 // will add additional magic to auto-propagate/generate PVCs
 // TODO: Fluent Syntax for Binding
 type WorkflowWorkspaceBinding struct {
-	// TODO: Support Secret Syntax here
 	Name                             string `json:"name"`
-	Secret                           string `json:"secret,omitempty"`
 	pipelinev1beta1.WorkspaceBinding `json:",inline"`
 }
 
@@ -102,49 +127,40 @@ type Secret struct {
 	Ref  string `json:"ref"`
 }
 
-func makeWorkspaces(bindings []WorkflowWorkspaceBinding) []pipelinev1beta1.WorkspaceBinding {
-	res := []pipelinev1beta1.WorkspaceBinding{}
-	for _, b := range bindings {
-		// TODO: Validate Secrets?
-		res = append(res, b.WorkspaceBinding)
-	}
-	return res
+type Trigger struct {
+	// Event describes the incoming event for this Trigger
+	Event Event `json:"event"`
+
+	// Bindings are the TriggerBindings used to extract information from this Trigger
+	// +listType=atomic
+	Bindings []*triggersv1beta1.TriggerSpecBinding `json:"bindings"`
+
+	// Name is the name of this Trigger
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// Interceptors are used to define additional filters on this trigger
+	// This field is temporary till we decide on how exactly to support simplified filters
+	// +listType=atomic
+	Interceptors []*triggersv1beta1.TriggerInterceptor `json:"interceptors,omitempty"`
 }
 
-// ToPipelineRun converts a Workflow to a PipelineRun.
-// Probably should be in its own pkg/resources folder so that it can be reused between
-// EL and WorkflowRun, and Workflow reconcilers
-func (w *Workflow) ToPipelineRun() (*pipelinev1beta1.PipelineRun, error) {
-	saName := "default"
-	if w.Spec.ServiceAccountName != nil && *w.Spec.ServiceAccountName != "" {
-		saName = *w.Spec.ServiceAccountName
-	}
+type Event struct {
+	// Source defines the source of a trigger event
+	Source EventSource `json:"source"`
 
-	params := []pipelinev1beta1.Param{}
-	for _, ps := range w.Spec.Params {
-		params = append(params, pipelinev1beta1.Param{
-			Name:  ps.Name,
-			Value: *ps.Default,
-		})
-	}
+	// Type is a string that defines the type of an event (e.g. a pull_request or a push)
+	// At the moment this assumes one of the GitHub event types
+	Type string `json:"type"`
 
-	return &pipelinev1beta1.PipelineRun{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "PipelineRun",
-			APIVersion: pipelinev1beta1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-run-", w.Name),
-			Namespace:    w.Namespace, // TODO: Do Runs generate from a Workflow always run in the same namespace
+	// Secret is the Webhook secret used for this Trigger
+	// This field is temporary until we implement a better way to handle secrets for webhook validation
+	Secret triggersv1beta1.SecretRef `json:"secret"`
+}
 
-			// TODO: Propagate labels/annotations from Workflows as well?
-		},
-		Spec: pipelinev1beta1.PipelineRunSpec{
-			PipelineSpec:       &w.Spec.Pipeline.Spec, // TODO: Apply transforms
-			Params:             params,
-			ServiceAccountName: saName,
-			Timeouts:           &w.Spec.Timeout,
-			Workspaces:         makeWorkspaces(w.Spec.Workspaces), // TODO: Add workspaces
-		},
-	}, nil
+// EventSource defines a Trigger EventSource
+type EventSource struct {
+	// TBD, this struct should contain enough information to identify the source of the events
+	// To start with, we'd support push and pull request events from GitHub as well as Cron/scheduled events
+
 }

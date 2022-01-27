@@ -5,16 +5,23 @@ go 1.18
 require (
 	github.com/google/go-cmp v0.5.9
 	github.com/spf13/cobra v1.3.0
-	github.com/tektoncd/pipeline v0.40.0
+	github.com/tektoncd/pipeline v0.40.2
 	github.com/tektoncd/plumbing v0.0.0-20220817140952-3da8ce01aeeb
+	github.com/tektoncd/triggers v0.21.0
 	go.uber.org/zap v1.23.0
 	k8s.io/api v0.23.9
+	k8s.io/apiextensions-apiserver v0.23.9 // indirect
 	k8s.io/apimachinery v0.23.9
 	k8s.io/client-go v0.23.9
 	k8s.io/code-generator v0.23.9
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
 	knative.dev/pkg v0.0.0-20220818004048-4a03844c0b15
 	sigs.k8s.io/yaml v1.3.0
+)
+
+require (
+	github.com/hashicorp/errwrap v1.1.0
+	github.com/hashicorp/golang-lru v0.5.4
 )
 
 require (
@@ -51,9 +58,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -99,7 +104,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.23.9 // indirect
 	k8s.io/gengo v0.0.0-20220613173612-397b4ae3bce7 // indirect
 	k8s.io/klog/v2 v2.70.2-0.20220707122935-0990e81f1a8f // indirect
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
