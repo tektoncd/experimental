@@ -17,6 +17,7 @@ import (
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -39,6 +40,11 @@ type Workflow struct {
 
 	// +optional
 	Status WorkflowStatus `json:"status,omitempty"`
+}
+
+// GetGroupVersionKind implements kmeta.OwnerRefable.
+func (*Workflow) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("Workflow")
 }
 
 // WorkflowSpec describes the desired state of the Workflow
@@ -162,5 +168,4 @@ type Event struct {
 type EventSource struct {
 	// TBD, this struct should contain enough information to identify the source of the events
 	// To start with, we'd support push and pull request events from GitHub as well as Cron/scheduled events
-
 }

@@ -10,7 +10,7 @@ require (
 	github.com/tektoncd/triggers v0.21.0
 	go.uber.org/zap v1.23.0
 	k8s.io/api v0.23.9
-	k8s.io/apiextensions-apiserver v0.23.9 // indirect
+	k8s.io/apiextensions-apiserver v0.23.9
 	k8s.io/apimachinery v0.23.9
 	k8s.io/client-go v0.23.9
 	k8s.io/code-generator v0.23.9
