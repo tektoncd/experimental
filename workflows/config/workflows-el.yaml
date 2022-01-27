@@ -1,0 +1,12 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: workflows-listener
+spec:
+  serviceAccountName: tekton-triggers-example-sa
+  resources:
+    kubernetesResource:
+      serviceType: LoadBalancer
+  labelSelector:
+    matchLabels:
+      managed-by: tekton-workflows
