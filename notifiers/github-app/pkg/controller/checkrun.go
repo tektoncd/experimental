@@ -71,9 +71,11 @@ func (r *GitHubAppReconciler) HandleCheckRun(ctx context.Context, log *zap.Sugar
 
 // UpsertCheckRun updates or creates a check run for the given TaskRun.
 func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.TaskRun, output *github.CheckRunOutput) (*github.CheckRun, error) {
-	owner := tr.Annotations[key("owner")]
-	repo := tr.Annotations[key("repo")]
-	commit := tr.Annotations[key("commit")]
+	ghMetadata, err := getStatusMetadata(tr)
+	if err != nil {
+		return nil, err
+	}
+
 	name, err := nameFor(tr)
 	if err != nil {
 		return nil, err
@@ -93,12 +95,12 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 		if err != nil {
 			return nil, fmt.Errorf("error converting check run id: %v", err)
 		}
-		cr, _, err := client.Checks.UpdateCheckRun(ctx, owner, repo, n, github.UpdateCheckRunOptions{
+		cr, _, err := client.Checks.UpdateCheckRun(ctx, ghMetadata["owner"], ghMetadata["repo"], n, github.UpdateCheckRunOptions{
 			ExternalID:  github.String(tr.GetSelfLink()),
 			Name:        name,
 			Status:      github.String(status),
 			Conclusion:  github.String(conclusion),
-			HeadSHA:     github.String(commit),
+			HeadSHA:     github.String(ghMetadata["commit"]),
 			Output:      output,
 			CompletedAt: ghtime(tr.Status.CompletionTime),
 			DetailsURL:  github.String(url),
@@ -110,7 +112,7 @@ func UpsertCheckRun(ctx context.Context, client *github.Client, tr *v1beta1.Task
 	}
 
 	// There's no existing CheckRun - create.
-	cr, _, err := client.Checks.CreateCheckRun(ctx, tr.Annotations[key("owner")], tr.Annotations[key("repo")], github.CreateCheckRunOptions{
+	cr, _, err := client.Checks.CreateCheckRun(ctx, ghMetadata["owner"], ghMetadata["repo"], github.CreateCheckRunOptions{
 		ExternalID:  github.String(tr.GetSelfLink()),
 		Name:        name,
 		Status:      github.String(status),

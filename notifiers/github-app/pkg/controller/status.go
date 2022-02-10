@@ -15,9 +15,11 @@ func (r *GitHubAppReconciler) HandleStatus(ctx context.Context, tr *v1beta1.Task
 		return err
 	}
 
-	owner := tr.Annotations[key("owner")]
-	repo := tr.Annotations[key("repo")]
-	commit := tr.Annotations[key("commit")]
+	ghMetadata, err := getStatusMetadata(tr)
+	if err != nil {
+		return err
+	}
+
 	name, err := nameFor(tr)
 	if err != nil {
 		return err
@@ -35,7 +37,7 @@ func (r *GitHubAppReconciler) HandleStatus(ctx context.Context, tr *v1beta1.Task
 		TargetURL:   github.String(url),
 		Context:     github.String(name),
 	}
-	_, _, err = client.Repositories.CreateStatus(ctx, owner, repo, commit, status)
+	_, _, err = client.Repositories.CreateStatus(ctx, ghMetadata["owner"], ghMetadata["repo"], ghMetadata["commit"], status)
 	return err
 }
 

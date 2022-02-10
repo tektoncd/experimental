@@ -60,8 +60,9 @@ func (r *GitHubAppReconciler) Reconcile(ctx context.Context, reconcileKey string
 	}
 	log = log.With(zap.String("uid", string(tr.UID)))
 
-	if tr.Annotations[key("owner")] == "" || tr.Annotations[key("repo")] == "" {
-		log.Info("no GitHub annotations found, skipping.")
+	owner, repo, err := getRepoMetadata(tr)
+	if owner == "" || repo == "" || err != nil {
+		log.Info("no GitHub annotations found, skipping")
 		return nil
 	}
 
