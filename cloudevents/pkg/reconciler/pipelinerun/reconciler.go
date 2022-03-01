@@ -23,6 +23,7 @@ import (
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -38,7 +39,7 @@ func (t CDEventType) String() string {
 }
 
 type Reconciler struct {
-	cloudEventClient cloudevent.CEClient
+	cloudEventClient cloudevents.Client
 	cacheClient      *lru.Cache
 	Clock            clock.PassiveClock
 }

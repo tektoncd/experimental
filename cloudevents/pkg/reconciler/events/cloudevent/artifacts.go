@@ -18,6 +18,7 @@ package cloudevent
 
 import (
 	"fmt"
+
 	cdeevents "github.com/cdfoundation/sig-events/cde/sdk/go/pkg/cdf/events"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"

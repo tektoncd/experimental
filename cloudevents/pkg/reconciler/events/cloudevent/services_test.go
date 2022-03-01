@@ -17,10 +17,11 @@ limitations under the License.
 package cloudevent
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/tektoncd/pipeline/test/diff"
-	"testing"
 
 	cdeevents "github.com/cdfoundation/sig-events/cde/sdk/go/pkg/cdf/events"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"

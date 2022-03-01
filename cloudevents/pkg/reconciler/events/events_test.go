@@ -2,18 +2,19 @@ package events_test
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+	"time"
+
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
+	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cloudevent"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	rtesting "knative.dev/pkg/reconciler/testing"
-	"regexp"
-	"testing"
-	"time"
 )
 
 func TestEmit(t *testing.T) {

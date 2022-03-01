@@ -17,22 +17,14 @@ limitations under the License.
 package cloudevent
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
+
 	"k8s.io/apimachinery/pkg/util/json"
-	"time"
 
 	cdeevents "github.com/cdfoundation/sig-events/cde/sdk/go/pkg/cdf/events"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
 )
 
 // TODO(afrittoli) The valid statuses should be encoded in the SDK
@@ -44,19 +36,6 @@ const (
 	StatusFinished EventStatus = "Finished"
 	StatusError    EventStatus = "Error"
 )
-
-var eventCreators = []cdEventCreator{
-	eventForObjectWithCondition,
-	artifactPackagedEventForObjectWithCondition,
-	artifactPublishedEventForObjectWithCondition,
-	serviceRemovedEventForObjectWithCondition,
-	serviceUpgradedEventForObjectWithCondition,
-	serviceDeployedEventForObjectWithCondition,
-	serviceRolledbackEventForObjectWithCondition,
-}
-
-// CEClient matches the `Client` interface from github.com/cloudevents/sdk-go/v2/cloudevents
-type CEClient cloudevents.Client
 
 type CDECloudEventData map[string]string
 
@@ -143,9 +122,9 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 	return &eventType, nil
 }
 
-// eventForObjectWithCondition creates a new event based for a objectWithCondition,
+// coreEventForObjectWithCondition creates a new event based for a objectWithCondition,
 // or return an error if not possible.
-func eventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Event, error) {
+func coreEventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Event, error) {
 	var (
 		event cloudevents.Event
 		err   error
@@ -175,83 +154,4 @@ func eventForObjectWithCondition(runObject objectWithCondition) (*cloudevents.Ev
 	event.SetSource(getSource(runObject))
 
 	return &event, nil
-}
-
-func getSource(runObject objectWithCondition) string {
-	meta := runObject.GetObjectMeta()
-	var kindString string
-	switch runObject.(type) {
-	case *v1beta1.TaskRun:
-		kindString = "taskrun"
-	case *v1beta1.PipelineRun:
-		kindString = "pipelinerun"
-	}
-	return fmt.Sprintf("/tekton/namespaces/%s/%s",
-		meta.GetNamespace(),
-		kindString)
-}
-
-// SendCloudEventWithRetries sends a cloud event for the specified resource.
-// It does not block and it perform retries with backoff using the cloudevents
-// sdk-go capabilities.
-// It accepts a runtime.Object to avoid making objectWithCondition public since
-// it's only used within the events/cloudevents packages.
-func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error {
-	logging.FromContext(ctx).Infof("send event for object of kind: %s", object.GetObjectKind())
-	var (
-		o  objectWithCondition
-		ok bool
-	)
-	if o, ok = object.(objectWithCondition); !ok {
-		return errors.New("input object does not satisfy objectWithCondition")
-	}
-	ceClient := cloudevent.Get(ctx)
-	if ceClient == nil {
-		return errors.New("no cloud events client found in the context")
-	}
-	for _, eventCreator := range eventCreators {
-		event, err := eventCreator(o)
-		if err != nil {
-			logging.FromContext(ctx).Warnf("no event to send %s", err)
-			continue
-		}
-		err = sendCloudEventWithRetries(ctx, object, event)
-		if err != nil {
-			logging.FromContext(ctx).Warnf("got error %s while sending event %T", err, event)
-		}
-	}
-	return nil
-}
-
-func sendCloudEventWithRetries(ctx context.Context, object runtime.Object, event *cloudevents.Event) error {
-	logger := logging.FromContext(ctx)
-	ceClient := cloudevent.Get(ctx)
-	cacheClient := cache.Get(ctx)
-	wasIn := make(chan error)
-	go func() {
-		wasIn <- nil
-		logger.Debugf("Sending cloudevent of type %q", event.Type())
-		// check cache if cloudevent is already sent
-		cloudEventSent, err := cache.IsCloudEventSent(cacheClient, event)
-		if err != nil {
-			logger.Errorf("error while checking cache: %s", err)
-		}
-		if cloudEventSent {
-			logger.Infof("cloudevent %s already sent", cache.EventKey(event))
-			return
-		}
-		if result := ceClient.Send(cloudevents.ContextWithRetriesExponentialBackoff(ctx, 10*time.Millisecond, 10), *event); !cloudevents.IsACK(result) {
-			logger.Warnf("Failed to send cloudevent: %s", result.Error())
-			recorder := controller.GetEventRecorder(ctx)
-			if recorder == nil {
-				logger.Warnf("No recorder in context, cannot emit error event")
-			} else {
-				recorder.Event(object, corev1.EventTypeWarning, "Cloud Event Failure", result.Error())
-			}
-		}
-		if err := cache.AddEventSentToCache(cacheClient, event); err != nil {
-			logger.Errorf("error while adding sent event to cache: %s", err)
-		}
-	}()
-	return <-wasIn
 }

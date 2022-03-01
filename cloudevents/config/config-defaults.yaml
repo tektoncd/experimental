@@ -43,3 +43,9 @@ data:
     # TaskRun specific sink, so the default is the only option available.
     # If no sink is specified, no CloudEvent is generated
     # default-cloud-events-sink:
+
+    # default-cloud-events-format defines the format of events that should be
+    # sent by the controller. Options are `legacy` which is the current format
+    # used by the Tekton controller, and `cdevents` which is the format defined
+    # in https://cdevents.dev/docs. The default value is `cdevents`.
+    # default-cloud-events-format:

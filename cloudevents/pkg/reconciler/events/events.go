@@ -38,10 +38,11 @@ func Emit(ctx context.Context, object runtime.Object) {
 		logger.Warnf("No DefaultCloudEventsSink set: %s", configs.Defaults.DefaultCloudEventsSink)
 		return
 	}
+	cloudEventsFormat := (configs.Defaults.DefaultCloudEventsFormat)
 	ctx = cloudevents.ContextWithTarget(ctx, configs.Defaults.DefaultCloudEventsSink)
 
 	logger.Debugf("Sending events for %s to %s", object, configs.Defaults.DefaultCloudEventsSink)
-	err := cloudevent.SendCloudEventWithRetries(ctx, object)
+	err := cloudevent.SendCloudEventWithRetries(ctx, object, cloudEventsFormat)
 	if err != nil {
 		logger.Warnf("Failed to emit cloud events %v", err.Error())
 	}

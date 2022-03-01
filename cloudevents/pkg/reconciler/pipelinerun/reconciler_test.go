@@ -23,15 +23,12 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	"knative.dev/pkg/apis"
 
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
-	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cloudevent"
+	cetesting "github.com/tektoncd/experimental/cloudevents/test"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	pipelinecloudevent "github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
-	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"
 	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
@@ -87,7 +84,7 @@ func (prt PipelineRunTest) reconcileRun(namespace, pipelineRunName string, perma
 	return reconciledRun, clients
 }
 
-func checkCloudEvents(t *testing.T, fce *pipelinecloudevent.FakeClient, testName string, wantEvents []string) error {
+func checkCloudEvents(t *testing.T, fce *cloudevent.FakeClient, testName string, wantEvents []string) error {
 	t.Helper()
 	return eventFromChannel(fce.Events, testName, wantEvents)
 }
@@ -147,12 +144,11 @@ func ensureConfigurationConfigMapsExist(d *test.Data) {
 // d, where d represents the state of the system (existing resources) needed for the test.
 func getPipelineRunController(t *testing.T, d test.Data) (test.Assets, func()) {
 	// unregisterMetrics()
-	ctx, _ := ttesting.SetupFakeContext(t)
-	cacheClient, _ := lru.New(128)
-	ctx = cache.ToContext(ctx, cacheClient)
+	ctx, _ := cetesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	ensureConfigurationConfigMapsExist(&d)
 	c, informers := test.SeedTestData(t, ctx, d)
+	c.CloudEvents = cloudevent.Get(ctx)
 	configMapWatcher := cminformer.NewInformedWatcher(c.Kube, system.Namespace())
 
 	ctl := NewController(testClock)(ctx, configMapWatcher)
@@ -361,7 +357,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 
 			_, clients := prt.reconcileRun("foo", "test-pipelinerun", false)
 
-			ceClient := clients.CloudEvents.(pipelinecloudevent.FakeClient)
+			ceClient := clients.CloudEvents.(cloudevent.FakeClient)
 			err := checkCloudEvents(t, &ceClient, "reconcile-cloud-events", tc.wantCloudEvents)
 			if err != nil {
 				t.Errorf(err.Error())
