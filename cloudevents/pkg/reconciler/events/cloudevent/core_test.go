@@ -25,63 +25,14 @@ import (
 	"github.com/tektoncd/pipeline/test/diff"
 	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 const (
-	taskRunName     = "faketaskrunname"
-	pipelineRunName = "fakepipelinerunname"
+	coreTaskRunName     = "faketaskrunname"
+	corePipelineRunName = "fakepipelinerunname"
 )
 
-func getTaskRunByCondition(status corev1.ConditionStatus, reason string) *v1beta1.TaskRun {
-	return &v1beta1.TaskRun{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TaskRun",
-			APIVersion: "v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      taskRunName,
-			Namespace: "marshmallow",
-		},
-		Spec: v1beta1.TaskRunSpec{},
-		Status: v1beta1.TaskRunStatus{
-			Status: duckv1beta1.Status{
-				Conditions: []apis.Condition{{
-					Type:   apis.ConditionSucceeded,
-					Status: status,
-					Reason: reason,
-				}},
-			},
-		},
-	}
-}
-
-func getPipelineRunByCondition(status corev1.ConditionStatus, reason string) *v1beta1.PipelineRun {
-	return &v1beta1.PipelineRun{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "PipelineRun",
-			APIVersion: "v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pipelineRunName,
-			Namespace: "marshmallow",
-		},
-		Spec: v1beta1.PipelineRunSpec{},
-		Status: v1beta1.PipelineRunStatus{
-			Status: duckv1beta1.Status{
-				Conditions: []apis.Condition{{
-					Type:   apis.ConditionSucceeded,
-					Status: status,
-					Reason: reason,
-				}},
-			},
-		},
-	}
-}
-
-func TestEventForTaskRun(t *testing.T) {
+func TestCoreEventForTaskRun(t *testing.T) {
 	taskRunTests := []struct {
 		desc          string
 		taskRun       *v1beta1.TaskRun
@@ -120,14 +71,14 @@ func TestEventForTaskRun(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := eventForObjectWithCondition(c.taskRun)
+			got, err := coreEventForObjectWithCondition(c.taskRun)
 			if err != nil {
 				// If not event type was set, don't expect an event
 				if c.wantEventType != "" {
 					t.Fatalf("I did not expect an error but I got %s", err)
 				}
 			} else {
-				wantSubject := taskRunName
+				wantSubject := coreTaskRunName
 				if d := cmp.Diff(wantSubject, got.Subject()); d != "" {
 					t.Errorf("Wrong Event ID %s", diff.PrintWantGot(d))
 				}
@@ -151,7 +102,7 @@ func TestEventForTaskRun(t *testing.T) {
 	}
 }
 
-func TestEventForPipelineRun(t *testing.T) {
+func TestCoreEventForPipelineRun(t *testing.T) {
 	pipelineRunTests := []struct {
 		desc          string
 		pipelineRun   *v1beta1.PipelineRun
@@ -186,14 +137,14 @@ func TestEventForPipelineRun(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
 
-			got, err := eventForObjectWithCondition(c.pipelineRun)
+			got, err := coreEventForObjectWithCondition(c.pipelineRun)
 			if err != nil {
 				// If not event type was set, don't expect an event
 				if c.wantEventType != "" {
 					t.Fatalf("I did not expect an error but I got %s", err)
 				}
 			} else {
-				wantSubject := pipelineRunName
+				wantSubject := corePipelineRunName
 				if d := cmp.Diff(wantSubject, got.Subject()); d != "" {
 					t.Errorf("Wrong Event ID %s", diff.PrintWantGot(d))
 				}
@@ -221,7 +172,7 @@ func TestEventForPipelineRun(t *testing.T) {
 }
 
 func TestEventTypeInvalidType(t *testing.T) {
-	eventType, err := eventForObjectWithCondition(myObjectWithCondition{})
+	eventType, err := coreEventForObjectWithCondition(myObjectWithCondition{})
 	if err == nil {
 		t.Fatalf("expected an error, got nil and eventType %s", eventType)
 	}

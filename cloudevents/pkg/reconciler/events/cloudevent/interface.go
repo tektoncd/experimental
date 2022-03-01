@@ -28,4 +28,4 @@ func (cdea cdEventAnnotationType) String() string {
 }
 
 // cdEventCreate is a function that creates a cd event from an objectWithCondition
-type cdEventCreator func(runObject objectWithCondition) (*cloudevents.Event, error)
+type eventCreator func(runObject objectWithCondition) (*cloudevents.Event, error)

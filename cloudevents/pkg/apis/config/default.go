@@ -1,19 +1,26 @@
 package config
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	"fmt"
 	"os"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	defaultCloudEventsSinkKey  = "default-cloud-events-sink"
-	DefaultCloudEventSinkValue = ""
+	defaultCloudEventsSinkKey    = "default-cloud-events-sink"
+	DefaultCloudEventSinkValue   = ""
+	EventFormatLegacy            = "legacy"
+	EventFormatCDEvents          = "cdevents"
+	defaultCloudEventsFormatKey  = "default-cloud-events-format"
+	DefaultCloudEventFormatValue = EventFormatCDEvents
 )
 
 // Defaults holds the default configurations
 // +k8s:deepcopy-gen=true
 type Defaults struct {
-	DefaultCloudEventsSink string
+	DefaultCloudEventsSink   string
+	DefaultCloudEventsFormat string
 }
 
 // GetDefaultsConfigName returns the name of the configmap containing all
@@ -35,7 +42,8 @@ func (cfg *Defaults) Equals(other *Defaults) bool {
 		return false
 	}
 
-	return other.DefaultCloudEventsSink == cfg.DefaultCloudEventsSink
+	return other.DefaultCloudEventsSink == cfg.DefaultCloudEventsSink &&
+		other.DefaultCloudEventsFormat == cfg.DefaultCloudEventsFormat
 }
 
 func NewDefaultsFromConfigMap(config *corev1.ConfigMap) (*Defaults, error) {
@@ -45,11 +53,21 @@ func NewDefaultsFromConfigMap(config *corev1.ConfigMap) (*Defaults, error) {
 // NewDefaultsFromMap returns a CEConfig given a map corresponding to a ConfigMap
 func NewDefaultsFromMap(cfgMap map[string]string) (*Defaults, error) {
 	tc := Defaults{
-		DefaultCloudEventsSink: DefaultCloudEventSinkValue,
+		DefaultCloudEventsSink:   DefaultCloudEventSinkValue,
+		DefaultCloudEventsFormat: DefaultCloudEventFormatValue,
 	}
 
 	if defaultCloudEventsSink, ok := cfgMap[defaultCloudEventsSinkKey]; ok {
 		tc.DefaultCloudEventsSink = defaultCloudEventsSink
+	}
+
+	if defaultCloudEventsFormat, ok := cfgMap[defaultCloudEventsFormatKey]; ok {
+		switch defaultCloudEventsFormat {
+		case EventFormatLegacy, EventFormatCDEvents:
+			tc.DefaultCloudEventsFormat = defaultCloudEventsFormat
+		default:
+			return nil, fmt.Errorf("invalid value for CloudEvents format: %q", defaultCloudEventsFormat)
+		}
 	}
 
 	return &tc, nil

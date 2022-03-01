@@ -21,5 +21,4 @@ metadata:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-cloudevents
 data:
-  default-cloud-events-sink: "http://example-cesink.tekton-cloudevents.svc.cluster.local"
-  default-cloud-events-format: "legacy"
+  default-cloud-events-format: "invalid"

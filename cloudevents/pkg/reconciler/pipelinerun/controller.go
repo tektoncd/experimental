@@ -5,10 +5,10 @@ import (
 
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
 	cloudeventscache "github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
+	cloudeventclient "github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cloudevent"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	pipelineruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/pipelinerun"
 	pipelinerunreconciler "github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1beta1/pipelinerun"
-	cloudeventclient "github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"

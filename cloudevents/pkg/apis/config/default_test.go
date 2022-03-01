@@ -56,6 +56,38 @@ func TestEquals(t *testing.T) {
 			right:    &config.Defaults{},
 			expected: true,
 		},
+		{
+			name: "right with value and left",
+			left: &config.Defaults{
+				DefaultCloudEventsSink: "foo",
+			},
+			right:    &config.Defaults{},
+			expected: false,
+		},
+		{
+			name: "right and left with values",
+			left: &config.Defaults{
+				DefaultCloudEventsSink:   "foo",
+				DefaultCloudEventsFormat: "bar",
+			},
+			right: &config.Defaults{
+				DefaultCloudEventsSink:   "foo",
+				DefaultCloudEventsFormat: "bar",
+			},
+			expected: true,
+		},
+		{
+			name: "right and left with different values",
+			left: &config.Defaults{
+				DefaultCloudEventsSink:   "foo",
+				DefaultCloudEventsFormat: "bar1",
+			},
+			right: &config.Defaults{
+				DefaultCloudEventsSink:   "foo",
+				DefaultCloudEventsFormat: "bar2",
+			},
+			expected: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -84,5 +116,42 @@ func verifyConfigFileWithExpectedError(t *testing.T, fileName string) {
 	cm := test.ConfigMapFromTestFile(t, fileName)
 	if _, err := config.NewDefaultsFromConfigMap(cm); err == nil {
 		t.Errorf("NewDefaultsFromConfigMap(actual) was expected to return an error")
+	}
+}
+
+func TestNewDefaultsFromConfigMap(t *testing.T) {
+	type testCase struct {
+		expectedConfig *config.Defaults
+		expectedError  bool
+		fileName       string
+	}
+
+	testCases := []testCase{
+		{
+			expectedConfig: &config.Defaults{
+				DefaultCloudEventsSink:   "http://example-cesink.tekton-cloudevents.svc.cluster.local",
+				DefaultCloudEventsFormat: "legacy",
+			},
+			fileName: config.GetDefaultsConfigName(),
+		},
+		{
+			expectedConfig: &config.Defaults{
+				DefaultCloudEventsSink:   "",
+				DefaultCloudEventsFormat: "cdevents",
+			},
+			fileName: "config-defaults-same",
+		},
+		{
+			expectedError: true,
+			fileName:      "config-defaults-error",
+		},
+	}
+
+	for _, tc := range testCases {
+		if tc.expectedError {
+			verifyConfigFileWithExpectedError(t, tc.fileName)
+		} else {
+			verifyConfigFileWithExpectedConfig(t, tc.fileName, tc.expectedConfig)
+		}
 	}
 }
