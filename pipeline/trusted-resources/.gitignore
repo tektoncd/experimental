@@ -12,11 +12,6 @@ cosign.*
 payload.json
 signatures.json
 
-# tmp
-/config
-/cmd
-/examples
-
 # Precompiled Headers
 *.gch
 *.pch

@@ -47,7 +47,7 @@ import (
 
 const (
 	secretPath          = "/etc/signing-secrets/cosign.pub"
-	signingConfigMap    = "signing-secret-path"
+	signingConfigMap    = "config-trusted-resources"
 	signatureAnnotation = "tekton.dev/signature"
 	kmsAnnotation       = "tekton.dev/kms"
 )
@@ -163,8 +163,8 @@ func verifier(
 		if err != nil {
 			return nil, err
 		}
-		if cm.Data["path"] != "" {
-			cosignPublicKeypath = cm.Data["path"]
+		if cm.Data["signing-secret-path"] != "" {
+			cosignPublicKeypath = cm.Data["signing-secret-path"]
 		}
 		return cosignsignature.LoadPublicKey(ctx, cosignPublicKeypath)
 	}

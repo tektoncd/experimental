@@ -1,0 +1,12 @@
+kind: TaskRun
+apiVersion: tekton.dev/v1beta1
+metadata:
+  annotations:
+      # add signature for verification
+      #tekton.dev/signature: MEYCIQCha6yYBI1Zfz3dG4qNXmirKJuVcyEU/UgVARJvKMfjCAIhAPsof7Nko/BjBUlPJOTvADjseLSbJrpc6e7O7Kstok+b
+      #tekton.dev/key: kms://
+  name: tr-3
+  namespace: tekton-trusted-resources
+spec:
+  taskRef:
+    name: t-3
