@@ -1,0 +1,13 @@
+kind: TaskRun
+apiVersion: tekton.dev/v1beta1
+metadata:
+  annotations:
+      # add signature for verification
+      #tekton.dev/signature: MEUCIQD5TCrknzAmsPKa0vgRdGj3qhyGuIG/+frARh3kVZWPGwIgAiFG7zWUKzzgxcIuq7ICYIb6CrbJsJVRTjvo4EPowXA=
+      #tekton.dev/key: kms://
+  name: tr-2
+  namespace: tekton-trusted-resources
+spec:
+  taskRef:
+    name: t-2
+    bundle: docker.io/zyx1200/testtask

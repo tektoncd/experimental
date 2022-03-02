@@ -522,7 +522,7 @@ func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.I
 			Namespace: nameSpace,
 			Name:      signingConfigMap,
 		},
-		Data: map[string]string{"path": filepath.Join(tmpDir, "cosign.pub")},
+		Data: map[string]string{"signing-secret-path": filepath.Join(tmpDir, "cosign.pub")},
 	}
 	if _, err := k8sclient.CoreV1().ConfigMaps(system.Namespace()).Create(ctx, cfg, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
 		t.Fatal(err)
