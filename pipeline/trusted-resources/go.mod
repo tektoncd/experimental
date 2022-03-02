@@ -3,7 +3,7 @@ module github.com/tektoncd/experimental/pipelines/trusted-resources
 go 1.16
 
 require (
-	github.com/sigstore/cosign v1.5.1
+	github.com/sigstore/cosign v1.5.2
 	github.com/sigstore/sigstore v1.1.1-0.20220130134424-bae9b66b8442
 	github.com/tektoncd/pipeline v0.32.1-0.20220207152807-6cb0f4ccfce0
 	k8s.io/api v0.22.5
