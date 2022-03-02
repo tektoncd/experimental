@@ -16,4 +16,5 @@ require (
 	cloud.google.com/go/iam v0.2.0 // indirect
 	github.com/google/go-containerregistry v0.8.1-0.20220202214207-9c35968ef47e
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220125170349-50dfc2733d10
+	go.uber.org/zap v1.20.0
 )

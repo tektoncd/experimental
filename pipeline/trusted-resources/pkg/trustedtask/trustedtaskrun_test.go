@@ -40,9 +40,13 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	remotetest "github.com/tektoncd/pipeline/test"
+	"go.uber.org/zap/zaptest"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/webhook/json"
 )
@@ -110,9 +114,6 @@ var (
 			Name:      serviceAccount,
 		},
 	}
-
-	k8sclient    = fakek8s.NewSimpleClientset(sa)
-	tektonClient = faketekton.NewSimpleClientset(ts, tsTampered)
 )
 
 func init() {
@@ -121,10 +122,13 @@ func init() {
 }
 
 func TestVerifyResources_TaskSpec(t *testing.T) {
-	ctx := context.Background()
+	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
+
+	k8sclient := fakek8s.NewSimpleClientset()
+	tektonClient := faketekton.NewSimpleClientset(ts, tsTampered)
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx)
+	signer, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,10 +180,13 @@ func TestVerifyResources_TaskSpec(t *testing.T) {
 }
 
 func TestVerifyResources_OCIBundle(t *testing.T) {
-	ctx := context.Background()
+	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
+
+	k8sclient := fakek8s.NewSimpleClientset(sa)
+	tektonClient := faketekton.NewSimpleClientset(ts, tsTampered)
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx)
+	signer, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,10 +257,13 @@ func TestVerifyResources_OCIBundle(t *testing.T) {
 }
 
 func TestVerifyResources_TaskRef(t *testing.T) {
-	ctx := context.Background()
+	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
+
+	k8sclient := fakek8s.NewSimpleClientset()
+	tektonClient := faketekton.NewSimpleClientset(ts, tsTampered)
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx)
+	signer, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +322,7 @@ func TestVerifyResources_TaskRef(t *testing.T) {
 }
 
 func TestVerifyTaskSpec(t *testing.T) {
-	ctx := context.Background()
+	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
 
 	// get keys
 	sv, err := getSignerVerifier(t, pass(password))
@@ -368,7 +378,9 @@ func TestVerifyTaskSpec(t *testing.T) {
 }
 
 func TestVerifyTaskOCIBundle(t *testing.T) {
-	ctx := context.Background()
+	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
+
+	k8sclient := fakek8s.NewSimpleClientset(sa)
 
 	// Create registry server
 	s := httptest.NewServer(registry.New())
@@ -440,6 +452,9 @@ func TestVerifyTaskOCIBundle(t *testing.T) {
 
 func TestDigest(t *testing.T) {
 	ctx := context.Background()
+
+	k8sclient := fakek8s.NewSimpleClientset(sa)
+
 	// Create registry server
 	s := httptest.NewServer(registry.New())
 	defer s.Close()
@@ -494,7 +509,7 @@ func TestDigest(t *testing.T) {
 }
 
 // Generate key files to tmpdir, set configMap and return signer
-func getSignerFromFile(t *testing.T, ctx context.Context) (signature.Signer, error) {
+func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.Interface) (signature.Signer, error) {
 	t.Helper()
 	tmpDir := t.TempDir()
 	privateKeyPath, _ := generateKeyFile(t, tmpDir, pass(password))
@@ -502,16 +517,14 @@ func getSignerFromFile(t *testing.T, ctx context.Context) (signature.Signer, err
 	if err != nil {
 		t.Fatal(err)
 	}
-	signgingConfigMap := &corev1.ConfigMap{
+	cfg := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nameSpace,
-			Name:      signgingConfigMap,
+			Name:      signingConfigMap,
 		},
-		Data: map[string]string{"path": tmpDir + "/cosign.pub"},
+		Data: map[string]string{"path": filepath.Join(tmpDir, "cosign.pub")},
 	}
-
-	_, err = k8sclient.CoreV1().ConfigMaps(system.Namespace()).Create(ctx, signgingConfigMap, metav1.CreateOptions{})
-	if err != nil {
+	if _, err := k8sclient.CoreV1().ConfigMaps(system.Namespace()).Create(ctx, cfg, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
 		t.Fatal(err)
 	}
 
@@ -563,14 +576,12 @@ func generateKeyFile(t *testing.T, tmpDir string, pf cosign.PassFunc) (privFile,
 	}
 
 	tmpPrivFile := filepath.Join(tmpDir, "cosign.key")
-	err = os.WriteFile(tmpPrivFile, keys.PrivateBytes, 0666)
-	if err != nil {
+	if err := os.WriteFile(tmpPrivFile, keys.PrivateBytes, 0666); err != nil {
 		t.Fatal(err)
 	}
 
 	tmpPubFile := filepath.Join(tmpDir, "cosign.pub")
-	err = os.WriteFile(tmpPubFile, keys.PublicBytes, 0666)
-	if err != nil {
+	if err := os.WriteFile(tmpPubFile, keys.PublicBytes, 0666); err != nil {
 		t.Fatal(err)
 	}
 
