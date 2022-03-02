@@ -110,9 +110,6 @@ var (
 			Name:      serviceAccount,
 		},
 	}
-
-	k8sclient    = fakek8s.NewSimpleClientset(sa)
-	tektonClient = faketekton.NewSimpleClientset(ts, tsTampered)
 )
 
 func init() {
@@ -123,8 +120,11 @@ func init() {
 func TestVerifyResources_TaskSpec(t *testing.T) {
 	ctx := context.Background()
 
+	k8sclient := fakek8s.NewSimpleClientset(sa)
+	tektonClient := faketekton.NewSimpleClientset(ts, tsTampered)
+
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx)
+	signer, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,9 +177,10 @@ func TestVerifyResources_TaskSpec(t *testing.T) {
 
 func TestVerifyResources_OCIBundle(t *testing.T) {
 	ctx := context.Background()
-
+	k8sclient := fakek8s.NewSimpleClientset(sa)
+	tektonClient := faketekton.NewSimpleClientset(ts, tsTampered)
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx)
+	signer, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,8 +253,10 @@ func TestVerifyResources_OCIBundle(t *testing.T) {
 func TestVerifyResources_TaskRef(t *testing.T) {
 	ctx := context.Background()
 
+	k8sclient := fakek8s.NewSimpleClientset(sa)
+	tektonClient := faketekton.NewSimpleClientset(ts, tsTampered)
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx)
+	signer, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,6 +373,8 @@ func TestVerifyTaskSpec(t *testing.T) {
 func TestVerifyTaskOCIBundle(t *testing.T) {
 	ctx := context.Background()
 
+	k8sclient := fakek8s.NewSimpleClientset(sa)
+
 	// Create registry server
 	s := httptest.NewServer(registry.New())
 	defer s.Close()
@@ -440,6 +445,8 @@ func TestVerifyTaskOCIBundle(t *testing.T) {
 
 func TestDigest(t *testing.T) {
 	ctx := context.Background()
+
+	k8sclient := fakek8s.NewSimpleClientset(sa)
 	// Create registry server
 	s := httptest.NewServer(registry.New())
 	defer s.Close()
@@ -494,7 +501,7 @@ func TestDigest(t *testing.T) {
 }
 
 // Generate key files to tmpdir, set configMap and return signer
-func getSignerFromFile(t *testing.T, ctx context.Context) (signature.Signer, error) {
+func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient *fakek8s.Clientset) (signature.Signer, error) {
 	t.Helper()
 	tmpDir := t.TempDir()
 	privateKeyPath, _ := generateKeyFile(t, tmpDir, pass(password))
