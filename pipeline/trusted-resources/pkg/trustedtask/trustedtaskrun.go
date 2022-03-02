@@ -47,7 +47,7 @@ import (
 
 const (
 	secretPath          = "/etc/signing-secrets/cosign.pub"
-	signgingConfigMap   = "signing-secret-path"
+	signingConfigMap    = "signing-secret-path"
 	signatureAnnotation = "tekton.dev/signature"
 	kmsAnnotation       = "tekton.dev/kms"
 )
@@ -159,7 +159,7 @@ func verifier(
 	} else {
 		cosignPublicKeypath := secretPath
 		// Overwrite the path if set in configmap.
-		cm, err := k8sclient.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, signgingConfigMap, metav1.GetOptions{})
+		cm, err := k8sclient.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, signingConfigMap, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
