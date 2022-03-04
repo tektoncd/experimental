@@ -18,11 +18,12 @@ package main
 
 import (
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/pipelinerun"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"knative.dev/pkg/injection/sharedmain"
 )
 
 const pipelineRunControllerName = "cloudevents-pipelinerun-controller"
 
 func main() {
-	sharedmain.Main(pipelineRunControllerName, pipelinerun.NewController())
+	sharedmain.Main(pipelineRunControllerName, pipelinerun.NewController(clock.RealClock{}))
 }

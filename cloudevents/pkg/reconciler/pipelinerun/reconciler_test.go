@@ -19,11 +19,12 @@ package pipelinerun
 import (
 	"context"
 	"fmt"
-	lru "github.com/hashicorp/golang-lru"
-	"knative.dev/pkg/apis"
 	"regexp"
 	"testing"
 	"time"
+
+	lru "github.com/hashicorp/golang-lru"
+	"knative.dev/pkg/apis"
 
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
@@ -36,6 +37,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/record"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	cminformer "knative.dev/pkg/configmap/informer"
@@ -44,6 +46,11 @@ import (
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
+)
+
+var (
+	now       = time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC)
+	testClock = clock.NewFakePassiveClock(now)
 )
 
 type PipelineRunTest struct {
@@ -148,7 +155,7 @@ func getPipelineRunController(t *testing.T, d test.Data) (test.Assets, func()) {
 	c, informers := test.SeedTestData(t, ctx, d)
 	configMapWatcher := cminformer.NewInformedWatcher(c.Kube, system.Namespace())
 
-	ctl := NewController()(ctx, configMapWatcher)
+	ctl := NewController(testClock)(ctx, configMapWatcher)
 
 	if la, ok := ctl.Reconciler.(reconciler.LeaderAware); ok {
 		la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {})
