@@ -18,16 +18,17 @@ package pipelinerun
 
 import (
 	"context"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events/cloudevent"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/logging"
 	kreconciler "knative.dev/pkg/reconciler"
-	"knative.dev/pkg/tracker"
 )
 
 type CDEventType string
@@ -39,7 +40,7 @@ func (t CDEventType) String() string {
 type Reconciler struct {
 	cloudEventClient cloudevent.CEClient
 	cacheClient      *lru.Cache
-	tracker          tracker.Interface
+	Clock            clock.PassiveClock
 }
 
 // ReconcileKind implements Interface.ReconcileKind.
@@ -60,7 +61,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 	// reconciled does not imply that the PipelineRun is being reconciled by the PipelineRun
 	// controller has well, so this is only a temporary fix for the initial PoC.
 	if !pr.HasStarted() && !pr.IsPending() {
-		prEvents.Status.InitializeConditions()
+		prEvents.Status.InitializeConditions(c.Clock)
 		// In case node time was not synchronized, when controller has been scheduled to other nodes.
 		if prEvents.Status.StartTime.Sub(pr.CreationTimestamp.Time) < 0 {
 			logger.Warnf("PipelineRun %s createTimestamp %s is after the pipelineRun started %s", pr.GetNamespacedName().String(), pr.CreationTimestamp, pr.Status.StartTime)
