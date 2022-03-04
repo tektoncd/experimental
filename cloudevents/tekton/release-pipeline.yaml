@@ -21,7 +21,7 @@ spec:
     description: The X.Y.Z version that the artifacts should be tagged with
   - name: releaseBucket
     description: bucket where the release is stored. The bucket must be project specific.
-    default: gs://tekton-releases-nightly/cel
+    default: gs://tekton-releases-nightly/cloudevents
   - name: releaseAsLatest
     description: Whether to tag and publish this release as Pipelines' latest
     default: "true"
@@ -68,7 +68,7 @@ spec:
       workspaces:
         - name: source
           workspace: workarea
-          subpath: git/cel
+          subpath: git/cloudevents
     - name: build-tests
       runAfter: [git-clone]
       taskRef:
@@ -79,7 +79,7 @@ spec:
       workspaces:
         - name: source
           workspace: workarea
-          subpath: git/cel
+          subpath: git/cloudevents
     - name: publish-images
       runAfter: [build-tests, unit-tests]
       taskRef:
