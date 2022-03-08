@@ -1,0 +1,17 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    tekton.dev/signature: MEUCIQDzoZ6BNzqGG7ofCOX9lGMoz9ny5L6LbMbUdn4lzryI/wIgPWWkWL7TtNSqdzjPYEGCsltnS7ratIqFoygyiqB5buQ=
+  creationTimestamp: null
+  name: tr-1
+  namespace: tekton-trusted-resources
+spec:
+  serviceAccountName: ""
+  taskSpec:
+    steps:
+    - image: ubuntu
+      name: echo
+      resources: {}
+status:
+  podName: ""
