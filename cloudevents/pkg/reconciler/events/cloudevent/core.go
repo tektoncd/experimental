@@ -67,14 +67,22 @@ type EventType struct {
 // getEventType returns the event type and status
 func getEventType(runObject objectWithCondition) (*EventType, error) {
 	statusCondition := runObject.GetStatusCondition()
+	eventType := EventType{}
 	if statusCondition == nil {
-		return nil, fmt.Errorf("no condition for ConditionSucceeded in %T", runObject)
+		return nil, fmt.Errorf("no ConditionAccessor for runObject in %T", runObject)
 	}
 	c := statusCondition.GetCondition(apis.ConditionSucceeded)
 	if c == nil {
-		return nil, fmt.Errorf("no condition for ConditionSucceeded in %T", runObject)
+		// If there is no condition set yet, the resource have just been
+		// queued. For PipelineRun we have a "queued" event we can send
+		switch runObject.(type) {
+		case *v1beta1.PipelineRun:
+			eventType.Type = cdeevents.PipelineRunQueuedEventV1
+			return &eventType, nil
+		default:
+			return nil, fmt.Errorf("no condition for ConditionSucceeded in %T", runObject)
+		}
 	}
-	eventType := EventType{}
 	switch {
 	case c.IsUnknown():
 		eventType.Status = StatusRunning
@@ -92,6 +100,8 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 		case *v1beta1.PipelineRun:
 			switch c.Reason {
 			case v1beta1.PipelineRunReasonStarted.String():
+				// The PipelineRunReasonStarted is unlikely to be written to
+				// etcd, but just in case
 				eventType.Type = cdeevents.PipelineRunQueuedEventV1
 			case v1beta1.PipelineRunReasonRunning.String():
 				eventType.Type = cdeevents.PipelineRunStartedEventV1

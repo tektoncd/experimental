@@ -180,14 +180,14 @@ func TestSendCloudEventWithRetries(t *testing.T) {
 		wantEvents:   []string{},
 		eventsFormat: "legacy",
 	}, {
-		name: "test-send-cloud-event-nothing-sent",
+		name: "test-send-cloud-event-queued",
 		clientBehaviour: FakeClientBehaviour{
 			SendSuccessfully: true,
 		},
 		object: &v1beta1.PipelineRun{
 			Status: v1beta1.PipelineRunStatus{},
 		},
-		wantCEvents:  []string{},
+		wantCEvents:  []string{"cd.pipelinerun.queued"},
 		wantEvents:   []string{},
 		eventsFormat: "cdevents",
 	}}

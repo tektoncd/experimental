@@ -20,6 +20,7 @@ import (
 	"context"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 
@@ -32,12 +33,6 @@ import (
 	kreconciler "knative.dev/pkg/reconciler"
 )
 
-type CDEventType string
-
-func (t CDEventType) String() string {
-	return string(t)
-}
-
 type Reconciler struct {
 	cloudEventClient cloudevents.Client
 	cacheClient      *lru.Cache
@@ -47,6 +42,7 @@ type Reconciler struct {
 // ReconcileKind implements Interface.ReconcileKind.
 func (c *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun) kreconciler.Event {
 	logger := logging.FromContext(ctx)
+	configs := config.FromContextOrDefaults(ctx)
 	ctx = cloudevent.ToContext(ctx, c.cloudEventClient)
 	ctx = cache.ToContext(ctx, c.cacheClient)
 	logger.Infof("Reconciling %s", pr.Name)
@@ -54,19 +50,20 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 	// Create a copy of the pr object, else the controller would try and sync back any change we made
 	prEvents := *pr.DeepCopy()
 
-	// It could be that there is no condition yet.
-	// Because of the way the PipelineRun controller works, the start condition is
-	// often not set, as the PipelineRun will reach "Running" before the first reconcile
-	// cycle is complete. Because of that, we must emulate here the behaviour of the
-	// PipelineRun controller, and initialise conditions. The fact that this is being
-	// reconciled does not imply that the PipelineRun is being reconciled by the PipelineRun
-	// controller has well, so this is only a temporary fix for the initial PoC.
-	if !pr.HasStarted() && !pr.IsPending() {
-		prEvents.Status.InitializeConditions(c.Clock)
-		// In case node time was not synchronized, when controller has been scheduled to other nodes.
-		if prEvents.Status.StartTime.Sub(pr.CreationTimestamp.Time) < 0 {
-			logger.Warnf("PipelineRun %s createTimestamp %s is after the pipelineRun started %s", pr.GetNamespacedName().String(), pr.CreationTimestamp, pr.Status.StartTime)
-			prEvents.Status.StartTime = &pr.CreationTimestamp
+	cloudEventsFormat := configs.Defaults.DefaultCloudEventsFormat
+	if cloudEventsFormat == config.EventFormatLegacy {
+		// The tekton pipelines controller (legacy) sends a "started" event when
+		// the resource is seen for the first time, and it does so after setting
+		// the initial resource condition. To ensure parity with the legacy
+		// controller, we must emulate here the behaviour of the PipelineRun
+		// controller, and initialise conditions.
+		if !pr.HasStarted() && !pr.IsPending() {
+			prEvents.Status.InitializeConditions(c.Clock)
+			// In case node time was not synchronized, when controller has been scheduled to other nodes.
+			if prEvents.Status.StartTime.Sub(pr.CreationTimestamp.Time) < 0 {
+				logger.Warnf("PipelineRun %s createTimestamp %s is after the pipelineRun started %s", pr.GetNamespacedName().String(), pr.CreationTimestamp, pr.Status.StartTime)
+				prEvents.Status.StartTime = &pr.CreationTimestamp
+			}
 		}
 	}
 

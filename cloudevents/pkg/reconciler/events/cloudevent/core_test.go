@@ -25,6 +25,7 @@ import (
 	"github.com/tektoncd/pipeline/test/diff"
 	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -109,6 +110,21 @@ func TestCoreEventForPipelineRun(t *testing.T) {
 		wantEventType cdeevents.CDEventType
 		wantStatus    EventStatus
 	}{{
+		desc: "send a cloud event with no condition, queued",
+		pipelineRun: &v1beta1.PipelineRun{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "PipelineRun",
+				APIVersion: "v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pipelineRunName,
+				Namespace: "marshmallow",
+			},
+			Spec: v1beta1.PipelineRunSpec{},
+		},
+		wantEventType: cdeevents.PipelineRunQueuedEventV1,
+		wantStatus:    "",
+	}, {
 		desc:          "send a cloud event with unknown status pipelinerun, just started",
 		pipelineRun:   getPipelineRunByCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
 		wantEventType: cdeevents.PipelineRunQueuedEventV1,
