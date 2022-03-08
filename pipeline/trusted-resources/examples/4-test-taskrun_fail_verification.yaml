@@ -3,7 +3,7 @@ apiVersion: tekton.dev/v1beta1
 metadata:
   annotations:
       # add signature for verification
-      #tekton.dev/signature: MEYCIQDhKiJpPylEFo5RmBEZV96luADJdhSQcE7EZuOgL7hk8wIhAICKk6o5ldqo2sN0R6GhE7GpuEkblbjeJilNms78E+ap
+      tekton.dev/signature: MEYCIQDhKiJpPylEFo5RmBEZV96luADJdhSQcE7EZuOgL7hk8wIhAICKk6o5ldqo2sN0R6GhE7GpuEkblbjeJilNms78E+ap
       #tekton.dev/key: kms://
   name: tr-4
   namespace: tekton-trusted-resources

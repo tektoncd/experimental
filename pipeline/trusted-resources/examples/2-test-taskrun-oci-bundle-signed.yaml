@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    tekton.dev/signature: MEUCIH2MuZXUApkayW6CTRc3w78DPQKwbJ50jjywQyMGeYLOAiEAkc0r3+2Lmx7erRNYy3aj8m14skw/2TVLgObinbKY/8c=
+  creationTimestamp: null
+  name: tr-2
+  namespace: tekton-trusted-resources
+spec:
+  serviceAccountName: ""
+  taskRef:
+    bundle: docker.io/zyx1200/testtask
+    name: t-2
+status:
+  podName: ""

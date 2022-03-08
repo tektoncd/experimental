@@ -58,7 +58,6 @@ cmd/*/kodata/source.tar.gz
 test/pullrequest/pullrequest-init
 /.bin/
 /bin/
-/etc
 
 # allow vendor
 !vendor/

@@ -26,10 +26,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
-	imgname "github.com/google/go-containerregistry/pkg/name"
-	ociremote "github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	cosignsignature "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
@@ -48,7 +46,7 @@ import (
 const (
 	secretPath          = "/etc/signing-secrets/cosign.pub"
 	signingConfigMap    = "config-trusted-resources"
-	signatureAnnotation = "tekton.dev/signature"
+	SignatureAnnotation = "tekton.dev/signature"
 	kmsAnnotation       = "tekton.dev/kms"
 )
 
@@ -77,7 +75,7 @@ func (tr *TrustedTaskRun) Validate(ctx context.Context) (errs *apis.FieldError) 
 	if err != nil {
 		return apis.ErrGeneric(err.Error())
 	}
-	if errs := errs.Also(tr.verifyTask(ctx, k8sclient, tektonClient)); errs != nil {
+	if errs := errs.Also(tr.VerifyTask(ctx, k8sclient, tektonClient)); errs != nil {
 		return errs
 	}
 	return nil
@@ -87,7 +85,7 @@ func (tr *TrustedTaskRun) Validate(ctx context.Context) (errs *apis.FieldError) 
 func (tr *TrustedTaskRun) SetDefaults(ctx context.Context) {
 }
 
-func (tr *TrustedTaskRun) verifyTask(
+func (tr *TrustedTaskRun) VerifyTask(
 	ctx context.Context,
 	k8sclient kubernetes.Interface,
 	tektonClient versioned.Interface,
@@ -99,11 +97,11 @@ func (tr *TrustedTaskRun) verifyTask(
 		return apis.ErrMissingField("annotations")
 	}
 
-	if tr.ObjectMeta.Annotations[signatureAnnotation] == "" {
-		return apis.ErrMissingField(fmt.Sprintf("annotations[%s]", signatureAnnotation))
+	if tr.ObjectMeta.Annotations[SignatureAnnotation] == "" {
+		return apis.ErrMissingField(fmt.Sprintf("annotations[%s]", SignatureAnnotation))
 	}
 
-	signature, err := base64.StdEncoding.DecodeString(tr.ObjectMeta.Annotations[signatureAnnotation])
+	signature, err := base64.StdEncoding.DecodeString(tr.ObjectMeta.Annotations[SignatureAnnotation])
 	if err != nil {
 		return apis.ErrGeneric(err.Error(), "metadata")
 	}
@@ -115,7 +113,7 @@ func (tr *TrustedTaskRun) verifyTask(
 
 	if tr.Spec.TaskSpec != nil {
 		logger.Info("Verifying TaskSpec")
-		if err := verifyTaskSpec(ctx, tr.Spec.TaskSpec, verifier, signature); err != nil {
+		if err := VerifyInterface(ctx, tr.Spec.TaskSpec, verifier, signature); err != nil {
 			return apis.ErrGeneric(err.Error(), "spec")
 		}
 		return nil
@@ -124,7 +122,7 @@ func (tr *TrustedTaskRun) verifyTask(
 	if tr.Spec.TaskRef != nil {
 		if tr.Spec.TaskRef.Bundle != "" {
 			logger.Info("Verifying OCI Bundle")
-			if err := verifyTaskOCIBundle(ctx, tr.Spec.TaskRef.Bundle, verifier, signature, k8sclient); err != nil {
+			if err := VerifyTaskOCIBundle(ctx, tr.Spec.TaskRef.Bundle, verifier, signature, k8sclient); err != nil {
 				return apis.ErrGeneric(err.Error(), "spec", "taskRef")
 			}
 			return nil
@@ -136,7 +134,7 @@ func (tr *TrustedTaskRun) verifyTask(
 		}
 		if ts.Name != "" {
 			logger.Info("Verifying TaskRef")
-			if err := verifyTaskSpec(ctx, &ts.Spec, verifier, signature); err != nil {
+			if err := VerifyInterface(ctx, &ts.Spec, verifier, signature); err != nil {
 				if err != nil {
 					return apis.ErrGeneric(err.Error(), "spec", "taskRef")
 				}
@@ -170,9 +168,9 @@ func verifier(
 	}
 }
 
-func verifyTaskSpec(
+func VerifyInterface(
 	ctx context.Context,
-	taskspec *v1beta1.TaskSpec,
+	taskspec interface{},
 	verifier signature.Verifier,
 	signature []byte,
 ) (errs *apis.FieldError) {
@@ -191,7 +189,7 @@ func verifyTaskSpec(
 	return nil
 }
 
-func verifyTaskOCIBundle(
+func VerifyTaskOCIBundle(
 	ctx context.Context,
 	bundle string,
 	verifier signature.Verifier,
@@ -211,35 +209,17 @@ func verifyTaskOCIBundle(
 		return apis.ErrGeneric(err.Error()).ViaKey(bundle)
 	}
 
-	digest, err := digest(ctx, bundle, kc)
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*60)
+	defer cancel()
+
+	digest, err := Digest(ctx, bundle, remote.WithAuthFromKeychain(kc), remote.WithContext(timeoutCtx))
 	if err != nil {
 		return apis.ErrGeneric(err.Error()).ViaKey(bundle)
 	}
 
-	if err := verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader([]byte(digest))); err != nil {
+	if err := verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader([]byte(digest.String()))); err != nil {
 		return apis.ErrGeneric(err.Error()).ViaKey(bundle)
 	}
 
 	return nil
-}
-
-func digest(ctx context.Context, imageReference string, keychain authn.Keychain) (string, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*60)
-	defer cancel()
-
-	imgRef, err := imgname.ParseReference(imageReference)
-	if err != nil {
-		return "", err
-	}
-
-	img, err := ociremote.Image(imgRef, ociremote.WithAuthFromKeychain(keychain), ociremote.WithContext(timeoutCtx))
-	if err != nil {
-		return "", err
-	}
-
-	dgst, err := img.Digest()
-	if err != nil {
-		return "", err
-	}
-	return dgst.String(), nil
 }
