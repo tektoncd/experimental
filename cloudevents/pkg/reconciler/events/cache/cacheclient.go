@@ -18,23 +18,27 @@ package cache
 
 import (
 	"context"
+
 	lru "github.com/hashicorp/golang-lru"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
 )
 
+// With 4 events per Run, we can store events for 1024 concurrent Runs
+const bufferSize = 4096
+
 func init() {
 	injection.Default.RegisterClient(withCacheClient)
 }
 
-// CacheKey is a way to associate the Cache from inside the context.Context
-type CacheKey struct{}
+// cacheKey is a way to associate the Cache from inside the context.Context
+type cacheKey struct{}
 
-func withCacheClient(ctx context.Context, cfg *rest.Config) context.Context {
+func withCacheClientFromSize(ctx context.Context, size int) context.Context {
 	logger := logging.FromContext(ctx)
 
-	cacheClient, err := lru.New(128)
+	cacheClient, err := lru.New(size)
 	logger.Infof("CACHE CLIENT %+v", cacheClient)
 	if err != nil {
 		logger.Error("unable to create cacheClient :" + err.Error())
@@ -43,9 +47,13 @@ func withCacheClient(ctx context.Context, cfg *rest.Config) context.Context {
 	return ToContext(ctx, cacheClient)
 }
 
+func withCacheClient(ctx context.Context, cfg *rest.Config) context.Context {
+	return withCacheClientFromSize(ctx, bufferSize)
+}
+
 // Get extracts the cloudEventClient client from the context.
 func Get(ctx context.Context) *lru.Cache {
-	untyped := ctx.Value(CacheKey{})
+	untyped := ctx.Value(cacheKey{})
 	if untyped == nil {
 		logging.FromContext(ctx).Errorf("Unable to fetch client from context.")
 		return nil
@@ -55,5 +63,5 @@ func Get(ctx context.Context) *lru.Cache {
 
 // ToContext adds the cloud events client to the context
 func ToContext(ctx context.Context, c *lru.Cache) context.Context {
-	return context.WithValue(ctx, CacheKey{}, c)
+	return context.WithValue(ctx, cacheKey{}, c)
 }

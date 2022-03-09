@@ -1,20 +1,17 @@
 package events_test
 
 import (
-	"fmt"
-	"regexp"
 	"testing"
-	"time"
 
 	"github.com/tektoncd/experimental/cloudevents/pkg/apis/config"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events"
 	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cloudevent"
+	cetest "github.com/tektoncd/experimental/cloudevents/test"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-	rtesting "knative.dev/pkg/reconciler/testing"
 )
 
 func TestEmit(t *testing.T) {
@@ -41,29 +38,28 @@ func TestEmit(t *testing.T) {
 		name           string
 		data           map[string]string
 		wantEvent      string
-		wantCloudEvent string
+		wantCloudEvent []string
 	}{{
 		name:           "without sink",
 		data:           map[string]string{},
 		wantEvent:      "Normal Started",
-		wantCloudEvent: "",
+		wantCloudEvent: []string{},
 	}, {
 		name:           "with empty string sink",
 		data:           map[string]string{"default-cloud-events-sink": ""},
 		wantEvent:      "Normal Started",
-		wantCloudEvent: "",
+		wantCloudEvent: []string{},
 	}, {
 		name:           "with sink",
 		data:           map[string]string{"default-cloud-events-sink": "http://mysink"},
 		wantEvent:      "Normal Started",
-		wantCloudEvent: `(?s)cd.pipelinerun.queued.v1.*test1`,
+		wantCloudEvent: []string{`(?s)cd.pipelinerun.queued.v1.*test1`},
 	}}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup the context and seed test data
-			ctx, _ := rtesting.SetupFakeContext(t)
-			ctx = cloudevent.WithClient(ctx, &cloudevent.FakeClientBehaviour{SendSuccessfully: true})
+			ctx, _ := cetest.SetupFakeContext(t)
 			fakeClient := cloudevent.Get(ctx).(cloudevent.FakeClient)
 
 			// Setup the config and add it to the context
@@ -74,35 +70,9 @@ func TestEmit(t *testing.T) {
 			ctx = config.ToContext(ctx, cfg)
 
 			events.Emit(ctx, object)
-			if err := checkCloudEvents(t, &fakeClient, tc.name, tc.wantCloudEvent); err != nil {
+			if err := cetest.CheckEventsUnordered(t, fakeClient.Events, tc.name, tc.wantCloudEvent); err != nil {
 				t.Fatalf(err.Error())
 			}
 		})
 	}
-}
-
-func eventFromChannel(c chan string, testName string, wantEvent string) error {
-	timer := time.NewTimer(1 * time.Second)
-	select {
-	case event := <-c:
-		if wantEvent == "" {
-			return fmt.Errorf("received event \"%s\" for %s but none expected", event, testName)
-		}
-		matching, err := regexp.MatchString(wantEvent, event)
-		if err == nil {
-			if !matching {
-				return fmt.Errorf("expected event \"%s\" but got \"%s\" instead for %s", wantEvent, event, testName)
-			}
-		}
-	case <-timer.C:
-		if wantEvent != "" {
-			return fmt.Errorf("received no events for %s but %s expected", testName, wantEvent)
-		}
-	}
-	return nil
-}
-
-func checkCloudEvents(t *testing.T, fce *cloudevent.FakeClient, testName string, wantEvent string) error {
-	t.Helper()
-	return eventFromChannel(fce.Events, testName, wantEvent)
 }

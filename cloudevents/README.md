@@ -4,6 +4,7 @@ The CloudEvents controller for Tekton provides CloudEvents for the lifecycle of
 the following Tekton Resources:
 
 - [`PipelineRuns`](https://tekton.dev/docs/pipelines/pipelineruns/)
+- [`TaskRuns`](https://tekton.dev/docs/pipelines/taskruns/)
 
 [CloudEvents](https://cloudevents.io/) is a CNCF project that provides:
 
