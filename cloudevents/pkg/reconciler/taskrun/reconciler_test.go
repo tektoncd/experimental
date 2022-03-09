@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipelinerun
+package taskrun
 
 import (
 	"testing"
@@ -40,30 +40,12 @@ import (
 // to ensure that events are sent in different cases
 func TestReconcile_CloudEvents(t *testing.T) {
 
-	ignoreResourceVersion := cmpopts.IgnoreFields(v1beta1.PipelineRun{}, "ObjectMeta.ResourceVersion")
+	ignoreResourceVersion := cmpopts.IgnoreFields(v1beta1.TaskRun{}, "ObjectMeta.ResourceVersion")
 
-	ps := []*v1beta1.Pipeline{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-pipeline",
-				Namespace: "foo",
-			},
-			Spec: v1beta1.PipelineSpec{
-				Tasks: []v1beta1.PipelineTask{
-					{
-						Name: "test-1",
-						TaskRef: &v1beta1.TaskRef{
-							Name: "test-task",
-						},
-					},
-				},
-			},
-		},
-	}
 	ts := []*v1beta1.Task{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-pipeline",
+				Name:      "test-task",
 				Namespace: "foo",
 			},
 			Spec: v1beta1.TaskSpec{
@@ -101,39 +83,39 @@ func TestReconcile_CloudEvents(t *testing.T) {
 		annotations     map[string]string
 		results         map[string]string
 	}{{
-		name:            "Pipeline with no condition",
+		name:            "Task with no condition",
 		condition:       nil,
-		wantCloudEvents: []string{`(?s)cd.pipelinerun.queued.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{},
 		startTime:       false,
 	}, {
-		name: "Pipeline with running condition",
+		name: "Task with running condition",
 		condition: &apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionUnknown,
-			Reason: v1beta1.PipelineRunReasonRunning.String(),
+			Reason: v1beta1.TaskRunReasonRunning.String(),
 		},
 		startTime:       true,
-		wantCloudEvents: []string{`(?s)cd.pipelinerun.started.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{`(?s)cd.taskrun.started.v1.*test-taskrun`},
 	}, {
-		name: "Pipeline with finished true condition",
+		name: "Task with finished true condition",
 		condition: &apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionTrue,
 			Reason: v1beta1.PipelineRunReasonSuccessful.String(),
 		},
 		startTime:       true,
-		wantCloudEvents: []string{`(?s)cd.pipelinerun.finished.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{`(?s)cd.taskrun.finished.v1.*test-taskrun`},
 	}, {
-		name: "Pipeline with finished false condition",
+		name: "Task with finished false condition",
 		condition: &apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionFalse,
 			Reason: v1beta1.PipelineRunReasonCancelled.String(),
 		},
 		startTime:       true,
-		wantCloudEvents: []string{`(?s)cd.pipelinerun.finished.v1.*test-pipelinerun`},
+		wantCloudEvents: []string{`(?s)cd.taskrun.finished.v1.*test-taskrun`},
 	}, {
-		name: "Pipeline with finished successfully, artifact annotations",
+		name: "Task with finished successfully, artifact annotations",
 		condition: &apis.Condition{
 			Type:   apis.ConditionSucceeded,
 			Status: corev1.ConditionTrue,
@@ -149,8 +131,8 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			"cd.artifact.version": "v123",
 		},
 		wantCloudEvents: []string{
-			`(?s)cd.pipelinerun.finished.v1.*test-pipelinerun`,
-			`(?s)cd.artifact.packaged.v1.*image1.*test-pipelinerun`,
+			`(?s)cd.taskrun.finished.v1.*test-taskrun`,
+			`(?s)cd.artifact.packaged.v1.*image1.*test-taskrun`,
 		},
 	}}
 
@@ -160,63 +142,63 @@ func TestReconcile_CloudEvents(t *testing.T) {
 			objectStatus := duckv1beta1.Status{
 				Conditions: []apis.Condition{},
 			}
-			pipelineStatusFields := v1beta1.PipelineRunStatusFields{}
+			taskRunStatusFields := v1beta1.TaskRunStatusFields{}
 			if tc.condition != nil {
 				objectStatus.Conditions = append(objectStatus.Conditions, *tc.condition)
 			}
 			if tc.startTime {
-				pipelineStatusFields.StartTime = &metav1.Time{Time: time.Now()}
+				taskRunStatusFields.StartTime = &metav1.Time{Time: time.Now()}
 			}
-			pr := v1beta1.PipelineRun{
+			tr := v1beta1.TaskRun{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pipelinerun",
+					Name:      "test-taskrun",
 					Namespace: "foo",
 				},
-				Spec: v1beta1.PipelineRunSpec{
-					PipelineRef: &v1beta1.PipelineRef{
-						Name: "test-pipeline",
+				Spec: v1beta1.TaskRunSpec{
+					TaskRef: &v1beta1.TaskRef{
+						Name: "test-task",
 					},
 				},
-				Status: v1beta1.PipelineRunStatus{
-					Status:                  objectStatus,
-					PipelineRunStatusFields: pipelineStatusFields,
+				Status: v1beta1.TaskRunStatus{
+					Status:              objectStatus,
+					TaskRunStatusFields: taskRunStatusFields,
 				},
 			}
 			// Set annotations, if any
 			if tc.annotations != nil {
-				if pr.ObjectMeta.Annotations == nil {
-					pr.ObjectMeta.Annotations = map[string]string{}
+				if tr.ObjectMeta.Annotations == nil {
+					tr.ObjectMeta.Annotations = map[string]string{}
 				}
 				for k, v := range tc.annotations {
-					pr.ObjectMeta.Annotations[k] = v
+					tr.ObjectMeta.Annotations[k] = v
 				}
 			}
 			// Set results, if any
 			if tc.results != nil {
 				for k, v := range tc.results {
-					trr := v1beta1.PipelineRunResult{Name: k, Value: v}
-					pr.Status.PipelineResults = append(pr.Status.PipelineResults, trr)
+					trr := v1beta1.TaskRunResult{Name: k, Value: v}
+					tr.Status.TaskRunResults = append(tr.Status.TaskRunResults, trr)
 				}
 			}
-			prs := []*v1beta1.PipelineRun{&pr}
+			trs := []*v1beta1.TaskRun{&tr}
 
 			d := test.Data{
-				PipelineRuns: prs,
-				Pipelines:    ps,
-				Tasks:        ts,
-				ConfigMaps:   cms,
+				TaskRuns:   trs,
+				Tasks:      ts,
+				ConfigMaps: cms,
 			}
 			rt := cetest.NewReconcileTest(d, NewController, t)
 			defer rt.Cancel()
 
-			rt.ReconcileRun(t, "foo", "test-pipelinerun")
+			// Run the reconciler
+			rt.ReconcileRun(t, "foo", "test-taskrun")
 
-			uResource, err := rt.TestAssets.Clients.Pipeline.TektonV1beta1().PipelineRuns("foo").Get(rt.TestAssets.Ctx, "test-pipelinerun", metav1.GetOptions{})
+			uResource, err := rt.TestAssets.Clients.Pipeline.TektonV1beta1().TaskRuns("foo").Get(rt.TestAssets.Ctx, "test-taskrun", metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("getting updated resource: %v", err)
 			}
 
-			if d := cmp.Diff(&pr, uResource, ignoreResourceVersion); d != "" {
+			if d := cmp.Diff(&tr, uResource, ignoreResourceVersion); d != "" {
 				t.Fatalf("run should not have changed, go %v instead", d)
 			}
 

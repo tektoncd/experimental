@@ -17,13 +17,9 @@ limitations under the License.
 package cloudevent
 
 import (
-	"context"
 	"testing"
 
-	lru "github.com/hashicorp/golang-lru"
-
-	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
-	eventstest "github.com/tektoncd/experimental/cloudevents/test/events"
+	cetest "github.com/tektoncd/experimental/cloudevents/test"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +27,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/controller"
-	rtesting "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -83,20 +78,6 @@ func getPipelineRunByCondition(status corev1.ConditionStatus, reason string) *v1
 			},
 		},
 	}
-}
-
-func setupFakeContext(t *testing.T, behaviour FakeClientBehaviour, withCEClient bool, withCacheClient bool) (context.Context, func()) {
-	var ctx context.Context
-	ctx, _ = rtesting.SetupFakeContext(t)
-	if withCEClient {
-		ctx = WithClient(ctx, &behaviour)
-	}
-	if withCacheClient {
-		cacheClient, _ := lru.New(128)
-		ctx = cache.ToContext(ctx, cacheClient)
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	return ctx, cancel
 }
 
 func TestSendCloudEventWithRetries(t *testing.T) {
@@ -193,8 +174,9 @@ func TestSendCloudEventWithRetries(t *testing.T) {
 	}}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := setupFakeContext(t, tc.clientBehaviour, true, true)
-			defer cancel()
+			ctx, _ := cetest.SetupFakeContext(t)
+			// Override the client to set the behaviour from the test
+			ctx = WithClient(ctx, &tc.clientBehaviour)
 			if err := SendCloudEventWithRetries(ctx, tc.object, tc.eventsFormat); err != nil {
 				t.Fatalf("Unexpected error sending cloud events: %v", err)
 			}
@@ -203,11 +185,11 @@ func TestSendCloudEventWithRetries(t *testing.T) {
 				t.Fatalf("Unexpected error sending cloud events: %v", err)
 			}
 			ceClient := Get(ctx).(FakeClient)
-			if err := eventstest.CheckEventsUnordered(t, ceClient.Events, tc.name, tc.wantCEvents); err != nil {
+			if err := cetest.CheckEventsUnordered(t, ceClient.Events, tc.name, tc.wantCEvents); err != nil {
 				t.Fatalf(err.Error())
 			}
 			recorder := controller.GetEventRecorder(ctx).(*record.FakeRecorder)
-			if err := eventstest.CheckEventsOrdered(t, recorder.Events, tc.name, tc.wantEvents); err != nil {
+			if err := cetest.CheckEventsOrdered(t, recorder.Events, tc.name, tc.wantEvents); err != nil {
 				t.Fatalf(err.Error())
 			}
 		})

@@ -20,7 +20,6 @@ import (
 	"context"
 	"testing"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -28,7 +27,6 @@ import (
 	"knative.dev/pkg/injection"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	"github.com/tektoncd/experimental/cloudevents/pkg/reconciler/events/cache"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/controller"
@@ -41,8 +39,6 @@ import (
 // SetupFakeContext sets up the the Context and the fake filtered informers for the tests.
 func SetupFakeContext(t *testing.T) (context.Context, []controller.Informer) {
 	ctx, _, informer := setupFakeContextWithLabelKey(t)
-	cacheClient, _ := lru.New(128)
-	ctx = cache.ToContext(ctx, cacheClient)
 	return WithLogger(ctx, t), informer
 }
 

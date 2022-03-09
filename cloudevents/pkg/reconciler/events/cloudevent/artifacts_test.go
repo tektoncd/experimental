@@ -25,7 +25,6 @@ import (
 	"github.com/tektoncd/pipeline/test/diff"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -99,7 +98,6 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 
 	for _, c := range taskRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getArtifactPackagedEventType(c.taskRun)
 			if err != nil {
@@ -155,7 +153,6 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 
 	for _, c := range pipelineRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getArtifactPublishedEventType(c.pipelineRun)
 			if err != nil {
@@ -246,7 +243,6 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 
 	for _, c := range pipelineRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getArtifactEventData(c.pipelineRun)
 			if err != nil {
@@ -338,7 +334,6 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 
 	for _, c := range taskRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getArtifactEventData(c.taskRun)
 			if err != nil {
@@ -399,7 +394,6 @@ func TestArtifactPublishedEvent(t *testing.T) {
 
 	for _, c := range artifactPublishedTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := artifactPublishedEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {
@@ -457,7 +451,6 @@ func TestArtifactPackagedEvent(t *testing.T) {
 
 	for _, c := range artifactPackagedTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := artifactPackagedEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {

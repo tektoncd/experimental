@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/test/diff"
-	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -64,7 +63,6 @@ func TestEventForTaskRun(t *testing.T) {
 
 	for _, c := range taskRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := eventForTaskRun(c.taskRun)
 			if err != nil {
@@ -123,7 +121,6 @@ func TestEventForPipelineRun(t *testing.T) {
 
 	for _, c := range pipelineRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := eventForPipelineRun(c.pipelineRun)
 			if err != nil {

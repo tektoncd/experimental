@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -26,7 +27,7 @@ func IsCloudEventSent(cacheClient *lru.Cache, event *cloudevents.Event) (bool, e
 	return cacheClient.Contains(EventKey(event)), nil
 }
 
-// eventKey defines whether an event is considered different from another
+// EventKey defines whether an event is considered different from another
 // in future we might want to let specific event types override this
 func EventKey(event *cloudevents.Event) string {
 	var (

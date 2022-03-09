@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/pipeline/test/diff"
-	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -84,7 +83,6 @@ func TestResultFromObjectWithCondition(t *testing.T) {
 
 	for _, c := range resultTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := resultFromObjectWithCondition(c.object.(objectWithCondition), c.resultName)
 			if err != nil {

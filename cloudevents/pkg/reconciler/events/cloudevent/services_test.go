@@ -25,7 +25,6 @@ import (
 
 	cdeevents "github.com/cdfoundation/sig-events/cde/sdk/go/pkg/cdf/events"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -71,7 +70,6 @@ func TestServiceEventsForTaskRun(t *testing.T) {
 
 	for _, c := range taskRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getServiceDeployedEventType(c.taskRun)
 			if err != nil {
@@ -127,7 +125,6 @@ func TestServiceEventsForPipelineRun(t *testing.T) {
 
 	for _, c := range pipelineRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getServiceRolledbackEventType(c.pipelineRun)
 			if err != nil {
@@ -218,7 +215,6 @@ func TestGetServiceEventDataPipelineRun(t *testing.T) {
 
 	for _, c := range pipelineRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getServiceEventData(c.pipelineRun)
 			if err != nil {
@@ -310,7 +306,6 @@ func TestGetServiceEventDataTaskRun(t *testing.T) {
 
 	for _, c := range taskRunTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := getServiceEventData(c.taskRun)
 			if err != nil {
@@ -371,7 +366,6 @@ func TestServiceRolledbackEvent(t *testing.T) {
 
 	for _, c := range serviceRolledbackTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := serviceRolledbackEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {
@@ -429,7 +423,6 @@ func TestServiceDeployedEvent(t *testing.T) {
 
 	for _, c := range serviceDeployedTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := serviceDeployedEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {
@@ -487,7 +480,6 @@ func TestServiceUpgradedEvent(t *testing.T) {
 
 	for _, c := range serviceDeployedTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := serviceUpgradedEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {
@@ -545,7 +537,6 @@ func TestServiceRemovedEvent(t *testing.T) {
 
 	for _, c := range serviceDeployedTests {
 		t.Run(c.desc, func(t *testing.T) {
-			names.TestingSeed()
 
 			got, err := serviceRemovedEventForObjectWithCondition(c.object.(objectWithCondition))
 			if err != nil {
