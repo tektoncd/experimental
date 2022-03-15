@@ -85,7 +85,7 @@ func TestReconcile_CloudEvents(t *testing.T) {
 	}{{
 		name:            "Task with no condition",
 		condition:       nil,
-		wantCloudEvents: []string{},
+		wantCloudEvents: []string{`(?s)cd.taskrun.started.v1.*test-taskrun`},
 		startTime:       false,
 	}, {
 		name: "Task with running condition",

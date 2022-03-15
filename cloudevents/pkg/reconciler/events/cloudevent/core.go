@@ -23,6 +23,7 @@ import (
 
 	cdeevents "github.com/cdfoundation/sig-events/cde/sdk/go/pkg/cdf/events"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"knative.dev/pkg/apis"
 )
@@ -44,6 +45,12 @@ func getEventData(runObject objectWithCondition) (CDECloudEventData, error) {
 	cdeCloudEventData := map[string]string{}
 	switch v := runObject.(type) {
 	case *v1beta1.TaskRun:
+		data, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		cdeCloudEventData["taskrun"] = string(data)
+	case *v1alpha1.Run: /* Consider a Run as TaskRun from CDEvents POV */
 		data, err := json.Marshal(v)
 		if err != nil {
 			return nil, err
@@ -74,10 +81,14 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 	c := statusCondition.GetCondition(apis.ConditionSucceeded)
 	if c == nil {
 		// If there is no condition set yet, the resource have just been
-		// queued. For PipelineRun we have a "queued" event we can send
+		// queued. For PipelineRun we have a "queued" event we can send,
+		// for TaskRun and Run we consider them "started"
 		switch runObject.(type) {
 		case *v1beta1.PipelineRun:
 			eventType.Type = cdeevents.PipelineRunQueuedEventV1
+			return &eventType, nil
+		case *v1beta1.TaskRun, *v1alpha1.Run:
+			eventType.Type = cdeevents.TaskRunStartedEventV1
 			return &eventType, nil
 		default:
 			return nil, fmt.Errorf("no condition for ConditionSucceeded in %T", runObject)
@@ -87,33 +98,22 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 	case c.IsUnknown():
 		eventType.Status = StatusRunning
 		switch runObject.(type) {
-		case *v1beta1.TaskRun:
-			switch c.Reason {
-			case v1beta1.TaskRunReasonStarted.String():
-				eventType.Type = cdeevents.TaskRunStartedEventV1
-			case v1beta1.TaskRunReasonRunning.String():
-				eventType.Type = cdeevents.TaskRunStartedEventV1
-			// Unknown status, unknown reason -> no event type
-			default:
-				return nil, fmt.Errorf("unknown status with unknown reason %s", c.Reason)
-			}
+		case *v1beta1.TaskRun, *v1alpha1.Run:
+			eventType.Type = cdeevents.TaskRunStartedEventV1
 		case *v1beta1.PipelineRun:
 			switch c.Reason {
 			case v1beta1.PipelineRunReasonStarted.String():
 				// The PipelineRunReasonStarted is unlikely to be written to
 				// etcd, but just in case
 				eventType.Type = cdeevents.PipelineRunQueuedEventV1
-			case v1beta1.PipelineRunReasonRunning.String():
-				eventType.Type = cdeevents.PipelineRunStartedEventV1
-			// Unknown status, unknown reason -> no event type
 			default:
-				return nil, fmt.Errorf("unknown status with unknown reason %s", c.Reason)
+				eventType.Type = cdeevents.PipelineRunStartedEventV1
 			}
 		}
 	case c.IsTrue():
 		eventType.Status = StatusFinished
 		switch runObject.(type) {
-		case *v1beta1.TaskRun:
+		case *v1beta1.TaskRun, *v1alpha1.Run:
 			eventType.Type = cdeevents.TaskRunFinishedEventV1 //TaskRunFailedEventV1
 		case *v1beta1.PipelineRun:
 			eventType.Type = cdeevents.PipelineRunFinishedEventV1 //PipelineRunFailedEventV1
@@ -121,7 +121,7 @@ func getEventType(runObject objectWithCondition) (*EventType, error) {
 	case c.IsFalse():
 		eventType.Status = StatusError
 		switch runObject.(type) {
-		case *v1beta1.TaskRun:
+		case *v1beta1.TaskRun, *v1alpha1.Run:
 			eventType.Type = cdeevents.TaskRunFinishedEventV1 //TaskRunFailedEventV1
 		case *v1beta1.PipelineRun:
 			eventType.Type = cdeevents.PipelineRunFinishedEventV1 //PipelineRunFailedEventV1
@@ -149,7 +149,7 @@ func coreEventForObjectWithCondition(runObject objectWithCondition) (*cloudevent
 	}
 	meta := runObject.GetObjectMeta()
 	switch runObject.(type) {
-	case *v1beta1.TaskRun:
+	case *v1beta1.TaskRun, *v1alpha1.Run:
 		event, err = cdeevents.CreateTaskRunEvent(etype.Type, string(meta.GetUID()), meta.GetName(), "", data)
 		if err != nil {
 			return nil, err

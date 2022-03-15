@@ -40,11 +40,11 @@ func TestServiceEventsForTaskRun(t *testing.T) {
 		wantError bool
 	}{{
 		desc:      "taskrun with no annotations",
-		taskRun:   getTaskRunByCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonStarted.String()),
+		taskRun:   createTaskRunWithCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonStarted.String()),
 		wantError: true,
 	}, {
 		desc: "taskrun with annotation, started",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{ServiceDeployedEventAnnotation.String(): ""},
@@ -52,7 +52,7 @@ func TestServiceEventsForTaskRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "taskrun with annotation, finished, failed",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
 			map[string]string{ServiceDeployedEventAnnotation.String(): ""},
@@ -60,7 +60,7 @@ func TestServiceEventsForTaskRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "taskrun with annotation, finished, succeeded",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
 			map[string]string{ServiceDeployedEventAnnotation.String(): ""},
@@ -95,11 +95,11 @@ func TestServiceEventsForPipelineRun(t *testing.T) {
 		wantError   bool
 	}{{
 		desc:        "pipelinerun with no annotations",
-		pipelineRun: getPipelineRunByCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
+		pipelineRun: createPipelineRunWithCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
 		wantError:   true,
 	}, {
 		desc: "pipelinerun with annotation, started",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -107,7 +107,7 @@ func TestServiceEventsForPipelineRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "pipelinerun with annotation, finished, failed",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -115,7 +115,7 @@ func TestServiceEventsForPipelineRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "pipelinerun with annotation, finished, succeeded",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -151,7 +151,7 @@ func TestGetServiceEventDataPipelineRun(t *testing.T) {
 		wantError   bool
 	}{{
 		desc: "pipelinerun with default results, all",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -167,7 +167,7 @@ func TestGetServiceEventDataPipelineRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "pipelinerun with default results, missing",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -179,7 +179,7 @@ func TestGetServiceEventDataPipelineRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "pipelinerun with overwritten results, all",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
@@ -198,7 +198,7 @@ func TestGetServiceEventDataPipelineRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "pipelinerun with overwritten results, missing an overwritten one",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
@@ -242,7 +242,7 @@ func TestGetServiceEventDataTaskRun(t *testing.T) {
 		wantError bool
 	}{{
 		desc: "taskrun with default results, all",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -258,7 +258,7 @@ func TestGetServiceEventDataTaskRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "taskrun with default results, missing",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -270,7 +270,7 @@ func TestGetServiceEventDataTaskRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "taskrun with overwritten results, all",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
@@ -289,7 +289,7 @@ func TestGetServiceEventDataTaskRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "taskrun with overwritten results, missing an overwritten one",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
@@ -332,7 +332,7 @@ func TestServiceRolledbackEvent(t *testing.T) {
 		wantEventExtensions map[string]interface{}
 	}{{
 		desc: "service event for taskrun",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -348,7 +348,7 @@ func TestServiceRolledbackEvent(t *testing.T) {
 		},
 	}, {
 		desc: "service event for pipelinerun",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{ServiceRolledbackEventAnnotation.String(): ""},
@@ -387,7 +387,7 @@ func TestServiceDeployedEvent(t *testing.T) {
 		wantEventExtensions map[string]interface{}
 	}{{
 		desc: "service event for taskrun",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{
@@ -404,7 +404,7 @@ func TestServiceDeployedEvent(t *testing.T) {
 		},
 	}, {
 		desc: "service event for pipelinerun",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{
@@ -444,7 +444,7 @@ func TestServiceUpgradedEvent(t *testing.T) {
 		wantEventExtensions map[string]interface{}
 	}{{
 		desc: "service event for taskrun",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{
@@ -461,7 +461,7 @@ func TestServiceUpgradedEvent(t *testing.T) {
 		},
 	}, {
 		desc: "service event for pipelinerun",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{
@@ -501,7 +501,7 @@ func TestServiceRemovedEvent(t *testing.T) {
 		wantEventExtensions map[string]interface{}
 	}{{
 		desc: "service event for taskrun",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{
@@ -518,7 +518,7 @@ func TestServiceRemovedEvent(t *testing.T) {
 		},
 	}, {
 		desc: "service event for pipelinerun",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{

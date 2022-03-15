@@ -12,10 +12,9 @@ require (
 	github.com/cdfoundation/sig-events/cde/sdk/go v0.0.0-20210619194635-1b767876db95
 	github.com/cloudevents/sdk-go/v2 v2.5.0
 	github.com/google/go-cmp v0.5.7
-	github.com/google/go-containerregistry v0.8.1-0.20220216220642-00c59d91847c // indirect
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/tektoncd/pipeline v0.33.2
+	github.com/tektoncd/pipeline v0.33.1-0.20220310125517-71237bae2dc1
 	go.uber.org/zap v1.19.1
 	k8s.io/api v0.23.4
 	k8s.io/apimachinery v0.23.4

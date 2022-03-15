@@ -21,13 +21,14 @@ import (
 
 	cdeevents "github.com/cdfoundation/sig-events/cde/sdk/go/pkg/cdf/events"
 	"github.com/google/go-cmp/cmp"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/test/diff"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
+	coreRunName         = "fakerunname"
 	coreTaskRunName     = "faketaskrunname"
 	corePipelineRunName = "fakepipelinerunname"
 )
@@ -38,28 +39,25 @@ func TestCoreEventForTaskRun(t *testing.T) {
 		taskRun       *v1beta1.TaskRun
 		wantEventType cdeevents.CDEventType
 	}{{
-		desc:          "send a cloud event when a taskrun starts",
-		taskRun:       getTaskRunByCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonStarted.String()),
+		desc:          "send a cloud event for a taskrun with no condition",
+		taskRun:       createTaskRunWithCondition("", "doesn't matter"),
 		wantEventType: cdeevents.TaskRunStartedEventV1,
 	}, {
-		desc:          "send a cloud event when a taskrun starts running",
-		taskRun:       getTaskRunByCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonRunning.String()),
+		desc:          "send a cloud event with unknown status taskrun",
+		taskRun:       createTaskRunWithCondition(corev1.ConditionUnknown, "doesn't matter"),
 		wantEventType: cdeevents.TaskRunStartedEventV1,
-	}, {
-		desc:    "send a cloud event with unknown status taskrun",
-		taskRun: getTaskRunByCondition(corev1.ConditionUnknown, "doesn't matter"),
 	}, {
 		desc:          "send a cloud event with failed status taskrun",
-		taskRun:       getTaskRunByCondition(corev1.ConditionFalse, "meh"),
+		taskRun:       createTaskRunWithCondition(corev1.ConditionFalse, "meh"),
 		wantEventType: cdeevents.TaskRunFinishedEventV1,
 	}, {
 		desc:          "send a cloud event with successful status taskrun",
-		taskRun:       getTaskRunByCondition(corev1.ConditionTrue, "yay"),
+		taskRun:       createTaskRunWithCondition(corev1.ConditionTrue, "yay"),
 		wantEventType: cdeevents.TaskRunFinishedEventV1,
 	}, {
 		desc: "send a cloud event with successful status taskrun, empty selflink",
 		taskRun: func() *v1beta1.TaskRun {
-			tr := getTaskRunByCondition(corev1.ConditionTrue, "yay")
+			tr := createTaskRunWithCondition(corev1.ConditionTrue, "yay")
 			// v1.20 does not set selfLink in controller
 			tr.ObjectMeta.SelfLink = ""
 			return tr
@@ -101,6 +99,63 @@ func TestCoreEventForTaskRun(t *testing.T) {
 	}
 }
 
+func TestCoreEventForRun(t *testing.T) {
+	runTests := []struct {
+		desc          string
+		run           *v1alpha1.Run
+		wantEventType cdeevents.CDEventType
+	}{{
+		desc:          "send a cloud event with no condition",
+		run:           createRunWithCondition("", "doesn't matter"),
+		wantEventType: cdeevents.TaskRunStartedEventV1,
+	}, {
+		desc:          "send a cloud event with unknown status run",
+		run:           createRunWithCondition(corev1.ConditionUnknown, "some condition"),
+		wantEventType: cdeevents.TaskRunStartedEventV1,
+	}, {
+		desc:          "send a cloud event with failed status run",
+		run:           createRunWithCondition(corev1.ConditionFalse, "meh"),
+		wantEventType: cdeevents.TaskRunFinishedEventV1,
+	}, {
+		desc:          "send a cloud event with successful status taskrun",
+		run:           createRunWithCondition(corev1.ConditionTrue, "yay"),
+		wantEventType: cdeevents.TaskRunFinishedEventV1,
+	}}
+
+	for _, c := range runTests {
+		t.Run(c.desc, func(t *testing.T) {
+
+			got, err := coreEventForObjectWithCondition(c.run)
+			if err != nil {
+				// If not event type was set, don't expect an event
+				if c.wantEventType != "" {
+					t.Fatalf("I did not expect an error but I got %s", err)
+				}
+			} else {
+				wantSubject := coreRunName
+				if d := cmp.Diff(wantSubject, got.Subject()); d != "" {
+					t.Errorf("Wrong Event ID %s", diff.PrintWantGot(d))
+				}
+				if d := cmp.Diff(string(c.wantEventType), got.Type()); d != "" {
+					t.Errorf("Wrong Event Type %s", diff.PrintWantGot(d))
+				}
+				wantData, _ := getEventData(c.run)
+				gotData := CDECloudEventData{}
+				if err := got.DataAs(&gotData); err != nil {
+					t.Errorf("Unexpected error from DataAsl; %s", err)
+				}
+				if d := cmp.Diff(wantData, gotData); d != "" {
+					t.Errorf("Wrong Event data %s", diff.PrintWantGot(d))
+				}
+
+				if err := got.Validate(); err != nil {
+					t.Errorf("Expected event to be valid; %s", err)
+				}
+			}
+		})
+	}
+}
+
 func TestCoreEventForPipelineRun(t *testing.T) {
 	pipelineRunTests := []struct {
 		desc          string
@@ -108,41 +163,33 @@ func TestCoreEventForPipelineRun(t *testing.T) {
 		wantEventType cdeevents.CDEventType
 		wantStatus    EventStatus
 	}{{
-		desc: "send a cloud event with no condition, queued",
-		pipelineRun: &v1beta1.PipelineRun{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "PipelineRun",
-				APIVersion: "v1beta1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pipelineRunName,
-				Namespace: "marshmallow",
-			},
-			Spec: v1beta1.PipelineRunSpec{},
-		},
+		desc:          "send a cloud event with no condition, queued",
+		pipelineRun:   createPipelineRunWithCondition("", "doesn't matter"),
 		wantEventType: cdeevents.PipelineRunQueuedEventV1,
 		wantStatus:    "",
 	}, {
 		desc:          "send a cloud event with unknown status pipelinerun, just started",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
 		wantEventType: cdeevents.PipelineRunQueuedEventV1,
 		wantStatus:    StatusRunning,
 	}, {
 		desc:          "send a cloud event with unknown status pipelinerun, just started running",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonRunning.String()),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonRunning.String()),
 		wantEventType: cdeevents.PipelineRunStartedEventV1,
 		wantStatus:    StatusRunning,
 	}, {
-		desc:        "send a cloud event with unknown status pipelinerun",
-		pipelineRun: getPipelineRunByCondition(corev1.ConditionUnknown, "doesn't matter"),
+		desc:          "send a cloud event with unknown status pipelinerun",
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionUnknown, "doesn't matter"),
+		wantEventType: cdeevents.PipelineRunStartedEventV1,
+		wantStatus:    StatusRunning,
 	}, {
 		desc:          "send a cloud event with successful status pipelinerun",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionTrue, "yay"),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionTrue, "yay"),
 		wantEventType: cdeevents.PipelineRunFinishedEventV1,
 		wantStatus:    StatusFinished,
 	}, {
 		desc:          "send a cloud event with unknown status pipelinerun",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionFalse, "meh"),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionFalse, "meh"),
 		wantEventType: cdeevents.PipelineRunFinishedEventV1,
 		wantStatus:    StatusError,
 	}}

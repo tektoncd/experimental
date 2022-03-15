@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/test/diff"
 	corev1 "k8s.io/api/core/v1"
@@ -32,28 +33,28 @@ func TestEventForTaskRun(t *testing.T) {
 		wantEventType TektonEventType
 	}{{
 		desc:          "send a cloud event when a taskrun starts",
-		taskRun:       getTaskRunByCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonStarted.String()),
+		taskRun:       createTaskRunWithCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonStarted.String()),
 		wantEventType: TaskRunStartedEventV1,
 	}, {
 		desc:          "send a cloud event when a taskrun starts running",
-		taskRun:       getTaskRunByCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonRunning.String()),
+		taskRun:       createTaskRunWithCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonRunning.String()),
 		wantEventType: TaskRunRunningEventV1,
 	}, {
 		desc:          "send a cloud event with unknown status taskrun",
-		taskRun:       getTaskRunByCondition(corev1.ConditionUnknown, "doesn't matter"),
+		taskRun:       createTaskRunWithCondition(corev1.ConditionUnknown, "doesn't matter"),
 		wantEventType: TaskRunUnknownEventV1,
 	}, {
 		desc:          "send a cloud event with failed status taskrun",
-		taskRun:       getTaskRunByCondition(corev1.ConditionFalse, "meh"),
+		taskRun:       createTaskRunWithCondition(corev1.ConditionFalse, "meh"),
 		wantEventType: TaskRunFailedEventV1,
 	}, {
 		desc:          "send a cloud event with successful status taskrun",
-		taskRun:       getTaskRunByCondition(corev1.ConditionTrue, "yay"),
+		taskRun:       createTaskRunWithCondition(corev1.ConditionTrue, "yay"),
 		wantEventType: TaskRunSuccessfulEventV1,
 	}, {
 		desc: "send a cloud event with successful status taskrun, empty selflink",
 		taskRun: func() *v1beta1.TaskRun {
-			tr := getTaskRunByCondition(corev1.ConditionTrue, "yay")
+			tr := createTaskRunWithCondition(corev1.ConditionTrue, "yay")
 			// v1.20 does not set selfLink in controller
 			tr.ObjectMeta.SelfLink = ""
 			return tr
@@ -99,23 +100,23 @@ func TestEventForPipelineRun(t *testing.T) {
 		wantEventType TektonEventType
 	}{{
 		desc:          "send a cloud event with unknown status pipelinerun, just started",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
 		wantEventType: PipelineRunStartedEventV1,
 	}, {
 		desc:          "send a cloud event with unknown status pipelinerun, just started running",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonRunning.String()),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonRunning.String()),
 		wantEventType: PipelineRunRunningEventV1,
 	}, {
 		desc:          "send a cloud event with unknown status pipelinerun",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionUnknown, "doesn't matter"),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionUnknown, "doesn't matter"),
 		wantEventType: PipelineRunUnknownEventV1,
 	}, {
 		desc:          "send a cloud event with successful status pipelinerun",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionTrue, "yay"),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionTrue, "yay"),
 		wantEventType: PipelineRunSuccessfulEventV1,
 	}, {
 		desc:          "send a cloud event with unknown status pipelinerun",
-		pipelineRun:   getPipelineRunByCondition(corev1.ConditionFalse, "meh"),
+		pipelineRun:   createPipelineRunWithCondition(corev1.ConditionFalse, "meh"),
 		wantEventType: PipelineRunFailedEventV1,
 	}}
 
@@ -134,6 +135,64 @@ func TestEventForPipelineRun(t *testing.T) {
 					t.Errorf("Wrong Event Type %s", diff.PrintWantGot(d))
 				}
 				wantData := newTektonCloudEventData(c.pipelineRun)
+				gotData := TektonCloudEventData{}
+				if err := got.DataAs(&gotData); err != nil {
+					t.Errorf("Unexpected error from DataAsl; %s", err)
+				}
+				if d := cmp.Diff(wantData, gotData); d != "" {
+					t.Errorf("Wrong Event data %s", diff.PrintWantGot(d))
+				}
+
+				if err := got.Validate(); err != nil {
+					t.Errorf("Expected event to be valid; %s", err)
+				}
+			}
+		})
+	}
+}
+
+func TestEventForRun(t *testing.T) {
+	runTests := []struct {
+		desc          string
+		run           *v1alpha1.Run
+		wantEventType TektonEventType
+	}{{
+		desc:          "send a cloud event with unset condition, just started",
+		run:           createRunWithCondition("", ""),
+		wantEventType: RunStartedEventV1,
+	}, {
+		desc:          "send a cloud event with unknown status run, empty reason",
+		run:           createRunWithCondition(corev1.ConditionUnknown, ""),
+		wantEventType: RunRunningEventV1,
+	}, {
+		desc:          "send a cloud event with unknown status run, some reason set",
+		run:           createRunWithCondition(corev1.ConditionUnknown, "custom controller reason"),
+		wantEventType: RunRunningEventV1,
+	}, {
+		desc:          "send a cloud event with successful status run",
+		run:           createRunWithCondition(corev1.ConditionTrue, "yay"),
+		wantEventType: RunSuccessfulEventV1,
+	}, {
+		desc:          "send a cloud event with unknown status run",
+		run:           createRunWithCondition(corev1.ConditionFalse, "meh"),
+		wantEventType: RunFailedEventV1,
+	}}
+
+	for _, c := range runTests {
+		t.Run(c.desc, func(t *testing.T) {
+
+			got, err := eventForRun(c.run)
+			if err != nil {
+				t.Fatalf("I did not expect an error but I got %s", err)
+			} else {
+				wantSubject := runName
+				if d := cmp.Diff(wantSubject, got.Subject()); d != "" {
+					t.Errorf("Wrong Event ID %s", diff.PrintWantGot(d))
+				}
+				if d := cmp.Diff(string(c.wantEventType), got.Type()); d != "" {
+					t.Errorf("Wrong Event Type %s", diff.PrintWantGot(d))
+				}
+				wantData := newTektonCloudEventData(c.run)
 				gotData := TektonCloudEventData{}
 				if err := got.DataAs(&gotData); err != nil {
 					t.Errorf("Unexpected error from DataAsl; %s", err)
