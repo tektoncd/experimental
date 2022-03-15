@@ -41,7 +41,7 @@ func TestResultFromObjectWithCondition(t *testing.T) {
 		wantError:  true,
 	}, {
 		desc: "pipelinerun with result",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			"somethingsomething",
 			map[string]string{},
@@ -51,7 +51,7 @@ func TestResultFromObjectWithCondition(t *testing.T) {
 		wantError:  false,
 	}, {
 		desc: "pipelinerun without result",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			"somethingsomething",
 			map[string]string{},
@@ -61,7 +61,7 @@ func TestResultFromObjectWithCondition(t *testing.T) {
 		wantError:  true,
 	}, {
 		desc: "taskrun with result",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			"somethingsomething",
 			map[string]string{},
@@ -71,7 +71,7 @@ func TestResultFromObjectWithCondition(t *testing.T) {
 		wantError:  false,
 	}, {
 		desc: "taskrun without result",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			"somethingsomething",
 			map[string]string{},

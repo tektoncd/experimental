@@ -28,8 +28,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func getTaskRunByConditionAndResults(status corev1.ConditionStatus, reason string, annotations map[string]string, results map[string]string) *v1beta1.TaskRun {
-	taskRun := getTaskRunByCondition(status, reason)
+func createTaskRunWithConditionAndResults(status corev1.ConditionStatus, reason string, annotations map[string]string, results map[string]string) *v1beta1.TaskRun {
+	taskRun := createTaskRunWithCondition(status, reason)
 	taskRunResults := []v1beta1.TaskRunResult{}
 	for key, value := range results {
 		taskRunResults = append(taskRunResults, v1beta1.TaskRunResult{
@@ -42,8 +42,8 @@ func getTaskRunByConditionAndResults(status corev1.ConditionStatus, reason strin
 	return taskRun
 }
 
-func getPipelineRunByConditionAndResults(status corev1.ConditionStatus, reason string, annotations map[string]string, results map[string]string) *v1beta1.PipelineRun {
-	pipelineRun := getPipelineRunByCondition(status, reason)
+func createPipelineRunWithConditionAndResults(status corev1.ConditionStatus, reason string, annotations map[string]string, results map[string]string) *v1beta1.PipelineRun {
+	pipelineRun := createPipelineRunWithCondition(status, reason)
 	pipelineRunResults := []v1beta1.PipelineRunResult{}
 	for key, value := range results {
 		pipelineRunResults = append(pipelineRunResults, v1beta1.PipelineRunResult{
@@ -68,11 +68,11 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		wantError bool
 	}{{
 		desc:      "taskrun with no annotations",
-		taskRun:   getTaskRunByCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonStarted.String()),
+		taskRun:   createTaskRunWithCondition(corev1.ConditionUnknown, v1beta1.TaskRunReasonStarted.String()),
 		wantError: true,
 	}, {
 		desc: "taskrun with annotation, started",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
@@ -80,7 +80,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "taskrun with annotation, finished, failed",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
 			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
@@ -88,7 +88,7 @@ func TestArtifactEventsForTaskRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "taskrun with annotation, finished, succeeded",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
 			map[string]string{ArtifactPackagedEventAnnotation.String(): ""},
@@ -123,11 +123,11 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		wantError   bool
 	}{{
 		desc:        "pipelinerun with no annotations",
-		pipelineRun: getPipelineRunByCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
+		pipelineRun: createPipelineRunWithCondition(corev1.ConditionUnknown, v1beta1.PipelineRunReasonStarted.String()),
 		wantError:   true,
 	}, {
 		desc: "pipelinerun with annotation, started",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -135,7 +135,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "pipelinerun with annotation, finished, failed",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionFalse,
 			"meh",
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -143,7 +143,7 @@ func TestArtifactEventsForPipelineRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "pipelinerun with annotation, finished, succeeded",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			"yay",
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -179,7 +179,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		wantError   bool
 	}{{
 		desc: "pipelinerun with default results, all",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -195,7 +195,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "pipelinerun with default results, missing",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -207,7 +207,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "pipelinerun with overwritten results, all",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
@@ -226,7 +226,7 @@ func TestGetArtifactEventDataPipelineRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "pipelinerun with overwritten results, missing an overwritten one",
-		pipelineRun: getPipelineRunByConditionAndResults(
+		pipelineRun: createPipelineRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.PipelineRunReasonStarted.String(),
 			map[string]string{
@@ -270,7 +270,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		wantError bool
 	}{{
 		desc: "taskrun with default results, all",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -286,7 +286,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "taskrun with default results, missing",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -298,7 +298,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		wantError: true,
 	}, {
 		desc: "taskrun with overwritten results, all",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
@@ -317,7 +317,7 @@ func TestGetArtifactEventDataTaskRun(t *testing.T) {
 		wantError: false,
 	}, {
 		desc: "taskrun with overwritten results, missing an overwritten one",
-		taskRun: getTaskRunByConditionAndResults(
+		taskRun: createTaskRunWithConditionAndResults(
 			corev1.ConditionUnknown,
 			v1beta1.TaskRunReasonStarted.String(),
 			map[string]string{
@@ -360,7 +360,7 @@ func TestArtifactPublishedEvent(t *testing.T) {
 		wantEventExtensions map[string]interface{}
 	}{{
 		desc: "artifact event for taskrun",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -376,7 +376,7 @@ func TestArtifactPublishedEvent(t *testing.T) {
 		},
 	}, {
 		desc: "artifact event for pipelinerun",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{ArtifactPublishedEventAnnotation.String(): ""},
@@ -415,7 +415,7 @@ func TestArtifactPackagedEvent(t *testing.T) {
 		wantEventExtensions map[string]interface{}
 	}{{
 		desc: "artifact event for taskrun",
-		object: getTaskRunByConditionAndResults(
+		object: createTaskRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.TaskRunReasonSuccessful.String(),
 			map[string]string{
@@ -432,7 +432,7 @@ func TestArtifactPackagedEvent(t *testing.T) {
 		},
 	}, {
 		desc: "artifact event for pipelinerun",
-		object: getPipelineRunByConditionAndResults(
+		object: createPipelineRunWithConditionAndResults(
 			corev1.ConditionTrue,
 			v1beta1.PipelineRunReasonSuccessful.String(),
 			map[string]string{

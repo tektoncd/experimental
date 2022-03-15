@@ -20,11 +20,13 @@ import (
 	"testing"
 
 	cetest "github.com/tektoncd/experimental/cloudevents/test"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/controller"
 )
@@ -32,10 +34,11 @@ import (
 const (
 	taskRunName     = "faketaskrunname"
 	pipelineRunName = "fakepipelinerunname"
+	runName         = "fakerunname"
 )
 
-func getTaskRunByCondition(status corev1.ConditionStatus, reason string) *v1beta1.TaskRun {
-	return &v1beta1.TaskRun{
+func createTaskRunWithCondition(status corev1.ConditionStatus, reason string) *v1beta1.TaskRun {
+	mytaskrun := &v1beta1.TaskRun{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TaskRun",
 			APIVersion: "v1beta1",
@@ -45,7 +48,10 @@ func getTaskRunByCondition(status corev1.ConditionStatus, reason string) *v1beta
 			Namespace: "marshmallow",
 		},
 		Spec: v1beta1.TaskRunSpec{},
-		Status: v1beta1.TaskRunStatus{
+	}
+	switch status {
+	case corev1.ConditionFalse, corev1.ConditionUnknown, corev1.ConditionTrue:
+		mytaskrun.Status = v1beta1.TaskRunStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
 					Type:   apis.ConditionSucceeded,
@@ -53,12 +59,13 @@ func getTaskRunByCondition(status corev1.ConditionStatus, reason string) *v1beta
 					Reason: reason,
 				}},
 			},
-		},
+		}
 	}
+	return mytaskrun
 }
 
-func getPipelineRunByCondition(status corev1.ConditionStatus, reason string) *v1beta1.PipelineRun {
-	return &v1beta1.PipelineRun{
+func createPipelineRunWithCondition(status corev1.ConditionStatus, reason string) *v1beta1.PipelineRun {
+	mypipelinerun := &v1beta1.PipelineRun{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PipelineRun",
 			APIVersion: "v1beta1",
@@ -68,7 +75,10 @@ func getPipelineRunByCondition(status corev1.ConditionStatus, reason string) *v1
 			Namespace: "marshmallow",
 		},
 		Spec: v1beta1.PipelineRunSpec{},
-		Status: v1beta1.PipelineRunStatus{
+	}
+	switch status {
+	case corev1.ConditionFalse, corev1.ConditionUnknown, corev1.ConditionTrue:
+		mypipelinerun.Status = v1beta1.PipelineRunStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
 					Type:   apis.ConditionSucceeded,
@@ -76,8 +86,36 @@ func getPipelineRunByCondition(status corev1.ConditionStatus, reason string) *v1
 					Reason: reason,
 				}},
 			},
-		},
+		}
 	}
+	return mypipelinerun
+}
+
+func createRunWithCondition(status corev1.ConditionStatus, reason string) *v1alpha1.Run {
+	myrun := &v1alpha1.Run{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Run",
+			APIVersion: "v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      runName,
+			Namespace: "marshmallow",
+		},
+		Spec: v1alpha1.RunSpec{},
+	}
+	switch status {
+	case corev1.ConditionFalse, corev1.ConditionUnknown, corev1.ConditionTrue:
+		myrun.Status = v1alpha1.RunStatus{
+			Status: duckv1.Status{
+				Conditions: []apis.Condition{{
+					Type:   apis.ConditionSucceeded,
+					Status: status,
+					Reason: reason,
+				}},
+			},
+		}
+	}
+	return myrun
 }
 
 func TestSendCloudEventWithRetries(t *testing.T) {
@@ -111,7 +149,7 @@ func TestSendCloudEventWithRetries(t *testing.T) {
 		wantEvents:   []string{},
 		eventsFormat: "cdevents",
 	}, {
-		name: "test-send-cloud-event-taskrun",
+		name: "test-send-cloud-event-taskrun-legacy",
 		clientBehaviour: FakeClientBehaviour{
 			SendSuccessfully: true,
 		},
@@ -180,16 +218,19 @@ func TestSendCloudEventWithRetries(t *testing.T) {
 			if err := SendCloudEventWithRetries(ctx, tc.object, tc.eventsFormat); err != nil {
 				t.Fatalf("Unexpected error sending cloud events: %v", err)
 			}
-			// Try to second a second time to check that the cache is working
-			if err := SendCloudEventWithRetries(ctx, tc.object, tc.eventsFormat); err != nil {
-				t.Fatalf("Unexpected error sending cloud events: %v", err)
-			}
 			ceClient := Get(ctx).(FakeClient)
 			if err := cetest.CheckEventsUnordered(t, ceClient.Events, tc.name, tc.wantCEvents); err != nil {
 				t.Fatalf(err.Error())
 			}
 			recorder := controller.GetEventRecorder(ctx).(*record.FakeRecorder)
 			if err := cetest.CheckEventsOrdered(t, recorder.Events, tc.name, tc.wantEvents); err != nil {
+				t.Fatalf(err.Error())
+			}
+			// Try to second a second time to check that the cache is working
+			if err := SendCloudEventWithRetries(ctx, tc.object, tc.eventsFormat); err != nil {
+				t.Fatalf("Unexpected error sending cloud events: %v", err)
+			}
+			if err := cetest.CheckEventsUnordered(t, ceClient.Events, tc.name, []string{}); err != nil {
 				t.Fatalf(err.Error())
 			}
 		})
