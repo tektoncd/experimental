@@ -2,12 +2,12 @@ apiVersion: tekton.dev/v1beta1
 kind: TaskRun
 metadata:
   annotations:
-    tekton.dev/signature: MEQCIA9nN1pOV/6A5XFbGMsxuhfTOboyThVPOQekxvllokIxAiAq83sszNtuei3E+Us5lIksegDlkYdtfoVZSJ5piQtOow==
+    tekton.dev/signature: MEUCIFgl4yEBs8IoX143PO6QxAe7X+9CNVgZVpSu/Xz8GOYAAiEAh0gKiG8uct10JgWprtdpLDb+jjlAnMoNtIhfIO/PbL0=
   creationTimestamp: null
   name: tr-3
   namespace: tekton-trusted-resources
 spec:
-  serviceAccountName: ""
+  serviceAccountName: tekton-trusted-resources-webhook
   taskRef:
     name: t-3
 status:

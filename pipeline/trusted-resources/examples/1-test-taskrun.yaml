@@ -8,6 +8,7 @@ metadata:
   name: tr-1
   namespace: tekton-trusted-resources
 spec:
+  serviceAccountName: "tekton-trusted-resources-webhook"
   taskSpec:
     steps:
       - image: ubuntu

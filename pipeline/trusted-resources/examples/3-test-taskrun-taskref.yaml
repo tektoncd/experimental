@@ -8,5 +8,7 @@ metadata:
   name: tr-3
   namespace: tekton-trusted-resources
 spec:
+  serviceAccountName: "tekton-trusted-resources-webhook"
   taskRef:
     name: t-3
+    kind: task

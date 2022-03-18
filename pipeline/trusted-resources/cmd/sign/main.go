@@ -24,9 +24,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/pkg/signature"
 	sigstore "github.com/sigstore/sigstore/pkg/signature"
@@ -38,26 +36,16 @@ import (
 var (
 	privateKey  = flag.String("pk", "", "cosign private key path")
 	taskRunFile = flag.String("tr", "", "YAML file path for tekton taskrun")
+	taskFile    = flag.String("ts", "", "YAML file path for tekton task")
 	targetDir   = flag.String("td", "", "Dir to save the signed files")
 	targetFile  = flag.String("tf", "signed.yaml", "Filename of the signed file")
 )
 
-// This is a demo of how to generate signed files, note that api task ref is not supported yet.
+// This is a demo of how to generate signed taskrun and task files
 func main() {
 	ctx := context.Background()
 
 	flag.Parse()
-
-	// Read taskrun objects from yaml files
-	trBuf, err := ioutil.ReadFile(*taskRunFile)
-	if err != nil {
-		log.Fatalf("error reading taskrun: %v", err)
-	}
-
-	tr := &v1beta1.TaskRun{}
-	if err := yaml.Unmarshal(trBuf, &tr); err != nil {
-		log.Fatalf("error unmarshalling taskrun: %v", err)
-	}
 
 	// Load signer from key files
 	signer, err := signature.SignerFromKeyRef(ctx, *privateKey, generate.GetPass)
@@ -71,40 +59,51 @@ func main() {
 	}
 	defer f.Close()
 
-	// Sign the task and write to writer
-	if err := Sign(ctx, tr, signer, f); err != nil {
-		log.Fatalf("error signing taskrun: %v", err)
+	if *taskFile != "" {
+		tsBuf, err := ioutil.ReadFile(*taskFile)
+		if err != nil {
+			log.Fatalf("error reading task: %v", err)
+		}
+
+		ts := &v1beta1.Task{}
+		if err := yaml.Unmarshal(tsBuf, &ts); err != nil {
+			log.Fatalf("error unmarshalling taskrun: %v", err)
+		}
+
+		// Sign the task and write to writer
+		if err := SignTask(ctx, ts, signer, f); err != nil {
+			log.Fatalf("error signing taskrun: %v", err)
+		}
+
+	}
+
+	if *taskRunFile != "" {
+		// Read taskrun objects from yaml files
+		trBuf, err := ioutil.ReadFile(*taskRunFile)
+		if err != nil {
+			log.Fatalf("error reading taskrun: %v", err)
+		}
+
+		tr := &v1beta1.TaskRun{}
+		if err := yaml.Unmarshal(trBuf, &tr); err != nil {
+			log.Fatalf("error unmarshalling taskrun: %v", err)
+		}
+
+		// Sign the task and write to writer
+		if err := SignTaskRun(ctx, tr, signer, f); err != nil {
+			log.Fatalf("error signing taskrun: %v", err)
+		}
 	}
 
 }
 
-// TODO: The signing target will be changed in next PR, right now only sign taskspec
-// Sign the task and output task bytes to writer
-func Sign(ctx context.Context, tr *v1beta1.TaskRun, signer sigstore.Signer, writer io.Writer) error {
-	var sig string
-	var err error
-	if tr.Spec.TaskSpec != nil {
-		sig, err = trustedtask.SignInterface(signer, tr.Spec.TaskSpec)
-		if err != nil {
-			return err
-		}
+// Sign the taskrun and output signed bytes to writer
+func SignTaskRun(ctx context.Context, tr *v1beta1.TaskRun, signer sigstore.Signer, writer io.Writer) error {
+	sig, err := trustedtask.SignInterface(signer, tr)
+	if err != nil {
+		return err
 	}
-	if tr.Spec.TaskRef != nil {
-		if tr.Spec.TaskRef.Bundle != "" {
-			timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*60)
-			defer cancel()
 
-			dig, err := trustedtask.Digest(ctx, tr.Spec.TaskRef.Bundle, remote.WithContext(timeoutCtx))
-			if err != nil {
-				return err
-			}
-
-			sig, err = trustedtask.SignRawPayload(signer, []byte(dig.String()))
-			if err != nil {
-				return err
-			}
-		}
-	}
 	if tr.Annotations == nil {
 		tr.Annotations = map[string]string{trustedtask.SignatureAnnotation: sig}
 	} else {
@@ -112,6 +111,28 @@ func Sign(ctx context.Context, tr *v1beta1.TaskRun, signer sigstore.Signer, writ
 	}
 
 	signedBuf, err := yaml.Marshal(tr)
+	if err != nil {
+		return err
+	}
+
+	_, err = writer.Write(signedBuf)
+	return err
+}
+
+// Sign the taskrun and output signed bytes to writer
+func SignTask(ctx context.Context, task *v1beta1.Task, signer sigstore.Signer, writer io.Writer) error {
+	sig, err := trustedtask.SignInterface(signer, task)
+	if err != nil {
+		return err
+	}
+
+	if task.Annotations == nil {
+		task.Annotations = map[string]string{trustedtask.SignatureAnnotation: sig}
+	} else {
+		task.Annotations[trustedtask.SignatureAnnotation] = sig
+	}
+
+	signedBuf, err := yaml.Marshal(task)
 	if err != nil {
 		return err
 	}
