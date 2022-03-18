@@ -5,9 +5,9 @@ metadata:
       # add signature for verification
       #tekton.dev/signature: MEUCIQD5TCrknzAmsPKa0vgRdGj3qhyGuIG/+frARh3kVZWPGwIgAiFG7zWUKzzgxcIuq7ICYIb6CrbJsJVRTjvo4EPowXA=
       #tekton.dev/key: kms://
-  name: tr-2
+  name: example-tr
   namespace: tekton-trusted-resources
 spec:
   taskRef:
-    name: t-2
+    name: example-task
     bundle: docker.io/zyx1200/testtask

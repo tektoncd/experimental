@@ -17,18 +17,12 @@ limitations under the License.
 package trustedtask
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"io"
-	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
-	"github.com/google/go-containerregistry/pkg/registry"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/tektoncd/pipeline/test/diff"
 )
@@ -102,119 +96,6 @@ func TestSignInterface(t *testing.T) {
 				t.Fatalf("SignInterface() generate wrong signature: %v", err)
 			}
 
-		})
-	}
-}
-
-func TestSignRawPayload(t *testing.T) {
-	sv, err := GetSignerVerifier(password)
-	if err != nil {
-		t.Fatalf("failed to get signerverifier %v", err)
-	}
-
-	var mocksigner mockSigner
-
-	tcs := []struct {
-		name     string
-		signer   signature.SignerVerifier
-		payload  []byte
-		expected string
-		wantErr  bool
-	}{{
-		name:    "Sign raw payload with cosign signer",
-		signer:  sv,
-		payload: []byte("payload"),
-		wantErr: false,
-	}, {
-		name:    "Empty payload",
-		signer:  sv,
-		payload: nil,
-		wantErr: false,
-	}, {
-		name:    "Empty Signer",
-		signer:  nil,
-		payload: []byte("payload"),
-		wantErr: true,
-	}, {
-		name:     "Sign raw payload with mock signer",
-		signer:   mocksigner,
-		payload:  []byte("payload"),
-		expected: "cGF5bG9hZA==",
-		wantErr:  false,
-	},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			sig, err := SignRawPayload(tc.signer, tc.payload)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("SignRawPayload() get err %v, wantErr %t", err, tc.wantErr)
-			}
-
-			if tc.expected != "" {
-				if d := cmp.Diff(sig, tc.expected); d != "" {
-					t.Fatalf("Diff:\n%s", diff.PrintWantGot(d))
-				}
-				return
-			}
-
-			if tc.wantErr {
-				return
-			}
-			signature, err := base64.StdEncoding.DecodeString(sig)
-			if err != nil {
-				t.Fatal("failed to decode signature")
-			}
-			if err := sv.VerifySignature((bytes.NewReader(signature)), bytes.NewReader(tc.payload)); err != nil {
-				t.Fatalf("SignRawPayload() get wrong signature %v:", err)
-			}
-
-		})
-	}
-}
-
-func TestDigest(t *testing.T) {
-	ctx := context.Background()
-
-	// Create registry server
-	s := httptest.NewServer(registry.New())
-	defer s.Close()
-	u, _ := url.Parse(s.URL)
-
-	// Push OCI bundle
-	if _, err := pushOCIImage(t, u, ts); err != nil {
-		t.Fatal(err)
-	}
-
-	kc, err := k8schain.NewNoClient(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tcs := []struct {
-		name     string
-		imageRef string
-		wantErr  bool
-	}{{
-		name:     "OCIBundle Pass Verification",
-		imageRef: u.Host + "/task/" + ts.Name,
-		wantErr:  false,
-	}, {
-		name:     "OCIBundle Fail Verification with empty signature",
-		imageRef: u.Host + "/task/" + tsTampered.Name,
-		wantErr:  true,
-	}, {
-		name:     "OCIBundle Fail Verification with empty Bundle",
-		imageRef: "",
-		wantErr:  true,
-	},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			if _, err = Digest(ctx, tc.imageRef, remote.WithAuthFromKeychain(kc)); (err != nil) != tc.wantErr {
-				t.Fatalf("Digest() get err %v, wantErr %t", err, tc.wantErr)
-			}
 		})
 	}
 }

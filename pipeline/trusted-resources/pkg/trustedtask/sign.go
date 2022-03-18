@@ -18,63 +18,35 @@ package trustedtask
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"knative.dev/pkg/webhook/json"
 )
 
-// TODO: refactor this func in next pr
-// SignTaskSpec returns the encoded signature for the given TaskSpec.
+// SignInterface returns the encoded signature for the given object.
 func SignInterface(signer signature.Signer, i interface{}) (string, error) {
+	if signer == nil {
+		return "", fmt.Errorf("signer is nil")
+	}
 	b, err := json.Marshal(i)
 	if err != nil {
 		return "", err
 	}
 	h := sha256.New()
 	h.Write(b)
-	return SignRawPayload(signer, h.Sum(nil))
-}
 
-// SignRawPayload and return encoded signature
-func SignRawPayload(signer signature.Signer, rawPayload []byte) (string, error) {
-	if signer == nil {
-		return "", fmt.Errorf("signer is nil")
-	}
-
-	sig, err := signer.SignMessage(bytes.NewReader(rawPayload))
+	sig, err := signer.SignMessage(bytes.NewReader(h.Sum(nil)))
 	if err != nil {
 		return "", err
 	}
+
 	return base64.StdEncoding.EncodeToString(sig), nil
-}
-
-// Digest returns the digest of image given imageReference
-func Digest(ctx context.Context, imageReference string, opt ...remote.Option) (v1.Hash, error) {
-	imgRef, err := name.ParseReference(imageReference)
-	if err != nil {
-		return v1.Hash{}, err
-	}
-
-	img, err := remote.Image(imgRef, opt...)
-	if err != nil {
-		return v1.Hash{}, err
-	}
-
-	dgst, err := img.Digest()
-	if err != nil {
-		return v1.Hash{}, err
-	}
-	return dgst, nil
 }
 
 // GenerateKeyFile creates cosign key files
