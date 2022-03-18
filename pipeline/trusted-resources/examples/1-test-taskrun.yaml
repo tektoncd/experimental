@@ -5,7 +5,7 @@ metadata:
       # add signature for verification
       #tekton.dev/signature: MEYCIQDhKiJpPylEFo5RmBEZV96luADJdhSQcE7EZuOgL7hk8wIhAICKk6o5ldqo2sN0R6GhE7GpuEkblbjeJilNms78E+ap
       #tekton.dev/key: kms://
-  name: tr-1
+  name: example-tr
   namespace: tekton-trusted-resources
 spec:
   taskSpec:

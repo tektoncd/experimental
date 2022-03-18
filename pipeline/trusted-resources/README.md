@@ -26,7 +26,7 @@ cosign generate-key-pair
 Prepare signed files
 ```bash
 # This is a demo of how to generate signed files.
-go run cmd/sign/main.go -pk=cosign.key -tr=examples/1-test-taskrun.yaml -td=examples
+go run cmd/sign/main.go -pk=cosign.key -ts=examples/example-task.yaml -td=examples
 ```
 
 Then install the new admission webhook:
@@ -54,7 +54,7 @@ kubectl create secret generic ${SECRET_NAME} \
 --type=kubernetes.io/dockerconfigjson
 --namespace=tekton-pipelines
 
-tkn bundle push docker.io/my-dockerhub-username/testtask:latest -f examples/test_task.yaml
+tkn bundle push docker.io/my-dockerhub-username/testtask:latest -f examples/signed.yaml
 cosign sign --key cosign.key docker.io/my-dockerhub-username/testtask:latest
 ```
 

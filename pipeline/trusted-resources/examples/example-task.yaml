@@ -1,7 +1,7 @@
 kind: Task
 apiVersion: tekton.dev/v1beta1
 metadata:
-  name: t-3
+  name: example-task
   namespace: tekton-trusted-resources
 spec:
   steps:
