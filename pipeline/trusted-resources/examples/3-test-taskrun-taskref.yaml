@@ -8,5 +8,7 @@ metadata:
   name: tr-3
   namespace: tekton-trusted-resources
 spec:
+  serviceAccountName: examples-sa
   taskRef:
     name: t-3
+    kind: task

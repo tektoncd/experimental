@@ -7,7 +7,7 @@ metadata:
   name: tr-2
   namespace: tekton-trusted-resources
 spec:
-  serviceAccountName: ""
+  serviceAccountName: examples-sa
   taskRef:
     bundle: docker.io/zyx1200/testtask
     name: t-2

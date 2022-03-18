@@ -18,7 +18,6 @@ package trustedtask
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -116,9 +115,8 @@ func init() {
 	os.Setenv("WEBHOOK_SERVICEACCOUNT_NAME", serviceAccount)
 }
 
-func TestVerifyResources_TaskSpec(t *testing.T) {
+func TestVerifyTaskRun_TaskRun(t *testing.T) {
 	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
-
 	k8sclient := fakek8s.NewSimpleClientset()
 	tektonClient := faketekton.NewSimpleClientset(ts, tsTampered)
 
@@ -139,7 +137,7 @@ func TestVerifyResources_TaskSpec(t *testing.T) {
 	unsigned := &TrustedTaskRun{TaskRun: tr}
 
 	signed := unsigned.DeepCopy()
-	signed.Annotations[SignatureAnnotation], err = SignInterface(signer, tr.Spec.TaskSpec)
+	signed.Annotations[SignatureAnnotation], err = SignInterface(signer, tr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,16 +166,15 @@ func TestVerifyResources_TaskSpec(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.taskRun.VerifyTask(ctx, k8sclient, tektonClient)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("verifyResources() get err %v, wantErr %t", err, tc.wantErr)
+			if err := tc.taskRun.verifyTaskRun(ctx, k8sclient, tektonClient); (err != nil) != tc.wantErr {
+				t.Errorf("verifyResources() get err %v, wantErr %t", err, tc.wantErr)
 			}
 		})
 	}
 
 }
 
-func TestVerifyResources_OCIBundle(t *testing.T) {
+func TestVerifyTaskRun_OCIBundle(t *testing.T) {
 	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
 
 	k8sclient := fakek8s.NewSimpleClientset(sa)
@@ -195,8 +192,7 @@ func TestVerifyResources_OCIBundle(t *testing.T) {
 	u, _ := url.Parse(s.URL)
 
 	// Push OCI bundle
-	dig, err := pushOCIImage(t, u, ts)
-	if err != nil {
+	if _, err = pushOCIImage(t, u, ts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -210,7 +206,7 @@ func TestVerifyResources_OCIBundle(t *testing.T) {
 		ObjectMeta: trObjectMeta,
 		Spec: v1beta1.TaskRunSpec{
 			TaskRef: &v1beta1.TaskRef{
-				Name:   "ts",
+				Name:   "test-task",
 				Bundle: u.Host + "/task/" + ts.Name,
 			},
 		},
@@ -219,7 +215,8 @@ func TestVerifyResources_OCIBundle(t *testing.T) {
 	unsigned := &TrustedTaskRun{TaskRun: otr}
 
 	signed := unsigned.DeepCopy()
-	signed.Annotations[SignatureAnnotation], err = SignRawPayload(signer, []byte(dig.String()))
+	signed.Annotations[SignatureAnnotation], err = SignInterface(signer, otr)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,16 +245,15 @@ func TestVerifyResources_OCIBundle(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.taskRun.VerifyTask(ctx, k8sclient, tektonClient)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("verifyResources() get err %v, wantErr %t", err, tc.wantErr)
+			if err := tc.taskRun.verifyTaskRun(ctx, k8sclient, tektonClient); (err != nil) != tc.wantErr {
+				t.Errorf("verifyResources() get err %v, wantErr %t", err, tc.wantErr)
 			}
 		})
 	}
 
 }
 
-func TestVerifyResources_TaskRef(t *testing.T) {
+func TestVerifyTaskRun_TaskRef(t *testing.T) {
 	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
 
 	k8sclient := fakek8s.NewSimpleClientset()
@@ -283,12 +279,9 @@ func TestVerifyResources_TaskRef(t *testing.T) {
 	unsigned := &TrustedTaskRun{TaskRun: ltr}
 
 	signed := unsigned.DeepCopy()
-	ts, err := tektonClient.TektonV1beta1().Tasks(unsigned.Namespace).Get(ctx, unsigned.Spec.TaskRef.Name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("Unexpected err %v", err)
-	}
 
-	signed.Annotations[SignatureAnnotation], err = SignInterface(signer, &ts.Spec)
+	signed.Annotations[SignatureAnnotation], err = SignInterface(signer, ltr)
+
 	if err != nil {
 		t.Fatalf("Unexpected err %v", err)
 	}
@@ -317,146 +310,9 @@ func TestVerifyResources_TaskRef(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.taskRun.VerifyTask(ctx, k8sclient, tektonClient)
+			err := tc.taskRun.verifyTaskRun(ctx, k8sclient, tektonClient)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("verifyResources() get err %v, wantErr %t", err, tc.wantErr)
-			}
-		})
-	}
-
-}
-
-func TestVerifyInterface(t *testing.T) {
-	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
-
-	// get keys
-	sv, err := GetSignerVerifier(password)
-	if err != nil {
-		t.Fatalf("Unexpected err %v", err)
-	}
-
-	tcs := []struct {
-		name         string
-		taskSpec     *v1beta1.TaskSpec
-		hasSignature bool
-		wantErr      bool
-	}{{
-		name:         "taskSpec Pass Verification",
-		taskSpec:     taskSpecTest,
-		hasSignature: true,
-		wantErr:      false,
-	}, {
-		name:         "taskSpec Fail Verification with empty signature",
-		taskSpec:     taskSpecTest,
-		hasSignature: false,
-		wantErr:      true,
-	}, {
-		name:         "taskSpec Fail Verification with empty taskSpec",
-		taskSpec:     nil,
-		hasSignature: true,
-		wantErr:      true,
-	}, {
-		name:         "taskSpec Fail Verification with tampered taskSpec",
-		taskSpec:     taskSpecTestTampered,
-		hasSignature: true,
-		wantErr:      true,
-	},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			sig := ""
-			if tc.hasSignature {
-				sig, err = SignInterface(sv, taskSpecTest)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			signature, err := base64.StdEncoding.DecodeString(sig)
-			if err != nil {
-				t.Fatal(err)
-			}
-			errs := VerifyInterface(ctx, tc.taskSpec, sv, signature)
-			if (errs != nil) != tc.wantErr {
-				t.Fatalf("VerifyInterface() get err %v, wantErr %t", err, tc.wantErr)
-			}
-		})
-	}
-
-}
-
-func TestVerifyTaskOCIBundle(t *testing.T) {
-	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
-
-	k8sclient := fakek8s.NewSimpleClientset(sa)
-
-	// Create registry server
-	s := httptest.NewServer(registry.New())
-	defer s.Close()
-	u, _ := url.Parse(s.URL)
-
-	// Push OCI bundle
-	dig, err := pushOCIImage(t, u, ts)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := pushOCIImage(t, u, tsTampered); err != nil {
-		t.Fatal(err)
-	}
-
-	// Get signer
-	sv, err := GetSignerVerifier(password)
-	if err != nil {
-		t.Fatalf("Unexpected err %v", err)
-	}
-
-	tcs := []struct {
-		name         string
-		bundle       string
-		hasSignature bool
-		wantErr      bool
-	}{{
-		name:         "OCIBundle Pass Verification",
-		bundle:       u.Host + "/task/" + ts.Name,
-		hasSignature: true,
-		wantErr:      false,
-	}, {
-		name:         "OCIBundle Fail Verification with empty signature",
-		bundle:       u.Host + "/task/" + ts.Name,
-		hasSignature: false,
-		wantErr:      true,
-	}, {
-		name:         "OCIBundle Fail Verification with empty Bundle",
-		bundle:       "",
-		hasSignature: true,
-		wantErr:      true,
-	}, {
-		name:         "OCIBundle Fail Verification with tampered OCIBundle",
-		bundle:       u.Host + "/task/" + tsTampered.Name,
-		hasSignature: true,
-		wantErr:      true,
-	},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			sig := ""
-			if tc.hasSignature {
-				sig, err = SignRawPayload(sv, []byte(dig.String()))
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			signature, err := base64.StdEncoding.DecodeString(sig)
-			if err != nil {
-				t.Fatal(err)
-			}
-			errs := VerifyTaskOCIBundle(ctx, tc.bundle, sv, signature, k8sclient)
-			if (errs != nil) != tc.wantErr {
-				t.Fatalf("verifyTaskOCIBundle() get err %v, wantErr %t", err, tc.wantErr)
 			}
 		})
 	}

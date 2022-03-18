@@ -20,14 +20,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	imgname "github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/registry"
 	typesv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/trustedtask"
@@ -36,7 +34,6 @@ import (
 	remotetest "github.com/tektoncd/pipeline/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/yaml"
 )
 
@@ -53,24 +50,13 @@ func init() {
 
 var (
 	// tasks for testing
-	taskSpecTest = &v1beta1.TaskSpec{
+	taskSpec = &v1beta1.TaskSpec{
 		Steps: []v1beta1.Step{{
 			Container: corev1.Container{
 				Image: "ubuntu",
 				Name:  "echo",
 			},
 		}},
-	}
-
-	ts = &v1beta1.Task{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "tekton.dev/v1beta1",
-			Kind:       "Task"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-task",
-			Namespace: namespace,
-		},
-		Spec: *taskSpecTest,
 	}
 
 	trTypeMeta = metav1.TypeMeta{
@@ -91,7 +77,7 @@ var (
 	}
 )
 
-func TestSign_Taskrun(t *testing.T) {
+func TestSignTaskrun(t *testing.T) {
 	ctx := context.Background()
 
 	sv, err := trustedtask.GetSignerVerifier(password)
@@ -99,76 +85,24 @@ func TestSign_Taskrun(t *testing.T) {
 		t.Fatalf("error get signerverifier: %v", err)
 	}
 
-	tr := &v1beta1.TaskRun{
-		TypeMeta:   trTypeMeta,
-		ObjectMeta: trObjectMeta,
-		Spec: v1beta1.TaskRunSpec{
-			TaskSpec: &ts.Spec,
-		},
-	}
+	tr := getTaskRun()
 
 	var writer bytes.Buffer
 
-	if err := Sign(ctx, tr, sv, &writer); err != nil {
+	if err := SignTaskRun(ctx, tr, sv, &writer); err != nil {
 		t.Fatalf("Sign() get err %v", err)
 	}
 
 	signed := writer.Bytes()
-	tr, signature := unmarshal(t, signed)
+	tr, signature := unmarshalTaskRun(t, signed)
 
-	if err := trustedtask.VerifyInterface(ctx, tr.Spec.TaskSpec, sv, signature); err != nil {
+	if err := trustedtask.VerifyInterface(ctx, tr, sv, signature); err != nil {
 		t.Fatalf("VerifyTaskOCIBundle get error: %v", err)
 	}
 
 }
 
-func TestSign_OCIBundle(t *testing.T) {
-	ctx := context.Background()
-
-	sv, err := trustedtask.GetSignerVerifier(password)
-	if err != nil {
-		t.Fatalf("error get signerverifier: %v", err)
-	}
-
-	k8sclient := fakek8s.NewSimpleClientset(sa)
-
-	// Create registry server
-	s := httptest.NewServer(registry.New())
-	defer s.Close()
-	u, err := url.Parse(s.URL)
-	if err != nil {
-		t.Fatalf("error parsing url: %v", err)
-	}
-
-	// Push OCI bundle
-	pushOCIImage(t, u, ts)
-
-	tr := &v1beta1.TaskRun{
-		TypeMeta:   trTypeMeta,
-		ObjectMeta: trObjectMeta,
-		Spec: v1beta1.TaskRunSpec{
-			TaskRef: &v1beta1.TaskRef{
-				Name:   "ts",
-				Bundle: u.Host + "/task/" + ts.Name,
-			},
-		},
-	}
-
-	var writer bytes.Buffer
-	if err := Sign(ctx, tr, sv, &writer); err != nil {
-		t.Fatalf("Sign() get err %v", err)
-	}
-
-	signed := writer.Bytes()
-	tr, signature := unmarshal(t, signed)
-
-	if err := trustedtask.VerifyTaskOCIBundle(ctx, tr.Spec.TaskRef.Bundle, sv, signature, k8sclient); err != nil {
-		t.Fatalf("VerifyTaskOCIBundle get error: %v", err)
-	}
-
-}
-
-func unmarshal(t *testing.T, buf []byte) (*v1beta1.TaskRun, []byte) {
+func unmarshalTaskRun(t *testing.T, buf []byte) (*v1beta1.TaskRun, []byte) {
 	tr := &v1beta1.TaskRun{}
 	if err := yaml.Unmarshal(buf, &tr); err != nil {
 		t.Fatalf("error unmarshalling buffer: %v", err)
@@ -178,7 +112,32 @@ func unmarshal(t *testing.T, buf []byte) (*v1beta1.TaskRun, []byte) {
 	if err != nil {
 		t.Fatalf("error decoding signature: %v", err)
 	}
+
+	delete(tr.ObjectMeta.Annotations, trustedtask.SignatureAnnotation)
 	return tr, signature
+}
+
+func getTaskRun() *v1beta1.TaskRun {
+	return &v1beta1.TaskRun{
+		TypeMeta:   trTypeMeta,
+		ObjectMeta: trObjectMeta,
+		Spec: v1beta1.TaskRunSpec{
+			TaskSpec: taskSpec,
+		},
+	}
+}
+
+func getTask() *v1beta1.Task {
+	return &v1beta1.Task{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "tekton.dev/v1beta1",
+			Kind:       "Task"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-task",
+			Namespace: namespace,
+		},
+		Spec: *taskSpec,
+	}
 }
 
 func pushOCIImage(t *testing.T, u *url.URL, task *v1beta1.Task) typesv1.Hash {

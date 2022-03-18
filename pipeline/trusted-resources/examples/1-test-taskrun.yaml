@@ -8,6 +8,7 @@ metadata:
   name: tr-1
   namespace: tekton-trusted-resources
 spec:
+  serviceAccountName: examples-sa
   taskSpec:
     steps:
       - image: ubuntu
