@@ -106,7 +106,6 @@ func (tr *TrustedTaskRun) verifyTaskRun(
 		return apis.ErrGeneric(err.Error(), "metadata")
 	}
 
-
 	if err := VerifyInterface(ctx, cp, verifier, signature); err != nil {
 		return apis.ErrGeneric(err.Error(), "taskrun")
 	}
