@@ -35,33 +35,12 @@ metadata:
     app.kubernetes.io/part-of: admissioncontrol
     pipeline.tekton.dev/release: "devel"
 webhooks:
-- admissionReviewVersions: ["v1"]
+- name: validation.trustedresources.webhook.pipeline.tekton.dev
   clientConfig:
     service:
       name: tekton-trusted-resources-webhook
       namespace: tekton-trusted-resources
       port: 442
+  admissionReviewVersions: ["v1"]
   failurePolicy: Fail
   sideEffects: None
-  name: validation.trustedresources.webhook.pipeline.tekton.dev
-
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  name: trustedresources.webhook.pipeline.tekton.dev
-  labels:
-    app.kubernetes.io/component: tekton-trusted-resources
-    app.kubernetes.io/instance: default
-    app.kubernetes.io/part-of: admissioncontrol
-    pipeline.tekton.dev/release: "devel"
-webhooks:
-- admissionReviewVersions: ["v1"]
-  clientConfig:
-    service:
-      name: tekton-trusted-resources-webhook
-      namespace: tekton-trusted-resources
-      port: 442
-  failurePolicy: Fail
-  sideEffects: None
-  name: trustedresources.webhook.pipeline.tekton.dev
