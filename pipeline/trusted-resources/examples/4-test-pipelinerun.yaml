@@ -1,0 +1,8 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: example-pipelinerun
+  namespace: tekton-trusted-resources
+spec:
+  pipelineRef:
+    name: example-pipeline
