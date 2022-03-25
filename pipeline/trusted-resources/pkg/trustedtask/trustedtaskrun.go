@@ -19,6 +19,7 @@ package trustedtask
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"os"
 
 	"github.com/tektoncd/pipeline/pkg/apis/config"
@@ -51,7 +52,7 @@ var (
 	_ apis.Validatable = (*TrustedTaskRun)(nil)
 )
 
-// Validate the Taskref referred task is tampered or not. Only support OCI task bundle now.
+// Validate the Taskref referred task is tampered or not.
 func (tr *TrustedTaskRun) Validate(ctx context.Context) (errs *apis.FieldError) {
 	// TODO: validate only on create operation.
 
@@ -88,11 +89,6 @@ func (tr *TrustedTaskRun) verifyTaskRun(
 		return nil
 	}
 
-	// TODO: ignore cluster task for now, will add later.
-	if tr.Spec.TaskRef.Bundle == "" {
-		return nil
-	}
-
 	serviceAccountName := os.Getenv("WEBHOOK_SERVICEACCOUNT_NAME")
 	if serviceAccountName == "" {
 		serviceAccountName = "tekton-verify-task-webhook"
@@ -107,6 +103,7 @@ func (tr *TrustedTaskRun) verifyTaskRun(
 	if err != nil {
 		return apis.ErrGeneric(err.Error(), "spec", "taskRef")
 	}
+
 	resolvedTask, err := fn(ctx, tr.Spec.TaskRef.Name)
 	if err != nil {
 		return apis.ErrGeneric(err.Error(), "spec", "taskRef")
@@ -136,13 +133,40 @@ func prepareTask(t v1beta1.TaskObject) (v1beta1.Task, []byte, error) {
 		APIVersion: "tekton.dev/v1beta1",
 		Kind:       "Task"}
 	task.Spec = t.TaskSpec()
-	task.ObjectMeta = t.TaskMetadata()
 
-	signature, err := base64.StdEncoding.DecodeString(task.ObjectMeta.Annotations[SignatureAnnotation])
+	// exclude the fields populated by system.
+	task.Name = t.TaskMetadata().Name
+	task.GenerateName = t.TaskMetadata().GenerateName
+	task.Namespace = t.TaskMetadata().Namespace
+
+	if t.TaskMetadata().Labels != nil {
+		task.Labels = make(map[string]string)
+		for k, v := range t.TaskMetadata().Labels {
+			task.Labels[k] = v
+		}
+	}
+
+	task.Annotations = make(map[string]string)
+	for k, v := range t.TaskMetadata().Annotations {
+		task.Annotations[k] = v
+	}
+
+	// signature should be contained in annotation
+	sig, ok := task.Annotations[SignatureAnnotation]
+	if !ok {
+		return task, nil, fmt.Errorf("signature is missing")
+	}
+
+	// extract signature
+	signature, err := base64.StdEncoding.DecodeString(sig)
 	if err != nil {
 		return task, nil, err
 	}
 	delete(task.ObjectMeta.Annotations, SignatureAnnotation)
+
+	// exclude the annotations added by other components
+	delete(task.ObjectMeta.Annotations, "kubectl-client-side-apply")
+	delete(task.ObjectMeta.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	return task, signature, nil
 }

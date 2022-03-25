@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	imgname "github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
@@ -36,6 +37,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	remotetest "github.com/tektoncd/pipeline/test"
+	"github.com/tektoncd/pipeline/test/diff"
 	"go.uber.org/zap/zaptest"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -69,9 +71,8 @@ var (
 		APIVersion: "tekton.dev/v1beta1"}
 
 	trObjectMeta = metav1.ObjectMeta{
-		Name:        "tr",
-		Namespace:   nameSpace,
-		Annotations: map[string]string{},
+		Name:      "tr",
+		Namespace: nameSpace,
 	}
 
 	// service account
@@ -105,6 +106,7 @@ func TestVerifyTaskRun_TaskRun(t *testing.T) {
 
 	unsigned := &TrustedTaskRun{TaskRun: tr}
 
+	// inline task should pass the validation
 	if err := unsigned.verifyTaskRun(ctx, k8sclient, tektonClient); err != nil {
 		t.Errorf("verifyTaskRun() get err %v", err)
 	}
@@ -266,11 +268,11 @@ func TestVerifyTaskRun_TaskRef(t *testing.T) {
 	}, {
 		name:    "Local taskRef Fail Verification with tampered content",
 		taskRun: tampered,
-		wantErr: false,
+		wantErr: true,
 	}, {
 		name:    "Local taskRef Fail Verification without signature",
 		taskRun: unsigned,
-		wantErr: false,
+		wantErr: true,
 	},
 	}
 
@@ -280,6 +282,110 @@ func TestVerifyTaskRun_TaskRef(t *testing.T) {
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("verifyTaskRun() get err %v, wantErr %t", err, tc.wantErr)
 			}
+		})
+	}
+
+}
+
+func TestPrepareTask(t *testing.T) {
+	unsignedTask := getUnsignedTask()
+
+	signedTask := unsignedTask.DeepCopy()
+	signedTask.Annotations = map[string]string{SignatureAnnotation: "tY805zV53PtwDarK3VD6dQPx5MbIgctNcg/oSle+MG0="}
+
+	taskWithLabels := signedTask.DeepCopy()
+	taskWithLabels.Labels = map[string]string{"label": "foo"}
+
+	taskWithExtraAnnotations := signedTask.DeepCopy()
+	taskWithExtraAnnotations.Annotations["kubectl-client-side-apply"] = "client"
+	taskWithExtraAnnotations.Annotations["kubectl.kubernetes.io/last-applied-configuration"] = "config"
+
+	tcs := []struct {
+		name       string
+		taskobject v1beta1.TaskObject
+		expected   v1beta1.Task
+		wantErr    bool
+	}{{
+		name:       "Prepare signed task without labels",
+		taskobject: signedTask.Copy(),
+		expected: v1beta1.Task{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "tekton.dev/v1beta1",
+				Kind:       "Task"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "test-task",
+				Namespace:   nameSpace,
+				Annotations: map[string]string{},
+			},
+			Spec: *taskSpecTest,
+		},
+		wantErr: false,
+	}, {
+		name:       "Prepare signed task with labels",
+		taskobject: taskWithLabels.Copy(),
+		expected: v1beta1.Task{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "tekton.dev/v1beta1",
+				Kind:       "Task"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "test-task",
+				Namespace:   nameSpace,
+				Labels:      map[string]string{"label": "foo"},
+				Annotations: map[string]string{},
+			},
+			Spec: *taskSpecTest,
+		},
+		wantErr: false,
+	}, {
+		name:       "Prepare signed task with extra annotations",
+		taskobject: taskWithExtraAnnotations.Copy(),
+		expected: v1beta1.Task{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "tekton.dev/v1beta1",
+				Kind:       "Task"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "test-task",
+				Namespace:   nameSpace,
+				Annotations: map[string]string{},
+			},
+			Spec: *taskSpecTest,
+		},
+		wantErr: false,
+	}, {
+		name:       "Fail prepration without signature",
+		taskobject: unsignedTask.Copy(),
+		expected: v1beta1.Task{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "tekton.dev/v1beta1",
+				Kind:       "Task"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "test-task",
+				Namespace:   nameSpace,
+				Annotations: map[string]string{},
+			},
+			Spec: *taskSpecTest,
+		},
+		wantErr: true,
+	},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			task, signature, err := prepareTask(tc.taskobject)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("prepareTask() get err %v, wantErr %t", err, tc.wantErr)
+			}
+			if d := cmp.Diff(task, tc.expected); &tc.expected != nil && d != "" {
+				t.Error(diff.PrintWantGot(d))
+			}
+
+			if tc.wantErr {
+				return
+			}
+			if signature == nil {
+				t.Fatal("signature is not extracted")
+			}
+
 		})
 	}
 
