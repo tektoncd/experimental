@@ -104,69 +104,80 @@ func (tr *TrustedTaskRun) verifyTaskRun(
 		return apis.ErrGeneric(err.Error(), "spec", "taskRef")
 	}
 
-	resolvedTask, err := fn(ctx, tr.Spec.TaskRef.Name)
-	if err != nil {
+	if err := verifyTask(ctx, tr.Spec.TaskRef.Name, k8sclient, fn); err != nil {
 		return apis.ErrGeneric(err.Error(), "spec", "taskRef")
 	}
+	return nil
+}
 
-	task, signature, err := prepareTask(resolvedTask)
+func verifyTask(ctx context.Context, taskRefName string, k8sclient kubernetes.Interface, fn resources.GetTask) error {
+	resolvedTask, err := fn(ctx, taskRefName)
 	if err != nil {
-		return apis.ErrGeneric(err.Error(), "spec", "taskRef")
+		return err
+	}
+
+	tm, signature, err := prepareObjectMeta(resolvedTask.TaskMetadata())
+	if err != nil {
+		return err
+	}
+
+	task := v1beta1.Task{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "tekton.dev/v1beta1",
+			Kind:       "Task"},
+		ObjectMeta: tm,
+		Spec:       resolvedTask.TaskSpec(),
 	}
 
 	verifier, err := verifier(ctx, task.ObjectMeta.Annotations, k8sclient)
 	if err != nil {
-		return apis.ErrGeneric(err.Error(), "taskRef")
+		return err
 	}
 
 	if err := VerifyInterface(ctx, task, verifier, signature); err != nil {
-		return apis.ErrGeneric(err.Error(), "taskRef")
+		return err
 	}
-
 	return nil
+
 }
 
-// prepareTask will convert the taskobject to task and extract the signature.
-func prepareTask(t v1beta1.TaskObject) (v1beta1.Task, []byte, error) {
-	task := v1beta1.Task{}
-	task.TypeMeta = metav1.TypeMeta{
-		APIVersion: "tekton.dev/v1beta1",
-		Kind:       "Task"}
-	task.Spec = t.TaskSpec()
+// prepareObjectMeta will filter the objectmeta and extract the signature.
+func prepareObjectMeta(in metav1.ObjectMeta) (metav1.ObjectMeta, []byte, error) {
+	out := metav1.ObjectMeta{}
 
 	// exclude the fields populated by system.
-	task.Name = t.TaskMetadata().Name
-	task.GenerateName = t.TaskMetadata().GenerateName
-	task.Namespace = t.TaskMetadata().Namespace
+	out.Name = in.Name
+	out.GenerateName = in.GenerateName
+	out.Namespace = in.Namespace
 
-	if t.TaskMetadata().Labels != nil {
-		task.Labels = make(map[string]string)
-		for k, v := range t.TaskMetadata().Labels {
-			task.Labels[k] = v
+	if in.Labels != nil {
+		out.Labels = make(map[string]string)
+		for k, v := range in.Labels {
+			out.Labels[k] = v
 		}
 	}
 
-	task.Annotations = make(map[string]string)
-	for k, v := range t.TaskMetadata().Annotations {
-		task.Annotations[k] = v
+	out.Annotations = make(map[string]string)
+	for k, v := range in.Annotations {
+		out.Annotations[k] = v
 	}
 
+	// exclude the annotations added by other components
+	delete(out.Annotations, "kubectl-client-side-apply")
+	delete(out.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
 	// signature should be contained in annotation
-	sig, ok := task.Annotations[SignatureAnnotation]
+	sig, ok := in.Annotations[SignatureAnnotation]
 	if !ok {
-		return task, nil, fmt.Errorf("signature is missing")
+		return out, nil, fmt.Errorf("signature is missing")
 	}
 
 	// extract signature
 	signature, err := base64.StdEncoding.DecodeString(sig)
 	if err != nil {
-		return task, nil, err
+		return out, nil, err
 	}
-	delete(task.ObjectMeta.Annotations, SignatureAnnotation)
+	delete(out.Annotations, SignatureAnnotation)
 
-	// exclude the annotations added by other components
-	delete(task.ObjectMeta.Annotations, "kubectl-client-side-apply")
-	delete(task.ObjectMeta.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
-
-	return task, signature, nil
+	return out, signature, nil
 }

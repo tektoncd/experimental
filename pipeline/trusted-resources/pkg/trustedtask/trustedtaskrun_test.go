@@ -287,83 +287,59 @@ func TestVerifyTaskRun_TaskRef(t *testing.T) {
 
 }
 
-func TestPrepareTask(t *testing.T) {
-	unsignedTask := getUnsignedTask()
+func TestPrepareObjectMeta(t *testing.T) {
+	unsigned := getUnsignedTask().ObjectMeta
 
-	signedTask := unsignedTask.DeepCopy()
-	signedTask.Annotations = map[string]string{SignatureAnnotation: "tY805zV53PtwDarK3VD6dQPx5MbIgctNcg/oSle+MG0="}
+	signed := unsigned.DeepCopy()
+	signed.Annotations = map[string]string{SignatureAnnotation: "tY805zV53PtwDarK3VD6dQPx5MbIgctNcg/oSle+MG0="}
 
-	taskWithLabels := signedTask.DeepCopy()
-	taskWithLabels.Labels = map[string]string{"label": "foo"}
+	signedWithLabels := signed.DeepCopy()
+	signedWithLabels.Labels = map[string]string{"label": "foo"}
 
-	taskWithExtraAnnotations := signedTask.DeepCopy()
-	taskWithExtraAnnotations.Annotations["kubectl-client-side-apply"] = "client"
-	taskWithExtraAnnotations.Annotations["kubectl.kubernetes.io/last-applied-configuration"] = "config"
+	signedWithExtraAnnotations := signed.DeepCopy()
+	signedWithExtraAnnotations.Annotations["kubectl-client-side-apply"] = "client"
+	signedWithExtraAnnotations.Annotations["kubectl.kubernetes.io/last-applied-configuration"] = "config"
 
 	tcs := []struct {
 		name       string
-		taskobject v1beta1.TaskObject
-		expected   v1beta1.Task
+		objectmeta *metav1.ObjectMeta
+		expected   metav1.ObjectMeta
 		wantErr    bool
 	}{{
-		name:       "Prepare signed task without labels",
-		taskobject: signedTask.Copy(),
-		expected: v1beta1.Task{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "tekton.dev/v1beta1",
-				Kind:       "Task"},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "test-task",
-				Namespace:   nameSpace,
-				Annotations: map[string]string{},
-			},
-			Spec: *taskSpecTest,
+		name:       "Prepare signed objectmeta without labels",
+		objectmeta: signed,
+		expected: metav1.ObjectMeta{
+			Name:        "test-task",
+			Namespace:   nameSpace,
+			Annotations: map[string]string{},
 		},
 		wantErr: false,
 	}, {
-		name:       "Prepare signed task with labels",
-		taskobject: taskWithLabels.Copy(),
-		expected: v1beta1.Task{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "tekton.dev/v1beta1",
-				Kind:       "Task"},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "test-task",
-				Namespace:   nameSpace,
-				Labels:      map[string]string{"label": "foo"},
-				Annotations: map[string]string{},
-			},
-			Spec: *taskSpecTest,
+		name:       "Prepare signed objectmeta with labels",
+		objectmeta: signedWithLabels,
+		expected: metav1.ObjectMeta{
+			Name:        "test-task",
+			Namespace:   nameSpace,
+			Labels:      map[string]string{"label": "foo"},
+			Annotations: map[string]string{},
 		},
 		wantErr: false,
 	}, {
-		name:       "Prepare signed task with extra annotations",
-		taskobject: taskWithExtraAnnotations.Copy(),
-		expected: v1beta1.Task{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "tekton.dev/v1beta1",
-				Kind:       "Task"},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "test-task",
-				Namespace:   nameSpace,
-				Annotations: map[string]string{},
-			},
-			Spec: *taskSpecTest,
+		name:       "Prepare signed objectmeta with extra annotations",
+		objectmeta: signedWithExtraAnnotations,
+		expected: metav1.ObjectMeta{
+			Name:        "test-task",
+			Namespace:   nameSpace,
+			Annotations: map[string]string{},
 		},
 		wantErr: false,
 	}, {
 		name:       "Fail prepration without signature",
-		taskobject: unsignedTask.Copy(),
-		expected: v1beta1.Task{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "tekton.dev/v1beta1",
-				Kind:       "Task"},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "test-task",
-				Namespace:   nameSpace,
-				Annotations: map[string]string{},
-			},
-			Spec: *taskSpecTest,
+		objectmeta: &unsigned,
+		expected: metav1.ObjectMeta{
+			Name:        "test-task",
+			Namespace:   nameSpace,
+			Annotations: map[string]string{},
 		},
 		wantErr: true,
 	},
@@ -371,7 +347,7 @@ func TestPrepareTask(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			task, signature, err := prepareTask(tc.taskobject)
+			task, signature, err := prepareObjectMeta(*tc.objectmeta)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("prepareTask() get err %v, wantErr %t", err, tc.wantErr)
 			}
