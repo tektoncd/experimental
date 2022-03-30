@@ -5,6 +5,10 @@
 *.so
 *.dylib
 .DS_Store
+/.bin/
+/bin/
+bin
+testbin/*
 
 # dependencies
 node_modules
@@ -16,14 +20,8 @@ vendor
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# dep
-vendor/
-
 # install script
 install/
-
-# node_modules
-node_modules/
 
 # dist
 dist/
@@ -36,3 +34,70 @@ kodata
 
 # Idea 
 *.idea
+
+# MacOS file viewer
+.DS_Store
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Fortran module files
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Emacs
+*~
+
+# Vim
+*.swp
+*.swo
+
+# VSCode config
+.vscode
+*.code-workspace
+
+# JetBrains IDE config
+.idea
+
+# Python
+*.pyc
+python/swagger-codegen-ignore
+python/swagger-codegen/
+python/travis.yml
+python/git_push.sh
+python/tox.ini
+python/.gitlab-ci.yml
+python/.openapi-generator
+python/.swagger-codegen
+python/.travis.yml
+
+# Release-generated source archives, just in case they get committed
+# accidentally.
+cmd/*/kodata/source.tar.gz
+
+# Kubernetes Generated files - skip generated files, except for vendored files
+!vendor/**/zz_generated.*
+
+# allow vendor
+!vendor/
+tmp/
+
+openapi-generator-cli.jar
+swagger.json
