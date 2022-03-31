@@ -1,0 +1,32 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Run
+metadata:
+  name: echo-good-morning-run
+spec:
+  spec:
+    apiVersion: tekton.dev/v1alpha1
+    kind: ColocatedPipelineRun
+    # metadata: # for labels and annotations
+    spec:
+      timeouts:
+        pipeline: 5m
+      pipelineSpec:
+        tasks:
+        - name: echo-good-morning
+          taskSpec:
+            steps:
+              - name: echo
+                image: ubuntu
+                script: |
+                  #!/usr/bin/env bash
+                  echo "Good Morning!"
+        - name: echo-good-afternoon
+          taskSpec:
+            steps:
+              - name: echo2
+                image: ubuntu
+                script: |
+                  #!/usr/bin/env bash
+                  echo "Good Afternoon!"
+          runAfter:
+          - echo-good-morning
