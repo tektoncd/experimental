@@ -129,7 +129,7 @@ func (pr *TrustedPipelineRun) verifyPipelineRun(
 		Spec:       resolvedPipeline.PipelineSpec(),
 	}
 
-	v, err := verifier(ctx, pipeline.ObjectMeta.Annotations, k8sclient)
+	v, err := verifier(ctx, pipeline.ObjectMeta.Annotations)
 	if err != nil {
 		return apis.ErrGeneric(err.Error(), "PipelineRef")
 	}

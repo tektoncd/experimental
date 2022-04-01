@@ -32,7 +32,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	cosignsignature "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/tektoncd/pipeline/pkg/apis/config"
+	"github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
@@ -40,12 +40,11 @@ import (
 	"github.com/tektoncd/pipeline/test/diff"
 	"go.uber.org/zap/zaptest"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
+	"knative.dev/pkg/configmap/informer"
 	"knative.dev/pkg/logging"
-	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/system"
 )
 
@@ -116,24 +115,15 @@ func TestVerifyTaskRun_TaskRun(t *testing.T) {
 func TestVerifyTaskRun_OCIBundle(t *testing.T) {
 	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
 
-	// this is needed to enable oci bundle
-	cfg := config.NewStore(logtesting.TestLogger(t))
-	cfg.OnConfigChanged(&corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: config.GetFeatureFlagsConfigName()},
-		Data: map[string]string{
-			"enable-tekton-oci-bundles": "true",
-		},
-	})
-	ctx = cfg.ToContext(ctx)
-
 	k8sclient := fakek8s.NewSimpleClientset(sa)
 	tektonClient := faketekton.NewSimpleClientset()
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx, k8sclient)
+	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	unsignedTask := getUnsignedTask()
 
@@ -221,10 +211,12 @@ func TestVerifyTaskRun_TaskRef(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx, k8sclient)
+	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	unsignedTask := getUnsignedTask()
 
@@ -394,9 +386,27 @@ func getSignedTask(unsigned *v1beta1.Task, signer signature.Signer) (*v1beta1.Ta
 	return signedTask, nil
 }
 
-// Generate key files to tmpdir, set configMap and return signer
-func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.Interface) (signature.Signer, error) {
+func setupContext(ctx context.Context, k8sclient kubernetes.Interface, secretpath string) context.Context {
+	cmw := informer.NewInformedWatcher(k8sclient, system.Namespace())
+	store := config.NewConfigStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nameSpace,
+			Name:      config.TrustedTaskConfig,
+		},
+		Data: map[string]string{config.CosignPubKey: secretpath},
+	}
+
+	cmw.ManualWatcher.OnChange(cm)
+
+	return store.ToContext(ctx)
+}
+
+// Generate key files to tmpdir, return signer and pubkey path
+func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.Interface) (signature.Signer, string, error) {
 	t.Helper()
+
 	tmpDir := t.TempDir()
 	privateKeyPath, _, err := GenerateKeyFile(tmpDir, pass(password))
 	if err != nil {
@@ -406,18 +416,8 @@ func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.I
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nameSpace,
-			Name:      signingConfigMap,
-		},
-		Data: map[string]string{"signing-secret-path": filepath.Join(tmpDir, "cosign.pub")},
-	}
-	if _, err := k8sclient.CoreV1().ConfigMaps(system.Namespace()).Create(ctx, cfg, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
-		t.Fatal(err)
-	}
 
-	return signer, nil
+	return signer, filepath.Join(tmpDir, "cosign.pub"), nil
 }
 
 func pushOCIImage(t *testing.T, u *url.URL, task *v1beta1.Task) (typesv1.Hash, error) {

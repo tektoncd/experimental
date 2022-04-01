@@ -7,6 +7,7 @@ This is an experimental project to provide a seperate webhook for remote resourc
 - [Install](#install)
 - [Uninstall](#uninstall)
 - [Development](#development)
+- [Config Secret Path](#config-secret-path)
 
 ## Install
 
@@ -76,4 +77,22 @@ $HOME/go/bin/deepcopy-gen   -O zz_generated.deepcopy   --go-header-file ./hack/b
 # or use go generate
 # cd pkg/trustedtask
 # go generate
+```
+
+## Config Secret Path
+
+`signing-secret-path` is used to specify the mounted path to store the cosign pubkey. By default it is "/etc/signing-secrets/cosign.pub".
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-trusted-resources
+  namespace: tekton-trusted-resources
+  labels:
+    app.kubernetes.io/component: tekton-trusted-resources
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: admissioncontrol
+data:
+  signing-secret-path: "/etc/signing-secrets/cosign.pub"
 ```
