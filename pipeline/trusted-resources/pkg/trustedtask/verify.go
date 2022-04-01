@@ -22,42 +22,27 @@ import (
 	"crypto"
 	"crypto/sha256"
 
+	"github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/config"
+
 	cosignsignature "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/system"
 	"knative.dev/pkg/webhook/json"
 )
 
 const (
-	signingConfigMap  = "config-trusted-resources"
-	signingSecretPath = "signing-secret-path"
-	secretPath        = "/etc/signing-secrets/cosign.pub"
-	kmsAnnotation     = "tekton.dev/kms"
+	signingConfigMap = "config-trusted-resources"
+	kmsAnnotation    = "tekton.dev/kms"
 )
 
-func verifier(
-	ctx context.Context,
-	annotations map[string]string,
-	k8sclient kubernetes.Interface,
-) (signature.Verifier, error) {
+func verifier(ctx context.Context, annotations map[string]string) (signature.Verifier, error) {
 	if annotations[kmsAnnotation] != "" {
 		// Fetch key from kms.
 		return kms.Get(ctx, annotations[kmsAnnotation], crypto.SHA256)
 	} else {
-		// TODO: refactor this to avoid make request to api server each time.
-		// Overwrite the path if set in configmap.
-		cm, err := k8sclient.CoreV1().ConfigMaps(system.Namespace()).Get(ctx, signingConfigMap, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		if cm.Data[signingSecretPath] != "" {
-			return cosignsignature.LoadPublicKey(ctx, cm.Data[signingSecretPath])
-		}
-		return cosignsignature.LoadPublicKey(ctx, secretPath)
+		cfg := config.FromContextOrDefaults(ctx)
+		return cosignsignature.LoadPublicKey(ctx, cfg.CosignKey)
 	}
 }
 

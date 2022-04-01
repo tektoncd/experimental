@@ -62,10 +62,11 @@ func TestVerifyPipelineRun_APIPipeline(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx, k8sclient)
+	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	prWithoutTasks := &TrustedPipelineRun{
 		PipelineRun: v1beta1.PipelineRun{
@@ -135,10 +136,11 @@ func TestVerifyPipelineRun_PipelineOCIBundle(t *testing.T) {
 	tektonClient := faketekton.NewSimpleClientset()
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx, k8sclient)
+	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	// Create registry server
 	s := httptest.NewServer(registry.New())
@@ -222,10 +224,11 @@ func TestVerifyPipelineRun_TaskOCIBundle(t *testing.T) {
 	tektonClient := faketekton.NewSimpleClientset()
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx, k8sclient)
+	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	// Create registry server
 	s := httptest.NewServer(registry.New())
@@ -356,10 +359,11 @@ func TestVerifyPipelineRun_PipelineRef(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx, k8sclient)
+	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	unsignedPipeline := getUnsignedPipeline("unsigned")
 	unsigned := &TrustedPipelineRun{v1beta1.PipelineRun{
@@ -422,10 +426,11 @@ func TestVerifyPipelineRun_TaskRef(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, err := getSignerFromFile(t, ctx, k8sclient)
+	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	// signed pipelineref with unsigned taskref
 	pipelineWithUnsignedTask := getUnsignedPipeline("unsigned")

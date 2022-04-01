@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/config"
 	taskvalidation "github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/trustedtask"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,6 +30,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/webhook"
@@ -45,6 +47,8 @@ var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 }
 
 func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	store := config.NewConfigStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
 	return validation.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
@@ -57,7 +61,9 @@ func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 		types,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
-		nil,
+		func(ctx context.Context) context.Context {
+			return store.ToContext(ctx)
+		},
 
 		// Whether to disallow unknown fields.
 		true,

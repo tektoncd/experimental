@@ -129,7 +129,7 @@ func verifyTask(ctx context.Context, taskRefName string, k8sclient kubernetes.In
 		Spec:       resolvedTask.TaskSpec(),
 	}
 
-	verifier, err := verifier(ctx, task.ObjectMeta.Annotations, k8sclient)
+	verifier, err := verifier(ctx, task.ObjectMeta.Annotations)
 	if err != nil {
 		return err
 	}
