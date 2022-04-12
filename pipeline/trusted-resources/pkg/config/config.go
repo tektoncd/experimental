@@ -24,17 +24,22 @@ import (
 )
 
 // Config holds the collection of configurations that we attach to contexts.
-// Configmap named with "config-trusted-resources" should include "signing-secret-path" as key in the data
+// Configmap named with "config-trusted-resources" where cosign pub key path and
+// KMS pub key path can be configured
 type Config struct {
 	// CosignKey defines the name of the key in configmap data
 	CosignKey string
+	// KmsKey defines the name of the key in configmap data
+	KMSKey string
 }
 
 const (
 	// CosignPubKey is the name of the key in configmap data
-	CosignPubKey = "signing-secret-path"
+	CosignPubKey = "cosign-pubkey-path"
 	// SecretPath is the default path of cosign public key
 	DefaultSecretPath = "/etc/signing-secrets/cosign.pub"
+	// CosignPubKey is the name of the key in configmap data
+	KMSPubKey = "kms-pubkey-path"
 	// TrustedTaskConfig is the name of the trusted resources configmap
 	TrustedTaskConfig = "config-trusted-resources"
 )
@@ -50,6 +55,7 @@ func NewConfigFromMap(data map[string]string) (*Config, error) {
 	cfg := defaultConfig()
 	if err := cm.Parse(data,
 		cm.AsString(CosignPubKey, &cfg.CosignKey),
+		cm.AsString(KMSPubKey, &cfg.KMSKey),
 	); err != nil {
 		return nil, fmt.Errorf("failed to parse data: %w", err)
 	}
