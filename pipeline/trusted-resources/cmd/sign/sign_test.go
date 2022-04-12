@@ -113,6 +113,7 @@ func unmarshalTask(t *testing.T, buf []byte) (*v1beta1.Task, []byte) {
 	}
 
 	delete(task.ObjectMeta.Annotations, trustedtask.SignatureAnnotation)
+	delete(task.ObjectMeta.Annotations, trustedtask.KMSAnnotation)
 	return task, signature
 }
 

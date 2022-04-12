@@ -33,15 +33,17 @@ import (
 
 const (
 	signingConfigMap = "config-trusted-resources"
-	kmsAnnotation    = "tekton.dev/kms"
+	KMSAnnotation    = "tekton.dev/kms"
 )
 
-func verifier(ctx context.Context, annotations map[string]string) (signature.Verifier, error) {
-	if annotations[kmsAnnotation] != "" {
+func verifier(ctx context.Context) (signature.Verifier, error) {
+	// Check if kms is configured, if not check if cosign key configured.
+	// TODO: Configuration of multiple keys will be discussed and can be changed soon.
+	cfg := config.FromContextOrDefaults(ctx)
+	if cfg.KMSKey != "" {
 		// Fetch key from kms.
-		return kms.Get(ctx, annotations[kmsAnnotation], crypto.SHA256)
+		return kms.Get(ctx, cfg.KMSKey, crypto.SHA256)
 	} else {
-		cfg := config.FromContextOrDefaults(ctx)
 		return cosignsignature.LoadPublicKey(ctx, cfg.CosignKey)
 	}
 }

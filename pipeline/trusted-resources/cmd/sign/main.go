@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"crypto"
 	"flag"
 	"io"
 	"io/ioutil"
@@ -28,13 +29,15 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/pkg/signature"
 	sigstore "github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/trustedtask"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"sigs.k8s.io/yaml"
 )
 
 var (
-	privateKey = flag.String("pk", "", "cosign private key path")
+	cosignKey  = flag.String("ck", "", "cosign private key path")
+	kmsKey     = flag.String("kms", "", "kms key path")
 	taskFile   = flag.String("ts", "", "YAML file path for tekton task")
 	targetDir  = flag.String("td", "", "Dir to save the signed files")
 	targetFile = flag.String("tf", "signed.yaml", "Filename of the signed file")
@@ -46,10 +49,20 @@ func main() {
 
 	flag.Parse()
 
-	// Load signer from key files
-	signer, err := signature.SignerFromKeyRef(ctx, *privateKey, generate.GetPass)
-	if err != nil {
-		log.Fatalf("error getting signer: %v", err)
+	var signer sigstore.Signer
+	var err error
+	if *cosignKey != "" {
+		// Load signer from key files
+		signer, err = signature.SignerFromKeyRef(ctx, *cosignKey, generate.GetPass)
+		if err != nil {
+			log.Fatalf("error getting signer: %v", err)
+		}
+	}
+	if *kmsKey != "" {
+		signer, err = kms.Get(ctx, *kmsKey, crypto.SHA256)
+		if err != nil {
+			log.Fatalf("error getting signer: %v", err)
+		}
 	}
 
 	f, err := os.OpenFile(filepath.Join(*targetDir, *targetFile), os.O_WRONLY|os.O_CREATE, 0644)
@@ -83,10 +96,9 @@ func SignTask(ctx context.Context, task *v1beta1.Task, signer sigstore.Signer, w
 	}
 
 	if task.Annotations == nil {
-		task.Annotations = map[string]string{trustedtask.SignatureAnnotation: sig}
-	} else {
-		task.Annotations[trustedtask.SignatureAnnotation] = sig
+		task.Annotations = map[string]string{}
 	}
+	task.Annotations[trustedtask.SignatureAnnotation] = sig
 
 	signedBuf, err := yaml.Marshal(task)
 	if err != nil {

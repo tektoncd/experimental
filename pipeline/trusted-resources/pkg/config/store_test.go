@@ -54,11 +54,12 @@ func TestNewConfigStore(t *testing.T) {
 	}
 
 	cm.Data = map[string]string{}
-	cm.Data[CosignPubKey] = "newPath"
+	cm.Data[CosignPubKey] = "cosignPath"
+	cm.Data[KMSPubKey] = "kmsPath"
 
 	cmw.ManualWatcher.OnChange(cm)
 
-	expected := &Config{CosignKey: "newPath"}
+	expected := &Config{CosignKey: "cosignPath", KMSKey: "kmsPath"}
 	cfg := FromContext(store.ToContext(ctx))
 
 	if diff := cmp.Diff(cfg, expected); diff != "" {

@@ -7,3 +7,7 @@ spec:
   steps:
     - image: ubuntu
       name: echo
+      command:
+        - echo
+      args:
+        - "Hello World"
