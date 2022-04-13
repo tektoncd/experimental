@@ -44,6 +44,9 @@ type ColocatedPipelineRunSpec struct {
 	// Time after which the PipelineRun times out.
 	// +optional
 	Timeouts *v1beta1.TimeoutFields `json:"timeout,omitempty"`
+
+	// +optional
+	Params []v1beta1.Param `json:"params,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

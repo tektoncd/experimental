@@ -10,16 +10,26 @@ spec:
     spec:
       timeouts:
         pipeline: 5m
+      params:
+      - name: greeting
+        value: "Good Morning!"
       pipelineSpec:
+        params:
+        - name: greeting
+          type: string
         tasks:
         - name: echo-good-morning
+          params:
+          - name: greeting
+            type: string
+            value: $(params.greeting)
           taskSpec:
             steps:
               - name: echo
                 image: ubuntu
                 script: |
                   #!/usr/bin/env bash
-                  echo "Good Morning!"
+                  echo "$(params.greeting)"
         - name: echo-good-afternoon
           taskSpec:
             steps:
