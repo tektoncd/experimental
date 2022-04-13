@@ -14,6 +14,7 @@ import (
 	clientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1alpha1/run"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events"
+	"github.com/tektoncd/pipeline/pkg/reconciler/pipelinerun/resources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,6 +29,7 @@ const (
 	ReasonCouldntGetPipeline = "ReasonCouldntGetPipeline"
 	// ReasonRunFailedValidation indicates that the reason for failure status is that Run failed validation
 	ReasonRunFailedValidation = "ReasonRunFailedValidation"
+	ReasonParameterMissing    = "ReasonParameterMissing"
 )
 
 // Reconciler implements controller.Reconciler for Run resources.
@@ -114,8 +116,18 @@ func (r *Reconciler) reconcile(ctx context.Context, runMeta metav1.ObjectMeta, c
 			"Error retrieving pipeline for pipelinerun %s/%s: %s", cpr.Namespace, cpr.Name, err)
 		return controller.NewPermanentError(err)
 	}
+
+	// Ensure that the PipelineRun provides all the parameters required by the Pipeline
+	if err := resources.ValidateRequiredParametersProvided(&pipelineSpec.Params, &cpr.Spec.Params); err != nil {
+		// This Run has failed, so we need to mark it as failed and stop reconciling it
+		cpr.Status.MarkFailed(ReasonParameterMissing,
+			"ColocatedPipelineRun %s parameters is missing some parameters required by Pipeline %s's parameters: %s",
+			cpr.Namespace, cpr.Name, err)
+		return controller.NewPermanentError(err)
+	}
+	pipelineSpec = ApplyParameters(pipelineSpec, cpr)
 	storePipelineSpecAndMergeMeta(cpr, pipelineSpec, meta)
-	r.storeTaskSpecs(ctx, cpr)
+	r.applyParamsAndStoreTaskSpecs(ctx, cpr)
 	var pod *corev1.Pod
 	labelSelector := fmt.Sprintf("%s=%s", cprv1alpha1.ColocatedPipelineRunLabelKey, cpr.Name)
 	pods, err := r.kubeClientSet.CoreV1().Pods(cpr.Namespace).List(ctx, metav1.ListOptions{
@@ -174,7 +186,8 @@ func (r *Reconciler) createPod(ctx context.Context, runMeta metav1.ObjectMeta, c
 }
 
 // fetches task specs (if not inlined in pipeline spec) and copies them to CPR.Status.ChildStatuses
-func (c *Reconciler) storeTaskSpecs(ctx context.Context, cpr *cprv1alpha1.ColocatedPipelineRun) error {
+func (c *Reconciler) applyParamsAndStoreTaskSpecs(ctx context.Context, cpr *cprv1alpha1.ColocatedPipelineRun) error {
+	logger := logging.FromContext(ctx)
 	if cpr.Status.PipelineSpec == nil {
 		return nil
 	}
@@ -186,13 +199,14 @@ func (c *Reconciler) storeTaskSpecs(ctx context.Context, cpr *cprv1alpha1.Coloca
 		return fmt.Errorf("child statuses does not match pipeline spec: %d child statuses and %d pipeline tasks",
 			len(cpr.Status.ChildStatuses), len(cpr.Status.PipelineSpec.Tasks))
 	}
-	for _, pt := range cpr.Status.PipelineSpec.Tasks {
+	for i, pt := range cpr.Status.PipelineSpec.Tasks {
 		var taskSpec *v1beta1.TaskSpec
 		var steps []v1beta1.StepState
 		if pt.TaskSpec != nil {
 			for _, step := range pt.TaskSpec.Steps {
 				steps = append(steps, v1beta1.StepState{Name: step.Name})
 			}
+			cpr.Status.PipelineSpec.Tasks[i].TaskSpec.TaskSpec = *ApplyParametersToTask(&pt.TaskSpec.TaskSpec, &pt)
 		} else if pt.TaskRef != nil {
 			// fetch task synchronously for now
 			// this should be async in the real implementation
@@ -200,13 +214,15 @@ func (c *Reconciler) storeTaskSpecs(ctx context.Context, cpr *cprv1alpha1.Coloca
 			if err != nil {
 				return err
 			}
-			taskSpec = &task.Spec
+			taskSpec = ApplyParametersToTask(&task.Spec, &pt)
 			for _, step := range taskSpec.Steps {
 				steps = append(steps, v1beta1.StepState{Name: step.Name})
 			}
+			logger.Infof("fetched task %s for pipeline task %s", task.Name, pt.Name)
 		} else {
 			return fmt.Errorf("both task spec and task ref are nil")
 		}
+
 		cpr.Status.ChildStatuses = append(cpr.Status.ChildStatuses, cprv1alpha1.ChildStatus{
 			PipelineTaskName: pt.Name,
 			Spec:             taskSpec, // no support for custom tasks yet

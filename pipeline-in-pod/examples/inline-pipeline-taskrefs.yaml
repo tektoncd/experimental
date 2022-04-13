@@ -13,34 +13,31 @@ spec:
       pipelineSpec:
         tasks:
         - name: echo-good-morning
+          params:
+          - name: greeting
+            value: "Good Morning!"
           taskRef:
-            name: good-morning
+            name: echo-greeting
         - name: echo-good-afternoon
+          params:
+          - name: greeting
+            value: "Good Afternoon!"
           taskRef:
-            name: good-afternoon
+            name: echo-greeting
           runAfter:
           - echo-good-morning
 ---
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: good-morning
-spec: 
+  name: echo-greeting
+spec:
+  params:
+  - name: greeting
+    type: string 
   steps:
   - name: echo
     image: ubuntu
     script: |
       #!/usr/bin/env bash
-      echo "Good Morning!"
----
-apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name: good-afternoon
-spec: 
-  steps:
-  - name: echo
-    image: ubuntu
-    script: |
-      #!/usr/bin/env bash
-      echo "Good Afternoon!"
+      echo "$(params.greeting)"

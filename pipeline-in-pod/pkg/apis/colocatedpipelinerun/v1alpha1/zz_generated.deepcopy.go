@@ -138,6 +138,13 @@ func (in *ColocatedPipelineRunSpec) DeepCopyInto(out *ColocatedPipelineRunSpec) 
 		*out = new(v1beta1.TimeoutFields)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Params != nil {
+		in, out := &in.Params, &out.Params
+		*out = make([]v1beta1.Param, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 
