@@ -9,7 +9,7 @@ spec:
     # metadata: # for labels and annotations
     spec:
       timeouts:
-        pipeline: 5m
+        pipeline: 15s
       params:
       - name: greeting
         value: "Good Morning!"
@@ -21,7 +21,6 @@ spec:
         - name: echo-good-morning
           params:
           - name: greeting
-            type: string
             value: $(params.greeting)
           taskSpec:
             steps:
@@ -30,6 +29,7 @@ spec:
                 script: |
                   #!/usr/bin/env bash
                   echo "$(params.greeting)"
+                  sleep 20
         - name: echo-good-afternoon
           taskSpec:
             steps:

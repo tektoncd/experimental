@@ -6,5 +6,5 @@ This is an experimental solution to [TEP-0044](https://github.com/tektoncd/commu
 This task can be built and installed with `ko`.
 
 ## Supported Features
-This custom task currently supports only running sequential tasks together in a pod.
+This custom task currently supports only running sequential tasks together in a pod with a pipeline-level timeout.
 The next features on the roadmap are params, workspaces, and parallel tasks.

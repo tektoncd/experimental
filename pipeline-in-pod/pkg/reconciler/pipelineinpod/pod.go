@@ -109,7 +109,7 @@ type pipelineTaskContainers struct {
 func getPod(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun, tasks []v1beta1.PipelineTask, images pipeline.Images, entrypointCache EntrypointCache) (*corev1.Pod, map[string]StepInfo, error) {
 	activeDeadlineSeconds := int64(60 * 60)
 	if cpr.Spec.Timeouts != nil && cpr.Spec.Timeouts.Pipeline != nil {
-		activeDeadlineSeconds = int64(cpr.Spec.Timeouts.Pipeline.Seconds() * 1.5)
+		activeDeadlineSeconds = int64(cpr.Spec.Timeouts.Pipeline.Seconds() * 2)
 	}
 
 	var initContainers []corev1.Container

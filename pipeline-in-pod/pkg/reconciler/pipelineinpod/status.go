@@ -98,14 +98,14 @@ func MakeColocatedPipelineRunStatus(logger *zap.SugaredLogger, cpr cprv1alpha1.C
 	}
 
 	if pending {
-		logger.Infof("Not all TaskRuns in CPR %s have completed", cpr.Name)
+		logger.Infof("Not all Tasks in CPR %s have completed", cpr.Name)
 		markStatusRunning(cprs, "Pending", "Pending")
 	} else if succeeded {
-		logger.Infof("All TaskRuns in PR %s have completed", cpr.Name)
+		logger.Infof("All Tasks in CPR %s have completed", cpr.Name)
 		markStatusSuccess(cprs)
 		markCompletionTime(cprs)
 	} else {
-		logger.Infof("At least one TaskRun in PR %s has failed", cpr.Name)
+		logger.Infof("At least one Task in CPR %s has failed", cpr.Name)
 		markStatusFailure(cprs, "failure", "failure")
 		markCompletionTime(cprs)
 	}

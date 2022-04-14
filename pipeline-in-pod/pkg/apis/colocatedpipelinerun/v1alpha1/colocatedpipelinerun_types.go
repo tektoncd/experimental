@@ -1,6 +1,10 @@
 package v1alpha1
 
 import (
+	"context"
+	"time"
+
+	"github.com/tektoncd/pipeline/pkg/apis/config"
 	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -41,9 +45,9 @@ type ColocatedPipelineRunSpec struct {
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// Time after which the PipelineRun times out.
+	// Time after which the ColocatedPipelineRun times out.
 	// +optional
-	Timeouts *v1beta1.TimeoutFields `json:"timeout,omitempty"`
+	Timeouts *v1beta1.TimeoutFields `json:"timeouts,omitempty"`
 
 	// +optional
 	Params []v1beta1.Param `json:"params,omitempty"`
@@ -115,4 +119,15 @@ func (cpr *ColocatedPipelineRunStatus) MarkFailed(reason, messageFormat string, 
 	cprCondSet.Manage(cpr).MarkFalse(apis.ConditionSucceeded, reason, messageFormat, messageA...)
 	succeeded := cpr.GetCondition(apis.ConditionSucceeded)
 	cpr.CompletionTime = &succeeded.LastTransitionTime.Inner
+}
+
+func (cpr *ColocatedPipelineRun) IsDone() bool {
+	return !cpr.Status.GetCondition(apis.ConditionSucceeded).IsUnknown()
+}
+
+func (cpr *ColocatedPipelineRun) PipelineTimeout(ctx context.Context) time.Duration {
+	if cpr.Spec.Timeouts != nil && cpr.Spec.Timeouts.Pipeline != nil {
+		return cpr.Spec.Timeouts.Pipeline.Duration
+	}
+	return time.Duration(config.FromContextOrDefaults(ctx).Defaults.DefaultTimeoutMinutes) * time.Minute
 }
