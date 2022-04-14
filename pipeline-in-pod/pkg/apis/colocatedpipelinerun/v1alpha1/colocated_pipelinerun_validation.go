@@ -6,7 +6,7 @@ func ValidateColocatedPipelineRun(cpr *ColocatedPipelineRun) error {
 		- only one of PipelineRef, PipelineSpec
 		- spec.ref not populated
 		- spec.Kind = colocatedPipelineRun
-		- timeouts has only timeouts.pipeline
+		- colocatedpipelinerun timeouts has only timeouts.pipeline
 	*/
 	return nil
 }

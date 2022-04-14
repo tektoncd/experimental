@@ -16,6 +16,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/reconciler/events"
 	"github.com/tektoncd/pipeline/pkg/reconciler/pipelinerun/resources"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -30,6 +31,7 @@ const (
 	// ReasonRunFailedValidation indicates that the reason for failure status is that Run failed validation
 	ReasonRunFailedValidation = "ReasonRunFailedValidation"
 	ReasonParameterMissing    = "ReasonParameterMissing"
+	ReasonTimedOut            = "ReasonTimedOut"
 )
 
 // Reconciler implements controller.Reconciler for Run resources.
@@ -67,7 +69,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 		events.Emit(ctx, nil, afterCondition, run)
 	}
 
-	cpr, err := toColocatedPipelineRun(run)
+	cpr, err := ToColocatedPipelineRun(run)
 	if err != nil {
 		return controller.NewPermanentError(fmt.Errorf("error translating to colocated pipeline run: %s", err))
 	}
@@ -79,11 +81,25 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 		return controller.NewPermanentError(err)
 	}
 
-	if run.IsDone() {
+	if cpr.IsDone() {
 		logger.Infof("Run %s/%s is done", run.Namespace, run.Name)
 		return nil
 	}
 
+	// We are not using run.HasTimedOut because run timeouts are ignored in favor of colocatedpipelinerun timeouts
+	if hasTimedOut(ctx, cpr) {
+		timeout := cpr.PipelineTimeout(ctx)
+		logger.Infof("Run %s/%s timed out after %s", run.Namespace, run.Name, timeout)
+		err = r.failColocatedPipelineRun(ctx, &cpr, ReasonTimedOut, fmt.Sprintf("timed out after %s", timeout))
+		if err != nil {
+			return fmt.Errorf("error failing colocatedpipelinerun: %s", err)
+		}
+		err = UpdateRunFromColocatedPipelineRun(run, cpr)
+		if err != nil {
+			return controller.NewPermanentError(fmt.Errorf("error translating colocatedpipelinerun to run: %s", err))
+		}
+		return nil
+	}
 	var merr error
 
 	if err := r.reconcile(ctx, run.ObjectMeta, &cpr, getPipelineFunc); err != nil {
@@ -91,13 +107,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 		merr = multierror.Append(merr, controller.NewPermanentError(err))
 	}
 
-	err = updateRunFromColocatedPipelineRun(run, cpr)
+	err = UpdateRunFromColocatedPipelineRun(run, cpr)
 	if err != nil {
 		return controller.NewPermanentError(fmt.Errorf("error translating colocatedpipelinerun to run: %s", err))
 	}
-
 	afterCondition := run.Status.GetCondition(apis.ConditionSucceeded)
 	events.Emit(ctx, beforeCondition, afterCondition, run)
+
+	if run.Status.StartTime != nil {
+		// Compute the time since the task started.
+		elapsed := time.Since(run.Status.StartTime.Time)
+		// Snooze this resource until the timeout has elapsed.
+		return controller.NewRequeueAfter(cpr.PipelineTimeout(ctx) - elapsed)
+	}
 	return merr
 }
 
@@ -128,19 +150,10 @@ func (r *Reconciler) reconcile(ctx context.Context, runMeta metav1.ObjectMeta, c
 	pipelineSpec = ApplyParameters(pipelineSpec, cpr)
 	storePipelineSpecAndMergeMeta(cpr, pipelineSpec, meta)
 	r.applyParamsAndStoreTaskSpecs(ctx, cpr)
-	var pod *corev1.Pod
-	labelSelector := fmt.Sprintf("%s=%s", cprv1alpha1.ColocatedPipelineRunLabelKey, cpr.Name)
-	pods, err := r.kubeClientSet.CoreV1().Pods(cpr.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
+	pod, err := r.getPodForColocatedPipelineRun(ctx, cpr)
 	if err != nil {
-		logger.Errorf("Error listing pods: %v", err)
+		logger.Errorf("Error getting pod for colocatedPipelineRun %s: %s", cpr.Name, err)
 		return err
-	}
-	for _, p := range pods.Items {
-		if metav1.IsControlledBy(&p, cpr) {
-			pod = &p
-		}
 	}
 	if pod == nil {
 		pod, err = r.createPod(ctx, runMeta, cpr, pipelineSpec)
@@ -257,4 +270,80 @@ func (c *Reconciler) getTaskSpecs(cpr *cprv1alpha1.ColocatedPipelineRunStatus) (
 		tasks = append(tasks, *pt)
 	}
 	return tasks, nil
+}
+
+func (r *Reconciler) getPodForColocatedPipelineRun(ctx context.Context, cpr *cprv1alpha1.ColocatedPipelineRun) (*corev1.Pod, error) {
+	logger := logging.FromContext(ctx)
+	labelSelector := fmt.Sprintf("%s=%s", cprv1alpha1.ColocatedPipelineRunLabelKey, cpr.Name)
+	pods, err := r.kubeClientSet.CoreV1().Pods(cpr.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		logger.Errorf("Error listing pods: %v", err)
+		return nil, err
+	}
+	for _, p := range pods.Items {
+		if metav1.IsControlledBy(&p, cpr) {
+			return &p, nil
+		}
+	}
+	return nil, nil
+}
+
+func hasTimedOut(ctx context.Context, cpr cprv1alpha1.ColocatedPipelineRun) bool {
+	if cpr.Status.StartTime == nil || cpr.Status.StartTime.IsZero() {
+		return false
+	}
+	timeout := cpr.PipelineTimeout(ctx)
+	runtime := time.Since(cpr.Status.StartTime.Time)
+	return runtime > timeout
+}
+
+func (c *Reconciler) failColocatedPipelineRun(ctx context.Context, cpr *cprv1alpha1.ColocatedPipelineRun, reason, message string) error {
+	logger := logging.FromContext(ctx)
+
+	logger.Warnf("stopping colocatedPipelineRun %q because of %q", cpr.Name, reason)
+	cpr.Status.MarkFailed(reason, message)
+
+	pod, err := c.getPodForColocatedPipelineRun(ctx, cpr)
+	if err != nil {
+		logger.Errorf("Error getting pod for colocatedPipelineRun %s: %s", cpr.Name, err)
+		return err
+	}
+	if pod == nil {
+		logger.Info("No pod created for ColocatedPipelineRun %s", cpr.Name)
+		return nil
+	}
+
+	err = c.kubeClientSet.CoreV1().Pods(cpr.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+	if err != nil && !k8serrors.IsNotFound(err) {
+		logger.Infof("Failed to terminate pod: %v", err)
+		return err
+	}
+
+	for i, task := range cpr.Status.ChildStatuses {
+		for j, step := range task.StepStatuses {
+			if step.Running != nil {
+				step.Terminated = &corev1.ContainerStateTerminated{
+					ExitCode:   1,
+					StartedAt:  step.Running.StartedAt,
+					FinishedAt: *cpr.Status.CompletionTime,
+					Reason:     reason,
+				}
+				step.Running = nil
+				cpr.Status.ChildStatuses[i].StepStatuses[j] = step
+			}
+
+			if step.Waiting != nil {
+				step.Terminated = &corev1.ContainerStateTerminated{
+					ExitCode:   1,
+					FinishedAt: *cpr.Status.CompletionTime,
+					Reason:     reason,
+				}
+				step.Waiting = nil
+				cpr.Status.ChildStatuses[i].StepStatuses[j] = step
+			}
+		}
+	}
+	return nil
 }

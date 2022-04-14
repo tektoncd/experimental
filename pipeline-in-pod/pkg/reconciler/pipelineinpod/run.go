@@ -1,6 +1,7 @@
 package pipelineinpod
 
 import (
+	"bytes"
 	"encoding/json"
 
 	cprv1alpha1 "github.com/tektoncd/experimental/pipeline-in-pod/pkg/apis/colocatedpipelinerun/v1alpha1"
@@ -13,7 +14,10 @@ func DecodeExtraFields(run v1alpha1.RunSpec, into interface{}) error {
 	if run.Spec == nil || len(run.Spec.Spec.Raw) == 0 {
 		return nil
 	}
-	return json.Unmarshal(run.Spec.Spec.Raw, into)
+	dec := json.NewDecoder(bytes.NewReader(run.Spec.Spec.Raw))
+	dec.DisallowUnknownFields() // Force errors
+
+	return dec.Decode(into)
 }
 
 func EncodeExtraFields(run *v1alpha1.RunSpec, from interface{}) error {
@@ -27,7 +31,7 @@ func EncodeExtraFields(run *v1alpha1.RunSpec, from interface{}) error {
 	return nil
 }
 
-func toColocatedPipelineRun(run *v1alpha1.Run) (cprv1alpha1.ColocatedPipelineRun, error) {
+func ToColocatedPipelineRun(run *v1alpha1.Run) (cprv1alpha1.ColocatedPipelineRun, error) {
 	var cpr cprv1alpha1.ColocatedPipelineRun
 
 	spec := &cprv1alpha1.ColocatedPipelineRunSpec{}
@@ -40,6 +44,9 @@ func toColocatedPipelineRun(run *v1alpha1.Run) (cprv1alpha1.ColocatedPipelineRun
 	}
 	cpr.Spec = *spec
 	cpr.Status = *status
+	cpr.Status.Status = run.Status.Status
+	cpr.Status.StartTime = run.Status.StartTime
+	cpr.Status.CompletionTime = run.Status.CompletionTime
 	cpr.TypeMeta = metav1.TypeMeta{
 		Kind:       run.Spec.Spec.Kind,
 		APIVersion: run.Spec.Spec.APIVersion,
@@ -58,11 +65,13 @@ func toColocatedPipelineRun(run *v1alpha1.Run) (cprv1alpha1.ColocatedPipelineRun
 	return cpr, nil
 }
 
-func updateRunFromColocatedPipelineRun(run *v1alpha1.Run, cpr cprv1alpha1.ColocatedPipelineRun) error {
+func UpdateRunFromColocatedPipelineRun(run *v1alpha1.Run, cpr cprv1alpha1.ColocatedPipelineRun) error {
 	if err := run.Status.EncodeExtraFields(cpr.Status); err != nil {
 		return err
 	}
 	// TODO: smarter translation e.g. translating reasons
 	run.Status.Status = cpr.Status.Status
+	run.Status.StartTime = cpr.Status.StartTime
+	run.Status.CompletionTime = cpr.Status.CompletionTime
 	return nil
 }
