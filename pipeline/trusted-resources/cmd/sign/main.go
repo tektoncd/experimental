@@ -32,18 +32,23 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/trustedtask"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/webhook/resourcesemantics"
 	"sigs.k8s.io/yaml"
 )
 
 var (
-	cosignKey  = flag.String("ck", "", "cosign private key path")
-	kmsKey     = flag.String("kms", "", "kms key path")
-	taskFile   = flag.String("ts", "", "YAML file path for tekton task")
-	targetDir  = flag.String("td", "", "Dir to save the signed files")
-	targetFile = flag.String("tf", "signed.yaml", "Filename of the signed file")
+	cosignKey    = flag.String("ck", "", "cosign private key path")
+	kmsKey       = flag.String("kms", "", "kms key path")
+	resourceFile = flag.String("rf", "", "YAML file path for tekton resources")
+	// TODO: case insensitive for kind
+	kind        = flag.String("kd", "Task", "The kind of the signed object. Supported values: [Task, Pipeline]")
+	setdefaults = flag.Bool("sd", true, "Whether we add Tekton default values to the CRD before signing")
+	targetDir   = flag.String("td", "", "Dir to save the signed files")
+	targetFile  = flag.String("tf", "signed.yaml", "Filename of the signed file")
 )
 
-// This is a demo of how to generate signed task files
+// This is a demo of how to generate signed task or pipeline files
 func main() {
 	ctx := context.Background()
 
@@ -71,40 +76,53 @@ func main() {
 	}
 	defer f.Close()
 
-	tsBuf, err := ioutil.ReadFile(*taskFile)
+	tsBuf, err := ioutil.ReadFile(*resourceFile)
 	if err != nil {
-		log.Fatalf("error reading task: %v", err)
+		log.Fatalf("error reading file: %v", err)
+	}
+	var crd resourcesemantics.GenericCRD
+	switch *kind {
+	case "Task":
+		crd = &v1beta1.Task{}
+	case "Pipeline":
+		crd = &v1beta1.Pipeline{}
 	}
 
-	ts := &v1beta1.Task{}
-	if err := yaml.Unmarshal(tsBuf, &ts); err != nil {
-		log.Fatalf("error unmarshalling taskrun: %v", err)
+	if err := yaml.Unmarshal(tsBuf, &crd); err != nil {
+		log.Fatalf("error unmarshalling Task/Pipeline: %v", err)
+	}
+
+	// Add missing fields for the crd
+	if *setdefaults {
+		crd.SetDefaults(ctx)
 	}
 
 	// Sign the task and write to writer
-	if err := SignTask(ctx, ts, signer, f); err != nil {
-		log.Fatalf("error signing taskrun: %v", err)
+	if err := Sign(ctx, crd.(metav1.Object), signer, f); err != nil {
+		log.Fatalf("error signing Task/Pipeline: %v", err)
 	}
 
 }
 
-// Sign the taskrun and output signed bytes to writer
-func SignTask(ctx context.Context, task *v1beta1.Task, signer sigstore.Signer, writer io.Writer) error {
-	sig, err := trustedtask.SignInterface(signer, task)
+// Sign the crd and output signed bytes to writer
+func Sign(ctx context.Context, o metav1.Object, signer sigstore.Signer, writer io.Writer) error {
+	// get annotation
+	a := o.GetAnnotations()
+	if a == nil {
+		a = map[string]string{}
+	}
+
+	// add signature
+	sig, err := trustedtask.SignInterface(signer, o)
 	if err != nil {
 		return err
 	}
-
-	if task.Annotations == nil {
-		task.Annotations = map[string]string{}
-	}
-	task.Annotations[trustedtask.SignatureAnnotation] = sig
-
-	signedBuf, err := yaml.Marshal(task)
+	a[trustedtask.SignatureAnnotation] = sig
+	o.SetAnnotations(a)
+	signedBuf, err := yaml.Marshal(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = writer.Write(signedBuf)
 	return err
 }

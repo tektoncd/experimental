@@ -29,14 +29,16 @@ Prepare signed files
 
 If using cosign keys:
 ```bash
-go run cmd/sign/main.go -ck=cosign.key -ts=examples/example-task.yaml -td=examples
+# Formatting of yaml files is enabled by default to add missing tekton fields. Can be
+# disabled by adding -fmt=false
+go run cmd/sign/main.go -ck=cosign.key -rf=examples/example-task.yaml -td=examples
 ```
 
 KMS follows the same format and autentication in [Chains](https://github.com/tektoncd/chains/blob/main/docs/signing.md#kms).
 ```bash
 # for gcp kms signing execute this
 # gcloud auth application-default login
-go run cmd/sign/main.go -ck=YOUR_KMS_PATH -ts=examples/example-task.yaml -td=examples
+go run cmd/sign/main.go -ck=YOUR_KMS_PATH -rf=examples/example-task.yaml -td=examples
 ```
 
 ### Deploy Admisssion Webhook
