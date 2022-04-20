@@ -69,6 +69,14 @@ var (
 		Annotations: map[string]string{},
 	}
 
+	pipelineSpec = &v1beta1.PipelineSpec{
+		Tasks: []v1beta1.PipelineTask{
+			{
+				Name: "pipelinetask",
+			},
+		},
+	}
+
 	sa = &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -77,7 +85,7 @@ var (
 	}
 )
 
-func TestSignTask(t *testing.T) {
+func TestSign(t *testing.T) {
 	ctx := context.Background()
 
 	sv, err := trustedtask.GetSignerVerifier(password)
@@ -85,48 +93,94 @@ func TestSignTask(t *testing.T) {
 		t.Fatalf("error get signerverifier: %v", err)
 	}
 
-	var writer bytes.Buffer
-	ts := getTask()
-	if err := SignTask(ctx, ts, sv, &writer); err != nil {
-		t.Fatalf("Sign() get err %v", err)
+	tcs := []struct {
+		name     string
+		resource metav1.Object
+		kind     string
+	}{{
+		name:     "Task Sign and pass verification",
+		resource: getTask(),
+		kind:     "Task",
+	}, {
+		name:     "Pipeline Sign and pass verification",
+		resource: getPipeline(),
+		kind:     "Pipeline",
+	},
 	}
 
-	signed := writer.Bytes()
-	ts, signature := unmarshalTask(t, signed)
-
-	if err := trustedtask.VerifyInterface(ctx, ts, sv, signature); err != nil {
-		t.Fatalf("VerifyTaskOCIBundle get error: %v", err)
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			var writer bytes.Buffer
+			if err := Sign(ctx, tc.resource, sv, &writer); err != nil {
+				t.Fatalf("Sign() get err %v", err)
+			}
+			signed := writer.Bytes()
+			target, signature := unmarshalCRD(t, signed, tc.kind)
+			if err := trustedtask.VerifyInterface(ctx, target, sv, signature); err != nil {
+				t.Fatalf("VerifyTaskOCIBundle get error: %v", err)
+			}
+		})
 	}
-
 }
 
-// unmarshalTask will get the task from buffer extract the signature.
-func unmarshalTask(t *testing.T, buf []byte) (*v1beta1.Task, []byte) {
-	task := &v1beta1.Task{}
-	if err := yaml.Unmarshal(buf, &task); err != nil {
-		t.Fatalf("error unmarshalling buffer: %v", err)
-	}
+// unmarshalCRD will get the task/pipeline from buffer extract the signature.
+func unmarshalCRD(t *testing.T, buf []byte, kind string) (metav1.Object, []byte) {
+	var resource metav1.Object
+	var signature []byte
 
-	signature, err := base64.StdEncoding.DecodeString(task.Annotations[trustedtask.SignatureAnnotation])
+	switch kind {
+	case "Task":
+		resource = &v1beta1.Task{}
+		if err := yaml.Unmarshal(buf, &resource); err != nil {
+			t.Fatalf("error unmarshalling buffer: %v", err)
+		}
+	case "Pipeline":
+		resource = &v1beta1.Pipeline{}
+		if err := yaml.Unmarshal(buf, &resource); err != nil {
+			t.Fatalf("error unmarshalling buffer: %v", err)
+		}
+	}
+	signature, err := extractSignature(resource.GetAnnotations())
 	if err != nil {
-		t.Fatalf("error decoding signature: %v", err)
+		t.Fatalf("Failed to extract signature: %v", err)
 	}
+	return resource, signature
+}
 
-	delete(task.ObjectMeta.Annotations, trustedtask.SignatureAnnotation)
-	delete(task.ObjectMeta.Annotations, trustedtask.KMSAnnotation)
-	return task, signature
+func extractSignature(annotations map[string]string) ([]byte, error) {
+	signature, err := base64.StdEncoding.DecodeString(annotations[trustedtask.SignatureAnnotation])
+	if err != nil {
+		return signature, err
+	}
+	delete(annotations, trustedtask.SignatureAnnotation)
+	return signature, nil
 }
 
 func getTask() *v1beta1.Task {
 	return &v1beta1.Task{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "tekton.dev/v1beta1",
-			Kind:       "Task"},
+			Kind:       "Task",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-task",
 			Namespace: namespace,
 		},
 		Spec: *taskSpec,
+	}
+}
+
+func getPipeline() *v1beta1.Pipeline {
+	return &v1beta1.Pipeline{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "tekton.dev/v1beta1",
+			Kind:       "Pipeline",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-Pipeline",
+			Namespace: namespace,
+		},
+		Spec: *pipelineSpec,
 	}
 }
 
