@@ -143,7 +143,9 @@ func updateRunStatus(ctx context.Context, run *v1alpha1.Run, pipelineRun *v1beta
 	logger := logging.FromContext(ctx)
 
 	c := pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded)
-	if c.IsTrue() {
+	if c == nil {
+		logger.Infof("PipelineRun created by Run %s/%s hasn't started", run.Namespace, run.Name)
+	} else if c.IsTrue() {
 		logger.Infof("PipelineRun created by Run %s/%s has succeeded", run.Namespace, run.Name)
 		run.Status.MarkRunSucceeded(c.Reason, c.Message)
 		propagateResults(run, pipelineRun)

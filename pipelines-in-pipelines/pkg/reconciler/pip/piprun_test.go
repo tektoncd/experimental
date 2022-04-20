@@ -179,6 +179,13 @@ func withResults(pr *v1beta1.PipelineRun, name string, value string) *v1beta1.Pi
 	return prWithStatus
 }
 
+func cancelled(r *v1alpha1.Run) *v1alpha1.Run {
+	cancelledR := r.DeepCopy()
+
+	cancelledR.Spec.Status = v1alpha1.RunSpecStatusCancelled
+	return cancelledR
+}
+
 var p = &v1beta1.Pipeline{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "pipeline",
@@ -241,7 +248,6 @@ var runWithPipeline = &v1alpha1.Run{
 		},
 	},
 }
-
 var runWithoutPipelineName = &v1alpha1.Run{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-with-missing-pipeline",
@@ -362,6 +368,16 @@ func TestReconcilePipRun(t *testing.T) {
 		expectedEvents: []string{
 			"Normal Started ",
 			"Normal Succeeded ",
+		},
+	}, {
+		name:           "Reconcile a cancelled run with a created PipelineRun ",
+		pipeline:       p,
+		run:            cancelled(runWithPipeline),
+		pipelineRun:    pr,
+		expectedStatus: corev1.ConditionUnknown,
+		expectedReason: v1beta1.PipelineRunReasonStarted,
+		expectedEvents: []string{
+			"Normal Started ",
 		},
 	}}
 	for _, tc := range testcases {
