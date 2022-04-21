@@ -8,6 +8,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	clientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	"github.com/tektoncd/pipeline/pkg/reconciler/pipelinerun/resources"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -52,50 +53,35 @@ func GetPipelineFunc(ctx context.Context, k8s kubernetes.Interface, tekton clien
 			}, nil
 		}, nil
 	}
-	local := &LocalPipelineRefResolver{
+	local := &resources.LocalPipelineRefResolver{
 		Namespace:    cpr.Namespace,
 		Tektonclient: tekton,
 	}
 	return local.GetPipeline, nil
 }
 
-// LocalPipelineRefResolver uses the current cluster to resolve a pipeline reference.
-type LocalPipelineRefResolver struct {
-	Namespace    string
-	Tektonclient clientset.Interface
-}
-
-// GetPipeline will resolve a Pipeline from the local cluster using a versioned Tekton client. It will
-// return an error if it can't find an appropriate Pipeline for any reason.
-func (l *LocalPipelineRefResolver) GetPipeline(ctx context.Context, name string) (v1beta1.PipelineObject, error) {
-	// If we are going to resolve this reference locally, we need a namespace scope.
-	if l.Namespace == "" {
-		return nil, fmt.Errorf("must specify namespace to resolve reference to pipeline %s", name)
-	}
-	return l.Tektonclient.TektonV1beta1().Pipelines(l.Namespace).Get(ctx, name, metav1.GetOptions{})
-}
-
 func storePipelineSpecAndMergeMeta(cpr *cprv1alpha1.ColocatedPipelineRun, ps *v1beta1.PipelineSpec, meta *metav1.ObjectMeta) error {
 	// Only store the PipelineSpec once, if it has never been set before.
-	if cpr.Status.PipelineSpec == nil {
-		cpr.Status.PipelineSpec = ps
+	if cpr.Status.PipelineSpec != nil {
+		return nil
+	}
+	cpr.Status.PipelineSpec = ps
 
-		// Propagate labels from Pipeline to PipelineRun.
-		if cpr.ObjectMeta.Labels == nil {
-			cpr.ObjectMeta.Labels = make(map[string]string, len(meta.Labels)+1)
-		}
-		for key, value := range meta.Labels {
-			cpr.ObjectMeta.Labels[key] = value
-		}
-		cpr.ObjectMeta.Labels[pipeline.PipelineLabelKey] = meta.Name
+	// Propagate labels from Pipeline to PipelineRun.
+	if cpr.ObjectMeta.Labels == nil {
+		cpr.ObjectMeta.Labels = make(map[string]string, len(meta.Labels)+1)
+	}
+	for key, value := range meta.Labels {
+		cpr.ObjectMeta.Labels[key] = value
+	}
+	cpr.ObjectMeta.Labels[pipeline.PipelineLabelKey] = meta.Name
 
-		// Propagate annotations from Pipeline to ColocatedPipelineRun.
-		if cpr.ObjectMeta.Annotations == nil {
-			cpr.ObjectMeta.Annotations = make(map[string]string, len(meta.Annotations))
-		}
-		for key, value := range meta.Annotations {
-			cpr.ObjectMeta.Annotations[key] = value
-		}
+	// Propagate annotations from Pipeline to ColocatedPipelineRun.
+	if cpr.ObjectMeta.Annotations == nil {
+		cpr.ObjectMeta.Annotations = make(map[string]string, len(meta.Annotations))
+	}
+	for key, value := range meta.Annotations {
+		cpr.ObjectMeta.Annotations[key] = value
 	}
 	return nil
 }

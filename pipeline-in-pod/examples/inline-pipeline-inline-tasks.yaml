@@ -11,25 +11,32 @@ spec:
       timeouts:
         pipeline: 15s
       params:
-      - name: greeting
-        value: "Good Morning!"
+      - name: git-url
+        value: "https://github.com/tektoncd/pipeline"
+      workspaces:
+      - name: source-code
+        emptyDir: {}
       pipelineSpec:
         params:
-        - name: greeting
+        - name: git-url
           type: string
         tasks:
-        - name: echo-good-morning
+        - name: clone
           params:
-          - name: greeting
-            value: $(params.greeting)
+          - name: url
+            value: $(params.git-url)
           taskSpec:
+            workspaces:
+            - name: output
             steps:
-              - name: echo
+              - name: git-clone
                 image: ubuntu
                 script: |
                   #!/usr/bin/env bash
-                  echo "$(params.greeting)"
-                  sleep 20
+                  echo "$(params.url)" >> $(workspaces.output.path)
+          workspaces:
+          - name: output
+            workspace: source-code
         - name: echo-good-afternoon
           taskSpec:
             steps:
@@ -39,4 +46,4 @@ spec:
                   #!/usr/bin/env bash
                   echo "Good Afternoon!"
           runAfter:
-          - echo-good-morning
+          - clone

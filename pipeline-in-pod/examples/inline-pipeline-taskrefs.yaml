@@ -1,3 +1,35 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: clone
+spec:
+  params:
+  - name: url
+    type: string 
+  workspaces:
+  - name: output
+  steps:
+  - name: echo
+    image: ubuntu
+    script: |
+      #!/usr/bin/env bash
+      echo "$(params.url)" >> $(workspaces.output.path)
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: echo-greeting
+spec:
+  params:
+  - name: greeting
+    type: string
+  steps:
+  - name: echo
+    image: ubuntu
+    script: |
+      #!/usr/bin/env bash
+      echo "$(params.greeting)"
+---
 apiVersion: tekton.dev/v1alpha1
 kind: Run
 metadata:
@@ -10,14 +42,25 @@ spec:
     spec:
       timeouts:
         pipeline: 5m
+      params:
+      - name: git-url
+        value: "https://github.com/tektoncd/pipeline"
+      workspaces:
+      - name: source-code
+        emptyDir: {}
       pipelineSpec:
+        workspaces:
+        - name: source-code
         tasks:
-        - name: echo-good-morning
+        - name: clone-repo
           params:
-          - name: greeting
-            value: "Good Morning!"
+          - name: url
+            value: $(params.git-url)
           taskRef:
-            name: echo-greeting
+            name: clone
+          workspaces:
+          - name: output
+            workspace: source-code
         - name: echo-good-afternoon
           params:
           - name: greeting
@@ -25,19 +68,4 @@ spec:
           taskRef:
             name: echo-greeting
           runAfter:
-          - echo-good-morning
----
-apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name: echo-greeting
-spec:
-  params:
-  - name: greeting
-    type: string 
-  steps:
-  - name: echo
-    image: ubuntu
-    script: |
-      #!/usr/bin/env bash
-      echo "$(params.greeting)"
+          - clone-repo

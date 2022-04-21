@@ -267,13 +267,6 @@ func IsSidecarStatusRunning(tr *v1beta1.TaskRun) bool {
 // represents a step.
 func IsContainerStep(name string) bool { return strings.Contains(name, stepPrefix) }
 
-// isContainerSidecar returns true if the container name indicates that it
-// represents a sidecar.
-func isContainerSidecar(name string) bool { return strings.Contains(name, sidecarPrefix) }
-
-// trimStepPrefix returns the container name, stripped of its step prefix.
-func trimStepPrefix(name string) string { return strings.TrimPrefix(name, stepPrefix) }
-
 func trimTaskPrefix(name string) string { return strings.TrimPrefix(name, taskPrefix) }
 
 // TrimSidecarPrefix returns the container name, stripped of its sidecar
