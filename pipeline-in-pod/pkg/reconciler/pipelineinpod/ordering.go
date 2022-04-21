@@ -28,7 +28,7 @@ func putTasksInOrder(ptcs []pipelineTaskContainers) ([]pipelineTaskContainers, e
 		l := seen[task.Name]
 		if len(task.RunAfter) == 0 {
 			if root != nil {
-				return nil, fmt.Errorf("parallel tasks not yet supported by %s and %s are trying to run in parallel", task.Name, root.task.pt.Name)
+				return nil, fmt.Errorf("parallel tasks not yet supported but %s and %s are trying to run in parallel", task.Name, root.task.pt.Name)
 			} else {
 				root = l
 			}

@@ -51,6 +51,10 @@ type ColocatedPipelineRunSpec struct {
 
 	// +optional
 	Params []v1beta1.Param `json:"params,omitempty"`
+
+	// +optional
+	// +listType=atomic
+	Workspaces []v1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -95,7 +99,7 @@ type ChildStatus struct {
 	PipelineTaskName string            `json:"pipelineTaskName,omitempty"`
 	Spec             *v1beta1.TaskSpec // TODO: custom tasks?
 	StepStatuses     []v1beta1.StepState
-	// TODO: do we need the task status in addition to the step statuses?
+	// TODO: task status in addition to the step statuses
 	// TaskRunResults are the list of results written out by the task's containers
 	// +optional
 	TaskRunResults []v1beta1.TaskRunResult `json:"taskResults,omitempty"` // TODO: custom tasks?

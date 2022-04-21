@@ -40,6 +40,7 @@ func updateContainerStatuses(logger *zap.SugaredLogger, cpr *cprv1alpha1.Colocat
 		for j, step := range task.StepStatuses {
 			containerStatus, ok := containerNameToStatus[step.ContainerName]
 			if !ok {
+				logger.Infof("No container status found for step %s", step.Name)
 				continue
 			}
 			cpr.ChildStatuses[i].StepStatuses[j].ContainerState = containerStatus.State

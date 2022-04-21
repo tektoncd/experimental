@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -106,7 +107,10 @@ type pipelineTaskContainers struct {
 	sidecars   []corev1.Container
 }
 
-func getPod(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun, tasks []v1beta1.PipelineTask, images pipeline.Images, entrypointCache EntrypointCache) (*corev1.Pod, map[string]StepInfo, error) {
+func getPod(
+	ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun,
+	tasks []v1beta1.PipelineTask, images pipeline.Images, entrypointCache EntrypointCache, v map[string]corev1.Volume,
+) (*corev1.Pod, map[string]StepInfo, error) {
 	activeDeadlineSeconds := int64(60 * 60)
 	if cpr.Spec.Timeouts != nil && cpr.Spec.Timeouts.Pipeline != nil {
 		activeDeadlineSeconds = int64(cpr.Spec.Timeouts.Pipeline.Seconds() * 2)
@@ -114,6 +118,9 @@ func getPod(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.Col
 
 	var initContainers []corev1.Container
 	var volumes []corev1.Volume
+	for _, vol := range v {
+		volumes = append(volumes, vol)
+	}
 	volumes = append(volumes, implicitVolumes...)
 	volumeMounts := []corev1.VolumeMount{binROMount}
 	volumeMounts = append(volumeMounts, implicitVolumeMounts...)
@@ -150,7 +157,7 @@ func getPod(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.Col
 	// TODO: this func is supposed to handle task timeouts and onerror
 	stepContainers, err := orderContainers(make([]string, 0), ptcs, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, controller.NewPermanentError(err)
 	}
 
 	initContainers = append([]corev1.Container{entrypointInit}, initContainers...)

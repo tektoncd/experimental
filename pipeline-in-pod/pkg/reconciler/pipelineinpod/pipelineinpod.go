@@ -29,9 +29,11 @@ import (
 const (
 	ReasonCouldntGetPipeline = "ReasonCouldntGetPipeline"
 	// ReasonRunFailedValidation indicates that the reason for failure status is that Run failed validation
-	ReasonRunFailedValidation = "ReasonRunFailedValidation"
-	ReasonParameterMissing    = "ReasonParameterMissing"
-	ReasonTimedOut            = "ReasonTimedOut"
+	ReasonRunFailedValidation     = "ReasonRunFailedValidation"
+	ReasonParameterMissing        = "ReasonParameterMissing"
+	ReasonTimedOut                = "ReasonTimedOut"
+	ReasonCouldntGetTask          = "ReasonCouldntGetTask"
+	ReasonInvalidWorkspaceBinding = "ReasonInvalidWorkspaceBinding"
 )
 
 // Reconciler implements controller.Reconciler for Run resources.
@@ -139,7 +141,7 @@ func (r *Reconciler) reconcile(ctx context.Context, runMeta metav1.ObjectMeta, c
 		return controller.NewPermanentError(err)
 	}
 
-	// Ensure that the PipelineRun provides all the parameters required by the Pipeline
+	// Ensure that the ColocatedPipelineRun provides all the parameters required by the Pipeline
 	if err := resources.ValidateRequiredParametersProvided(&pipelineSpec.Params, &cpr.Spec.Params); err != nil {
 		// This Run has failed, so we need to mark it as failed and stop reconciling it
 		cpr.Status.MarkFailed(ReasonParameterMissing,
@@ -147,9 +149,18 @@ func (r *Reconciler) reconcile(ctx context.Context, runMeta metav1.ObjectMeta, c
 			cpr.Namespace, cpr.Name, err)
 		return controller.NewPermanentError(err)
 	}
-	pipelineSpec = ApplyParameters(pipelineSpec, cpr)
+	// Ensure that the workspaces expected by the Pipeline are provided by the ColocatedPipelineRun.
+	if err := ValidateWorkspaceBindings(pipelineSpec, cpr); err != nil {
+		cpr.Status.MarkFailed(ReasonInvalidWorkspaceBinding,
+			"ColocatedPipelineRun %s/%s doesn't bind Pipeline %s/%s's Workspaces correctly: %s",
+			cpr.Namespace, cpr.Name, cpr.Namespace, meta.Name, err)
+		return controller.NewPermanentError(err)
+	}
+
+	pipelineSpec = ApplyParametersToPipeline(pipelineSpec, cpr)
+	pipelineSpec = ApplyWorkspacesToPipeline(pipelineSpec, cpr)
 	storePipelineSpecAndMergeMeta(cpr, pipelineSpec, meta)
-	r.applyParamsAndStoreTaskSpecs(ctx, cpr)
+	r.applyTasks(ctx, cpr)
 	pod, err := r.getPodForColocatedPipelineRun(ctx, cpr)
 	if err != nil {
 		logger.Errorf("Error getting pod for colocatedPipelineRun %s: %s", cpr.Name, err)
@@ -176,13 +187,17 @@ func (r *Reconciler) reconcile(ctx context.Context, runMeta metav1.ObjectMeta, c
 }
 
 func (r *Reconciler) createPod(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun, ps *v1beta1.PipelineSpec) (*corev1.Pod, error) {
-	tasks, err := r.getTaskSpecs(&cpr.Status)
+	volumes, err := ApplyWorkspacesToTasks(ctx, runMeta, cpr)
 	if err != nil {
 		return nil, err
 	}
-	pod, containerMappings, err := getPod(ctx, runMeta, cpr, tasks, r.Images, r.entrypointCache)
+	tasks, err := getPipelineTaskSpecs(ctx, &cpr.Status)
 	if err != nil {
 		return nil, err
+	}
+	pod, containerMappings, err := getPod(ctx, runMeta, cpr, tasks, r.Images, r.entrypointCache, volumes)
+	if err != nil {
+		return nil, controller.NewPermanentError(err)
 	}
 	for i, childStatus := range cpr.Status.ChildStatuses {
 		stepInfo := containerMappings[childStatus.PipelineTaskName]
@@ -198,55 +213,9 @@ func (r *Reconciler) createPod(ctx context.Context, runMeta metav1.ObjectMeta, c
 	return pod, err
 }
 
-// fetches task specs (if not inlined in pipeline spec) and copies them to CPR.Status.ChildStatuses
-func (c *Reconciler) applyParamsAndStoreTaskSpecs(ctx context.Context, cpr *cprv1alpha1.ColocatedPipelineRun) error {
-	logger := logging.FromContext(ctx)
-	if cpr.Status.PipelineSpec == nil {
-		return nil
-	}
-	if len(cpr.Status.ChildStatuses) == len(cpr.Status.PipelineSpec.Tasks) {
-		return nil
-	}
-	if len(cpr.Status.ChildStatuses) != 0 {
-		// no support for matrix yet
-		return fmt.Errorf("child statuses does not match pipeline spec: %d child statuses and %d pipeline tasks",
-			len(cpr.Status.ChildStatuses), len(cpr.Status.PipelineSpec.Tasks))
-	}
-	for i, pt := range cpr.Status.PipelineSpec.Tasks {
-		var taskSpec *v1beta1.TaskSpec
-		var steps []v1beta1.StepState
-		if pt.TaskSpec != nil {
-			for _, step := range pt.TaskSpec.Steps {
-				steps = append(steps, v1beta1.StepState{Name: step.Name})
-			}
-			cpr.Status.PipelineSpec.Tasks[i].TaskSpec.TaskSpec = *ApplyParametersToTask(&pt.TaskSpec.TaskSpec, &pt)
-		} else if pt.TaskRef != nil {
-			// fetch task synchronously for now
-			// this should be async in the real implementation
-			task, err := c.pipelineClientSet.TektonV1beta1().Tasks(cpr.Namespace).Get(ctx, pt.TaskRef.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			taskSpec = ApplyParametersToTask(&task.Spec, &pt)
-			for _, step := range taskSpec.Steps {
-				steps = append(steps, v1beta1.StepState{Name: step.Name})
-			}
-			logger.Infof("fetched task %s for pipeline task %s", task.Name, pt.Name)
-		} else {
-			return fmt.Errorf("both task spec and task ref are nil")
-		}
-
-		cpr.Status.ChildStatuses = append(cpr.Status.ChildStatuses, cprv1alpha1.ChildStatus{
-			PipelineTaskName: pt.Name,
-			Spec:             taskSpec, // no support for custom tasks yet
-			StepStatuses:     steps,
-		})
-	}
-	return nil
-}
-
-// returns a list of pipeline tasks with task specs embedded
-func (c *Reconciler) getTaskSpecs(cpr *cprv1alpha1.ColocatedPipelineRunStatus) ([]v1beta1.PipelineTask, error) {
+// use cpr.ChildStatuses[].Spec as source of truth instead of modifying spec embedded in pipeline
+// this spec has params and workspaces substituted
+func getPipelineTaskSpecs(ctx context.Context, cpr *cprv1alpha1.ColocatedPipelineRunStatus) ([]v1beta1.PipelineTask, error) {
 	var tasks []v1beta1.PipelineTask
 	if cpr.PipelineSpec == nil {
 		return tasks, fmt.Errorf("no pipeline spec")
@@ -255,18 +224,18 @@ func (c *Reconciler) getTaskSpecs(cpr *cprv1alpha1.ColocatedPipelineRunStatus) (
 	for _, childStatus := range cpr.ChildStatuses {
 		if childStatus.Spec != nil {
 			taskSpecs[childStatus.PipelineTaskName] = *childStatus.Spec
+		} else {
+			return tasks, fmt.Errorf("could not get spec for pipeline task %s", childStatus.PipelineTaskName)
 		}
 	}
 
 	for _, task := range cpr.PipelineSpec.Tasks {
 		pt := task.DeepCopy()
-		if pt.TaskSpec == nil {
-			spec, ok := taskSpecs[pt.Name]
-			if !ok {
-				return tasks, fmt.Errorf("could not get spec for pipeline task %s", pt.Name)
-			}
-			pt.TaskSpec = &v1beta1.EmbeddedTask{TaskSpec: *spec.DeepCopy()}
+		spec, ok := taskSpecs[pt.Name]
+		if !ok {
+			return tasks, fmt.Errorf("could not get spec for pipeline task %s", pt.Name)
 		}
+		pt.TaskSpec = &v1beta1.EmbeddedTask{TaskSpec: *spec.DeepCopy()}
 		tasks = append(tasks, *pt)
 	}
 	return tasks, nil
