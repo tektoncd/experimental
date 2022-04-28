@@ -1,15 +1,17 @@
-TODO(#805): Migrate to use common release pipeline
-
 # Tekton Resources
 
-This folder contains tekton resources used build and release the Task Loops custom task.
+This folder contains tekton resources used build and release custom tasks.
 The resources included in `kustomization.yaml` are installed nightly on the `dogfooding`
 cluster, and used to run nightly releases.
+
+Individual projects will be updated to use these common release resources
+([#805](https://github.com/tektoncd/experimental/issues/805)). Please don't
+add more copy-pasted release Pipelines for releasing Custom Tasks.
 
 ## Nightly releases
 
 [The release pipeline](release-pipeline.yaml) is
-[triggered nightly by Tekton](https://github.com/tektoncd/plumbing/tree/master/tekton/resources/nightly-release).
+[triggered nightly by Tekton](https://github.com/tektoncd/plumbing/tree/main/tekton/resources/nightly-release).
 
 This Pipeline uses:
 
