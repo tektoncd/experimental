@@ -1,3 +1,5 @@
+TODO(#805): Migrate to use common release pipeline
+
 # Tekton Resources
 
 This folder contains tekton resources used build and release the Pipelines in Pipelines custom task.

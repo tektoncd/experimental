@@ -1,0 +1,187 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: publish-release
+spec:
+  params:
+  - name: package
+    description: package to release (e.g. github.com/<org>/<project>
+  - name: subfolder
+    description: folder within the package for which to publish a release
+  - name: versionTag
+    description: The vX.Y.Z version that the artifacts should be tagged with (including `v`)
+  - name: imageRegistry
+    description: The target image registry
+  - name: imageRegistryPath
+    description: The path (project) in the image registry
+  - name: imageRegistryRegions
+    description: The target image registry regions
+    default: "us eu asia"
+  - name: releaseAsLatest
+    description: Whether to tag and publish this release as Pipelines' latest
+  - name: platforms
+    description: Platforms to publish for the images (e.g. linux/amd64,linux/arm64)
+    default: linux/amd64,linux/arm64,linux/s390x,linux/ppc64le
+  - name: serviceAccountPath
+    description: The name of the service account path within the release-secret workspace
+  workspaces:
+    - name: source
+      description: The workspace where the repo has been cloned
+    - name: release-secret
+      description: The secret that contains a service account authorized to push to the imageRegistry and to the output bucket
+    - name: output
+      description: The release YAML will be written to this workspace
+  stepTemplate:
+    env:
+      - name: "GIT_ROOT"
+        value: "/workspace/go/src/$(params.package)"
+      - name: "PROJECT_ROOT"
+        value: "/workspace/go/src/$(params.package)/$(params.subfolder)"
+      - name: CONTAINER_REGISTRY
+        value: "$(params.imageRegistry)/$(params.imageRegistryPath)"
+      - name: CONTAINER_REGISTY_CREDENTIALS
+        value: "$(workspaces.release-secret.path)/$(params.serviceAccountPath)"
+      - name: REGIONS
+        value: "$(params.imageRegistryRegions)"
+  steps:
+
+  - name: create-ko-yaml
+    image: busybox
+    script: |
+      #!/bin/sh
+      set -ex
+
+      mkdir -p $GIT_ROOT
+      cp -R "$(workspaces.source.path)"/* ${GIT_ROOT}
+
+      cat <<EOF > ${PROJECT_ROOT}/.ko.yaml
+      # This matches the value configured in .ko.yaml
+      defaultBaseImage: gcr.io/distroless/static:nonroot
+      EOF
+
+      cat ${PROJECT_ROOT}/.ko.yaml
+
+  - name: container-registry-auth
+    image: gcr.io/go-containerregistry/crane:debug
+    script: |
+      #!/busybox/sh
+      set -ex
+
+      # Login to $(params.imageRegistry)
+      DOCKER_CONFIG=$(cat ${CONTAINER_REGISTY_CREDENTIALS} | \
+        crane auth login -u _json_key --password-stdin $(params.imageRegistry) 2>&1 | \
+        sed 's,^.*logged in via \(.*\)$,\1,g')
+
+      # Auth with account credentials for all regions.
+      for region in ${REGIONS}
+      do
+        HOSTNAME=${region}.$(params.imageRegistry)
+        cat ${CONTAINER_REGISTY_CREDENTIALS} | crane auth login -u _json_key --password-stdin ${HOSTNAME}
+      done
+      cp ${DOCKER_CONFIG} /workspace/docker-config.json
+
+  - name: run-ko
+    image: gcr.io/tekton-releases/dogfooding/ko:latest
+    env:
+    - name: KO_DOCKER_REPO
+      value: $(params.imageRegistry)/$(params.imageRegistryPath)
+    - name: GOPATH
+      value: /workspace/go
+    - name: GO111MODULE
+      value: "on"
+    script: |
+      #!/usr/bin/env sh
+      set -ex
+
+      # Setup docker-auth
+      DOCKER_CONFIG=~/.docker
+      mkdir -p ${DOCKER_CONFIG}
+      cp /workspace/docker-config.json ${DOCKER_CONFIG}/config.json
+
+      # Change to directory with our .ko.yaml
+      cd ${PROJECT_ROOT}
+
+      # For each cmd/* directory, include a full gzipped tar of all source in
+      # vendor/. This is overkill. Some deps' licenses require the source to be
+      # included in the container image when they're used as a dependency.
+      # Rather than trying to determine which deps have this requirement (and
+      # probably get it wrong), we'll just targz up the whole vendor tree and
+      # include it. As of 9/20/2019, this amounts to about 11MB of additional
+      # data in each image.
+      go mod vendor
+      TMPDIR=$(mktemp -d)
+      tar cfz ${TMPDIR}/source.tar.gz vendor/
+      for d in cmd/*; do
+        if [ -d ${d}/kodata/ ]; then
+          ln -s ${TMPDIR}/source.tar.gz ${d}/kodata/
+        fi
+      done
+
+      # Rewrite "devel" to params.versionTag
+      sed -i -e 's/\(pipeline.tekton.dev\/release\): "devel"/\1: "$(params.versionTag)"/g' -e 's/\(app.kubernetes.io\/version\): "devel"/\1: "$(params.versionTag)"/g' -e 's/\(version\): "devel"/\1: "$(params.versionTag)"/g' -e 's/\("-version"\), "devel"/\1, "$(params.versionTag)"/g' ${PROJECT_ROOT}/config/*.yaml
+
+      OUTPUT_RELEASE_DIR="$(workspaces.output.path)/$(params.versionTag)"
+      mkdir -p $OUTPUT_RELEASE_DIR
+
+      # Publish images and create release.yaml
+      ko resolve --platform=$(params.platforms) --preserve-import-paths -t $(params.versionTag) -f ${PROJECT_ROOT}/config/ > $OUTPUT_RELEASE_DIR/release.yaml
+      # Publish images and create release.notags.yaml
+      # This is useful if your container runtime doesn't support the `image-reference:tag@digest` notation
+      # This is currently the case for `cri-o` (and most likely others)
+      ko resolve --platform=$(params.platforms) --preserve-import-paths -f ${PROJECT_ROOT}/config/ > $OUTPUT_RELEASE_DIR/release.notags.yaml
+
+  - name: koparse
+    image: gcr.io/tekton-releases/dogfooding/koparse:latest
+    script: |
+      set -ex
+
+      IMAGES_PATH=${CONTAINER_REGISTRY}/$(params.package)
+      if [ "$(params.subfolder)" != "" ]; then
+        IMAGES_PATH=${IMAGES_PATH}/$(params.subfolder)
+      fi
+
+      for d in cmd/*
+      do
+        IMAGES="${IMAGES} ${IMAGES_PATH}/${d}:$(params.versionTag)"
+      done
+
+      # Parse the built images from the release.yaml generated by ko
+      koparse \
+        --path $(workspaces.output.path)/$(params.versionTag)/release.yaml \
+        --base ${IMAGES_PATH} --images ${IMAGES} > /workspace/built_images
+
+  - name: tag-images
+    image: gcr.io/go-containerregistry/crane:debug
+    script: |
+      #!/busybox/sh
+      set -ex
+
+      # Setup docker-auth
+      DOCKER_CONFIG=~/.docker
+      mkdir -p ${DOCKER_CONFIG}
+      cp /workspace/docker-config.json ${DOCKER_CONFIG}/config.json
+
+      # Tag the images in all regions
+      for IMAGE in $(cat /workspace/built_images)
+      do
+        IMAGE_WITHOUT_SHA=${IMAGE%%@*}
+        IMAGE_WITHOUT_SHA_AND_TAG=${IMAGE_WITHOUT_SHA%%:*}
+        IMAGE_WITH_SHA=${IMAGE_WITHOUT_SHA_AND_TAG}@${IMAGE##*@}
+        if [[ "$(params.releaseAsLatest)" == "true" ]]
+        then
+          crane cp ${IMAGE_WITH_SHA} ${IMAGE_WITHOUT_SHA_AND_TAG}:latest
+        fi
+        for REGION in ${REGIONS}
+        do
+          if [[ "$(params.releaseAsLatest)" == "true" ]]
+          then
+            for TAG in "latest" $(params.versionTag)
+            do
+              crane cp ${IMAGE_WITH_SHA} ${REGION}.${IMAGE_WITHOUT_SHA_AND_TAG}:$TAG
+            done
+          else
+            TAG="$(params.versionTag)"
+            crane cp ${IMAGE_WITH_SHA} ${REGION}.${IMAGE_WITHOUT_SHA_AND_TAG}:$TAG
+          fi
+        done
+      done
