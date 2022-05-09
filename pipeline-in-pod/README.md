@@ -3,7 +3,18 @@
 This is an experimental solution to [TEP-0044](https://github.com/tektoncd/community/blob/main/teps/0044-data-locality-and-pod-overhead-in-pipelines.md).
 
 ## Installation
-This task can be built and installed with `ko`.
+
+### Install from nightly release
+
+```
+kubectl apply --filename https://storage.googleapis.com/tekton-releases-nightly/pipeline-in-pod/latest/release.yaml
+```
+
+### Build and install from source
+
+```
+ko apply -f config
+```
 
 ## Supported Features
 This custom task currently supports only running sequential tasks together in a pod with params, a pipeline-level timeout and workspaces.
