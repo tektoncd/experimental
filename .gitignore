@@ -36,3 +36,7 @@ kodata
 
 # Idea 
 *.idea
+
+# VSCode
+.vscode
+*.code-workspace
