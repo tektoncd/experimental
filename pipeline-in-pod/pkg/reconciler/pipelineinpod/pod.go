@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	cprv1alpha1 "github.com/tektoncd/experimental/pipeline-in-pod/pkg/apis/colocatedpipelinerun/v1alpha1"
@@ -155,14 +154,15 @@ func getPod(
 		VolumeMounts: []corev1.VolumeMount{binMount},
 	}
 	// TODO: this func is supposed to handle task timeouts and onerror
-	stepContainers, err := orderContainers(make([]string, 0), ptcs, nil)
+	stepContainers, stepVolumes, err := createContainers(make([]string, 0), ptcs, nil)
 	if err != nil {
 		return nil, nil, controller.NewPermanentError(err)
 	}
 
 	initContainers = append([]corev1.Container{entrypointInit}, initContainers...)
 	volumes = append(volumes, binVolume, downwardVolume)
-	volumes = append(volumes, getStepContainerVolumes(ctx, stepContainers, volumeMounts)...)
+	volumes = append(volumes, stepVolumes...)
+	volumes = append(volumes, addExtraVolumes(ctx, stepContainers, volumeMounts)...)
 	annotations, err := getAnnotations(cpr)
 	if err != nil {
 		return nil, nil, err
@@ -190,19 +190,10 @@ func getPod(
 	return pod, containerMappings, nil
 }
 
-func getStepContainerVolumes(ctx context.Context, stepContainers []corev1.Container, volumeMounts []corev1.VolumeMount) []corev1.Volume {
+func addExtraVolumes(ctx context.Context, stepContainers []corev1.Container, volumeMounts []corev1.VolumeMount) []corev1.Volume {
 	var volumes []corev1.Volume
 	for i, s := range stepContainers {
 		// TODO (maybe) creds-init
-
-		// Add /tekton/run state volumes.
-		// Each step should only mount their own volume as RW,
-		// all other steps should be mounted RO.
-		volumes = append(volumes, runVolume(i))
-		for j := 0; j < len(stepContainers); j++ {
-			s.VolumeMounts = append(s.VolumeMounts, runMount(j, i != j))
-		}
-
 		requestedVolumeMounts := map[string]bool{}
 		for _, vm := range s.VolumeMounts {
 			requestedVolumeMounts[filepath.Clean(vm.MountPath)] = true
@@ -398,21 +389,6 @@ func extractWindowsScriptComponents(script string, fileName string) ([]string, [
 	}
 
 	return command, args, script, fileName
-}
-
-func runMount(i int, ro bool) corev1.VolumeMount {
-	return corev1.VolumeMount{
-		Name:      fmt.Sprintf("%s-%d", runVolumeName, i),
-		MountPath: filepath.Join(runDir, strconv.Itoa(i)),
-		ReadOnly:  ro,
-	}
-}
-
-func runVolume(i int) corev1.Volume {
-	return corev1.Volume{
-		Name:         fmt.Sprintf("%s-%d", runVolumeName, i),
-		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
-	}
 }
 
 func getAnnotations(cpr *cprv1alpha1.ColocatedPipelineRun) (map[string]string, error) {

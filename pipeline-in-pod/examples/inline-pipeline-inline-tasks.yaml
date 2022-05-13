@@ -9,7 +9,7 @@ spec:
     # metadata: # for labels and annotations
     spec:
       timeouts:
-        pipeline: 15s
+        pipeline: 5m
       params:
       - name: git-url
         value: "https://github.com/tektoncd/pipeline"
@@ -47,3 +47,14 @@ spec:
                   echo "Good Afternoon!"
           runAfter:
           - clone
+        - name: echo-good-morning
+          taskSpec:
+            steps:
+              - name: echo2
+                image: ubuntu
+                script: |
+                  #!/usr/bin/env bash
+                  echo "Good Morning!"
+          runAfter:
+          - clone
+         

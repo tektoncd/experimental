@@ -37,6 +37,16 @@ spec:
           echo "Good Afternoon!"
     runAfter:
     - clone
+  - name: echo-good-morning
+    taskSpec:
+      steps:
+      - name: echo2
+        image: ubuntu
+        script: |
+          #!/usr/bin/env bash
+          echo "Good Morning!"
+    runAfter:
+    - clone
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Run

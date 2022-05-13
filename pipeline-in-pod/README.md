@@ -17,6 +17,6 @@ ko apply -f config
 ```
 
 ## Supported Features
-This custom task currently supports only running sequential tasks together in a pod with params, a pipeline-level timeout and workspaces.
+This custom task currently supports only running tasks together in a pod with params, a pipeline-level timeout and workspaces.
 In this implementation, workspace volumes are accessible to all tasks, but this can be changed.
-The next features on the roadmap are OCI bundles and parallel tasks.
+The next feature on the roadmap is OCI bundles or remote tasks.

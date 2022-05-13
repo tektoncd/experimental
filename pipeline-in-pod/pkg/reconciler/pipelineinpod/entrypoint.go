@@ -82,51 +82,69 @@ var (
 	}
 )
 
-// orderContainers returns the specified steps, modified so that they are
+// createContainers returns the specified steps, modified so that they are
 // executed in order by overriding the entrypoint binary.
 //
 // Containers must have Command specified; if the user didn't specify a
 // command, we must have fetched the image's ENTRYPOINT before calling this
 // method, using entrypoint_lookup.go.
 // Additionally, Step timeouts are added as entrypoint flag.
-func orderContainers(commonExtraEntrypointArgs []string, ptcs []pipelineTaskContainers, breakpointConfig *v1beta1.TaskRunDebug) ([]corev1.Container, error) {
-	orderedptcs, err := putTasksInOrder(ptcs)
-	if err != nil {
-		return nil, err
-	}
+func createContainers(commonExtraEntrypointArgs []string, ptcs []pipelineTaskContainers, breakpointConfig *v1beta1.TaskRunDebug,
+) ([]corev1.Container, []corev1.Volume, error) {
 	containers := []corev1.Container{}
-	containerNum := 0
-	for _, ptc := range orderedptcs {
+
+	ptNameToPTC := make(map[string]pipelineTaskContainers)
+	for _, ptc := range ptcs {
+		ptNameToPTC[ptc.pt.Name] = ptc
+	}
+	var volumes []corev1.Volume
+
+	for _, ptc := range ptcs {
 		steps := ptc.containers
 		taskSpec := ptc.pt.TaskSpec
+		var runAfter []pipelineTaskContainers
+		for _, ra := range ptc.pt.RunAfter {
+			runAfter = append(runAfter, ptNameToPTC[ra])
+		}
 		if len(steps) == 0 {
-			return nil, errors.New("no steps specified")
+			return nil, nil, errors.New("no steps specified")
 		}
 
 		for i, s := range steps {
 			var argsForEntrypoint []string
-			switch containerNum {
-			case 0:
-				argsForEntrypoint = []string{
-					// First step waits for the Downward volume file.
-					"-wait_file", filepath.Join(downwardMountPoint, downwardMountReadyFile),
-					"-wait_file_content", // Wait for file contents, not just an empty file.
-					// Start next step.
-					"-post_file", filepath.Join(runDir, strconv.Itoa(containerNum), "out"),
-					"-termination_path", terminationPath,
-					"-step_metadata_dir", filepath.Join(pipeline.StepsDir, steps[i].Name),
-					"-step_metadata_dir_link", filepath.Join(pipeline.StepsDir, fmt.Sprintf("%d", containerNum)),
+			var waitFiles string
+			var waitFileContents bool
+
+			if i == 0 {
+				if len(runAfter) == 0 {
+					// Wait for "ready" file
+					waitFiles = filepath.Join(downwardMountPoint, downwardMountReadyFile)
+					waitFileContents = true
+					steps[i].VolumeMounts = append(steps[0].VolumeMounts, downwardMount)
+				} else {
+					// Wait for the last step in any previous tasks
+					for j, previous := range runAfter {
+						if j != 0 {
+							waitFiles = waitFiles + ","
+						}
+						lastStepInPrevious := len(previous.containers) - 1
+						waitFiles = waitFiles + filepath.Join(runDir, previous.pt.Name, strconv.Itoa(lastStepInPrevious), "out")
+					}
 				}
-			default:
-				// All other steps wait for previous file, write next file.
-				argsForEntrypoint = []string{
-					"-wait_file", filepath.Join(runDir, strconv.Itoa(containerNum-1), "out"),
-					"-post_file", filepath.Join(runDir, strconv.Itoa(containerNum), "out"),
-					"-termination_path", terminationPath,
-					"-step_metadata_dir", filepath.Join(pipeline.StepsDir, steps[i].Name),
-					"-step_metadata_dir_link", filepath.Join(pipeline.StepsDir, fmt.Sprintf("%d", containerNum)),
-				}
+			} else {
+				// wait for previous step in current task
+				waitFiles = filepath.Join(runDir, ptc.pt.Name, strconv.Itoa(i-1), "out")
 			}
+			argsForEntrypoint = []string{
+				"-wait_file", waitFiles,
+				"-post_file", filepath.Join(runDir, ptc.pt.Name, strconv.Itoa(i), "out"),
+				"-termination_path", terminationPath,
+				"-step_metadata_dir", filepath.Join(pipeline.StepsDir, steps[i].Name),
+			}
+			if waitFileContents {
+				argsForEntrypoint = append(argsForEntrypoint, "-wait_file_content")
+			}
+
 			argsForEntrypoint = append(argsForEntrypoint, commonExtraEntrypointArgs...)
 			if taskSpec != nil {
 				if taskSpec.Steps != nil && len(taskSpec.Steps) >= i+1 {
@@ -140,15 +158,6 @@ func orderContainers(commonExtraEntrypointArgs []string, ptcs []pipelineTaskCont
 				argsForEntrypoint = append(argsForEntrypoint, resultArgument(steps, taskSpec.Results)...)
 			}
 
-			cmd, args := s.Command, s.Args
-			if len(cmd) == 0 {
-				return nil, fmt.Errorf("step %d did not specify command", i)
-			}
-			if len(cmd) > 1 {
-				args = append(cmd[1:], args...)
-				cmd = []string{cmd[0]}
-			}
-
 			if breakpointConfig != nil && len(breakpointConfig.Breakpoint) > 0 {
 				breakpoints := breakpointConfig.Breakpoint
 				for _, b := range breakpoints {
@@ -159,20 +168,68 @@ func orderContainers(commonExtraEntrypointArgs []string, ptcs []pipelineTaskCont
 				}
 			}
 
-			argsForEntrypoint = append(argsForEntrypoint, "-entrypoint", cmd[0], "--")
+			cmd, args := s.Command, s.Args
+			if len(cmd) > 0 {
+				argsForEntrypoint = append(argsForEntrypoint, "-entrypoint", cmd[0])
+			}
+			if len(cmd) > 1 {
+				args = append(cmd[1:], args...)
+			}
+			argsForEntrypoint = append(argsForEntrypoint, "--")
+
 			argsForEntrypoint = append(argsForEntrypoint, args...)
 
 			steps[i].Command = []string{entrypointBinary}
 			steps[i].Args = argsForEntrypoint
 			steps[i].TerminationMessagePath = terminationPath
-			containerNum += 1
+
+			v, vms := getVolumesForStep(ptc, i, runAfter)
+			steps[i].VolumeMounts = vms
+
+			volumes = append(volumes, v...)
 		}
-		// Mount the Downward volume into the first step container.
-		steps[0].VolumeMounts = append(steps[0].VolumeMounts, downwardMount)
 		containers = append(containers, steps...)
+		//v := mountVolumesForTask(&ptc, ptNameToPTC)
+	}
+	return containers, volumes, nil
+}
+
+func getVolumesForStep(ptc pipelineTaskContainers, i int, runAfter []pipelineTaskContainers) ([]corev1.Volume, []corev1.VolumeMount) {
+	var volumes []corev1.Volume
+	s := ptc.containers[i]
+
+	// TODO (maybe) creds-init
+
+	// Add /tekton/run state volumes.
+	// Each step should only mount their own volume as RW,
+	// all other steps should be mounted RO.
+	volumeMounts := s.VolumeMounts
+	volumes = append(volumes, runVolume(ptc.pt.Name, i))
+	for j := 0; j < len(ptc.containers); j++ {
+		volumeMounts = append(volumeMounts, runMount(ptc.pt.Name, j, i != j))
 	}
 
-	return containers, nil
+	// Add /tekton/run volumes for steps this step must wait for
+	for _, ra := range runAfter {
+		lastStepInPrevious := len(ra.containers) - 1
+		volumeMounts = append(volumeMounts, runMount(ra.pt.Name, lastStepInPrevious, true))
+	}
+	return volumes, volumeMounts
+}
+
+func runMount(ptName string, i int, ro bool) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      fmt.Sprintf("%s-%s-%d", runVolumeName, ptName, i),
+		MountPath: filepath.Join(runDir, ptName, strconv.Itoa(i)),
+		ReadOnly:  ro,
+	}
+}
+
+func runVolume(ptName string, i int) corev1.Volume {
+	return corev1.Volume{
+		Name:         fmt.Sprintf("%s-%s-%d", runVolumeName, ptName, i),
+		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+	}
 }
 
 func resultArgument(steps []corev1.Container, results []v1beta1.TaskResult) []string {
