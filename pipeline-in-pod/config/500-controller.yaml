@@ -51,8 +51,8 @@ spec:
             # These images are built on-demand by `ko resolve` and are replaced
             # by image references by digest.
             "-kubeconfig-writer-image", "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/kubeconfigwriter",
-            "-git-image", "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init",
-            "-entrypoint-image", "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/entrypoint",
+            "-git-image", "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init@sha256:ce47e7392b37fc8f1dea8009e74f863656a9de37e03c7ee7371d8530cf7a9e07",
+            "-entrypoint-image", "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/entrypoint@sha256:4fc8631a27bdd1b4c149a08b7db0465a706559ccddd979d0b9dbc93ef676105d",
             "-nop-image", "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/nop",
             "-imagedigest-exporter-image", "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/imagedigestexporter",
             # This is gcr.io/google.com/cloudsdktool/cloud-sdk:302.0.0-slim

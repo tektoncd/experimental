@@ -69,3 +69,11 @@ spec:
             name: echo-greeting
           runAfter:
           - clone-repo
+        - name: echo-good-morning
+          params:
+          - name: greeting
+            value: "Good Morning!"
+          taskRef:
+            name: echo-greeting
+          runAfter:
+          - clone-repo
