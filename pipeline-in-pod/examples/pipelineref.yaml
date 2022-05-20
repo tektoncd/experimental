@@ -7,6 +7,8 @@ spec:
   - name: source-code
   params:
   - name: git-url
+  - name: branch
+    default: "main"
   tasks:
   - name: clone
     workspaces:
@@ -15,18 +17,25 @@ spec:
     params:
     - name: url
       value: $(params.git-url)
+    - name: branch
+      value: $(params.branch)
     taskSpec:
       steps:
       - name: clone
         image: ubuntu
         script: |
           #!/usr/bin/env bash
-          echo "$(params.url)" >> $(workspaces.output.path)
+          echo "$(params.url):$(params.branch)" >> $(workspaces.output.path)
+          echo "commit-sha: 1234" >>$(results.commit.path)
       workspaces:
       - name: output
       params:
       - name: url
         type: string
+      - name: branch
+        type: string
+      results:
+      - name: commit
   - name: echo-good-afternoon
     taskSpec:
       steps:
@@ -34,7 +43,7 @@ spec:
         image: ubuntu
         script: |
           #!/usr/bin/env bash
-          echo "Good Afternoon!"
+          echo "Good Afternoon!s"
     runAfter:
     - clone
   - name: echo-good-morning

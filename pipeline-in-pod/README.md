@@ -18,5 +18,12 @@ ko apply -f config
 
 ## Supported Features
 This custom task currently supports only running tasks together in a pod with params, a pipeline-level timeout and workspaces.
-In this implementation, workspace volumes are accessible to all tasks, but this can be changed.
 The next feature on the roadmap is OCI bundles or remote tasks.
+
+### Results support
+This custom task supports outputting task results, but does not support passing results of one task into the
+parameters of another task.
+
+### Workspaces support
+This custom task supports workspaces backed by emptyDir; they may be optional or required.
+Workspace volumes are mounted only onto the steps that need them.

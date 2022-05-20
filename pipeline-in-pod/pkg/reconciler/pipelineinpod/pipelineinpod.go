@@ -187,7 +187,7 @@ func (r *Reconciler) reconcile(ctx context.Context, runMeta metav1.ObjectMeta, c
 }
 
 func (r *Reconciler) createPod(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun, ps *v1beta1.PipelineSpec) (*corev1.Pod, error) {
-	volumes, err := ApplyWorkspacesToTasks(ctx, runMeta, cpr)
+	volumes, volumeMounts, err := ApplyWorkspacesToTasks(ctx, runMeta, cpr)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (r *Reconciler) createPod(ctx context.Context, runMeta metav1.ObjectMeta, c
 	if err != nil {
 		return nil, err
 	}
-	pod, containerMappings, err := getPod(ctx, runMeta, cpr, tasks, r.Images, r.entrypointCache, volumes)
+	pod, containerMappings, err := getPod(ctx, runMeta, cpr, tasks, r.Images, r.entrypointCache, volumes, volumeMounts)
 	if err != nil {
 		return nil, controller.NewPermanentError(err)
 	}

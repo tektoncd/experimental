@@ -106,8 +106,9 @@ func MakeColocatedPipelineRunStatus(logger *zap.SugaredLogger, cpr cprv1alpha1.C
 		markStatusSuccess(cprs)
 		markCompletionTime(cprs)
 	} else {
-		logger.Infof("At least one Task in CPR %s has failed", cpr.Name)
-		markStatusFailure(cprs, "failure", "failure")
+		msg := fmt.Sprintf("At least one Task in CPR %s has failed", cpr.Name)
+		logger.Infof(msg)
+		markStatusFailure(cprs, "Failed", msg)
 		markCompletionTime(cprs)
 	}
 
