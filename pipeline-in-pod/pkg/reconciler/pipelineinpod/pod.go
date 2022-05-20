@@ -108,7 +108,8 @@ type pipelineTaskContainers struct {
 
 func getPod(
 	ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun,
-	tasks []v1beta1.PipelineTask, images pipeline.Images, entrypointCache EntrypointCache, v map[string]corev1.Volume,
+	tasks []v1beta1.PipelineTask, images pipeline.Images, entrypointCache EntrypointCache,
+	v map[string]corev1.Volume, vms map[string][]corev1.VolumeMount,
 ) (*corev1.Pod, map[string]StepInfo, error) {
 	activeDeadlineSeconds := int64(60 * 60)
 	if cpr.Spec.Timeouts != nil && cpr.Spec.Timeouts.Pipeline != nil {
@@ -153,8 +154,7 @@ func getPod(
 		Command:      []string{"/ko-app/entrypoint", "cp", "/ko-app/entrypoint", entrypointBinary},
 		VolumeMounts: []corev1.VolumeMount{binMount},
 	}
-	// TODO: this func is supposed to handle task timeouts and onerror
-	stepContainers, stepVolumes, err := createContainers(make([]string, 0), ptcs, nil)
+	stepContainers, stepVolumes, err := createContainers(make([]string, 0), ptcs, vms, nil)
 	if err != nil {
 		return nil, nil, controller.NewPermanentError(err)
 	}
@@ -217,7 +217,7 @@ func convertScripts(shellImageLinux string, shellImageWin string, tasks []v1beta
 	shellCommand := "sh"
 	shellArg := "-c"
 	requiresWindows := checkWindowsRequirement(tasks)
-	ptcs := make([]pipelineTaskContainers, len(tasks)) // task might have multiple containers: problem for later
+	ptcs := make([]pipelineTaskContainers, len(tasks))
 
 	// Set windows variants for Image, Command and Args
 	if requiresWindows {

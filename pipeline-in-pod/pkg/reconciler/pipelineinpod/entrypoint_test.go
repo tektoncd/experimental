@@ -112,7 +112,7 @@ func TestCreateContainersSingleTask(t *testing.T) {
 		}},
 		TerminationMessagePath: "/tekton/termination",
 	}}
-	gotContainers, _, err := createContainers([]string{}, tasks, nil)
+	gotContainers, _, err := createContainers([]string{}, tasks, nil, nil)
 	if err != nil {
 		t.Fatalf("createContainers: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestCreateContainersSequentialTasks(t *testing.T) {
 		}},
 		TerminationMessagePath: "/tekton/termination",
 	}}
-	gotContainers, _, err := createContainers([]string{}, tasks, nil)
+	gotContainers, _, err := createContainers([]string{}, tasks, nil, nil)
 	if err != nil {
 		t.Fatalf("createContainers: %v", err)
 	}
@@ -308,7 +308,7 @@ func TestCreateContainersParallelTasks(t *testing.T) {
 		}},
 		TerminationMessagePath: "/tekton/termination",
 	}}
-	gotContainers, _, err := createContainers([]string{}, tasks, nil)
+	gotContainers, _, err := createContainers([]string{}, tasks, nil, nil)
 	if err != nil {
 		t.Fatalf("createContainers: %v", err)
 	}

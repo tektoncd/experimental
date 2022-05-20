@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	controller "knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
 )
 
 const (
@@ -25,7 +24,7 @@ const (
 )
 
 func ApplyParametersToPipeline(p *v1beta1.PipelineSpec, cpr *cprv1alpha1.ColocatedPipelineRun) *v1beta1.PipelineSpec {
-	// This assumes that the PipelineRun inputs have been validated against what the Pipeline requests.
+	// This assumes that the ColocatedPipelineRun inputs have been validated against what the Pipeline requests.
 
 	// stringReplacements is used for standard single-string stringReplacements, while arrayReplacements contains arrays
 	// that need to be further processed.
@@ -68,12 +67,11 @@ func ApplyParametersToPipeline(p *v1beta1.PipelineSpec, cpr *cprv1alpha1.Colocat
 	return resources.ApplyReplacements(p, stringReplacements, arrayReplacements)
 }
 
-func ApplyParametersToTask(spec *v1beta1.TaskSpec, pt *v1beta1.PipelineTask) *v1beta1.TaskSpec {
-	// This assumes that the TaskRun inputs have been validated against what the Task requests.
+func ApplyParametersToTask(spec *v1beta1.TaskSpec, pt *v1beta1.PipelineTask, defaults ...v1beta1.ParamSpec) *v1beta1.TaskSpec {
+	// This assumes that the ColocatedPipelineRun inputs have been validated against what the Task requests.
 
 	// stringReplacements is used for standard single-string stringReplacements, while arrayReplacements contains arrays
 	// that need to be further processed.
-	var defaults []v1beta1.ParamSpec
 	if len(spec.Params) > 0 {
 		defaults = append(defaults, spec.Params...)
 	}
@@ -131,42 +129,102 @@ func ApplyWorkspacesToPipeline(p *v1beta1.PipelineSpec, cpr *cprv1alpha1.Colocat
 	return resources.ApplyReplacements(p, replacements, map[string][]string{})
 }
 
-func ApplyWorkspacesToTasks(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun) (map[string]corev1.Volume, error) {
+// ApplyWorkspacesToTasks creates volumes for workspaces, replaces workspace path variables,
+// and returns a mapping of workspace names (as specified in the pipeline) to volumes
+// and a mapping of pipeline task name to volume mounts.
+func ApplyWorkspacesToTasks(ctx context.Context, runMeta metav1.ObjectMeta, cpr *cprv1alpha1.ColocatedPipelineRun) (map[string]corev1.Volume, map[string][]corev1.VolumeMount, error) {
 	// Get the randomized volume names assigned to workspace bindings
-	logger := logging.FromContext(ctx)
 	workspaceVolumes := createVolumes(cpr.Spec.Workspaces)
 	workspaceBindings := make(map[string][]v1beta1.WorkspaceBinding)
 	if cpr.Status.PipelineSpec == nil {
-		return nil, fmt.Errorf("no pipeline spec")
+		return nil, nil, fmt.Errorf("no pipeline spec")
 	}
 	for _, pt := range cpr.Status.PipelineSpec.Tasks {
 		wbs, _, err := getWorkspaceBindingsForPipelineTask(runMeta, cpr, pt)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		workspaceBindings[pt.Name] = wbs
 	}
-	logger.Infof("workspace bindings: %s", workspaceBindings)
-	// Apply workspace resource substitution
+	err := applyWorkspaceSubstitutionsToTasks(ctx, workspaceVolumes, workspaceBindings, cpr)
+	if err != nil {
+		cpr.Status.MarkFailed(ReasonInvalidWorkspaceBinding, err.Error())
+		return nil, nil, controller.NewPermanentError(err)
+	}
+	volumeMounts, err := getWorkspaceVolumeMounts(workspaceVolumes, cpr)
+	if err != nil {
+		cpr.Status.MarkFailed(ReasonInvalidWorkspaceBinding, err.Error())
+		return nil, nil, controller.NewPermanentError(err)
+	}
+	return workspaceVolumes, volumeMounts, nil
+}
+
+func applyWorkspaceSubstitutionsToTasks(ctx context.Context, workspaceVolumes map[string]corev1.Volume, workspaceBindings map[string][]v1beta1.WorkspaceBinding,
+	cpr *cprv1alpha1.ColocatedPipelineRun) error {
 	for i, status := range cpr.Status.ChildStatuses {
 		taskSpec := status.Spec
 		wbs, ok := workspaceBindings[status.PipelineTaskName]
 		if !ok {
-			return nil, fmt.Errorf("no workspace bindings for pipeline task %s", status.PipelineTaskName)
+			return fmt.Errorf("no workspace bindings for pipeline task %s", status.PipelineTaskName)
 		}
 		if err := workspace.ValidateBindings(taskSpec.Workspaces, wbs); err != nil {
-			logger.Errorf("CPR %q workspaces are invalid for pipeline task %s: %v", cpr.Name, err, status.PipelineTaskName)
-			cpr.Status.MarkFailed(ReasonInvalidWorkspaceBinding, err.Error())
-			return nil, controller.NewPermanentError(err)
+			return err
 		}
 		taskSpec = taskresources.ApplyWorkspaces(ctx, taskSpec, taskSpec.Workspaces, wbs, workspaceVolumes)
 		taskSpec, err := workspace.Apply(ctx, *taskSpec, wbs, workspaceVolumes)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		cpr.Status.ChildStatuses[i].Spec = taskSpec
 	}
-	return workspaceVolumes, nil
+	return nil
+}
+
+// getWorkspaceVolumeMounts takes a mapping of workspace name to volumes and
+// returns a mapping of Pipeline Task name to volume mounts.
+func getWorkspaceVolumeMounts(
+	volumes map[string]corev1.Volume, cpr *cprv1alpha1.ColocatedPipelineRun) (map[string][]corev1.VolumeMount, error) {
+	volumeMounts := make(map[string][]corev1.VolumeMount)
+	cprWorkspaces := make(map[string]v1beta1.WorkspaceBinding)
+	for _, binding := range cpr.Spec.Workspaces {
+		cprWorkspaces[binding.Name] = binding
+	}
+	taskSpecs := make(map[string]v1beta1.TaskSpec)
+	for _, status := range cpr.Status.ChildStatuses {
+		taskSpecs[status.PipelineTaskName] = *status.Spec
+	}
+
+	for _, pt := range cpr.Status.PipelineSpec.Tasks {
+		var ptMounts []corev1.VolumeMount
+		for _, ptWorkspaceBinding := range pt.Workspaces {
+			pipelineWorkspaceName := ptWorkspaceBinding.Workspace
+			vv := volumes[pipelineWorkspaceName]
+			wb := cprWorkspaces[pipelineWorkspaceName]
+			ts := taskSpecs[pt.Name]
+			w, err := getDeclaredWorkspace(ptWorkspaceBinding.Name, ts.Workspaces)
+			if err != nil {
+				return nil, fmt.Errorf("error with workspaces for pipeline task %s: %s", pt.Name, err)
+			}
+			volumeMount := corev1.VolumeMount{
+				Name:      vv.Name,
+				MountPath: w.GetMountPath(),
+				SubPath:   wb.SubPath,
+				ReadOnly:  w.ReadOnly,
+			}
+			ptMounts = append(ptMounts, volumeMount)
+		}
+		volumeMounts[pt.Name] = ptMounts
+	}
+	return volumeMounts, nil
+}
+
+func getDeclaredWorkspace(name string, w []v1beta1.WorkspaceDeclaration) (*v1beta1.WorkspaceDeclaration, error) {
+	for _, workspace := range w {
+		if workspace.Name == name {
+			return &workspace, nil
+		}
+	}
+	return nil, fmt.Errorf("even though validation should have caught it, bound workspace %s did not exist in declared workspaces", name)
 }
 
 func createVolumes(wbs []v1beta1.WorkspaceBinding) map[string]corev1.Volume {

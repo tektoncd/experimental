@@ -89,7 +89,7 @@ var (
 // command, we must have fetched the image's ENTRYPOINT before calling this
 // method, using entrypoint_lookup.go.
 // Additionally, Step timeouts are added as entrypoint flag.
-func createContainers(commonExtraEntrypointArgs []string, ptcs []pipelineTaskContainers, breakpointConfig *v1beta1.TaskRunDebug,
+func createContainers(commonExtraEntrypointArgs []string, ptcs []pipelineTaskContainers, volumeMounts map[string][]corev1.VolumeMount, breakpointConfig *v1beta1.TaskRunDebug,
 ) ([]corev1.Container, []corev1.Volume, error) {
 	containers := []corev1.Container{}
 
@@ -184,12 +184,13 @@ func createContainers(commonExtraEntrypointArgs []string, ptcs []pipelineTaskCon
 			steps[i].TerminationMessagePath = terminationPath
 
 			v, vms := getVolumesForStep(ptc, i, runAfter)
+			workspaceVms, _ := volumeMounts[ptc.pt.Name]
+			vms = append(vms, workspaceVms...)
 			steps[i].VolumeMounts = vms
 
 			volumes = append(volumes, v...)
 		}
 		containers = append(containers, steps...)
-		//v := mountVolumesForTask(&ptc, ptNameToPTC)
 	}
 	return containers, volumes, nil
 }

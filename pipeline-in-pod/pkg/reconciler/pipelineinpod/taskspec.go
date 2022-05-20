@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	cprv1alpha1 "github.com/tektoncd/experimental/pipeline-in-pod/pkg/apis/colocatedpipelinerun/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/reconciler/taskrun/resources"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/logging"
 )
@@ -39,10 +40,9 @@ func (r *Reconciler) getTaskSpec(ctx context.Context, cpr *cprv1alpha1.Colocated
 }
 
 // Fetches tasks and writes them to cpr.Status.ChildStatus[].Spec along with pipeline task name.
-// Substitutes parameters into the task specs.
+// Substitutes parameters and results into the task specs.
 // Initializes cpr.Status.ChildStatus[].StepStatuses with step names.
 func (r *Reconciler) applyTasks(ctx context.Context, cpr *cprv1alpha1.ColocatedPipelineRun) error {
-	//logger := logging.FromContext(ctx)
 	if cpr.Status.PipelineSpec == nil {
 		return nil
 	}
@@ -54,6 +54,12 @@ func (r *Reconciler) applyTasks(ctx context.Context, cpr *cprv1alpha1.ColocatedP
 		return fmt.Errorf("child statuses does not match pipeline spec: %d child statuses and %d pipeline tasks",
 			len(cpr.Status.ChildStatuses), len(cpr.Status.PipelineSpec.Tasks))
 	}
+	var defaultParams []v1beta1.ParamSpec
+	for _, p := range cpr.Status.PipelineSpec.Params {
+		if p.Default != nil {
+			defaultParams = append(defaultParams, p)
+		}
+	}
 	var merr error
 	for _, pt := range cpr.Status.PipelineSpec.Tasks {
 		taskSpec, err := r.getTaskSpec(ctx, cpr, pt)
@@ -61,7 +67,8 @@ func (r *Reconciler) applyTasks(ctx context.Context, cpr *cprv1alpha1.ColocatedP
 			merr = multierror.Append(merr, err)
 		}
 		taskSpec.SetDefaults(ctx)
-		taskSpec = *ApplyParametersToTask(&taskSpec, &pt)
+		taskSpec = *ApplyParametersToTask(&taskSpec, &pt, defaultParams...)
+		taskSpec = *resources.ApplyTaskResults(&taskSpec)
 		var steps []v1beta1.StepState
 		for _, step := range taskSpec.Steps {
 			steps = append(steps, v1beta1.StepState{Name: step.Name})

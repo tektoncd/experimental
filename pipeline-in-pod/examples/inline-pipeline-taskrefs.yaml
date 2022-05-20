@@ -6,6 +6,9 @@ spec:
   params:
   - name: url
     type: string 
+  - name: branch
+    type: string
+    default: "main"
   workspaces:
   - name: output
   steps:
@@ -13,22 +16,29 @@ spec:
     image: ubuntu
     script: |
       #!/usr/bin/env bash
-      echo "$(params.url)" >> $(workspaces.output.path)
+      echo $(params.branch)
+      echo "$(params.url)" >> $(workspaces.output.path)/file
+      echo "commit-sha: 1234" >>$(results.commit.path)
+  results:
+  - name: commit
 ---
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: echo-greeting
+  name: echo-greeting-read-workspace
 spec:
   params:
   - name: greeting
     type: string
+  workspaces:
+  - name: input
   steps:
   - name: echo
     image: ubuntu
     script: |
       #!/usr/bin/env bash
       echo "$(params.greeting)"
+      ls $(workspaces.input.path)
 ---
 apiVersion: tekton.dev/v1alpha1
 kind: Run
@@ -66,7 +76,10 @@ spec:
           - name: greeting
             value: "Good Afternoon!"
           taskRef:
-            name: echo-greeting
+            name: echo-greeting-read-workspace
+          workspaces:
+          - name: input
+            workspace: source-code
           runAfter:
           - clone-repo
         - name: echo-good-morning
@@ -74,6 +87,9 @@ spec:
           - name: greeting
             value: "Good Morning!"
           taskRef:
-            name: echo-greeting
+            name: echo-greeting-read-workspace
+          workspaces:
+          - name: input
+            workspace: source-code
           runAfter:
           - clone-repo
