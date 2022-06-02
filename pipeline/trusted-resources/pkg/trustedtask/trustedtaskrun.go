@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 
+	trustedconfig "github.com/tektoncd/experimental/pipelines/trusted-resources/pkg/config"
 	"github.com/tektoncd/pipeline/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -35,7 +36,8 @@ import (
 )
 
 const (
-	SignatureAnnotation = "tekton.dev/signature"
+	SignatureAnnotation        = "tekton.dev/signature"
+	PassVerificationAnnotation = "tekton.dev/pass-verification"
 )
 
 //go:generate deepcopy-gen -O zz_generated.deepcopy --go-header-file ./../../hack/boilerplate/boilerplate.go.txt  -i ./
@@ -57,11 +59,11 @@ func (tr *TrustedTaskRun) Validate(ctx context.Context) (errs *apis.FieldError) 
 	// TODO: validate only on create operation.
 
 	k8sclient := kubeclient.Get(ctx)
-	config, err := rest.InClusterConfig()
+	restCfg, err := rest.InClusterConfig()
 	if err != nil {
 		return apis.ErrGeneric(err.Error())
 	}
-	tektonClient, err := versioned.NewForConfig(config)
+	tektonClient, err := versioned.NewForConfig(restCfg)
 	if err != nil {
 		return apis.ErrGeneric(err.Error())
 	}
@@ -81,6 +83,7 @@ func (tr *TrustedTaskRun) verifyTaskRun(
 	k8sclient kubernetes.Interface,
 	tektonClient versioned.Interface,
 ) (errs *apis.FieldError) {
+	trustedConfig := trustedconfig.FromContextOrDefaults(ctx)
 	logger := logging.FromContext(ctx)
 	logger.Info("Verifying TaskRun")
 
@@ -104,9 +107,19 @@ func (tr *TrustedTaskRun) verifyTaskRun(
 		return apis.ErrGeneric(err.Error(), "spec", "taskRef")
 	}
 
-	if err := verifyTask(ctx, tr.Spec.TaskRef.Name, k8sclient, fn); err != nil {
-		return apis.ErrGeneric(err.Error(), "spec", "taskRef")
+	if tr.Annotations == nil {
+		tr.Annotations = make(map[string]string)
 	}
+
+	if err := verifyTask(ctx, tr.Spec.TaskRef.Name, k8sclient, fn); err != nil {
+		if trustedConfig.SkipValidation {
+			logger.Error(err.Error())
+			tr.Annotations[PassVerificationAnnotation] = "false"
+		} else {
+			return apis.ErrGeneric(err.Error(), "spec", "taskRef")
+		}
+	}
+	tr.Annotations[PassVerificationAnnotation] = "true"
 	return nil
 }
 

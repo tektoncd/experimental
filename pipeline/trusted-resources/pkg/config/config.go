@@ -31,6 +31,8 @@ type Config struct {
 	CosignKey string
 	// KmsKey defines the name of the key in configmap data
 	KMSKey string
+	// SkipValidation defines the flag to skip task run validation
+	SkipValidation bool
 }
 
 const (
@@ -42,6 +44,8 @@ const (
 	KMSPubKey = "kms-pubkey-path"
 	// TrustedTaskConfig is the name of the trusted resources configmap
 	TrustedTaskConfig = "config-trusted-resources"
+	// SkipTaskRunValidation is the flag to skip task run validation
+	PassTaskRunWhenFailVerification = "pass-taskrun-when-fail-verification"
 )
 
 func defaultConfig() *Config {
@@ -56,6 +60,7 @@ func NewConfigFromMap(data map[string]string) (*Config, error) {
 	if err := cm.Parse(data,
 		cm.AsString(CosignPubKey, &cfg.CosignKey),
 		cm.AsString(KMSPubKey, &cfg.KMSKey),
+		cm.AsBool(PassTaskRunWhenFailVerification, &cfg.SkipValidation),
 	); err != nil {
 		return nil, fmt.Errorf("failed to parse data: %w", err)
 	}
