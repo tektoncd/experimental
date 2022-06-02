@@ -397,6 +397,23 @@ func setupContext(ctx context.Context, k8sclient kubernetes.Interface, secretpat
 	return store.ToContext(ctx)
 }
 
+func setupContextSkipTaskRunValidation(ctx context.Context, k8sclient kubernetes.Interface, secretpath string, skipValidation string) context.Context {
+	cmw := informer.NewInformedWatcher(k8sclient, system.Namespace())
+	store := config.NewConfigStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nameSpace,
+			Name:      config.TrustedTaskConfig,
+		},
+		Data: map[string]string{config.CosignPubKey: secretpath, config.PassTaskRunWhenFailVerification: skipValidation},
+	}
+
+	cmw.ManualWatcher.OnChange(cm)
+
+	return store.ToContext(ctx)
+}
+
 // Generate key files to tmpdir, return signer and pubkey path
 func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.Interface) (signature.Signer, string) {
 	t.Helper()
@@ -436,4 +453,61 @@ func pushOCIImage(t *testing.T, u *url.URL, task *v1beta1.Task) (typesv1.Hash, e
 		t.Fatalf("failed to fetch img manifest: %v", err)
 	}
 	return dig, nil
+}
+
+func TestVerifyTaskRun_SkipValidation(t *testing.T) {
+	tektonClient := faketekton.NewSimpleClientset()
+	k8sclient := fakek8s.NewSimpleClientset()
+
+	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
+	// Get Signer
+	_, secretpath := getSignerFromFile(t, ctx, k8sclient)
+
+	unsignedTask := getUnsignedTask()
+
+	// Local taskref taskruns
+	ltr := v1beta1.TaskRun{
+		TypeMeta:   trTypeMeta,
+		ObjectMeta: trObjectMeta,
+		Spec: v1beta1.TaskRunSpec{
+			TaskRef: &v1beta1.TaskRef{
+				Name: unsignedTask.Name,
+			},
+		},
+	}
+
+	unsigned := &TrustedTaskRun{TaskRun: ltr}
+
+	tcs := []struct {
+		name     string
+		taskRun  *TrustedTaskRun
+		wantErr  bool
+		skipTask string
+	}{{
+		name:     "Skip validation avoiding fail verification",
+		taskRun:  unsigned,
+		wantErr:  false,
+		skipTask: "true",
+	}, {
+		name:     "Local taskRef Fail Verification without signature",
+		taskRun:  unsigned,
+		wantErr:  true,
+		skipTask: "false",
+	},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+
+			ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
+
+			ctx = setupContextSkipTaskRunValidation(ctx, k8sclient, secretpath, tc.skipTask)
+
+			err := tc.taskRun.verifyTaskRun(ctx, k8sclient, tektonClient)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("verifyTaskRun() get err %v, wantErr %t", err, tc.wantErr)
+			}
+		})
+	}
+
 }

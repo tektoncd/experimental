@@ -118,4 +118,6 @@ metadata:
     app.kubernetes.io/part-of: admissioncontrol
 data:
   cosign-pubkey-path: "/etc/signing-secrets/cosign.pub"
+  pass-taskrun-when-fail-verification: true
+
 ```
