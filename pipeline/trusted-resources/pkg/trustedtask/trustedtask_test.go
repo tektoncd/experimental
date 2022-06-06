@@ -25,7 +25,7 @@ func Test_verifyTask(t *testing.T) {
 	ctx := logging.WithLogger(context.Background(), zaptest.NewLogger(t).Sugar())
 	k8sClient := fakek8s.NewSimpleClientset(sa)
 	tektonClient := faketekton.NewSimpleClientset()
-	signer, secretpath, _ := getSignerFromFile(t, ctx, k8sClient)
+	signer, secretpath := getSignerFromFile(t, ctx, k8sClient)
 	ctx = setupContext(ctx, k8sClient, secretpath)
 
 	task := v1beta1.Task{
