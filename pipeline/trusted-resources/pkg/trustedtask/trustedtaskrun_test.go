@@ -119,10 +119,7 @@ func TestVerifyTaskRun_OCIBundle(t *testing.T) {
 	tektonClient := faketekton.NewSimpleClientset()
 
 	// Get Signer
-	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer, secretpath := getSignerFromFile(t, ctx, k8sclient)
 	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	unsignedTask := getUnsignedTask()
@@ -211,10 +208,7 @@ func TestVerifyTaskRun_TaskRef(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer, secretpath := getSignerFromFile(t, ctx, k8sclient)
 
 	ctx = setupContext(ctx, k8sclient, secretpath)
 
@@ -404,7 +398,7 @@ func setupContext(ctx context.Context, k8sclient kubernetes.Interface, secretpat
 }
 
 // Generate key files to tmpdir, return signer and pubkey path
-func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.Interface) (signature.Signer, string, error) {
+func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.Interface) (signature.Signer, string) {
 	t.Helper()
 
 	tmpDir := t.TempDir()
@@ -417,7 +411,7 @@ func getSignerFromFile(t *testing.T, ctx context.Context, k8sclient kubernetes.I
 		t.Fatal(err)
 	}
 
-	return signer, filepath.Join(tmpDir, "cosign.pub"), nil
+	return signer, filepath.Join(tmpDir, "cosign.pub")
 }
 
 func pushOCIImage(t *testing.T, u *url.URL, task *v1beta1.Task) (typesv1.Hash, error) {

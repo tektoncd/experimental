@@ -62,10 +62,7 @@ func TestVerifyPipelineRun_APIPipeline(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer, secretpath := getSignerFromFile(t, ctx, k8sclient)
 	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	prWithoutTasks := &TrustedPipelineRun{
@@ -136,10 +133,7 @@ func TestVerifyPipelineRun_PipelineOCIBundle(t *testing.T) {
 	tektonClient := faketekton.NewSimpleClientset()
 
 	// Get Signer
-	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer, secretpath := getSignerFromFile(t, ctx, k8sclient)
 	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	// Create registry server
@@ -148,7 +142,7 @@ func TestVerifyPipelineRun_PipelineOCIBundle(t *testing.T) {
 	u, _ := url.Parse(s.URL)
 
 	unsignedPipeline := getUnsignedPipeline("unsigned")
-	if _, err = pushPipelineImage(t, u, unsignedPipeline); err != nil {
+	if _, err := pushPipelineImage(t, u, unsignedPipeline); err != nil {
 		t.Fatal(err)
 	}
 
@@ -224,10 +218,7 @@ func TestVerifyPipelineRun_TaskOCIBundle(t *testing.T) {
 	tektonClient := faketekton.NewSimpleClientset()
 
 	// Get Signer
-	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer, secretpath := getSignerFromFile(t, ctx, k8sclient)
 	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	// Create registry server
@@ -244,7 +235,7 @@ func TestVerifyPipelineRun_TaskOCIBundle(t *testing.T) {
 			Kind:   "Task",
 			Bundle: u.Host + "/task/" + unsignedTask.Name,
 		}}}
-	pipelineWithUnsignedTask, err = getSignedPipeline(pipelineWithUnsignedTask, signer)
+	pipelineWithUnsignedTask, err := getSignedPipeline(pipelineWithUnsignedTask, signer)
 	if err != nil {
 		t.Fatal("fail to sign pipeline", err)
 	}
@@ -359,10 +350,7 @@ func TestVerifyPipelineRun_PipelineRef(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer, secretpath := getSignerFromFile(t, ctx, k8sclient)
 	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	unsignedPipeline := getUnsignedPipeline("unsigned")
@@ -426,10 +414,7 @@ func TestVerifyPipelineRun_TaskRef(t *testing.T) {
 	k8sclient := fakek8s.NewSimpleClientset()
 
 	// Get Signer
-	signer, secretpath, err := getSignerFromFile(t, ctx, k8sclient)
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer, secretpath := getSignerFromFile(t, ctx, k8sclient)
 	ctx = setupContext(ctx, k8sclient, secretpath)
 
 	// signed pipelineref with unsigned taskref
@@ -440,7 +425,7 @@ func TestVerifyPipelineRun_TaskRef(t *testing.T) {
 			Name: unsignedTask.Name,
 			Kind: "Task",
 		}}}
-	pipelineWithUnsignedTask, err = getSignedPipeline(pipelineWithUnsignedTask, signer)
+	pipelineWithUnsignedTask, err := getSignedPipeline(pipelineWithUnsignedTask, signer)
 	if err != nil {
 		t.Fatal("fail to sign pipeline", err)
 	}
