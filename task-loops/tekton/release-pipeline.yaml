@@ -38,7 +38,7 @@ spec:
   results:
     - name: commit-sha
       description: the sha of the commit that was released
-      value: $(tasks.git-clone.results.commit
+      value: $(tasks.git-clone.results.commit)
     - name: release-file
       description: the URL of the release file
       value: $(tasks.report-bucket.results.release)
