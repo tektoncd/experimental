@@ -29,7 +29,7 @@ cd ${REPO_ROOT_DIR}/task-loops
 
 header "Setting up environment"
 
-install_pipeline_crd_version v0.20.1
+install_pipeline_crd_version v0.35.1
 
 install_taskloop_crd
 
