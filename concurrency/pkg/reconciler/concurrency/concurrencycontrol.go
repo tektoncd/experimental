@@ -71,11 +71,12 @@ func init() {
 // ReconcileKind docstring
 func (r *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun) pkgreconciler.Event {
 	logger := logging.FromContext(ctx)
-	if hasConcurrencyLabels(pr.ObjectMeta) {
-		// Assume concurrency controls have already been handled in a previous reconcile loop
-		// If pipelinerun is pending here, it's an error
-		logger.Infof("pr %s in ns %s already has concurrency labels: %s, skipping", pr.Name, pr.Namespace, pr.Labels)
+	if !pr.IsPending() {
 		return nil
+	}
+	if hasConcurrencyLabels(pr.ObjectMeta) {
+		logger.Infof("pr %s in ns %s already has concurrency labels: %s, skipping", pr.Name, pr.Namespace, pr.Labels)
+		return r.startPR(ctx, pr)
 	}
 
 	// Find all concurrency controls in the namespace and determine which ones match
@@ -153,6 +154,21 @@ func (r *Reconciler) updateLabelsAndStartPR(ctx context.Context, pr *v1beta1.Pip
 	newPr = newPr.DeepCopy()
 	newPr.Labels = pr.Labels
 	addLabels(newPr, labels)
+	newPr.Spec.Status = ""
+	_, err = r.PipelineClientSet.TektonV1beta1().PipelineRuns(pr.Namespace).Update(ctx, newPr, metav1.UpdateOptions{})
+
+	return err
+}
+
+func (r *Reconciler) startPR(ctx context.Context, pr *v1beta1.PipelineRun) error {
+	logger := logging.FromContext(ctx)
+	newPr, err := r.PipelineRunLister.PipelineRuns(pr.Namespace).Get(pr.Name)
+	if err != nil {
+		return fmt.Errorf("error getting PipelineRun %s when updating labels/annotations: %w", pr.Name, err)
+	}
+	logger.Infof("pr %s in ns %s had status %s. clearing status", pr.Name, pr.Namespace, newPr.Spec.Status)
+	newPr = newPr.DeepCopy()
+
 	newPr.Spec.Status = ""
 	_, err = r.PipelineClientSet.TektonV1beta1().PipelineRuns(pr.Namespace).Update(ctx, newPr, metav1.UpdateOptions{})
 

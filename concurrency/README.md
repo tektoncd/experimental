@@ -28,5 +28,5 @@ same concurrency group will be canceled.
 If a PipelineRun is part of multiple concurrency groups (i.e. its labels match the label selectors of multiple concurrency controls),
 PipelineRuns in all of its concurrency groups will be canceled when it is created.
 
-To avoid allowing the new PipelineRun to start before the old PipelineRun has been canceled, PipelineRuns should be created as pending.
-TODO(Lee): explore admission webhook to create all PRs as pending.
+This repo also contains an admission webhook that patches all PipelineRuns with "Pending" status on creation.
+PipelineRuns are later started by the reconciler. This project doesn't support keeping PipelineRuns pending.

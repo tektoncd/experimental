@@ -19,4 +19,3 @@ spec:
             echo "hello"
             sleep 100
             echo "goodbye"
-  status: PipelineRunPending

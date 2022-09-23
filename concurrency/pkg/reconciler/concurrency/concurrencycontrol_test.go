@@ -130,11 +130,11 @@ func TestConcurrency2(t *testing.T) {
 	}{{
 		name:       "no other PRs, no concurrency labels, no matching controls",
 		wantLabels: map[string]string{"tekton.dev/concurrency": "None"},
-	}, /* {
-			name:       "no other PRs, existing concurrency labels",
-			labels:     map[string]string{"tekton.dev/concurrency-concurrency-control": "pipeline-run"},
-			wantLabels: map[string]string{"tekton.dev/concurrency-concurrency-control": "pipeline-run"},
-		}, */
+	}, {
+		name:       "no other PRs, existing concurrency labels",
+		labels:     map[string]string{"tekton.dev/concurrency-concurrency-control": "pipeline-run"},
+		wantLabels: map[string]string{"tekton.dev/concurrency-concurrency-control": "pipeline-run"},
+	},
 		{
 			name:   "no other PRs, no concurrency labels, one matching control",
 			labels: map[string]string{"tekton.dev/pipeline": "pipeline-run"},

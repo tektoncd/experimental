@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,6 +53,9 @@ func (t *ConcurrencyControl) SetDefaults(ctx context.Context) {}
 
 // Validate validates a concurrencycontrol
 func (t *ConcurrencyControl) Validate(ctx context.Context) *apis.FieldError {
+	if t.Spec.Strategy != "Cancel" {
+		return apis.ErrInvalidValue(fmt.Sprintf("got strategy %s but the only supported strategy is 'Cancel'", t.Spec.Strategy), "strategy")
+	}
 	return nil
 }
 
