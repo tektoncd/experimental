@@ -1,0 +1,1 @@
+This project aims to address [TEP-0120: Canceling Concurrent PipelineRuns](https://github.com/tektoncd/community/blob/main/teps/0120-canceling-concurrent-pipelineruns.md).
