@@ -554,24 +554,6 @@ func TestTaskLoopRun(t *testing.T) {
 			ev{"Iterations completed: 2", true},
 			ev{"All TaskRuns completed successfully", true}},
 	}, {
-		name:           "successful TaskLoop using a cluster task",
-		clustertask:    aClusterTask,
-		taskloop:       aTaskLoopUsingAClusterTask,
-		run:            runTaskLoopUsingAClusterTaskSuccess,
-		expectedStatus: corev1.ConditionTrue,
-		expectedReason: taskloopv1alpha1.TaskLoopRunReasonSucceeded,
-		expectedTaskRuns: []*v1beta1.TaskRun{
-			getExpectedTaskRunForClusterTask(expectedTaskRunIteration1Success),
-			getExpectedTaskRunForClusterTask(expectedTaskRunIteration2Success),
-			getExpectedTaskRunForClusterTask(expectedTaskRunIteration3Success),
-		},
-		expectedEvents: []ev{
-			ev{startedEventMessage, true},
-			ev{"Iterations completed: 0", true},
-			ev{"Iterations completed: 1", true},
-			ev{"Iterations completed: 2", true},
-			ev{"All TaskRuns completed successfully", true}},
-	}, {
 		name:           "successful TaskLoop with concurrency limit",
 		task:           aTask,
 		taskloop:       getTaskLoopWithConcurrency(aTaskLoop, concurrencyLimit2),
@@ -608,6 +590,7 @@ func TestTaskLoopRun(t *testing.T) {
 			ev{"Iterations completed: 2", false}, // Optional event depending on timing
 			ev{"All TaskRuns completed successfully", true}},
 	}}
+	// TODO: TaskLoop tests using a ClusterTask
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
