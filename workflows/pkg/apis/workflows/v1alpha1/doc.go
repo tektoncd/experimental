@@ -14,7 +14,6 @@ limitations under the License.
 // Package v1alpha1 contains API Schema definitions for the workflows v1alpha1 API group
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=github.com/tektoncd/experimental/workflows/pkg/apis/triggers
 // +k8s:defaulter-gen=TypeMeta
-// +groupName=triggers.tekton.dev
+// +groupName=tekton.dev
 package v1alpha1

@@ -4,7 +4,13 @@ metadata:
   name: example-workflow
 spec:
   pipeline:
-    ref: my-pipeline
+    spec:
+      tasks:
+      - name: echo-hello
+        taskSpec:
+          steps:
+          - image: busybox
+            script: echo "hello"
   params:
     - name: default-repo
       default: my-repo

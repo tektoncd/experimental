@@ -62,13 +62,13 @@ func NewFilteredWorkflowInformer(client versioned.Interface, namespace string, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TriggersV1alpha1().Workflows(namespace).List(context.TODO(), options)
+				return client.TektonV1alpha1().Workflows(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TriggersV1alpha1().Workflows(namespace).Watch(context.TODO(), options)
+				return client.TektonV1alpha1().Workflows(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&workflowsv1alpha1.Workflow{},

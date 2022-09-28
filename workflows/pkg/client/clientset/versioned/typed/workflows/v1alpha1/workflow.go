@@ -57,7 +57,7 @@ type workflows struct {
 }
 
 // newWorkflows returns a Workflows
-func newWorkflows(c *TriggersV1alpha1Client, namespace string) *workflows {
+func newWorkflows(c *TektonV1alpha1Client, namespace string) *workflows {
 	return &workflows{
 		client: c.RESTClient(),
 		ns:     namespace,
