@@ -32,13 +32,13 @@ import (
 
 // FakeWorkflows implements WorkflowInterface
 type FakeWorkflows struct {
-	Fake *FakeTriggersV1alpha1
+	Fake *FakeTektonV1alpha1
 	ns   string
 }
 
-var workflowsResource = schema.GroupVersionResource{Group: "triggers.tekton.dev", Version: "v1alpha1", Resource: "workflows"}
+var workflowsResource = schema.GroupVersionResource{Group: "tekton.dev", Version: "v1alpha1", Resource: "workflows"}
 
-var workflowsKind = schema.GroupVersionKind{Group: "triggers.tekton.dev", Version: "v1alpha1", Kind: "Workflow"}
+var workflowsKind = schema.GroupVersionKind{Group: "tekton.dev", Version: "v1alpha1", Kind: "Workflow"}
 
 // Get takes name of the workflow, and returns the corresponding workflow object, and an error if there is any.
 func (c *FakeWorkflows) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Workflow, err error) {
@@ -117,7 +117,7 @@ func (c *FakeWorkflows) UpdateStatus(ctx context.Context, workflow *v1alpha1.Wor
 // Delete takes name of the workflow and deletes it. Returns an error if one occurs.
 func (c *FakeWorkflows) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(workflowsResource, c.ns, name), &v1alpha1.Workflow{})
+		Invokes(testing.NewDeleteActionWithOptions(workflowsResource, c.ns, name, opts), &v1alpha1.Workflow{})
 
 	return err
 }

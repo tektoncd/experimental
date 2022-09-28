@@ -20,7 +20,7 @@ import (
 )
 
 // GroupName is the Kubernetes resource group name for Tekton types.
-const GroupName = "experimental.tekton.dev"
+const GroupName = "tekton.dev"
 
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}

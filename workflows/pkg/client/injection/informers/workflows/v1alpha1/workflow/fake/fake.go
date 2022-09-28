@@ -35,6 +35,6 @@ func init() {
 
 func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	f := fake.Get(ctx)
-	inf := f.Triggers().V1alpha1().Workflows()
+	inf := f.Tekton().V1alpha1().Workflows()
 	return context.WithValue(ctx, workflow.Key{}, inf), inf.Informer()
 }

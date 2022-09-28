@@ -19,41 +19,59 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"net/http"
+
 	v1alpha1 "github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
 	"github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
-type TriggersV1alpha1Interface interface {
+type TektonV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	WorkflowsGetter
 }
 
-// TriggersV1alpha1Client is used to interact with features provided by the triggers.tekton.dev group.
-type TriggersV1alpha1Client struct {
+// TektonV1alpha1Client is used to interact with features provided by the tekton.dev group.
+type TektonV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *TriggersV1alpha1Client) Workflows(namespace string) WorkflowInterface {
+func (c *TektonV1alpha1Client) Workflows(namespace string) WorkflowInterface {
 	return newWorkflows(c, namespace)
 }
 
-// NewForConfig creates a new TriggersV1alpha1Client for the given config.
-func NewForConfig(c *rest.Config) (*TriggersV1alpha1Client, error) {
+// NewForConfig creates a new TektonV1alpha1Client for the given config.
+// NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
+// where httpClient was generated with rest.HTTPClientFor(c).
+func NewForConfig(c *rest.Config) (*TektonV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientFor(&config)
+	httpClient, err := rest.HTTPClientFor(&config)
 	if err != nil {
 		return nil, err
 	}
-	return &TriggersV1alpha1Client{client}, nil
+	return NewForConfigAndClient(&config, httpClient)
 }
 
-// NewForConfigOrDie creates a new TriggersV1alpha1Client for the given config and
+// NewForConfigAndClient creates a new TektonV1alpha1Client for the given config and http client.
+// Note the http client provided takes precedence over the configured transport values.
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*TektonV1alpha1Client, error) {
+	config := *c
+	if err := setConfigDefaults(&config); err != nil {
+		return nil, err
+	}
+	client, err := rest.RESTClientForConfigAndClient(&config, h)
+	if err != nil {
+		return nil, err
+	}
+	return &TektonV1alpha1Client{client}, nil
+}
+
+// NewForConfigOrDie creates a new TektonV1alpha1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *TriggersV1alpha1Client {
+func NewForConfigOrDie(c *rest.Config) *TektonV1alpha1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -61,9 +79,9 @@ func NewForConfigOrDie(c *rest.Config) *TriggersV1alpha1Client {
 	return client
 }
 
-// New creates a new TriggersV1alpha1Client for the given RESTClient.
-func New(c rest.Interface) *TriggersV1alpha1Client {
-	return &TriggersV1alpha1Client{c}
+// New creates a new TektonV1alpha1Client for the given RESTClient.
+func New(c rest.Interface) *TektonV1alpha1Client {
+	return &TektonV1alpha1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -81,7 +99,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *TriggersV1alpha1Client) RESTClient() rest.Interface {
+func (c *TektonV1alpha1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

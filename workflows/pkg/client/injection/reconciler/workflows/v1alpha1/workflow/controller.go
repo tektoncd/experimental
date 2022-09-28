@@ -44,13 +44,13 @@ import (
 
 const (
 	defaultControllerAgentName = "workflow-controller"
-	defaultFinalizerName       = "workflows.triggers.tekton.dev"
+	defaultFinalizerName       = "workflows.tekton.dev"
 )
 
 // NewImpl returns a controller.Impl that handles queuing and feeding work from
 // the queue through an implementation of controller.Reconciler, delegating to
 // the provided Interface and optional Finalizer methods. OptionsFn is used to return
-// controller.Options to be used by the internal reconciler.
+// controller.ControllerOptions to be used by the internal reconciler.
 func NewImpl(ctx context.Context, r Interface, optionsFns ...controller.OptionsFn) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
@@ -98,10 +98,10 @@ func NewImpl(ctx context.Context, r Interface, optionsFns ...controller.OptionsF
 
 	logger = logger.With(
 		zap.String(logkey.ControllerType, ctrTypeName),
-		zap.String(logkey.Kind, "triggers.tekton.dev.Workflow"),
+		zap.String(logkey.Kind, "tekton.dev.Workflow"),
 	)
 
-	impl := controller.NewImpl(rec, logger, ctrTypeName)
+	impl := controller.NewContext(ctx, rec, controller.ControllerOptions{WorkQueueName: ctrTypeName, Logger: logger})
 	agentName := defaultControllerAgentName
 
 	// Pass impl to the options. Save any optional results.

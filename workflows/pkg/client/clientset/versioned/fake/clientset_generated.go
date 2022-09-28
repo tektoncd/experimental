@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned"
-	triggersv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1"
-	faketriggersv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1/fake"
+	tektonv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1"
+	faketektonv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -74,9 +74,12 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
-// TriggersV1alpha1 retrieves the TriggersV1alpha1Client
-func (c *Clientset) TriggersV1alpha1() triggersv1alpha1.TriggersV1alpha1Interface {
-	return &faketriggersv1alpha1.FakeTriggersV1alpha1{Fake: &c.Fake}
+// TektonV1alpha1 retrieves the TektonV1alpha1Client
+func (c *Clientset) TektonV1alpha1() tektonv1alpha1.TektonV1alpha1Interface {
+	return &faketektonv1alpha1.FakeTektonV1alpha1{Fake: &c.Fake}
 }

@@ -1,4 +1,4 @@
-apiVersion: experimental.tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1alpha1
 kind: Workflow
 metadata:
   name: npm-publish

@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tekton-workflows-webhook-certs
+  namespace: tekton-workflows
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-experimental-workflows
+    pipeline.tekton.dev/release: "devel"
+# The data is populated at install time.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validation.webhook.workflows.custom.tekton.dev
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-experimental-workflows
+    pipeline.tekton.dev/release: "devel"
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: workflows-webhook
+      namespace: tekton-workflows
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: ["tekton.dev"]
+    apiVersions: ["v1alpha1"]
+    resources: ["workflows"]
+  failurePolicy: Fail
+  sideEffects: None
+  name: validation.webhook.workflows.custom.tekton.dev
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: webhook.workflows.custom.tekton.dev
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-experimental-workflows
+    pipeline.tekton.dev/release: "devel"
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: workflows-webhook
+      namespace: tekton-workflows
+  failurePolicy: Fail
+  sideEffects: None
+  name: webhook.workflows.custom.tekton.dev
