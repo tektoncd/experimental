@@ -15,6 +15,7 @@ require (
 	k8s.io/code-generator v0.20.7
 	k8s.io/kube-openapi v0.0.0-20210113233702-8566a335510f
 	knative.dev/pkg v0.0.0-20210730172132-bb4aaf09c430
+	sigs.k8s.io/yaml v1.2.0
 )
 
 // Knative deps (release-0.20)
