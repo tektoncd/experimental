@@ -1,0 +1,10 @@
+kind: ConcurrencyControl
+apiVersion: tekton.dev/v1alpha1
+metadata:
+  name: cc
+  namespace: concurrency
+spec:
+  strategy: Cancel
+  selector:
+    matchLabels:
+      foo: bar
