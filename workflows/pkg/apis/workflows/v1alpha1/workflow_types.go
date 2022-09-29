@@ -69,7 +69,7 @@ type WorkflowSpec struct {
 	// TODO: Auto-setup a Workspace across multiple
 	Workspaces []WorkflowWorkspaceBinding `json:"workspaces"`
 
-	// TODO: Timeout ?
+	// TODO: Timeouts ?
 	Timeout pipelinev1beta1.TimeoutFields `json:"timeout,omitempty"`
 	// TODO: queue_ttl -> pending_timeout
 }

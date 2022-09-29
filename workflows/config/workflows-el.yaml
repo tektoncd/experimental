@@ -2,8 +2,9 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
   name: workflows-listener
+  namespace: tekton-workflows
 spec:
-  serviceAccountName: tekton-triggers-example-sa
+  serviceAccountName: tekton-workflows-el-sa
   resources:
     kubernetesResource:
       serviceType: LoadBalancer
