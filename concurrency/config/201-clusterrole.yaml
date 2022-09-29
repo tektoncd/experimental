@@ -46,7 +46,7 @@ rules:
   - apiGroups: ["admissionregistration.k8s.io"]
     # The webhook performs a reconciliation on these two resources and continuously
     # updates configuration.
-    resources: ["validatingwebhookconfigurations"]
+    resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
     # knative starts informers on these things, which is why we need get, list and watch.
     verbs: ["list", "watch", "get", "update", "delete"]
   - apiGroups: [""]

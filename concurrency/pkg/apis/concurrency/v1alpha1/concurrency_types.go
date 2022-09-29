@@ -11,7 +11,16 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
-const ManagedByLabelKey = "app.kubernetes.io/managed-by"
+const (
+	ManagedByLabelKey = "app.kubernetes.io/managed-by"
+
+	// Label used to indicate that a reconciler should start a pending PipelineRun
+	LabelToStartPR = "tekton.dev/ok-to-start"
+)
+
+type Strategy string
+
+var StrategyCancel = Strategy("cancel")
 
 // +genclient
 // +genreconciler:krshapedlogic=false
@@ -49,7 +58,7 @@ func (t *ConcurrencyControl) SetDefaults(ctx context.Context) {}
 
 // Validate validates a concurrencycontrol
 func (t *ConcurrencyControl) Validate(ctx context.Context) *apis.FieldError {
-	if strings.ToLower(t.Spec.Strategy) != "cancel" {
+	if strings.ToLower(t.Spec.Strategy) != string(StrategyCancel) {
 		return apis.ErrInvalidValue(fmt.Sprintf("got strategy %s but the only supported strategy is 'Cancel'", t.Spec.Strategy), "strategy")
 	}
 	return nil

@@ -3,7 +3,8 @@ package concurrency
 import (
 	"context"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
+	concurrencycontrolinformer "github.com/tektoncd/experimental/concurrency/pkg/client/injection/informers/concurrency/v1alpha1/concurrencycontrol"
+	pipelineclient "github.com/tektoncd/pipeline/pkg/client/injection/client"
 	pipelineruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/pipelinerun"
 	pipelinerunreconciler "github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1beta1/pipelinerun"
 	configmap "knative.dev/pkg/configmap"
@@ -15,15 +16,22 @@ const (
 	ControllerName = "concurrency-controller"
 )
 
-func NewController(opts *pipeline.Options) func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+func NewController() func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 		logger := logging.FromContext(ctx)
+		pipelineClientSet := pipelineclient.Get(ctx)
 		pipelineRunInformer := pipelineruninformer.Get(ctx)
+		concurrencyControlInformer := concurrencycontrolinformer.Get(ctx)
 
-		r := &Reconciler{}
+		r := &Reconciler{
+			ConcurrencyControlLister: concurrencyControlInformer.Lister(),
+			PipelineRunLister:        pipelineRunInformer.Lister(),
+			PipelineClientSet:        pipelineClientSet,
+		}
 		impl := pipelinerunreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
 			return controller.Options{
-				AgentName: ControllerName,
+				AgentName:         ControllerName,
+				SkipStatusUpdates: true, // Don't update PipelineRun status. This is the responsibility of Tekton Pipelines
 			}
 		})
 
