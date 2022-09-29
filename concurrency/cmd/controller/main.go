@@ -16,7 +16,6 @@ package main
 import (
 	"github.com/tektoncd/experimental/concurrency/pkg/apis/concurrency/v1alpha1"
 	"github.com/tektoncd/experimental/concurrency/pkg/reconciler/concurrency"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	filteredinformerfactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
@@ -24,6 +23,5 @@ import (
 
 func main() {
 	ctx := filteredinformerfactory.WithSelectors(signals.NewContext(), v1alpha1.ManagedByLabelKey)
-	opts := &pipeline.Options{}
-	sharedmain.MainWithContext(ctx, concurrency.ControllerName, concurrency.NewController(opts))
+	sharedmain.MainWithContext(ctx, concurrency.ControllerName, concurrency.NewController())
 }

@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: testme-
+  labels:
+    foo: bar
+  namespace: concurrency
+spec:
+  params:
+  - name: param1
+    value: "1234"
+  pipelineSpec:
+    tasks:
+    - name: task1
+      taskSpec:
+        steps:
+        - image: busybox
+          script: |
+            echo "hello"
+            sleep 100
+            echo "goodbye"

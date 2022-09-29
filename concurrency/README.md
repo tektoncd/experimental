@@ -14,3 +14,19 @@ kubectl apply --filename https://storage.googleapis.com/tekton-releases-nightly/
 ```
 ko apply -f config
 ```
+
+## Usage
+
+To try it out:
+```sh
+kubectl apply -f examples/concurrencycontrol.yaml
+kubectl create -f examples/pipelinerun.yaml
+```
+
+This first PipelineRun should begin executing normally.
+Now, create another PipelineRun that also matches the concurrency control:
+```sh
+kubectl create -f examples/pipelinerun.yaml
+```
+
+The first PipelineRun should be canceled, and the second one should execute normally.
