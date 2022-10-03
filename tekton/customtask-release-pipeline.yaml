@@ -9,6 +9,9 @@ spec:
     default: github.com/tektoncd/experimental
   - name: subfolder
     description: folder to release within package
+  - name: images
+    description: list of cmd/* paths to be published as images
+    default: "controller webhook"
   - name: gitRevision
     description: the git revision to release
   - name: imageRegistry
@@ -88,6 +91,8 @@ spec:
       params:
         - name: package
           value: $(params.package)
+        - name: images
+          value: $(params.images)
         - name: subfolder
           value: $(params.subfolder)
         - name: versionTag
