@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	WorkflowsNamespace = "tekton-workflows"
+	WorkflowLabelKey = "tekton.dev/workflow"
 )
 
 // +genclient

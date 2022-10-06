@@ -2,6 +2,7 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
   name: workflows-listener
+  namespace: tekton-workflows
 spec:
   serviceAccountName: tekton-triggers-example-sa
   resources:
@@ -10,3 +11,6 @@ spec:
   labelSelector:
     matchLabels:
       managed-by: tekton-workflows
+  namespaceSelector:
+    matchNames: # Manage triggers in all namespaces
+    - "*"

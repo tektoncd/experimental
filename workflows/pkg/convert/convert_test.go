@@ -191,10 +191,9 @@ spec:
 
 func TestToTriggers(t *testing.T) {
 	tests := []struct {
-		name        string
-		w           *v1alpha1.Workflow
-		elNamespace string
-		want        []triggersv1beta1.Trigger
+		name string
+		w    *v1alpha1.Workflow
+		want []*triggersv1beta1.Trigger
 	}{{
 		name: "single trigger",
 		w: MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
@@ -224,15 +223,14 @@ spec:
       - name: task-with-no-params
         taskRef:
           name: some-task
-
 `),
-		elNamespace: "tekton-workflows",
-		want: []triggersv1beta1.Trigger{*MustParseTrigger(t, `
+		want: []*triggersv1beta1.Trigger{MustParseTrigger(t, `
 metadata:
   name: trigger-workflow-on-pr
   namespace: tekton-workflows
   labels:
     managed-by: tekton-workflows
+    tekton.dev/workflow: trigger-workflow
   ownerReferences:
   - apiVersion: tekton.dev/v1alpha1
     kind: Workflow
@@ -283,7 +281,7 @@ spec:
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convert.ToTriggers(tt.w, tt.elNamespace)
+			got, err := convert.ToTriggers(tt.w)
 			if err != nil {
 				t.Errorf("ToTriggers() error = %v", err)
 				return

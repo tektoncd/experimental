@@ -24,6 +24,9 @@ rules:
   - apiGroups: ["tekton.dev"]
     resources: ["workflows"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["triggers.tekton.dev"]
+    resources: ["triggers"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   # Controller needs cluster access to leases for leader election.
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
