@@ -3,16 +3,16 @@ kind: Workflow
 metadata:
   name: npm-publish
 spec:
-  secrets: # Declare secrets
-  - name: npm-publish-token
-    ref: npm-publish-token # Refers to a K8s secret with this name
-  - name: git-clone-secret
-    ref: git-clone-secret
+  # secrets: # Declare secrets
+  # - name: npm-publish-token
+  #   ref: npm-publish-token # Refers to a K8s secret with this name
+  # - name: git-clone-secret
+  #   ref: git-clone-secret
   triggers:
   - name: on-pr
     event:
       source:
-        url: https://github.com/dibyom/tkndemo
+    #     url: https://github.com/dibyom/tkndemo
       type: "pull_request"
       secret:
         secretName: "repo-secret"
@@ -35,16 +35,16 @@ spec:
   - name: commit-sha
     default: main
   workspaces:
-  - name: clone-secret # Mount secret into a workspace
-    secret: "$(secrets.git-clone-secret)"
+  # - name: clone-secret # Mount secret into a workspace
+  #   secret: "$(secrets.git-clone-secret)"
   - name: source
     volumeClaimTemplate: # Current Tekton Workspace syntax. We can simplify
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 1Gi
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
   pipeline:
     spec:
       params:

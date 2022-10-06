@@ -1,19 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 
 	"github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/scheme"
 	"github.com/tektoncd/experimental/workflows/pkg/convert"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/streaming"
 
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
 )
@@ -40,30 +35,31 @@ func main() {
 	rootCmd.Execute()
 }
 
+func parseWorkflowOrDie(yaml []byte) *v1alpha1.Workflow {
+	var w v1alpha1.Workflow
+	meta := `apiVersion: tekton.dev/v1alpha1
+kind: Workflow
+`
+	bytes := append([]byte(meta), yaml...)
+	if _, _, err := scheme.Codecs.UniversalDeserializer().Decode(bytes, nil, &w); err != nil {
+		panic(fmt.Sprintf("failed to parse workflow: %s", err))
+	}
+	return &w
+}
+
 func runWorkflow(fileName string) error {
 	file, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		fmt.Printf("error reading file: %+v", err)
 	}
-
-	sch := runtime.NewScheme()
-	_ = scheme.AddToScheme(sch)
-
-	decoder := streaming.NewDecoder(ioutil.NopCloser(bytes.NewReader(file)), serializer.NewCodecFactory(sch).UniversalDecoder())
-	w := new(v1alpha1.Workflow)
-	_, _, err = decoder.Decode(nil, w)
-	if err != nil {
-		if err != io.EOF {
-			return fmt.Errorf("error decoding workflow: %v", err)
-		}
-	}
+	w := parseWorkflowOrDie(file)
 	tt, err := convert.ToPipelineRun(w)
 	if err != nil {
 		return fmt.Errorf("error converting to pipelineRun: %s", err)
 	}
 	tty, err := yaml.Marshal(tt)
 	if err != nil {
-		return fmt.Errorf("error convering pipelineRun to yaml: %w", err)
+		return fmt.Errorf("error converting pipelineRun to yaml: %w", err)
 	}
 	fmt.Printf("%s", tty)
 	return nil

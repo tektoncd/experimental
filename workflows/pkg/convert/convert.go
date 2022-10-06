@@ -163,12 +163,12 @@ func ToTriggerTemplate(w *v1alpha1.Workflow) (*triggersv1beta1.TriggerTemplate, 
 
 // ToTriggers creates a new Trigger with inline bindings and template for each type
 // TODO: Reuse same triggertemplate for efficiency?
-func ToTriggers(w *v1alpha1.Workflow, elNamespace string) ([]triggersv1beta1.Trigger, error) {
+func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 	tt, err := ToTriggerTemplate(w)
 	if err != nil {
 		return nil, err
 	}
-	triggers := []triggersv1beta1.Trigger{}
+	triggers := []*triggersv1beta1.Trigger{}
 	for i, t := range w.Spec.Triggers {
 		name := t.Name
 		if name == "" {
@@ -203,18 +203,17 @@ func ToTriggers(w *v1alpha1.Workflow, elNamespace string) ([]triggersv1beta1.Tri
 		interceptors := []*triggersv1beta1.TriggerInterceptor{&payloadValidation}
 		interceptors = append(interceptors, t.Interceptors...)
 
-		triggers = append(triggers, triggersv1beta1.Trigger{
+		triggers = append(triggers, &triggersv1beta1.Trigger{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Trigger",
 				APIVersion: triggersv1beta1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-%s", w.Name, name),
-				// Trigger is created in the namespace of the EL for easier RBAC
-				// The SA needs roles to create in any repo though
-				Namespace: elNamespace,
+				Name:      fmt.Sprintf("%s-%s", w.Name, name),
+				Namespace: w.Namespace,
 				Labels: map[string]string{
-					"managed-by": "tekton-workflows",
+					v1alpha1.WorkflowLabelKey: w.Name,             // Used by the controller to list Triggers belonging to this workflow
+					"managed-by":              "tekton-workflows", // Used by the workflows EL to select Triggers
 				},
 				OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(w)},
 			},
