@@ -35,6 +35,7 @@ func main() {
 	rootCmd.Execute()
 }
 
+// TODO: fail if the yaml contains unrecognized fields
 func parseWorkflowOrDie(yaml []byte) *v1alpha1.Workflow {
 	var w v1alpha1.Workflow
 	meta := `apiVersion: tekton.dev/v1alpha1
@@ -53,13 +54,13 @@ func runWorkflow(fileName string) error {
 		fmt.Printf("error reading file: %+v", err)
 	}
 	w := parseWorkflowOrDie(file)
-	tt, err := convert.ToPipelineRun(w)
+	triggers, err := convert.ToTriggers(w)
 	if err != nil {
-		return fmt.Errorf("error converting to pipelineRun: %s", err)
+		return fmt.Errorf("error converting to Triggers: %s", err)
 	}
-	tty, err := yaml.Marshal(tt)
+	tty, err := yaml.Marshal(triggers)
 	if err != nil {
-		return fmt.Errorf("error converting pipelineRun to yaml: %w", err)
+		return fmt.Errorf("error converting Triggers to yaml: %w", err)
 	}
 	fmt.Printf("%s", tty)
 	return nil

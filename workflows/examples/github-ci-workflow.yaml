@@ -1,0 +1,31 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Workflow
+metadata:
+  name: example-workflow
+spec:
+  triggers:
+  - event:
+      type: pull_request
+    filters:
+      gitRef:
+        regex: '^main$'
+  pipeline:
+    spec:
+      tasks:
+      - name: clone
+        taskRef:
+          name: git-clone
+          bundle: gcr.io/tekton-releases/catalog/upstream/git-clone:0.7
+        workspaces:
+        - name: output
+          workspace: source
+        params:
+        - name: url
+          value: https://github.com/$(params.repo-full-name)
+        - name: revision
+          value: $(params.revision)
+      - name: unit-tests
+        taskSpec:
+          steps:
+          - image: busybox
+            script: echo "hello"

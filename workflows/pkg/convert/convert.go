@@ -18,9 +18,9 @@ import (
 	"fmt"
 
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
+	"github.com/tektoncd/experimental/workflows/pkg/filters"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/kmeta"
@@ -68,7 +68,7 @@ func ToPipelineRun(w *v1alpha1.Workflow) (*pipelinev1beta1.PipelineRun, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-run-", w.Name),
-			Namespace:    w.Namespace, // TODO: Do Runs generate from a Workflow always run in the same namespace
+			Namespace:    w.Namespace, // TODO: Do Runs generated from a Workflow always run in the same namespace
 			// TODO: Propagate labels/annotations from Workflows as well?
 		},
 		Spec: pipelinev1beta1.PipelineRunSpec{
@@ -169,19 +169,12 @@ func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 		return nil, err
 	}
 	triggers := []*triggersv1beta1.Trigger{}
-	for i, t := range w.Spec.Triggers {
-		name := t.Name
-		if name == "" {
-			// FIXME: What if user re-orders triggers
-			// Name field should always exist -> Add it in defautls
-			name = fmt.Sprintf("%d", i)
-		}
-
-		secretToJson, err := ToV1JSON(t.Event.Secret)
+	for _, t := range w.Spec.Triggers {
+		secretToJson, err := filters.ToV1JSON(t.Event.Secret)
 		if err != nil {
 			return nil, err
 		}
-		eventTypesJson, err := ToV1JSON([]string{t.Event.Type})
+		eventTypesJson, err := filters.ToV1JSON([]string{string(t.Event.Type)})
 		if err != nil {
 			return nil, err
 		}
@@ -201,15 +194,18 @@ func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 			}},
 		}
 		interceptors := []*triggersv1beta1.TriggerInterceptor{&payloadValidation}
-		interceptors = append(interceptors, t.Interceptors...)
-
+		filterInterceptors, err := filters.ToInterceptors(t.Filters)
+		if err != nil {
+			return nil, err
+		}
+		interceptors = append(interceptors, filterInterceptors...)
 		triggers = append(triggers, &triggersv1beta1.Trigger{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Trigger",
 				APIVersion: triggersv1beta1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s", w.Name, name),
+				Name:      fmt.Sprintf("%s-%s", w.Name, t.Name),
 				Namespace: w.Namespace,
 				Labels: map[string]string{
 					v1alpha1.WorkflowLabelKey: w.Name,             // Used by the controller to list Triggers belonging to this workflow
@@ -222,21 +218,10 @@ func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 				Template: triggersv1beta1.TriggerSpecTemplate{
 					Spec: &tt.Spec,
 				},
-				Name:         name,
+				Name:         t.Name,
 				Interceptors: interceptors,
 			},
 		})
 	}
 	return triggers, nil
-}
-
-// ToV1JSON is a wrapper around json.Marshal to easily convert to the Kubernetes apiextensionsv1.JSON type
-func ToV1JSON(v interface{}) (v1.JSON, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return v1.JSON{}, err
-	}
-	return v1.JSON{
-		Raw: b,
-	}, nil
 }

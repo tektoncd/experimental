@@ -145,10 +145,8 @@ type Trigger struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 
-	// Interceptors are used to define additional filters on this trigger
-	// This field is temporary till we decide on how exactly to support simplified filters
 	// +listType=atomic
-	Interceptors []*triggersv1beta1.TriggerInterceptor `json:"interceptors,omitempty"`
+	Filters *Filters `json:"filters,omitempty"`
 }
 
 type Event struct {
@@ -157,15 +155,43 @@ type Event struct {
 
 	// Type is a string that defines the type of an event (e.g. a pull_request or a push)
 	// At the moment this assumes one of the GitHub event types
-	Type string `json:"type"`
+	Type EventType `json:"type"`
 
 	// Secret is the Webhook secret used for this Trigger
 	// This field is temporary until we implement a better way to handle secrets for webhook validation
 	Secret triggersv1beta1.SecretRef `json:"secret"`
 }
 
+type EventType string
+
+const (
+	EventTypePush        = EventType("push")
+	EventTypePullRequest = EventType("pull_request")
+)
+
 // EventSource defines a Trigger EventSource
 type EventSource struct {
 	// TBD, this struct should contain enough information to identify the source of the events
 	// To start with, we'd support push and pull request events from GitHub as well as Cron/scheduled events
+}
+
+type Filters struct {
+	// GitRef filters events to those affecting the specified git branch or tag
+	// Valid only for "pull_request" or "push" event types
+	// For "pull_request" events, this is the base branch
+	// +optional
+	GitRef *GitRef `json:"gitRef,omitempty"`
+	// +optional
+	Custom []Custom `json:"custom,omitempty"`
+}
+
+type GitRef struct {
+	// Regex matches a git branch or tag
+	// +optional
+	Regex string `json:"regex,omitempty"`
+}
+
+type Custom struct {
+	// +optional
+	CEL string `json:"cel,omitempty"`
 }
