@@ -20,12 +20,25 @@ func TestValidateConcurrencyControl(t *testing.T) {
 			},
 		},
 	}, {
-		name: "valid cancel: Lowercase",
+		name: "valid gracefully cancel",
 		cc: &v1alpha1.ConcurrencyControl{
 			Spec: v1alpha1.ConcurrencySpec{
-				Strategy: "cancel",
+				Strategy: "GracefullyCancel",
 			},
 		},
+	}, {
+		name: "valid gracefully stop",
+		cc: &v1alpha1.ConcurrencyControl{
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "GracefullyStop",
+			},
+		},
+	}, {
+		name: "no strategy specified",
+		cc: &v1alpha1.ConcurrencyControl{
+			Spec: v1alpha1.ConcurrencySpec{},
+		},
+		wantErr: true,
 	}, {
 		name: "invalid strategy",
 		cc: &v1alpha1.ConcurrencyControl{

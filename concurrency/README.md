@@ -30,3 +30,10 @@ kubectl create -f examples/pipelinerun.yaml
 ```
 
 The first PipelineRun should be canceled, and the second one should execute normally.
+
+### Supported concurrency strategies
+
+Supported strategies are "Cancel", "GracefullyCancel", and "GracefullyStop"
+(corresponding to canceling, gracefully canceling, and gracefully stopping a PipelineRun, respectively).
+The default strategy is "GracefullyCancel".
+If multiple ConcurrencyControls with different strategies apply to the same PipelineRun, concurrency controls will fail.

@@ -4,7 +4,6 @@ metadata:
   name: cc
   namespace: concurrency
 spec:
-  strategy: Cancel
   selector:
     matchLabels:
       foo: bar

@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,7 +19,12 @@ const (
 
 type Strategy string
 
-var StrategyCancel = Strategy("cancel")
+var (
+	StrategyCancel                      = Strategy("Cancel")
+	StrategyGracefullyCancel            = Strategy("GracefullyCancel")
+	StrategyGracefullyStop              = Strategy("GracefullyStop")
+	supportedStrategies      []Strategy = []Strategy{StrategyCancel, StrategyGracefullyCancel, StrategyGracefullyStop}
+)
 
 // +genclient
 // +genreconciler:krshapedlogic=false
@@ -54,14 +58,24 @@ type ConcurrencyControlList struct {
 }
 
 // SetDefaults sets the defaults on the object.
-func (t *ConcurrencyControl) SetDefaults(ctx context.Context) {}
+func (t *ConcurrencyControl) SetDefaults(ctx context.Context) {
+	if t.Spec.Strategy == "" {
+		t.Spec.Strategy = string(StrategyGracefullyCancel)
+	}
+}
 
 // Validate validates a concurrencycontrol
 func (t *ConcurrencyControl) Validate(ctx context.Context) *apis.FieldError {
-	if strings.ToLower(t.Spec.Strategy) != string(StrategyCancel) {
-		return apis.ErrInvalidValue(fmt.Sprintf("got strategy %s but the only supported strategy is 'Cancel'", t.Spec.Strategy), "strategy")
+	return validateStrategy(t.Spec.Strategy)
+}
+
+func validateStrategy(s string) *apis.FieldError {
+	for _, supported := range supportedStrategies {
+		if s == string(supported) {
+			return nil
+		}
 	}
-	return nil
+	return apis.ErrInvalidValue(fmt.Sprintf("got unsupported strategy %s", s), "strategy")
 }
 
 // GetGroupVersionKind implements kmeta.OwnerRefable

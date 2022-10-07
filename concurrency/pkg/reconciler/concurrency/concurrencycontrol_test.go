@@ -121,6 +121,7 @@ func TestConcurrency(t *testing.T) {
 	tcs := []struct {
 		name                string
 		concurrencyControls []*v1alpha1.ConcurrencyControl
+		wantErr             bool
 		// Labels and status for the PipelineRun being reconciled
 		labels     map[string]string
 		specStatus v1beta1.PipelineRunSpecStatus
@@ -228,6 +229,70 @@ func TestConcurrency(t *testing.T) {
 		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
 		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusCancelled,
 	}, {
+		name:       "one matching control, running PR in same namespace with same key, strategy = gracefully cancel",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "GracefullyCancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusCancelledRunFinally,
+	}, {
+		name:       "one matching control, running PR in same namespace with same key, strategy = gracefully stop",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "GracefullyStop",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusStoppedRunFinally,
+	}, {
 		name:       "one matching control, pending PR in same namespace with same key",
 		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run"},
 		specStatus: v1beta1.PipelineRunSpecStatusPending,
@@ -331,8 +396,47 @@ func TestConcurrency(t *testing.T) {
 		},
 		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "anotherlabel": "anotherlabelvalue", "tekton.dev/concurrency": "true"},
 		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusCancelled,
-	},
-	}
+	}, {
+		name:       "two matching controls with different strategies, running PR in same namespace with one of same key",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run", "anotherlabel": "anotherlabelvalue"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "GracefullyCancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+			},
+		}, {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control2",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"anotherlabel": "anotherlabelvalue"}},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantErr: true,
+	}}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
@@ -356,19 +460,21 @@ func TestConcurrency(t *testing.T) {
 			c := prt.TestAssets.Controller
 			clients := prt.TestAssets.Clients
 			reconcileError := c.Reconciler.Reconcile(prt.TestAssets.Ctx, fmt.Sprintf("%s/%s", namespace, name))
-			if reconcileError != nil {
-				t.Errorf("unexpected reconcile err %s", reconcileError)
+			if (reconcileError != nil) != tc.wantErr {
+				t.Errorf("wantErr was %t but got reconcile err %s", tc.wantErr, reconcileError)
 			}
-			// Check that the PipelineRun was reconciled correctly
-			reconciledRun, err := clients.Pipeline.TektonV1beta1().PipelineRuns(namespace).Get(prt.TestAssets.Ctx, name, metav1.GetOptions{})
-			if err != nil {
-				prt.Test.Fatalf("Somehow had error getting reconciled run out of fake client: %s", err)
-			}
-			if d := cmp.Diff(tc.wantSpecStatus, reconciledRun.Spec.Status); d != "" {
-				t.Errorf("wrong spec status: %s", d)
-			}
-			if d := cmp.Diff(tc.wantLabels, reconciledRun.Labels); d != "" {
-				t.Errorf("wrong labels: %s", d)
+			if tc.wantErr == false {
+				// Check that the PipelineRun was reconciled correctly
+				reconciledRun, err := clients.Pipeline.TektonV1beta1().PipelineRuns(namespace).Get(prt.TestAssets.Ctx, name, metav1.GetOptions{})
+				if err != nil {
+					prt.Test.Fatalf("Somehow had error getting reconciled run out of fake client: %s", err)
+				}
+				if d := cmp.Diff(tc.wantSpecStatus, reconciledRun.Spec.Status); d != "" {
+					t.Errorf("wrong spec status: %s", d)
+				}
+				if d := cmp.Diff(tc.wantLabels, reconciledRun.Labels); d != "" {
+					t.Errorf("wrong labels: %s", d)
+				}
 			}
 
 			if tc.otherPR != nil {

@@ -29,7 +29,8 @@ const (
 )
 
 var (
-	pipelineRunKind = v1beta1.SchemeGroupVersion.WithKind("PipelineRun")
+	pipelineRunKind        = v1beta1.SchemeGroupVersion.WithKind("PipelineRun")
+	concurrencyControlKind = v1alpha1.SchemeGroupVersion.WithKind("ConcurrencyControl")
 
 	c = defaulting.NewCallback(func(ctx context.Context, uns *unstructured.Unstructured) error {
 		pr := v1beta1.PipelineRun{}
@@ -54,12 +55,12 @@ var (
 		}
 		uns.Object = u
 		return nil
-	}, webhook.Create)
+	}, webhook.Create) // Apply callback only on PipelineRun creation
 )
 
 func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-		v1alpha1.SchemeGroupVersion.WithKind("ConcurrencyControl"): &v1alpha1.ConcurrencyControl{},
+		concurrencyControlKind: &v1alpha1.ConcurrencyControl{},
 	}
 	return validation.NewAdmissionController(ctx,
 
@@ -82,7 +83,35 @@ func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	)
 }
 
-func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+func newConcurrencyControlDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+		concurrencyControlKind: &v1alpha1.ConcurrencyControl{},
+	}
+	return defaulting.NewAdmissionController(ctx,
+
+		// Name of the resource webhook.
+		"webhook.concurrency.custom.tekton.dev",
+
+		// The path on which to serve the webhook.
+		"/defaulting",
+
+		// The resources to validate and default.
+		types,
+
+		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
+		func(ctx context.Context) context.Context {
+			return ctx
+		},
+
+		// Whether to disallow unknown fields.
+		true,
+	)
+}
+
+// TODO: This sets defaults based on PipelineRun.SetDefaults imported from Pipelines.
+// We will need to write our own admission webhook that only uses the callback
+// defined above.
+func newPipelineRunDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 		pipelineRunKind: &v1beta1.PipelineRun{},
 	}
@@ -92,7 +121,7 @@ func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 		"webhook.concurrency.custom.tekton.dev",
 
 		// The path on which to serve the webhook.
-		"/defaulting",
+		"/pipelinerun-mutation",
 
 		// The resources to validate and default.
 		types,
@@ -133,6 +162,7 @@ func main() {
 	sharedmain.MainWithContext(ctx, WebhookLogKey,
 		certificates.NewController,
 		newValidationAdmissionController,
-		newDefaultingAdmissionController,
+		newPipelineRunDefaultingAdmissionController,
+		newConcurrencyControlDefaultingAdmissionController,
 	)
 }
