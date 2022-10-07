@@ -13,17 +13,13 @@ spec:
     event:
       source:
     #     url: https://github.com/dibyom/tkndemo
-      type: "pull_request"
+      type: "push"
       secret:
         secretName: "repo-secret"
         secretKey: "token"
-    interceptors:
-    - name: "only_opened_prs"
-      ref:
-        name: cel
-      params:
-      - name: "filter"
-        value: "body.action in ['opened', 'synchronize', 'reopened']"
+    filters:
+      gitRef:
+        regex: "^main$"
     bindings:
     - name: commit-sha
       value: $(body.pull_request.head.sha)
@@ -54,8 +50,10 @@ spec:
         taskRef:
           name: git-clone
         params:
-        - name: abc
-          value: "$(params.def)"
+        - name: url
+          value: "$(params.url)"
+        - name: revision
+          value: $(params.commit-sha)
         workspaces:
         - name: "output"
           workspace: "source"

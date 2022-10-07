@@ -2,17 +2,15 @@ package convert_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
-	"github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/scheme"
 	"github.com/tektoncd/experimental/workflows/pkg/convert"
+	"github.com/tektoncd/experimental/workflows/test/parse"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestToPipelineRun(t *testing.T) {
@@ -22,7 +20,7 @@ func TestToPipelineRun(t *testing.T) {
 		want     *pipelinev1beta1.PipelineRun
 	}{{
 		name: "workflow with pipeline ref",
-		workflow: MustParseWorkflow(t, "basic-workflow", "some-namespace", `
+		workflow: parse.MustParseWorkflow(t, "basic-workflow", "some-namespace", `
 spec:
   pipeline:
     git:
@@ -43,7 +41,7 @@ spec:
     secret:
       secretName: release-secret
 `),
-		want: MustParsePipelineRun(t, `
+		want: parse.MustParsePipelineRun(t, `
 metadata:
   generateName: basic-workflow-run-
   namespace: some-namespace
@@ -72,7 +70,7 @@ spec:
 `),
 	}, {
 		name: "workflow with pipelineSpec",
-		workflow: MustParseWorkflow(t, "basic-workflow", "some-namespace", `
+		workflow: parse.MustParseWorkflow(t, "basic-workflow", "some-namespace", `
 spec:
   pipeline:
     spec:
@@ -81,7 +79,7 @@ spec:
         taskRef: 
           name: some-task
 `),
-		want: MustParsePipelineRun(t, `
+		want: parse.MustParsePipelineRun(t, `
 metadata:
   generateName: basic-workflow-run-
   namespace: some-namespace
@@ -115,7 +113,7 @@ func TestToTriggerTemplate(t *testing.T) {
 		want *triggersv1beta1.TriggerTemplate
 	}{{
 		name: "single trigger",
-		w: MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
+		w: parse.MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
 spec:
   pipeline:
     git:
@@ -136,7 +134,7 @@ spec:
     secret:
       secretName: release-secret
 `),
-		want: MustParseTriggerTemplate(t, `
+		want: parse.MustParseTriggerTemplate(t, `
 metadata:
   name: tt-trigger-workflow
   namespace: some-namespace
@@ -196,7 +194,7 @@ func TestToTriggers(t *testing.T) {
 		want []*triggersv1beta1.Trigger
 	}{{
 		name: "single trigger",
-		w: MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
+		w: parse.MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
 spec:
   triggers:
   - name: on-pr
@@ -205,13 +203,6 @@ spec:
       secret:
         secretName: "repo-secret"
         secretKey: "token"
-    interceptors:
-    - name: "only_open_prs"
-      ref:
-        name: cel
-      params:
-      - name: "filter"
-        value:  "body.action in ['opened', 'synchronize', 'reopened']"  
     bindings:
     - name: commit-sha
       value: $(body.pull_request.head.sha)
@@ -224,7 +215,7 @@ spec:
         taskRef:
           name: some-task
 `),
-		want: []*triggersv1beta1.Trigger{MustParseTrigger(t, `
+		want: []*triggersv1beta1.Trigger{parse.MustParseTrigger(t, `
 metadata:
   name: trigger-workflow-on-pr
   namespace: some-namespace
@@ -256,12 +247,77 @@ spec:
         secretKey: token
     - name: eventTypes
       value: ["pull_request"]
-  - name: "only_open_prs"
+  template:
+    spec:
+      resourcetemplates:
+      - apiVersion: tekton.dev/v1beta1
+        kind: PipelineRun
+        metadata:
+          generateName: trigger-workflow-run-
+          namespace: some-namespace
+        spec:
+          serviceAccountName: default
+          pipelineSpec:
+            tasks:
+            - name: task-with-no-params
+              taskRef: 
+                name: some-task
+`)},
+	}, {
+		name: "with filters",
+		w: parse.MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
+spec:
+  triggers:
+  - name: on-pr
+    event:
+      type: "pull_request"
+      secret:
+        secretName: "repo-secret"
+        secretKey: "token"
+    filters:
+      gitRef:
+        regex: '^main$' 
+  pipeline:
+    spec:
+      tasks:
+      - name: task-with-no-params
+        taskRef:
+          name: some-task
+`),
+		want: []*triggersv1beta1.Trigger{parse.MustParseTrigger(t, `
+metadata:
+  name: trigger-workflow-on-pr
+  namespace: some-namespace
+  labels:
+    managed-by: tekton-workflows
+    tekton.dev/workflow: trigger-workflow
+  ownerReferences:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: Workflow
+    name: trigger-workflow
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  name: on-pr
+  interceptors:
+  - name: "validate-webhook"
+    ref:
+      name: github
+      kind: ClusterInterceptor
+    params:
+    - name: secretRef
+      value:
+        secretName: repo-secret
+        secretKey: token
+    - name: eventTypes
+      value: ["pull_request"]
+  - name: "gitRef"
     ref:
       name: cel
+      kind: ClusterInterceptor
     params:
     - name: "filter"
-      value:  "body.action in ['opened', 'synchronize', 'reopened']" 
+      value:  "body.ref.split('/')[2].matches(^main$)" 
   template:
     spec:
       resourcetemplates:
@@ -291,55 +347,6 @@ spec:
 			}
 		})
 	}
-}
-
-func mustParseYAML(t *testing.T, yaml string, i runtime.Object) {
-	if _, _, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(yaml), nil, i); err != nil {
-		t.Fatalf("mustParseYAML (%s): %v", yaml, err)
-	}
-}
-
-// MustParsePipelineRun takes YAML and parses it into a *v1beta1.PipelineRun
-func MustParsePipelineRun(t *testing.T, yaml string) *pipelinev1beta1.PipelineRun {
-	var pr pipelinev1beta1.PipelineRun
-	yaml = `apiVersion: tekton.dev/v1beta1
-kind: PipelineRun
-` + yaml
-	mustParseYAML(t, yaml, &pr)
-	return &pr
-}
-
-// MustParsePipelineRun takes YAML and parses it into a *v1beta1.PipelineRun
-func MustParseWorkflow(t *testing.T, name, namespace, yaml string) *v1alpha1.Workflow {
-	var w v1alpha1.Workflow
-	yaml = fmt.Sprintf(`apiVersion: tekton.dev/v1alpha1
-kind: Workflow
-metadata:
-  name: %s
-  namespace: %s
-`+yaml, name, namespace)
-	mustParseYAML(t, yaml, &w)
-	return &w
-}
-
-// MustParseTriggerTemplate takes YAML and parses it into a *triggersv1beta1.TriggerTemplate
-func MustParseTriggerTemplate(t *testing.T, yaml string) *triggersv1beta1.TriggerTemplate {
-	var pr triggersv1beta1.TriggerTemplate
-	yaml = `apiVersion: triggers.tekton.dev/v1beta1
-kind: TriggerTemplate
-` + yaml
-	mustParseYAML(t, yaml, &pr)
-	return &pr
-}
-
-// MustParseTrigger takes YAML and parses it into a *triggersv1beta1.Trigger
-func MustParseTrigger(t *testing.T, yaml string) *triggersv1beta1.Trigger {
-	var pr triggersv1beta1.Trigger
-	yaml = `apiVersion: triggers.tekton.dev/v1beta1
-kind: Trigger
-` + yaml
-	mustParseYAML(t, yaml, &pr)
-	return &pr
 }
 
 func templateToPipelineRun(t *testing.T, rt triggersv1beta1.TriggerResourceTemplate) *pipelinev1beta1.PipelineRun {
