@@ -18,6 +18,7 @@ import (
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
@@ -30,8 +31,10 @@ type Reconciler struct {
 }
 
 var (
-	cancelPipelineRunPatchBytes     []byte
-	concurrencyControlsAppliedLabel = "tekton.dev/concurrency"
+	cancelPipelineRunPatchBytes           []byte
+	gracefullyCancelPipelineRunPatchBytes []byte
+	gracefullyStopPipelineRunPatchBytes   []byte
+	concurrencyControlsAppliedLabel       = "tekton.dev/concurrency"
 )
 
 func init() {
@@ -44,6 +47,24 @@ func init() {
 		}})
 	if err != nil {
 		log.Fatalf("failed to marshal PipelineRun cancel patch bytes: %v", err)
+	}
+	gracefullyCancelPipelineRunPatchBytes, err = json.Marshal([]jsonpatch.JsonPatchOperation{
+		{
+			Operation: "add",
+			Path:      "/spec/status",
+			Value:     v1beta1.PipelineRunSpecStatusCancelledRunFinally,
+		}})
+	if err != nil {
+		log.Fatalf("failed to marshal PipelineRun gracefully cancel patch bytes: %v", err)
+	}
+	gracefullyStopPipelineRunPatchBytes, err = json.Marshal([]jsonpatch.JsonPatchOperation{
+		{
+			Operation: "add",
+			Path:      "/spec/status",
+			Value:     v1beta1.PipelineRunSpecStatusStoppedRunFinally,
+		}})
+	if err != nil {
+		log.Fatalf("failed to marshal PipelineRun gracefully stop patch bytes: %v", err)
 	}
 }
 
@@ -62,6 +83,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 	logger.Infof("found %d concurrency controls in namespace %s", len(ccs), pr.Namespace)
 
 	prsToCancel := sets.NewString()
+	var strategy v1alpha1.Strategy
 	for _, cc := range ccs {
 		if !matches(pr, cc) {
 			// Concurrency control does not apply to this PipelineRun
@@ -73,13 +95,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 		if err != nil {
 			return err
 		}
+		if strategy == "" {
+			strategy = v1alpha1.Strategy(cc.Spec.Strategy)
+		} else if string(strategy) != cc.Spec.Strategy {
+			// This error is unlikely to be fixed by retrying
+			return controller.NewPermanentError(fmt.Errorf("found multiple concurrency strategies for PipelineRun %s in namespace %s; skipping concurrency controls", pr.Name, pr.Namespace))
+		}
 		for _, matchingPR := range matchingPRs {
 			if matchingPR.Name != pr.Name && !matchingPR.IsDone() {
 				prsToCancel.Insert(matchingPR.Name)
 			}
 		}
 	}
-	err = r.cancelPipelineRuns(ctx, pr.Namespace, prsToCancel.List())
+	err = r.cancelPipelineRuns(ctx, pr.Namespace, prsToCancel.List(), strategy)
 	if err != nil {
 		return fmt.Errorf("error canceling PipelineRuns in the same concurrency group as %s: %s", pr.Name, err)
 	}
@@ -98,14 +126,14 @@ func concurrencyControlsPreviouslyApplied(pr *v1beta1.PipelineRun) bool {
 	return ok
 }
 
-func (r *Reconciler) cancelPipelineRuns(ctx context.Context, namespace string, names []string) error {
+func (r *Reconciler) cancelPipelineRuns(ctx context.Context, namespace string, names []string, strategy v1alpha1.Strategy) error {
 	logger := logging.FromContext(ctx)
 	g := new(errgroup.Group)
 	for _, n := range names {
 		n := n // https://go.dev/doc/faq#closures_and_goroutines
 		g.Go(func() error {
 			logger.Infof("canceling PipelineRun %s in namespace %s", n, namespace)
-			return r.cancelPipelineRun(ctx, namespace, n)
+			return r.cancelPipelineRun(ctx, namespace, n, strategy)
 		})
 	}
 	// TODO: We may want to implement a solution that avoids blocking until all PipelineRuns have been canceled.
@@ -115,14 +143,24 @@ func (r *Reconciler) cancelPipelineRuns(ctx context.Context, namespace string, n
 	return g.Wait()
 }
 
-func (r *Reconciler) cancelPipelineRun(ctx context.Context, namespace, name string) error {
-	// TODO: Add support for graceful cancellation and graceful stopping
-	_, err := r.PipelineClientSet.TektonV1beta1().PipelineRuns(namespace).Patch(ctx, name, types.JSONPatchType, cancelPipelineRunPatchBytes, metav1.PatchOptions{})
+func (r *Reconciler) cancelPipelineRun(ctx context.Context, namespace, name string, s v1alpha1.Strategy) error {
+	var bytes []byte
+	switch s {
+	case v1alpha1.StrategyCancel:
+		bytes = cancelPipelineRunPatchBytes
+	case v1alpha1.StrategyGracefullyCancel:
+		bytes = gracefullyCancelPipelineRunPatchBytes
+	case v1alpha1.StrategyGracefullyStop:
+		bytes = gracefullyStopPipelineRunPatchBytes
+	default:
+		return fmt.Errorf("unsupported operation: %s", s)
+	}
+	_, err := r.PipelineClientSet.TektonV1beta1().PipelineRuns(namespace).Patch(ctx, name, types.JSONPatchType, bytes, metav1.PatchOptions{})
 	if errors.IsNotFound(err) {
 		// The PipelineRun may have been deleted in the meantime
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("error canceling PipelineRun %s: %s", name, err)
+		return fmt.Errorf("error patching PipelineRun %s using strategy %s: %s", name, s, err)
 	}
 	return nil
 }

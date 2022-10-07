@@ -51,11 +51,6 @@ webhooks:
     service:
       name: tekton-concurrency-webhook
       namespace: tekton-concurrency
-  rules:
-  - operations: ["CREATE"]
-    apiGroups: ["tekton.dev"]
-    apiVersions: ["v1beta1", "v1"]
-    resources: ["pipelineruns"]
   failurePolicy: Fail
   sideEffects: None
   name: webhook.concurrency.custom.tekton.dev
