@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/tektoncd/experimental/concurrency/pkg/apis/concurrency/v1alpha1"
+	"github.com/tektoncd/experimental/concurrency/pkg/apis/config"
 	listersv1alpha1 "github.com/tektoncd/experimental/concurrency/pkg/client/listers/concurrency/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	clientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -71,6 +72,11 @@ func init() {
 // ReconcileKind reconciles PipelineRuns
 func (r *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun) pkgreconciler.Event {
 	logger := logging.FromContext(ctx)
+	cfg := config.FromContext(ctx)
+	if len(cfg.AllowedNamespaces) > 0 && !cfg.AllowedNamespaces.Has(pr.Namespace) {
+		logger.Infof("PipelineRun %s/%s is not in an allowed namespace, skipping concurrency controls", pr.Namespace, pr.Name)
+		return nil
+	}
 	if !pr.IsPending() || concurrencyControlsPreviouslyApplied(pr) {
 		return nil
 	}

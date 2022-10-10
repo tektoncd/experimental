@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/concurrency/pkg/apis/concurrency/v1alpha1"
+	"github.com/tektoncd/experimental/concurrency/pkg/apis/config"
 	fakeconcurrencyclient "github.com/tektoncd/experimental/concurrency/pkg/client/injection/client/fake"
 	fakeconcurrencycontrolinformer "github.com/tektoncd/experimental/concurrency/pkg/client/injection/informers/concurrency/v1alpha1/concurrencycontrol/fake"
 	"github.com/tektoncd/experimental/concurrency/pkg/reconciler/concurrency"
@@ -26,7 +27,6 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
-	"knative.dev/pkg/system"
 
 	_ "knative.dev/pkg/system/testing" // Setup system.Namespace()
 )
@@ -36,6 +36,7 @@ func initializeControllerAssets(t *testing.T, d test.Data, ccs []*v1alpha1.Concu
 	t.Helper()
 	ctx, _ := ttesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
+	ensureConfigMapsExist(&d)
 
 	// Set up all Tekton Pipelines test data objects
 	c, informers := test.SeedTestData(t, ctx, d)
@@ -51,12 +52,15 @@ func initializeControllerAssets(t *testing.T, d test.Data, ccs []*v1alpha1.Concu
 		}
 	}
 
-	configMapWatcher := cminformer.NewInformedWatcher(c.Kube, system.Namespace())
+	configMapWatcher := cminformer.NewInformedWatcher(c.Kube, config.ConcurrencyNamespace)
 	ctl := concurrency.NewController()(ctx, configMapWatcher)
 	if la, ok := ctl.Reconciler.(reconciler.LeaderAware); ok {
 		if err := la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {}); err != nil {
 			t.Fatalf("error promoting reconciler leader: %v", err)
 		}
+	}
+	if err := configMapWatcher.Start(ctx.Done()); err != nil {
+		t.Fatalf("error starting configmap watcher: %v", err)
 	}
 	return test.Assets{
 		Logger:     logging.FromContext(ctx),
@@ -66,6 +70,21 @@ func initializeControllerAssets(t *testing.T, d test.Data, ccs []*v1alpha1.Concu
 		Recorder:   controller.GetEventRecorder(ctx).(*record.FakeRecorder),
 		Ctx:        ctx,
 	}, cancel
+}
+
+func ensureConfigMapsExist(d *test.Data) {
+	var configExists bool
+	for _, cm := range d.ConfigMaps {
+		if cm.Name == config.ConcurrencyConfigMapName {
+			configExists = true
+		}
+	}
+	if !configExists {
+		d.ConfigMaps = append(d.ConfigMaps, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: config.ConcurrencyConfigMapName, Namespace: config.ConcurrencyNamespace},
+			Data:       map[string]string{},
+		})
+	}
 }
 
 type concurrencyTest struct {

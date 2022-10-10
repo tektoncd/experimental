@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: concurrency-config
+  namespace: tekton-workflows
+data:
+  allowed-namespaces: "default"

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/tektoncd/experimental/concurrency/pkg/apis/concurrency/v1alpha1"
+	defaultconfig "github.com/tektoncd/experimental/concurrency/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,11 +36,14 @@ var (
 	c = defaulting.NewCallback(func(ctx context.Context, uns *unstructured.Unstructured) error {
 		pr := v1beta1.PipelineRun{}
 		logger := logging.FromContext(ctx)
-		logger.Infof("calling defaulting callback")
+		cfg := defaultconfig.FromContext(ctx)
+		if len(cfg.AllowedNamespaces) > 0 && !cfg.AllowedNamespaces.Has(uns.GetNamespace()) {
+			logger.Infof("PipelineRun %s/%s is not in an allowed namespace, skipping concurrency controls", uns.GetNamespace(), uns.GetName())
+			return nil
+		}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(uns.UnstructuredContent(), &pr); err != nil {
 			return err
 		}
-		logger.Infof("pr name: %s", pr.Name)
 		if pr.Spec.Status == v1beta1.PipelineRunSpecStatusPending {
 			return nil
 		}
@@ -62,6 +66,8 @@ func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 		concurrencyControlKind: &v1alpha1.ConcurrencyControl{},
 	}
+	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
 	return validation.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
@@ -75,7 +81,7 @@ func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
-			return ctx
+			return store.ToContext(ctx)
 		},
 
 		// Whether to disallow unknown fields.
@@ -91,6 +97,8 @@ func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 		pipelineRunKind:        &v1beta1.PipelineRun{},
 		concurrencyControlKind: &v1alpha1.ConcurrencyControl{},
 	}
+	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
 	return defaulting.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
@@ -104,7 +112,7 @@ func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
-			return ctx
+			return store.ToContext(ctx)
 		},
 
 		// Whether to disallow unknown fields.

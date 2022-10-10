@@ -37,3 +37,9 @@ Supported strategies are "Cancel", "GracefullyCancel", and "GracefullyStop"
 (corresponding to canceling, gracefully canceling, and gracefully stopping a PipelineRun, respectively).
 The default strategy is "GracefullyCancel".
 If multiple ConcurrencyControls with different strategies apply to the same PipelineRun, concurrency controls will fail.
+
+### Configuration
+
+To restrict the concurrency webhook and controller to only modify PipelineRuns in a subset of namespaces,
+edit the "allowed-namespaces" field of the [concurrency configMap](./config/concurrency-config.yaml) to be
+a comma-separated list of these namespaces, for example: `allowed-namespaces: "default,another-namespace"`.
