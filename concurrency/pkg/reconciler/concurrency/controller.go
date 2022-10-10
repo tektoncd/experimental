@@ -3,6 +3,7 @@ package concurrency
 import (
 	"context"
 
+	config "github.com/tektoncd/experimental/concurrency/pkg/apis/config"
 	concurrencycontrolinformer "github.com/tektoncd/experimental/concurrency/pkg/client/injection/informers/concurrency/v1alpha1/concurrencycontrol"
 	pipelineclient "github.com/tektoncd/pipeline/pkg/client/injection/client"
 	pipelineruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/pipelinerun"
@@ -23,6 +24,8 @@ func NewController() func(ctx context.Context, cmw configmap.Watcher) *controlle
 		pipelineRunInformer := pipelineruninformer.Get(ctx)
 		concurrencyControlInformer := concurrencycontrolinformer.Get(ctx)
 
+		configStore := config.NewStore(logger.Named("config-store"))
+		configStore.WatchConfigs(cmw)
 		r := &Reconciler{
 			ConcurrencyControlLister: concurrencyControlInformer.Lister(),
 			PipelineRunLister:        pipelineRunInformer.Lister(),
@@ -32,12 +35,12 @@ func NewController() func(ctx context.Context, cmw configmap.Watcher) *controlle
 			return controller.Options{
 				AgentName:         ControllerName,
 				SkipStatusUpdates: true, // Don't update PipelineRun status. This is the responsibility of Tekton Pipelines
+				ConfigStore:       configStore,
 			}
 		})
 
 		logger.Info("Setting up event handlers")
 		pipelineRunInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
 		return impl
 	}
 }
