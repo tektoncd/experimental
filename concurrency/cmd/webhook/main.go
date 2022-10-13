@@ -83,8 +83,12 @@ func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	)
 }
 
-func newConcurrencyControlDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+// TODO: This sets defaults based on PipelineRun.SetDefaults imported from Pipelines.
+// We will need to write our own admission webhook that only uses the callback
+// defined above.
+func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+		pipelineRunKind:        &v1beta1.PipelineRun{},
 		concurrencyControlKind: &v1alpha1.ConcurrencyControl{},
 	}
 	return defaulting.NewAdmissionController(ctx,
@@ -94,34 +98,6 @@ func newConcurrencyControlDefaultingAdmissionController(ctx context.Context, cmw
 
 		// The path on which to serve the webhook.
 		"/defaulting",
-
-		// The resources to validate and default.
-		types,
-
-		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
-		func(ctx context.Context) context.Context {
-			return ctx
-		},
-
-		// Whether to disallow unknown fields.
-		true,
-	)
-}
-
-// TODO: This sets defaults based on PipelineRun.SetDefaults imported from Pipelines.
-// We will need to write our own admission webhook that only uses the callback
-// defined above.
-func newPipelineRunDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-		pipelineRunKind: &v1beta1.PipelineRun{},
-	}
-	return defaulting.NewAdmissionController(ctx,
-
-		// Name of the resource webhook.
-		"webhook.concurrency.custom.tekton.dev",
-
-		// The path on which to serve the webhook.
-		"/pipelinerun-mutation",
 
 		// The resources to validate and default.
 		types,
@@ -162,7 +138,6 @@ func main() {
 	sharedmain.MainWithContext(ctx, WebhookLogKey,
 		certificates.NewController,
 		newValidationAdmissionController,
-		newPipelineRunDefaultingAdmissionController,
-		newConcurrencyControlDefaultingAdmissionController,
+		newDefaultingAdmissionController,
 	)
 }
