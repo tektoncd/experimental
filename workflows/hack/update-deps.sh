@@ -19,7 +19,7 @@ set -o pipefail
 
 source $(git rev-parse --show-toplevel)/vendor/github.com/tektoncd/plumbing/scripts/library.sh
 
-# Copied from scripts.sh
+# Copied from scripts.sh w/ subdir added
 # Update licenses.
 # Parameters: $1 - output file, relative to repo root dir.
 #             $2...$n - directories and files to inspect.
@@ -34,7 +34,7 @@ function update_licenses() {
    chmod +w $(find ${dst} -type d)
 }
 
-# HACK: Most plumbing scripts assume everything is relative to ${REPO_ROO_DIR}
+# HACK: Most plumbing scripts assume everything is relative to ${REPO_ROOT_DIR}
 # This does not work for experimental since there are multiple projects within
 # subfolders. We also cannot set ${REPO_ROOT_DIR} since it is a readonly variable
 
@@ -47,7 +47,6 @@ VERSION="master"
 # float forward in this repository.
 FLOATING_DEPS=(
   "knative.dev/pkg@${VERSION}"
- # "github.com/tektoncd/pipeline@master"
 )
 
 # Parse flags to determine any we should pass to dep.
@@ -70,5 +69,4 @@ fi
 # Prune modules.
 go mod tidy
 go mod vendor
-
 update_licenses third_party/

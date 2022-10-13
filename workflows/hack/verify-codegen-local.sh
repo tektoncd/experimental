@@ -20,7 +20,8 @@ set -o pipefail
 
 source $(git rev-parse --show-toplevel)/vendor/github.com/tektoncd/plumbing/scripts/library.sh
 
-readonly TMP_DIFFROOT="$(mktemp -d ${REPO_ROOT_DIR}/tmpdiffroot.XXXXXX)"
+WORKFLOWS_ROOT_DIR=${REPO_ROOT_DIR}/workflows
+readonly TMP_DIFFROOT="$(mktemp -d ${WORKFLOWS_ROOT_DIR}/tmpdiffroot.XXXXXX)"
 
 cleanup() {
   rm -rf "${TMP_DIFFROOT}"
@@ -32,26 +33,26 @@ cleanup
 
 # Save working tree state
 mkdir -p "${TMP_DIFFROOT}/pkg"
-cp -aR "${REPO_ROOT_DIR}/pkg" "${TMP_DIFFROOT}"
+cp -aR "${WORKFLOWS_ROOT_DIR}/pkg" "${TMP_DIFFROOT}"
 
 mkdir -p "${TMP_DIFFROOT}/vendor"
-cp -aR "${REPO_ROOT_DIR}/vendor" "${TMP_DIFFROOT}"
+cp -aR "${WORKFLOWS_ROOT_DIR}/vendor" "${TMP_DIFFROOT}"
 
-"${REPO_ROOT_DIR}/hack/update-codegen.sh"
-echo "Diffing ${REPO_ROOT_DIR} against freshly generated codegen"
+"${WORKFLOWS_ROOT_DIR}/hack/update-codegen.sh"
+echo "Diffing ${WORKFLOWS_ROOT_DIR} against freshly generated codegen"
 ret=0
-diff -Naupr "${REPO_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=1
-diff -Naupr "${REPO_ROOT_DIR}/vendor" "${TMP_DIFFROOT}/vendor" || ret=1
+diff -Naupr "${WORKFLOWS_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=1
+diff -Naupr "${WORKFLOWS_ROOT_DIR}/vendor" "${TMP_DIFFROOT}/vendor" || ret=1
 
 # Restore working tree state
-rm -fr "${REPO_ROOT_DIR}/pkg"
-rm -fr "${REPO_ROOT_DIR}/vendor"
-cp -aR "${TMP_DIFFROOT}"/* "${REPO_ROOT_DIR}"
+rm -fr "${WORKFLOWS_ROOT_DIR}/pkg"
+rm -fr "${WORKFLOWS_ROOT_DIR}/vendor"
+cp -aR "${TMP_DIFFROOT}"/* "${WORKFLOWS_ROOT_DIR}"
 
 if [[ $ret -eq 0 ]]
 then
-  echo "${REPO_ROOT_DIR} up to date."
+  echo "${WORKFLOWS_ROOT_DIR} up to date."
 else
-  echo "${REPO_ROOT_DIR} is out of date. Please run hack/update-codegen.sh"
+  echo "${WORKFLOWS_ROOT_DIR} is out of date. Please run hack/update-codegen.sh"
   exit 1
 fi
