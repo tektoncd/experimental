@@ -227,7 +227,7 @@ spec:
 		want: []*triggersv1beta1.Trigger{MustParseTrigger(t, `
 metadata:
   name: trigger-workflow-on-pr
-  namespace: tekton-workflows
+  namespace: some-namespace
   labels:
     managed-by: tekton-workflows
     tekton.dev/workflow: trigger-workflow
