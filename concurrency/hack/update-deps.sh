@@ -19,6 +19,21 @@ set -o pipefail
 
 source $(git rev-parse --show-toplevel)/vendor/github.com/tektoncd/plumbing/scripts/library.sh
 
+# Copied from scripts.sh
+# Update licenses.
+# Parameters: $1 - output file, relative to repo root dir.
+#             $2...$n - directories and files to inspect.
+function update_licenses() {
+  cd ${REPO_ROOT_DIR}/concurrency || return 1
+  local dst=$1
+  shift
+  go-licenses save ./... --save_path=${dst} --force
+  # Hack to make sure directories retain write permissions after save. This
+  # can happen if the directory being copied is a Go module.
+  # See https://github.com/google/go-licenses/issues/11
+   chmod +w $(find ${dst} -type d)
+}
+
 # HACK: Most plumbing scripts assume everything is relative to ${REPO_ROO_DIR}
 # This does not work for experimental since there are multiple projects within
 # subfolders. We also cannot set ${REPO_ROOT_DIR} since it is a readonly variable
@@ -27,7 +42,6 @@ cd ${REPO_ROOT_DIR}/concurrency
 
 # Update when you want to pin knative.dev/pkg
 VERSION="master"
-#VERSION="release-0.23"
 
 # The list of dependencies that we track at HEAD and periodically
 # float forward in this repository.
@@ -55,3 +69,4 @@ fi
 # Prune modules.
 go mod tidy
 go mod vendor
+update_licenses third_party/

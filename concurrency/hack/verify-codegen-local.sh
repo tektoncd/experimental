@@ -38,6 +38,9 @@ cp -aR "${CONCURRENCY_ROOT_DIR}/pkg" "${TMP_DIFFROOT}"
 mkdir -p "${TMP_DIFFROOT}/vendor"
 cp -aR "${CONCURRENCY_ROOT_DIR}/vendor" "${TMP_DIFFROOT}"
 
+cp -aR "${CONCURRENCY_ROOT_DIR}/go.mod" "${TMP_DIFFROOT}"
+cp -aR "${CONCURRENCY_ROOT_DIR}/go.sum" "${TMP_DIFFROOT}"
+
 "${CONCURRENCY_ROOT_DIR}/hack/update-codegen.sh"
 echo "Diffing ${CONCURRENCY_ROOT_DIR} against freshly generated codegen"
 ret=0
