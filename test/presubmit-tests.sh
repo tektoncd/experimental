@@ -32,7 +32,8 @@ function run() {
       if [[ -f ./test/presubmit-tests.sh ]]; then
           ./test/presubmit-tests.sh $@ || exited=1
       else
-          echo "Skip due to no './test/presubmit-tests.sh' file"
+          echo "Missing './test/presubmit-tests.sh' file"
+          exited=1
       fi
       popd >/dev/null
       return $exited

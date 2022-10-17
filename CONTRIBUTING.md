@@ -20,6 +20,7 @@ Once [your experimental project proposal has been accepted](https://github.com/t
 - Add an [OWNERS](https://github.com/tektoncd/community/blob/master/process.md#OWNERS) file only in the initial pull request so that the project owners can approve subsequent pull requests for your project
 - Add a README describing your project
 - Add your project [to the list of projects in presubmit-tests.sh](https://github.com/tektoncd/experimental/blob/main/test/presubmit-tests.sh#L61)
+- Add a `test/presubmit-tests.sh` file to your project
 
 ## Code standards
 
