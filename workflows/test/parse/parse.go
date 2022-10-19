@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"k8s.io/client-go/kubernetes/scheme"
-
+	fluxnotifications "github.com/fluxcd/notification-controller/api/v1beta1"
+	fluxsource "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 func mustParseYAML(t *testing.T, yaml string, i runtime.Object) {
@@ -59,4 +60,56 @@ kind: Trigger
 ` + yaml
 	mustParseYAML(t, yaml, &tr)
 	return &tr
+}
+
+func MustParseRepo(t *testing.T, name, namespace, yaml string) fluxsource.GitRepository {
+	var repo fluxsource.GitRepository
+	yaml = fmt.Sprintf(`
+kind: GitRepository
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+metadata:
+  name: %s
+  namespace: %s
+`+yaml, name, namespace)
+	mustParseYAML(t, yaml, &repo)
+	return repo
+}
+
+func MustParseReceiver(t *testing.T, name, namespace, yaml string) fluxnotifications.Receiver {
+	var r fluxnotifications.Receiver
+	yaml = fmt.Sprintf(`
+kind: Receiver
+apiVersion: notifications.toolkit.fluxcd.io/v1beta1
+metadata:
+  name: %s
+  namespace: %s
+`+yaml, name, namespace)
+	mustParseYAML(t, yaml, &r)
+	return r
+}
+
+func MustParseProvider(t *testing.T, name, namespace, yaml string) fluxnotifications.Provider {
+	var p fluxnotifications.Provider
+	yaml = fmt.Sprintf(`
+apiVersion: notifications.toolkit.fluxcd.io/v1beta1
+kind: Provider
+metadata:
+  name: %s
+  namespace: %s
+`+yaml, name, namespace)
+	mustParseYAML(t, yaml, &p)
+	return p
+}
+
+func MustParseAlert(t *testing.T, name, namespace, yaml string) fluxnotifications.Alert {
+	var a fluxnotifications.Alert
+	yaml = fmt.Sprintf(`
+apiVersion: notifications.toolkit.fluxcd.io/v1beta1
+kind: Alert
+metadata:
+  name: %s
+  namespace: %s
+`+yaml, name, namespace)
+	mustParseYAML(t, yaml, &a)
+	return a
 }

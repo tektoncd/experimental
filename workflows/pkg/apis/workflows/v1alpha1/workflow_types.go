@@ -50,7 +50,7 @@ func (*Workflow) GetGroupVersionKind() schema.GroupVersionKind {
 // WorkflowSpec describes the desired state of the Workflow
 type WorkflowSpec struct {
 	// Repos defines a set of Git repos required for this Workflow
-	// Repos   []Repo   `json:"repos,omitempty"`
+	Repos []Repo `json:"repos,omitempty"`
 
 	// Secrets defines any secrets that this Workflow needs
 	// Secrets []Secret `json:"secrets,omitempty"`
@@ -135,7 +135,7 @@ type Secret struct {
 
 type Trigger struct {
 	// Event describes the incoming event for this Trigger
-	Event Event `json:"event"`
+	Event *Event `json:"event"`
 
 	// Bindings are the TriggerBindings used to extract information from this Trigger
 	// +listType=atomic
@@ -145,7 +145,7 @@ type Trigger struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 
-	// +listType=atomic
+	// +optional
 	Filters *Filters `json:"filters,omitempty"`
 }
 
@@ -153,9 +153,9 @@ type Event struct {
 	// Source defines the source of a trigger event
 	Source EventSource `json:"source"`
 
-	// Type is a string that defines the type of an event (e.g. a pull_request or a push)
+	// Types are strings that define the type of an event (e.g. a pull_request or a push)
 	// At the moment this assumes one of the GitHub event types
-	Type EventType `json:"type"`
+	Types []EventType `json:"types"`
 
 	// Secret is the Webhook secret used for this Trigger
 	// This field is temporary until we implement a better way to handle secrets for webhook validation
@@ -173,6 +173,15 @@ const (
 type EventSource struct {
 	// TBD, this struct should contain enough information to identify the source of the events
 	// To start with, we'd support push and pull request events from GitHub as well as Cron/scheduled events
+	// The name of the repo to use as an event source
+	Repo string `json:"repo"`
+}
+
+type Repo struct {
+	Name      string `json:"name"`
+	URL       string `json:"url"`
+	VCSType   string `json:"vcsType,omitempty"`
+	SecretRef string `json:"secretRef,omitempty"`
 }
 
 type Filters struct {

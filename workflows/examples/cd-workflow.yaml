@@ -1,0 +1,77 @@
+# Note: To use this example, you must create a secret in the "flux-system" namespace
+# named "webhook-token" with a key named "token".
+apiVersion: tekton.dev/v1alpha1
+kind: Workflow
+metadata:
+  name: cd-workflow
+spec:
+  repos:
+  - name: web-app-demo
+    url: https://github.com/lbernick/web-app-demo
+    vcsType: github
+  triggers:
+  - name: on-push-to-main-branch
+    event:
+      types:
+      - push
+      source:
+        repo: web-app-demo
+      secret:
+        secretName: webhook-token
+    filters:
+      gitRef:
+        regex: main
+  pipeline:
+    spec:
+      tasks:
+      - name: fetch-source
+        taskRef:
+          resolver: hub
+          params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone
+          - name: version
+            value: "0.7"
+        workspaces:
+        - name: output
+          workspace: source-code
+        params:
+        - name: url
+          value:  https://github.com/lbernick/web-app-demo
+      - name: build
+        taskRef:
+          name: kaniko-build
+        workspaces:
+        - name: source-code
+        runAfter:
+        - fetch-source
+  workspaces:
+  - name: source-code
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kaniko-build
+spec:
+  workspaces:
+  - name: source-code
+  results:
+  - name: digest
+  steps:
+  - name: build-and-push
+    image: "gcr.io/kaniko-project/executor:v1.5.1"
+    args: [
+      "--dockerfile=$(workspaces.source-code.path)/Dockerfile",
+      "--context=dir://$(workspaces.source-code.path)",
+      "--digest-file=$(results.digest.path)",
+      "--no-push"
+    ]

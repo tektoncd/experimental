@@ -16,16 +16,32 @@ package convert
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
+	fluxnotifications "github.com/fluxcd/notification-controller/api/v1beta1"
+	fluxmeta "github.com/fluxcd/pkg/apis/meta"
+	fluxsource "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
-	"github.com/tektoncd/experimental/workflows/pkg/filters"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/ptr"
 )
+
+var fluxCELFilter []byte
+
+const FluxNamespace = "flux-system"
+
+func init() {
+	var err error
+	fluxCELFilter, err = json.Marshal("header.canonical('Gotk-Component') == 'source-controller' && body.involvedObject.kind == 'GitRepository'")
+	if err != nil {
+		panic(err)
+	}
+}
 
 func makeWorkspaces(bindings []v1alpha1.WorkflowWorkspaceBinding) []pipelinev1beta1.WorkspaceBinding {
 	if bindings == nil && len(bindings) == 0 {
@@ -170,35 +186,18 @@ func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 	}
 	triggers := []*triggersv1beta1.Trigger{}
 	for _, t := range w.Spec.Triggers {
-		secretToJson, err := filters.ToV1JSON(t.Event.Secret)
-		if err != nil {
-			return nil, err
-		}
-		eventTypesJson, err := filters.ToV1JSON([]string{string(t.Event.Type)})
-		if err != nil {
-			return nil, err
-		}
-		// Add an interceptor to validate the payload from GitHub webhook
 		payloadValidation := triggersv1beta1.TriggerInterceptor{
-			Name: ptr.String("validate-webhook"),
+			Name: ptr.String("filter-flux-events"),
 			Ref: triggersv1beta1.InterceptorRef{
-				Name: "github",
+				Name: "cel",
 				Kind: "ClusterInterceptor",
 			},
 			Params: []triggersv1beta1.InterceptorParams{{
-				Name:  "secretRef",
-				Value: secretToJson,
-			}, {
-				Name:  "eventTypes",
-				Value: eventTypesJson,
+				Name:  "filter",
+				Value: v1.JSON{Raw: fluxCELFilter},
 			}},
 		}
 		interceptors := []*triggersv1beta1.TriggerInterceptor{&payloadValidation}
-		filterInterceptors, err := filters.ToInterceptors(t.Filters)
-		if err != nil {
-			return nil, err
-		}
-		interceptors = append(interceptors, filterInterceptors...)
 		triggers = append(triggers, &triggersv1beta1.Trigger{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Trigger",
@@ -214,7 +213,7 @@ func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 				OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(w)},
 			},
 			Spec: triggersv1beta1.TriggerSpec{
-				Bindings: t.Bindings,
+				Bindings: t.Bindings, // Problem: Event body from flux != event body from github -> User specified bindings will not work
 				Template: triggersv1beta1.TriggerSpecTemplate{
 					Spec: &tt.Spec,
 				},
@@ -224,4 +223,79 @@ func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 		})
 	}
 	return triggers, nil
+}
+
+type FluxResources struct {
+	Repos     []fluxsource.GitRepository
+	Receivers []fluxnotifications.Receiver
+	Alert     *fluxnotifications.Alert
+	Provider  *fluxnotifications.Provider
+}
+
+func GetFluxResources(w *v1alpha1.Workflow) (FluxResources, error) {
+	out := FluxResources{}
+	repos := map[string]v1alpha1.Repo{}
+	for _, r := range w.Spec.Repos {
+		repos[r.Name] = r
+	}
+	var fluxRepos []fluxsource.GitRepository
+	var fluxReceivers []fluxnotifications.Receiver
+	// TODO: single flux provider for workflows; one flux alert per workflow in tekton-workflows namespace?
+	// TODO: It's unclear which objects need to go in the flux-system namespace-- for now we'll put everything there and forgo owner references
+	// TODO: since these are all going in the flux-system namespace, their names will need to depend on the workflow namespace
+	fluxProvider := fluxnotifications.Provider{ObjectMeta: metav1.ObjectMeta{Name: w.Name, Namespace: FluxNamespace},
+		TypeMeta: metav1.TypeMeta{Kind: "Provider", APIVersion: "notification.toolkit.fluxcd.io/v1beta1"},
+		Spec:     fluxnotifications.ProviderSpec{Type: "generic", Address: "http://el-workflows-listener.tekton-workflows.svc.cluster.local:8080/"}}
+	var fluxAlert = fluxnotifications.Alert{ObjectMeta: metav1.ObjectMeta{Name: w.Name, Namespace: FluxNamespace},
+		TypeMeta: metav1.TypeMeta{Kind: "Alert", APIVersion: "notification.toolkit.fluxcd.io/v1beta1"},
+		Spec:     fluxnotifications.AlertSpec{ProviderRef: fluxmeta.LocalObjectReference{Name: fluxProvider.Name}, EventSeverity: "info"}}
+	// TODO: handle multiple triggers w/ same event source and filter but different event types
+	for _, t := range w.Spec.Triggers {
+		if t.Event == nil {
+			continue
+		}
+		r, ok := repos[t.Event.Source.Repo]
+		if !ok {
+			return out, fmt.Errorf("unsupported event source %s", t.Event.Source.Repo) // TODO: handle this in validation code
+		}
+
+		repo := fluxsource.GitRepository{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-%s", w.Name, r.Name), Namespace: FluxNamespace},
+			TypeMeta: metav1.TypeMeta{Kind: "GitRepository", APIVersion: "source.toolkit.fluxcd.io/v1beta2"},
+			Spec: fluxsource.GitRepositorySpec{
+				URL: r.URL, Interval: metav1.Duration{Duration: time.Minute},
+				// Flux requires you to specify Branch, Tag, or Commit, so we are assuming the GitRef is a branch
+				Reference: &fluxsource.GitRepositoryRef{Branch: t.Filters.GitRef.Regex},
+			}}
+		if r.SecretRef != "" {
+			repo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: r.SecretRef}
+		}
+		fluxRepos = append(fluxRepos, repo)
+		receiver := fluxnotifications.Receiver{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-%s", w.Name, r.Name), Namespace: FluxNamespace},
+			TypeMeta: metav1.TypeMeta{Kind: "Receiver", APIVersion: "notification.toolkit.fluxcd.io/v1beta1"},
+			Spec: fluxnotifications.ReceiverSpec{Type: r.VCSType, Events: eventTypes(t.Event.Types), SecretRef: fluxmeta.LocalObjectReference{Name: t.Event.Secret.SecretName},
+				Resources: []fluxnotifications.CrossNamespaceObjectReference{{
+					Kind:      "GitRepository",
+					Name:      repo.Name,
+					Namespace: repo.Namespace,
+				}}}}
+		fluxReceivers = append(fluxReceivers, receiver)
+		fluxAlert.Spec.EventSources = append(fluxAlert.Spec.EventSources, fluxnotifications.CrossNamespaceObjectReference{
+			Kind:      "GitRepository",
+			Name:      repo.Name,
+			Namespace: repo.Namespace,
+		})
+	}
+	out.Repos = fluxRepos
+	out.Receivers = fluxReceivers
+	out.Alert = &fluxAlert
+	out.Provider = &fluxProvider
+	return out, nil
+}
+
+func eventTypes(ets []v1alpha1.EventType) []string {
+	var out []string
+	for _, t := range ets {
+		out = append(out, string(t))
+	}
+	return out
 }

@@ -31,6 +31,15 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
+  - apiGroups: ["source.toolkit.fluxcd.io"]
+    resources: ["gitrepositories"]
+    verbs: ["create", "update", "patch", "delete", "get", "watch"]
+  - apiGroups: ["notification.toolkit.fluxcd.io"]
+    resources: ["receivers", "providers", "alerts"]
+    verbs: ["create", "update", "patch", "delete", "get", "watch"]
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1

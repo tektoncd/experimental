@@ -8,7 +8,7 @@ This project is discussed in the [Workflows Working Group](https://github.com/te
 
 ## Installation
 
-You must first install Tekton Pipelines and Tekton Triggers.
+You must first install Tekton Pipelines, Tekton Triggers, and [Flux CD](https://fluxcd.io/flux/installation/).
 
 ### Install from nightly release
 

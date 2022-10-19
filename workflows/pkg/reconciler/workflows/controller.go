@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 // NewController creates a Reconciler and returns the result of NewImpl.
@@ -24,6 +25,7 @@ func NewController(
 	r := &Reconciler{
 		TriggerClientSet: triggersclientset,
 		TriggerLister:    triggersinformer.Get(ctx).Lister(),
+		DynamicClient:    dynamicclient.Get(ctx),
 	}
 	impl := workflowsreconciler.NewImpl(ctx, r)
 	workflowsInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -31,5 +33,6 @@ func NewController(
 		FilterFunc: controller.FilterController(&v1alpha1.Workflow{}),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
+	// TODO: Flux resources event handler
 	return impl
 }

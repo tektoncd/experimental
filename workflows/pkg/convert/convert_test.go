@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	fluxnotifications "github.com/fluxcd/notification-controller/api/v1beta1"
+	fluxsource "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
@@ -236,17 +238,13 @@ spec:
   - name: url
     value: $(body.repository.clone_url)
   interceptors:
-  - name: "validate-webhook"
+  - name: "filter-flux-events"
     ref:
-      name: github
+      name: cel
       kind: ClusterInterceptor
     params:
-    - name: secretRef
-      value:
-        secretName: repo-secret
-        secretKey: token
-    - name: eventTypes
-      value: ["pull_request"]
+    - name: filter
+      value: "header.canonical('Gotk-Component') == 'source-controller' && body.involvedObject.kind == 'GitRepository'"
   template:
     spec:
       resourcetemplates:
@@ -300,24 +298,13 @@ metadata:
 spec:
   name: on-pr
   interceptors:
-  - name: "validate-webhook"
-    ref:
-      name: github
-      kind: ClusterInterceptor
-    params:
-    - name: secretRef
-      value:
-        secretName: repo-secret
-        secretKey: token
-    - name: eventTypes
-      value: ["pull_request"]
-  - name: "gitRef"
+  - name: "filter-flux-events"
     ref:
       name: cel
       kind: ClusterInterceptor
     params:
-    - name: "filter"
-      value:  "body.ref.split('/')[2].matches(^main$)" 
+    - name: filter
+      value: "header.canonical('Gotk-Component') == 'source-controller' && body.involvedObject.kind == 'GitRepository'"
   template:
     spec:
       resourcetemplates:
@@ -344,6 +331,90 @@ spec:
 			}
 			if diff := cmp.Diff(tt.want, got, compareResourcetemplates(t), cmpopts.EquateEmpty()); diff != "" {
 				t.Errorf("ToTriggers() failed. Diff -want/+got: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetFluxResources(t *testing.T) {
+	provider := parse.MustParseProvider(t, "workflow", "flux-system", `
+spec:
+  type: generic
+  address: http://el-workflows-listener.tekton-workflows.svc.cluster.local:8080/
+`)
+	alert := parse.MustParseAlert(t, "workflow", "flux-system", `
+spec:
+  providerRef:
+    name: workflow
+  eventSeverity: info
+  eventSources:
+  - kind: GitRepository
+    name: workflow-pipelines
+    namespace: flux-system
+`)
+	tests := []struct {
+		name string
+		w    *v1alpha1.Workflow
+		want convert.FluxResources
+	}{{
+		name: "CD workflow w/ main branch push trigger",
+		w: parse.MustParseWorkflow(t, "workflow", "namespace", `
+spec:
+  repos:
+  - name: pipelines
+    url: https://tektoncd/pipeline
+    vcsType: github
+  triggers:
+  - name: on-push-and-ping-to-main-branch
+    event:
+      types:
+      - push
+      - ping
+      source:
+        repo: pipelines
+      secret:
+        secretName: webhook-token
+    filters:
+      gitRef:
+        regex: main
+`),
+		want: convert.FluxResources{
+			Repos: []fluxsource.GitRepository{
+				parse.MustParseRepo(t, "workflow-pipelines", "flux-system", `
+spec:
+  interval: 1m0s
+  url: https://tektoncd/pipeline
+  ref:
+    branch: main
+`),
+			},
+			Receivers: []fluxnotifications.Receiver{
+				parse.MustParseReceiver(t, "workflow-pipelines", "flux-system", `
+spec:
+  type: github
+  events:
+  - push
+  - ping
+  secretRef:
+    name: webhook-token
+  resources:
+  - kind: GitRepository
+    name: workflow-pipelines
+    namespace: flux-system
+`),
+			},
+			Provider: &provider,
+			Alert:    &alert,
+		},
+	}}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := convert.GetFluxResources(tc.w)
+			if err != nil {
+				t.Fatalf("unxpected conversion error %s", err)
+			}
+			if diff := cmp.Diff(tc.want, got, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("wrong flux resources: %s", diff)
 			}
 		})
 	}
