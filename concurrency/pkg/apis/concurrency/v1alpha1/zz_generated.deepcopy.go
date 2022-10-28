@@ -88,6 +88,11 @@ func (in *ConcurrencyControlList) DeepCopyObject() runtime.Object {
 func (in *ConcurrencySpec) DeepCopyInto(out *ConcurrencySpec) {
 	*out = *in
 	in.Selector.DeepCopyInto(&out.Selector)
+	if in.GroupBy != nil {
+		in, out := &in.GroupBy, &out.GroupBy
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

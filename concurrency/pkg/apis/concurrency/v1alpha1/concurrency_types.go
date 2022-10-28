@@ -47,6 +47,13 @@ type ConcurrencySpec struct {
 	Strategy string `json:"strategy,omitempty"`
 	// + optional
 	Selector metav1.LabelSelector `json:"selector,omitempty"`
+	// Label keys that identify the concurrency group of a PipelineRun.
+	// All PipelineRuns with the same value for all of these labels are part of the
+	// same concurrency group.
+	// If a PipelineRun has no value for a key in GroupBy, other PipelineRuns that
+	// also have no value for that key will be part of the same concurrency group.
+	// + optional
+	GroupBy []string `json:"groupBy,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -312,6 +312,233 @@ func TestConcurrency(t *testing.T) {
 		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
 		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusStoppedRunFinally,
 	}, {
+		name:       "one matching control, running PR in same namespace with same key and same groupby",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run", "another-label": "foobar"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+				GroupBy:  []string{"another-label"},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar"},
+		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusCancelled,
+	}, {
+		name:       "one matching control, running PR in same namespace with same key and different groupby",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run", "another-label": "foobar"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+				GroupBy:  []string{"another-label"},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "abcd"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar"},
+	}, {
+		name:       "one matching control, running PR in same namespace with same key and both missing value for groupby",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+				GroupBy:  []string{"another-label"},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusCancelled,
+	}, {
+		name:       "one matching control, running PR in same namespace with same key and existing missing value for groupby",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+				GroupBy:  []string{"another-label"},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "abcd"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+	}, {
+		name:       "one matching control, running PR in same namespace with same key and other PR missing value for groupby",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run", "another-label": "foobar"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+				GroupBy:  []string{"another-label"},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar"},
+	}, {
+		name:       "one matching control, running PR in same namespace with same key, multiple matching groupby",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run", "another-label": "foobar", "third-label": "abcd"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+				GroupBy:  []string{"another-label", "third-label"},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar", "third-label": "abcd"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels:            map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar", "third-label": "abcd"},
+		wantOtherPRSpecStatus: v1beta1.PipelineRunSpecStatusCancelled,
+	}, {
+		name:       "one matching control, running PR in same namespace with same key, multiple groupby",
+		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run", "another-label": "foobar", "third-label": "abcd"},
+		specStatus: v1beta1.PipelineRunSpecStatusPending,
+		concurrencyControls: []*v1alpha1.ConcurrencyControl{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "concurrency-control",
+				Namespace: "default",
+			},
+			Spec: v1alpha1.ConcurrencySpec{
+				Strategy: "Cancel",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run"}},
+				GroupBy:  []string{"another-label", "third-label"},
+			},
+		}},
+		otherPR: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "anything",
+				Namespace: "default",
+				Labels:    map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar", "third-label": "1234"},
+			},
+			Spec: newPipelineRunSpecWithStatus(""),
+			Status: v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
+			},
+		},
+		wantLabels: map[string]string{"tekton.dev/pipeline": "pipeline-run", "tekton.dev/concurrency": "true", "another-label": "foobar", "third-label": "abcd"},
+	}, {
 		name:       "one matching control, pending PR in same namespace with same key",
 		labels:     map[string]string{"tekton.dev/ok-to-start": "true", "tekton.dev/pipeline": "pipeline-run"},
 		specStatus: v1beta1.PipelineRunSpecStatusPending,
