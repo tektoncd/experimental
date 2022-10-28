@@ -14,6 +14,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,9 +63,12 @@ type WorkflowSpec struct {
 	// overridden in a WorkflowRun or (in the future) from an incoming event.
 	Params []pipelinev1beta1.ParamSpec `json:"params,omitempty"`
 
-	// Pipeline is a reference to a Pipeline. Currently only an inline
-	// pipelineSpec is supported
-	Pipeline PipelineRef `json:"pipeline,omitempty"`
+	// PipelineSpec is an inline pipeline spec.
+	// Cannot specify both PipelineSpec and PipelineRef.
+	PipelineSpec *v1beta1.PipelineSpec `json:"pipelineSpec,omitempty"`
+
+	// PipelineRef is a reference to a Pipeline
+	PipelineRef *v1beta1.PipelineRef `json:"pipelineRef,omitempty"`
 
 	// ServiceAccountName is the K8s service account that pipelineruns
 	// generated from this workflow run as
@@ -94,31 +98,6 @@ type WorkflowList struct {
 	Items           []Workflow `json:"items"`
 }
 
-// PipelineRef describes a pipeline
-// Only one of the following must be provided
-// TODO: Add validation
-type PipelineRef struct {
-	// Spec is a PipelineSpec that defines the pipeline to be run for this Workflow
-	// Mutually exclusive with Git
-	Spec pipelinev1beta1.PipelineSpec `json:"spec,omitempty"`
-
-	// Git defines the location of a Tekton Pipeline inside a git repository
-	// Mutually exclusive with Spec
-	Git PipelineRefGit `json:"git,omitempty"`
-}
-
-// PipelineRefGit refers to the location of a pipeline within a git repository at a particular commit/revision
-type PipelineRefGit struct {
-	// URL is the URL of the git repo containing the pipeline
-	URL string `json:"url"`
-
-	// Revision is the git revision to fetch the pipeline from
-	Revision string `json:"revision"`
-
-	// PathInRepo is the path to the pipeline file in the git repo at the revision
-	PathInRepo string `json:"pathInRepo"`
-}
-
 // WorkflowWorkspaceBinding maps a Pipeline's declared Workspaces
 // to a Volume. Unlike a regular WorkspaceBinding, a WorkflowWorkspaceBinding
 // will add additional magic to auto-propagate/generate PVCs
@@ -145,7 +124,7 @@ type Trigger struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 
-	// +listType=atomic
+	// +optional
 	Filters *Filters `json:"filters,omitempty"`
 }
 

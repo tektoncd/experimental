@@ -22,11 +22,15 @@ func TestToPipelineRun(t *testing.T) {
 		name: "workflow with pipeline ref",
 		workflow: parse.MustParseWorkflow(t, "basic-workflow", "some-namespace", `
 spec:
-  pipeline:
-    git:
-      url: https://github.com/tektoncd/pipeline
-      revision: main
-      pathInRepo: tekton/release-pipeline.yaml
+  pipelineRef:
+    resolver: git
+    params:
+    - name: url
+      value: https://github.com/tektoncd/pipeline
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: tekton/release-pipeline.yaml
   serviceAccountName: pipelines-release
   timeout: 
     pipeline: 10s
@@ -72,9 +76,8 @@ spec:
 		name: "workflow with pipelineSpec",
 		workflow: parse.MustParseWorkflow(t, "basic-workflow", "some-namespace", `
 spec:
-  pipeline:
-    spec:
-      tasks:
+  pipelineSpec:
+    tasks:
       - name: task-with-no-params
         taskRef: 
           name: some-task
@@ -115,11 +118,15 @@ func TestToTriggerTemplate(t *testing.T) {
 		name: "single trigger",
 		w: parse.MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
 spec:
-  pipeline:
-    git:
-      url: https://github.com/tektoncd/pipeline
-      revision: main
-      pathInRepo: tekton/release-pipeline.yaml
+  pipelineRef:
+    resolver: git
+    params:
+    - name: url
+      value: https://github.com/tektoncd/pipeline
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: tekton/release-pipeline.yaml
   serviceAccountName: pipelines-release
   timeout: 
     pipeline: 10s
@@ -208,9 +215,8 @@ spec:
       value: $(body.pull_request.head.sha)
     - name: url
       value: $(body.repository.clone_url)
-  pipeline:
-    spec:
-      tasks:
+  pipelineSpec:
+    tasks:
       - name: task-with-no-params
         taskRef:
           name: some-task
@@ -277,9 +283,8 @@ spec:
     filters:
       gitRef:
         regex: '^main$' 
-  pipeline:
-    spec:
-      tasks:
+  pipelineSpec:
+    tasks:
       - name: task-with-no-params
         taskRef:
           name: some-task
