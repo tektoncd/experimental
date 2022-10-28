@@ -3,9 +3,8 @@ kind: Workflow
 metadata:
   name: example-workflow
 spec:
-  pipeline:
-    spec:
-      tasks:
+  pipelineSpec:
+    tasks:
       - name: echo-hello
         taskSpec:
           steps:

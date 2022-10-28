@@ -78,28 +78,10 @@ func ToPipelineRun(w *v1alpha1.Workflow) (*pipelinev1beta1.PipelineRun, error) {
 			Workspaces:         makeWorkspaces(w.Spec.Workspaces), // TODO: Add workspaces
 		},
 	}
-
-	// Add in pipelineSpec or pipelineRef (via git resolver)
-	if w.Spec.Pipeline.Git.URL != "" {
-		gitConfig := w.Spec.Pipeline.Git
-		// TODO: This assumes each field is specified. Support defaults as well
-		pr.Spec.PipelineRef = &pipelinev1beta1.PipelineRef{
-			ResolverRef: pipelinev1beta1.ResolverRef{
-				Resolver: "git",
-				Params: []pipelinev1beta1.Param{{
-					Name:  "url",
-					Value: *pipelinev1beta1.NewArrayOrString(gitConfig.URL),
-				}, {
-					Name:  "revision",
-					Value: *pipelinev1beta1.NewArrayOrString(gitConfig.Revision),
-				}, {
-					Name:  "pathInRepo",
-					Value: *pipelinev1beta1.NewArrayOrString(gitConfig.PathInRepo),
-				}},
-			},
-		}
-	} else {
-		pr.Spec.PipelineSpec = &w.Spec.Pipeline.Spec
+	if w.Spec.PipelineRef != nil {
+		pr.Spec.PipelineRef = w.Spec.PipelineRef
+	} else if w.Spec.PipelineSpec != nil {
+		pr.Spec.PipelineSpec = w.Spec.PipelineSpec
 	}
 
 	return &pr, nil

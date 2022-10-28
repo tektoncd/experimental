@@ -9,9 +9,8 @@ spec:
     filters:
       gitRef:
         regex: '^main$'
-  pipeline:
-    spec:
-      tasks:
+  pipelineSpec:
+    tasks:
       - name: clone
         taskRef:
           name: git-clone

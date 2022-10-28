@@ -41,11 +41,10 @@ spec:
         resources:
           requests:
             storage: 1Gi
-  pipeline:
-    spec:
-      params:
+  pipelineSpec:
+    params:
       - name: abc
-      tasks:
+    tasks:
       - name: git-clone
         taskRef:
           name: git-clone
