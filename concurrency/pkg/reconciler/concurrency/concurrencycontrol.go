@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/pkg/controller"
@@ -95,9 +96,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 			// Concurrency control does not apply to this PipelineRun
 			continue
 		}
-		// If concurrency control matches the current pipelinerun, get all pipelineruns matching the same label selector.
-		// Cancel them all except the one currently running.
-		matchingPRs, err := r.PipelineRunLister.PipelineRuns(pr.Namespace).List(k8slabels.SelectorFromSet(cc.Spec.Selector.MatchLabels))
+
+		// If concurrency control matches the current pipelinerun, get all pipelineruns matching the same label selector
+		// and with the same values for label keys in groupby. Cancel them all except the one currently running.
+		labelSelector, err := getLabelSelector(cc, pr)
+		if err != nil {
+			return controller.NewPermanentError(fmt.Errorf("error building label selector from concurrency control: %s", err))
+		}
+		matchingPRs, err := r.PipelineRunLister.PipelineRuns(pr.Namespace).List(labelSelector)
 		if err != nil {
 			return err
 		}
@@ -122,7 +128,31 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, pr *v1beta1.PipelineRun)
 }
 
 func matches(pr *v1beta1.PipelineRun, cc *v1alpha1.ConcurrencyControl) bool {
+	// TODO: Support MatchExpressions as well
 	return k8slabels.SelectorFromSet(cc.Spec.Selector.MatchLabels).Matches(k8slabels.Set(pr.Labels))
+}
+
+func getLabelSelector(cc *v1alpha1.ConcurrencyControl, pr *v1beta1.PipelineRun) (k8slabels.Selector, error) {
+	labelSelector := cc.Spec.Selector.MatchLabels
+	var requirements []k8slabels.Requirement
+	for _, key := range cc.Spec.GroupBy {
+		val, ok := pr.Labels[key]
+		if !ok {
+			r, err := k8slabels.NewRequirement(key, selection.DoesNotExist, []string{})
+			if err != nil {
+				return nil, err
+			}
+			if r == nil {
+				return nil, fmt.Errorf("error building label selector")
+			}
+			requirements = append(requirements, *r)
+		} else {
+			labelSelector[key] = val
+		}
+	}
+	out := k8slabels.SelectorFromSet(labelSelector)
+	out = out.Add(requirements...)
+	return out, nil
 }
 
 // concurrencyControlsPreviouslyApplied returns true if concurrency controls have been applied in a previous reconcile loop,

@@ -4,6 +4,7 @@ metadata:
   generateName: testme-
   labels:
     foo: bar
+    baz: qux
   namespace: concurrency
 spec:
   params:
