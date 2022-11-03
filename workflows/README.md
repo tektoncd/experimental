@@ -27,3 +27,8 @@ ko apply -f config
 Each Workflow creates Triggers in its own namespace.
 To restrict [the Workflows EventListener](./config/workflows-el.yaml) to only be able to access the Triggers
 in certain namespaces, edit its namespace selector.
+
+## Future work
+- Support for connecting to GitHub repos
+- Support for declaring secrets in a Workflow
+- Improved syntax for Workspaces and volumes

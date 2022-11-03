@@ -1,14 +1,38 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: python-test
+spec:
+  workspaces:
+  - name: source-code
+  steps:
+  - name: test
+    image: python
+    args: [
+      "python",
+      "-m",
+      "src.animals_test",
+    ]
+---
 apiVersion: workflows.tekton.dev/v1alpha1
 kind: Workflow
 metadata:
-  name: example-workflow
+  name: ci-workflow
 spec:
   triggers:
   - event:
-      type: pull_request
+      type: "pull-request"
+      secret:
+        secretName: "webhook-secret"
+        secretKey: "token"
     filters:
       gitRef:
         regex: '^main$'
+  params:
+  - name: url
+    default: "https://github.com/lbernick/web-app-demo"
+  - name: commit-sha
+    default: main
   pipelineSpec:
     tasks:
       - name: clone
@@ -20,11 +44,9 @@ spec:
           workspace: source
         params:
         - name: url
-          value: https://github.com/$(params.repo-full-name)
+          value: $(params.url)
         - name: revision
-          value: $(params.revision)
+          value: $(params.commit-sha)
       - name: unit-tests
-        taskSpec:
-          steps:
-          - image: busybox
-            script: echo "hello"
+        taskRef:
+          name: python-test
