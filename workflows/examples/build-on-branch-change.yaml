@@ -1,21 +1,33 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kaniko-build
+spec:
+  workspaces:
+  - name: source-code
+  results:
+  - name: digest
+  steps:
+  - name: build
+    image: "gcr.io/kaniko-project/executor:v1.5.1"
+    args: [
+      "--dockerfile=$(workspaces.source-code.path)/Dockerfile",
+      "--context=dir://$(workspaces.source-code.path)",
+      "--digest-file=$(results.digest.path)",
+      "--no-push",
+    ]
+---
 apiVersion: workflows.tekton.dev/v1alpha1
 kind: Workflow
 metadata:
-  name: npm-publish
+  name: build-on-branch-push
 spec:
-  # secrets: # Declare secrets
-  # - name: npm-publish-token
-  #   ref: npm-publish-token # Refers to a K8s secret with this name
-  # - name: git-clone-secret
-  #   ref: git-clone-secret
   triggers:
   - name: on-pr
     event:
-      source:
-    #     url: https://github.com/dibyom/tkndemo
       type: "push"
       secret:
-        secretName: "repo-secret"
+        secretName: "webhook-secret"
         secretKey: "token"
     filters:
       gitRef:
@@ -27,14 +39,12 @@ spec:
       value: $(body.repository.clone_url)
   params:
   - name: url
-    default: "https://github.com/dibyom/tkndemo"
+    default: "https://github.com/lbernick/web-app-demo"
   - name: commit-sha
     default: main
   workspaces:
-  # - name: clone-secret # Mount secret into a workspace
-  #   secret: "$(secrets.git-clone-secret)"
   - name: source
-    volumeClaimTemplate: # Current Tekton Workspace syntax. We can simplify
+    volumeClaimTemplate:
       spec:
         accessModes:
         - ReadWriteOnce
@@ -42,12 +52,11 @@ spec:
           requests:
             storage: 1Gi
   pipelineSpec:
-    params:
-      - name: abc
     tasks:
       - name: git-clone
         taskRef:
           name: git-clone
+          bundle: gcr.io/tekton-releases/catalog/upstream/git-clone:0.7
         params:
         - name: url
           value: "$(params.url)"
@@ -56,15 +65,10 @@ spec:
         workspaces:
         - name: "output"
           workspace: "source"
-        - name: "ssh-directory"
-          workspace: clone-secret
-      - name: "publish-npm"
+      - name: kaniko-build
         runAfter: [ "fetch-source" ]
         workspaces:
         - name: "source"
           workspace: "source"
         taskRef:
-          name: npm-publish
-        params:
-        - name: publish-secret
-          value: "$(secrets.npm-publish-token)"
+          name: kaniko-build
