@@ -181,7 +181,7 @@ spec:
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convert.ToTriggerTemplate(tt.w)
+			got, err := convert.ToTriggerTemplate(tt.w, map[string]string{})
 			if err != nil {
 				t.Errorf("ToTriggerTemplate() error = %v", err)
 				return
@@ -196,9 +196,10 @@ spec:
 
 func TestToTriggers(t *testing.T) {
 	tests := []struct {
-		name string
-		w    *v1alpha1.Workflow
-		want []*triggersv1beta1.Trigger
+		name  string
+		w     *v1alpha1.Workflow
+		want  []*triggersv1beta1.Trigger
+		repos []*v1alpha1.GitRepository
 	}{{
 		name: "single trigger",
 		w: parse.MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
@@ -206,7 +207,7 @@ spec:
   triggers:
   - name: on-pr
     event:
-      type: "pull_request"
+      types: ["pull_request"]
       secret:
         secretName: "repo-secret"
         secretKey: "token"
@@ -241,18 +242,6 @@ spec:
     value: $(body.pull_request.head.sha)
   - name: url
     value: $(body.repository.clone_url)
-  interceptors:
-  - name: "validate-webhook"
-    ref:
-      name: github
-      kind: ClusterInterceptor
-    params:
-    - name: secretRef
-      value:
-        secretName: repo-secret
-        secretKey: token
-    - name: eventTypes
-      value: ["pull_request"]
   template:
     spec:
       resourcetemplates:
@@ -276,7 +265,7 @@ spec:
   triggers:
   - name: on-pr
     event:
-      type: "pull_request"
+      types: ["pull_request"]
       secret:
         secretName: "repo-secret"
         secretKey: "token"
@@ -305,17 +294,6 @@ metadata:
 spec:
   name: on-pr
   interceptors:
-  - name: "validate-webhook"
-    ref:
-      name: github
-      kind: ClusterInterceptor
-    params:
-    - name: secretRef
-      value:
-        secretName: repo-secret
-        secretKey: token
-    - name: eventTypes
-      value: ["pull_request"]
   - name: "gitRef"
     ref:
       name: cel
@@ -339,10 +317,80 @@ spec:
               taskRef: 
                 name: some-task
 `)},
+	}, {
+		name: "with repos",
+		w: parse.MustParseWorkflow(t, "trigger-workflow", "some-namespace", `
+spec:
+  repos:
+  - name: pipelines
+  triggers:
+  - name: on-pr
+    event:
+      types: ["pull_request"]
+      source:
+        repo: pipelines
+  params:
+  - name: repo-url
+    default: $(repos.pipelines.url)
+  pipelineSpec:
+    tasks:
+      - name: task-with-no-params
+        taskRef:
+          name: some-task
+`),
+		repos: []*v1alpha1.GitRepository{parse.MustParseRepo(t, "pipelines", "some-namespace", `
+spec:
+  url: https://tektoncd/pipeline
+`)},
+		want: []*triggersv1beta1.Trigger{parse.MustParseTrigger(t, `
+metadata:
+  name: trigger-workflow-on-pr
+  namespace: some-namespace
+  labels:
+    managed-by: tekton-workflows
+    workflows.tekton.dev/workflow: trigger-workflow
+  ownerReferences:
+  - apiVersion: workflows.tekton.dev/v1alpha1
+    kind: Workflow
+    name: trigger-workflow
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  name: on-pr
+  interceptors:
+  - name: repo
+    ref:
+      name: cel
+      kind: ClusterInterceptor
+    params:
+    - name: "filter"
+      value:  "body.repository.html_url.matches('https://tektoncd/pipeline')" 
+  template:
+    spec:
+      params:
+      - name: repo-url
+        default: https://tektoncd/pipeline 
+      resourcetemplates:
+      - apiVersion: tekton.dev/v1beta1
+        kind: PipelineRun
+        metadata:
+          generateName: trigger-workflow-run-
+          namespace: some-namespace
+        spec:
+          serviceAccountName: default
+          params:
+          - name: repo-url
+            value: $(tt.params.repo-url)
+          pipelineSpec:
+            tasks:
+            - name: task-with-no-params
+              taskRef: 
+                name: some-task
+`)},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convert.ToTriggers(tt.w)
+			got, err := convert.ToTriggers(tt.w, tt.repos)
 			if err != nil {
 				t.Errorf("ToTriggers() error = %v", err)
 				return

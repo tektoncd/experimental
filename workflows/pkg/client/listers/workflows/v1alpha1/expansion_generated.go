@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// GitRepositoryListerExpansion allows custom methods to be added to
+// GitRepositoryLister.
+type GitRepositoryListerExpansion interface{}
+
+// GitRepositoryNamespaceListerExpansion allows custom methods to be added to
+// GitRepositoryNamespaceLister.
+type GitRepositoryNamespaceListerExpansion interface{}
+
 // WorkflowListerExpansion allows custom methods to be added to
 // WorkflowLister.
 type WorkflowListerExpansion interface{}

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
+	workflowsclientset "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned"
 	workflowsreconciler "github.com/tektoncd/experimental/workflows/pkg/client/injection/reconciler/workflows/v1alpha1/workflow"
 	"github.com/tektoncd/experimental/workflows/pkg/convert"
 	"github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
@@ -12,22 +13,81 @@ import (
 	"golang.org/x/sync/errgroup"
 	v1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 )
 
 type Reconciler struct {
-	TriggerLister    listers.TriggerLister
-	TriggerClientSet triggersclientset.Interface
+	TriggerLister      listers.TriggerLister
+	TriggerClientSet   triggersclientset.Interface
+	WorkflowsClientSet workflowsclientset.Interface
 }
 
 var _ workflowsreconciler.Interface = (*Reconciler)(nil)
 
+var ReasonCouldntGetRepo = "CouldntGetRepo"
+
 func (r *Reconciler) ReconcileKind(ctx context.Context, w *v1alpha1.Workflow) reconciler.Event {
-	workflowTriggers, err := convert.ToTriggers(w)
+	repos, err := r.ReconcileRepos(ctx, w)
+	if err != nil {
+		return err
+	}
+	return r.ReconcileTriggers(ctx, w, repos)
+}
+
+func (r *Reconciler) ReconcileRepos(ctx context.Context, w *v1alpha1.Workflow) ([]*v1alpha1.GitRepository, reconciler.Event) {
+	repoEvents := getEventsByRepo(w)
+	var out []*v1alpha1.GitRepository
+	for _, repo := range w.Spec.Repos {
+		existing, err := r.WorkflowsClientSet.WorkflowsV1alpha1().GitRepositories(w.Namespace).Get(ctx, repo.Name, metav1.GetOptions{})
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				w.Status.MarkFailed(ReasonCouldntGetRepo, "Couldn't get repo %s/%s: %s", w.Namespace, repo.Name, err)
+			}
+			return nil, controller.NewPermanentError(err)
+		}
+		// Update repo spec to add events defined in the workflow triggers
+		// TODO: Add a finalizer to remove these events if the workflow is deleted,
+		// as long as no other workflows need these events
+		existingEvents := sets.NewString(existing.Spec.EventTypes...)
+		repoEvents := sets.NewString(repoEvents[repo.Name]...)
+		wantEvents := repoEvents.Union(existingEvents)
+		if !wantEvents.Equal(existingEvents) {
+			newRepo := existing.DeepCopy()
+			newRepo.Spec.EventTypes = wantEvents.List()
+			_, err := r.WorkflowsClientSet.WorkflowsV1alpha1().GitRepositories(w.Namespace).Update(ctx, newRepo, metav1.UpdateOptions{})
+			if err != nil {
+				return nil, err
+			}
+		}
+		out = append(out, existing)
+	}
+	return out, nil
+}
+
+func getEventsByRepo(w *v1alpha1.Workflow) map[string][]string {
+	repoEvents := map[string][]string{}
+	for _, t := range w.Spec.Triggers {
+		if t.Event != nil && t.Event.Source.Repo != "" {
+			repoName := t.Event.Source.Repo
+			events, ok := repoEvents[repoName]
+			if !ok {
+				repoEvents[repoName] = v1alpha1.GetEventTypes(t.Event.Types)
+			} else {
+				repoEvents[repoName] = append(events, v1alpha1.GetEventTypes(t.Event.Types)...)
+			}
+		}
+	}
+	return repoEvents
+}
+
+func (r *Reconciler) ReconcileTriggers(ctx context.Context, w *v1alpha1.Workflow, grs []*v1alpha1.GitRepository) reconciler.Event {
+	workflowTriggers, err := convert.ToTriggers(w, grs)
 	if err != nil {
 		return controller.NewPermanentError(err)
 	}

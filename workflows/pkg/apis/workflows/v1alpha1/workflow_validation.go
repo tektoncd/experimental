@@ -35,8 +35,10 @@ func ValidateTrigger(ctx context.Context, t Trigger) (errs *apis.FieldError) {
 	if t.Filters == nil || t.Filters.GitRef == nil {
 		return nil
 	}
-	if t.Event.Type != EventTypePush && t.Event.Type != EventTypePullRequest {
-		return apis.ErrGeneric(fmt.Sprintf("gitRef filter can be used only with 'push' and 'pull_request' events but got event %s", t.Event.Type))
+	for _, eventType := range t.Event.Types {
+		if eventType != EventTypePush && eventType != EventTypePullRequest {
+			return apis.ErrGeneric(fmt.Sprintf("gitRef filter can be used only with 'push' and 'pull_request' events but got event %s", eventType))
+		}
 	}
 	return nil
 }

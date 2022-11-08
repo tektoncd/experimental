@@ -18,10 +18,13 @@ import (
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
-	WorkflowLabelKey = "workflows.tekton.dev/workflow"
+	WorkflowLabelKey   = "workflows.tekton.dev/workflow"
+	WorkflowsNamespace = "tekton-workflows"
 )
 
 // +genclient
@@ -50,7 +53,7 @@ func (*Workflow) GetGroupVersionKind() schema.GroupVersionKind {
 // WorkflowSpec describes the desired state of the Workflow
 type WorkflowSpec struct {
 	// Repos defines a set of Git repos required for this Workflow
-	// Repos   []Repo   `json:"repos,omitempty"`
+	Repos []RepoRef `json:"repos,omitempty"`
 
 	// Secrets defines any secrets that this Workflow needs
 	// Secrets []Secret `json:"secrets,omitempty"`
@@ -85,6 +88,12 @@ type WorkflowSpec struct {
 
 // WorkflowStatus describes the observed state of the Workflow
 type WorkflowStatus struct {
+	duckv1.Status `json:",inline"`
+}
+
+type RepoRef struct {
+	// TODO: Support cross-namespace repo references
+	Name string `json:"name"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -108,12 +117,12 @@ type WorkflowWorkspaceBinding struct {
 
 type Secret struct {
 	Name string `json:"name"`
-	Ref  string `json:"ref"`
+	Key  string `json:"key"`
 }
 
 type Trigger struct {
 	// Event describes the incoming event for this Trigger
-	Event Event `json:"event"`
+	Event *Event `json:"event"`
 
 	// Bindings are the TriggerBindings used to extract information from this Trigger
 	// +listType=atomic
@@ -131,13 +140,9 @@ type Event struct {
 	// Source defines the source of a trigger event
 	Source EventSource `json:"source"`
 
-	// Type is a string that defines the type of an event (e.g. a pull_request or a push)
+	// Types is a slice of string that defines the type of an event (e.g. a pull_request or a push)
 	// At the moment this assumes one of the GitHub event types
-	Type EventType `json:"type"`
-
-	// Secret is the Webhook secret used for this Trigger
-	// This field is temporary until we implement a better way to handle secrets for webhook validation
-	Secret triggersv1beta1.SecretRef `json:"secret"`
+	Types []EventType `json:"types"`
 }
 
 type EventType string
@@ -149,8 +154,9 @@ const (
 
 // EventSource defines a Trigger EventSource
 type EventSource struct {
-	// TBD, this struct should contain enough information to identify the source of the events
-	// To start with, we'd support push and pull request events from GitHub as well as Cron/scheduled events
+	// TODO: support cron jobs
+	// +optional
+	Repo string `json:"repo,omitempty"`
 }
 
 type Filters struct {
@@ -172,4 +178,19 @@ type GitRef struct {
 type Custom struct {
 	// +optional
 	CEL string `json:"cel,omitempty"`
+}
+
+var workflowCondSet = apis.NewBatchConditionSet()
+
+// MarkFailed changes the Succeeded condition to False with the provided reason and message.
+func (w *WorkflowStatus) MarkFailed(reason, messageFormat string, messageA ...interface{}) {
+	workflowCondSet.Manage(w).MarkFalse(apis.ConditionSucceeded, reason, messageFormat, messageA...)
+}
+
+func GetEventTypes(ets []EventType) []string {
+	var out []string
+	for _, et := range ets {
+		out = append(out, string(et))
+	}
+	return out
 }

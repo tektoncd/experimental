@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
+	workflowsclient "github.com/tektoncd/experimental/workflows/pkg/client/injection/client"
 	workflowsinformer "github.com/tektoncd/experimental/workflows/pkg/client/injection/informers/workflows/v1alpha1/workflow"
 	workflowsreconciler "github.com/tektoncd/experimental/workflows/pkg/client/injection/reconciler/workflows/v1alpha1/workflow"
 	triggersclient "github.com/tektoncd/triggers/pkg/client/injection/client"
@@ -21,9 +22,11 @@ func NewController(
 	workflowsInformer := workflowsinformer.Get(ctx)
 	triggersclientset := triggersclient.Get(ctx)
 	triggersInformer := triggersinformer.Get(ctx)
+	workflowsclientset := workflowsclient.Get(ctx)
 	r := &Reconciler{
-		TriggerClientSet: triggersclientset,
-		TriggerLister:    triggersinformer.Get(ctx).Lister(),
+		TriggerClientSet:   triggersclientset,
+		TriggerLister:      triggersinformer.Get(ctx).Lister(),
+		WorkflowsClientSet: workflowsclientset,
 	}
 	impl := workflowsreconciler.NewImpl(ctx, r)
 	workflowsInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

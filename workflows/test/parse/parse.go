@@ -10,6 +10,7 @@ import (
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	ghsource "knative.dev/eventing-github/pkg/apis/sources/v1alpha1"
 )
 
 func mustParseYAML(t *testing.T, yaml string, i runtime.Object) {
@@ -39,6 +40,29 @@ metadata:
 `+yaml, name, namespace)
 	mustParseYAML(t, yaml, &w)
 	return &w
+}
+
+// MustParseRepo takes YAML and parses it into a *v1alpha1.GitRepository
+func MustParseRepo(t *testing.T, name, namespace, yaml string) *v1alpha1.GitRepository {
+	var gr v1alpha1.GitRepository
+	yaml = fmt.Sprintf(`apiVersion: workflows.tekton.dev/v1alpha1
+kind: GitRepository
+metadata:
+  name: %s
+  namespace: %s
+`+yaml, name, namespace)
+	mustParseYAML(t, yaml, &gr)
+	return &gr
+}
+
+// MustParseGitHubSource takes YAML and parses it into a GitHubSource
+func MustParseGitHubSource(t *testing.T, yaml string) *ghsource.GitHubSource {
+	var ghs ghsource.GitHubSource
+	yaml = `apiVersion: sources.knative.dev/v1alpha1
+kind: GitHubSource
+` + yaml
+	mustParseYAML(t, yaml, &ghs)
+	return &ghs
 }
 
 // MustParseTriggerTemplate takes YAML and parses it into a *triggersv1beta1.TriggerTemplate

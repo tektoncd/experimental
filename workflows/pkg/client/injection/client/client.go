@@ -111,6 +111,137 @@ func (w *wrapWorkflowsV1alpha1) RESTClient() rest.Interface {
 	panic("RESTClient called on dynamic client!")
 }
 
+func (w *wrapWorkflowsV1alpha1) GitRepositories(namespace string) typedworkflowsv1alpha1.GitRepositoryInterface {
+	return &wrapWorkflowsV1alpha1GitRepositoryImpl{
+		dyn: w.dyn.Resource(schema.GroupVersionResource{
+			Group:    "workflows.tekton.dev",
+			Version:  "v1alpha1",
+			Resource: "gitrepositories",
+		}),
+
+		namespace: namespace,
+	}
+}
+
+type wrapWorkflowsV1alpha1GitRepositoryImpl struct {
+	dyn dynamic.NamespaceableResourceInterface
+
+	namespace string
+}
+
+var _ typedworkflowsv1alpha1.GitRepositoryInterface = (*wrapWorkflowsV1alpha1GitRepositoryImpl)(nil)
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) Create(ctx context.Context, in *v1alpha1.GitRepository, opts v1.CreateOptions) (*v1alpha1.GitRepository, error) {
+	in.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "workflows.tekton.dev",
+		Version: "v1alpha1",
+		Kind:    "GitRepository",
+	})
+	uo := &unstructured.Unstructured{}
+	if err := convert(in, uo); err != nil {
+		return nil, err
+	}
+	uo, err := w.dyn.Namespace(w.namespace).Create(ctx, uo, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1alpha1.GitRepository{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+	return w.dyn.Namespace(w.namespace).Delete(ctx, name, opts)
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	return w.dyn.Namespace(w.namespace).DeleteCollection(ctx, opts, listOpts)
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.GitRepository, error) {
+	uo, err := w.dyn.Namespace(w.namespace).Get(ctx, name, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1alpha1.GitRepository{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.GitRepositoryList, error) {
+	uo, err := w.dyn.Namespace(w.namespace).List(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1alpha1.GitRepositoryList{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.GitRepository, err error) {
+	uo, err := w.dyn.Namespace(w.namespace).Patch(ctx, name, pt, data, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1alpha1.GitRepository{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) Update(ctx context.Context, in *v1alpha1.GitRepository, opts v1.UpdateOptions) (*v1alpha1.GitRepository, error) {
+	in.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "workflows.tekton.dev",
+		Version: "v1alpha1",
+		Kind:    "GitRepository",
+	})
+	uo := &unstructured.Unstructured{}
+	if err := convert(in, uo); err != nil {
+		return nil, err
+	}
+	uo, err := w.dyn.Namespace(w.namespace).Update(ctx, uo, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1alpha1.GitRepository{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) UpdateStatus(ctx context.Context, in *v1alpha1.GitRepository, opts v1.UpdateOptions) (*v1alpha1.GitRepository, error) {
+	in.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "workflows.tekton.dev",
+		Version: "v1alpha1",
+		Kind:    "GitRepository",
+	})
+	uo := &unstructured.Unstructured{}
+	if err := convert(in, uo); err != nil {
+		return nil, err
+	}
+	uo, err := w.dyn.Namespace(w.namespace).UpdateStatus(ctx, uo, opts)
+	if err != nil {
+		return nil, err
+	}
+	out := &v1alpha1.GitRepository{}
+	if err := convert(uo, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (w *wrapWorkflowsV1alpha1GitRepositoryImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+	return nil, errors.New("NYI: Watch")
+}
+
 func (w *wrapWorkflowsV1alpha1) Workflows(namespace string) typedworkflowsv1alpha1.WorkflowInterface {
 	return &wrapWorkflowsV1alpha1WorkflowImpl{
 		dyn: w.dyn.Resource(schema.GroupVersionResource{

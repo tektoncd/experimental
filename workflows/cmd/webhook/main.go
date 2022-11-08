@@ -31,7 +31,8 @@ import (
 
 var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// List the types to validate.
-	v1alpha1.SchemeGroupVersion.WithKind("Workflow"): &v1alpha1.Workflow{},
+	v1alpha1.SchemeGroupVersion.WithKind("Workflow"):      &v1alpha1.Workflow{},
+	v1alpha1.SchemeGroupVersion.WithKind("GitRepository"): &v1alpha1.GitRepository{},
 }
 
 var callbacks = map[schema.GroupVersionKind]validation.Callback{}

@@ -22,7 +22,7 @@ spec:
   triggers:
   - name: on-push
     event:
-      type: "push"
+      types: ["push"]
     filters:
       gitRef:
         regex: "^main$"
@@ -34,7 +34,7 @@ spec:
   triggers:
   - name: on-pr
     event:
-      type: "pull_request"
+      types: ["pull_request"]
     filters:
       gitRef:
         regex: "^main$"
@@ -46,7 +46,7 @@ spec:
   triggers:
   - name: on-event
     event:
-      type: "some-other-event-type"
+      types: ["some-other-event-type"]
     filters:
       gitRef:
         regex: "^main$"

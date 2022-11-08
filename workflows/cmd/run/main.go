@@ -54,7 +54,7 @@ func runWorkflow(fileName string) error {
 		fmt.Printf("error reading file: %+v", err)
 	}
 	w := parseWorkflowOrDie(file)
-	triggers, err := convert.ToTriggers(w)
+	triggers, err := convert.ToTriggers(w, []*v1alpha1.GitRepository{})
 	if err != nil {
 		return fmt.Errorf("error converting to Triggers: %s", err)
 	}

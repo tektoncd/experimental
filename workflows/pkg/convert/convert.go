@@ -20,6 +20,7 @@ import (
 	"github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
 	"github.com/tektoncd/experimental/workflows/pkg/filters"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/substitution"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -88,7 +89,7 @@ func ToPipelineRun(w *v1alpha1.Workflow) (*pipelinev1beta1.PipelineRun, error) {
 }
 
 // ToTriggerTemplate converts a Workflow into a TriggerTemplate
-func ToTriggerTemplate(w *v1alpha1.Workflow) (*triggersv1beta1.TriggerTemplate, error) {
+func ToTriggerTemplate(w *v1alpha1.Workflow, replacements map[string]string) (*triggersv1beta1.TriggerTemplate, error) {
 	pr, err := ToPipelineRun(w)
 	if err != nil {
 		return nil, err
@@ -96,16 +97,16 @@ func ToTriggerTemplate(w *v1alpha1.Workflow) (*triggersv1beta1.TriggerTemplate, 
 
 	params := []triggersv1beta1.ParamSpec{}
 	for _, p := range w.Spec.Params {
-
 		// Triggers does not support array values from bindings
 		if p.Type == pipelinev1beta1.ParamTypeArray {
 			continue
 		}
+		defaultVal := substitution.ApplyReplacements(p.Default.StringVal, replacements)
 
 		params = append(params, triggersv1beta1.ParamSpec{
 			Name:        p.Name,
 			Description: p.Description,
-			Default:     ptr.String(p.Default.StringVal),
+			Default:     ptr.String(defaultVal),
 		})
 		for i, prp := range pr.Spec.Params {
 			if prp.Name == p.Name {
@@ -145,37 +146,31 @@ func ToTriggerTemplate(w *v1alpha1.Workflow) (*triggersv1beta1.TriggerTemplate, 
 
 // ToTriggers creates a new Trigger with inline bindings and template for each type
 // TODO: Reuse same triggertemplate for efficiency?
-func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
-	tt, err := ToTriggerTemplate(w)
+func ToTriggers(w *v1alpha1.Workflow, grs []*v1alpha1.GitRepository) ([]*triggersv1beta1.Trigger, error) {
+	repoMap := getRepoMap(grs)
+	replacements := getRepoParamReplacements(repoMap)
+	tt, err := ToTriggerTemplate(w, replacements)
 	if err != nil {
 		return nil, err
 	}
 	triggers := []*triggersv1beta1.Trigger{}
 	for _, t := range w.Spec.Triggers {
-		secretToJson, err := filters.ToV1JSON(t.Event.Secret)
-		if err != nil {
-			return nil, err
+		interceptors := []*triggersv1beta1.TriggerInterceptor{}
+
+		// TODO: Ideally we'd like to filter for the correct event types,
+		// but the Knative GithubSource doesn't preserve GitHub headers,
+		// which is what the Triggers GitHub interceptor uses to determine event types.
+		// So for now, all the workflows will receive all the events for a repo.
+		if t.Event != nil && t.Event.Source.Repo != "" {
+			repoName := t.Event.Source.Repo
+			url := repoMap[repoName].Spec.URL
+			repoFilter, err := getRepoFilter(url)
+			if err != nil {
+				return nil, err
+			}
+			interceptors = append(interceptors, repoFilter)
 		}
-		eventTypesJson, err := filters.ToV1JSON([]string{string(t.Event.Type)})
-		if err != nil {
-			return nil, err
-		}
-		// Add an interceptor to validate the payload from GitHub webhook
-		payloadValidation := triggersv1beta1.TriggerInterceptor{
-			Name: ptr.String("validate-webhook"),
-			Ref: triggersv1beta1.InterceptorRef{
-				Name: "github",
-				Kind: "ClusterInterceptor",
-			},
-			Params: []triggersv1beta1.InterceptorParams{{
-				Name:  "secretRef",
-				Value: secretToJson,
-			}, {
-				Name:  "eventTypes",
-				Value: eventTypesJson,
-			}},
-		}
-		interceptors := []*triggersv1beta1.TriggerInterceptor{&payloadValidation}
+
 		filterInterceptors, err := filters.ToInterceptors(t.Filters)
 		if err != nil {
 			return nil, err
@@ -206,4 +201,49 @@ func ToTriggers(w *v1alpha1.Workflow) ([]*triggersv1beta1.Trigger, error) {
 		})
 	}
 	return triggers, nil
+}
+
+func getRepoMap(grs []*v1alpha1.GitRepository) map[string]*v1alpha1.GitRepository {
+	out := map[string]*v1alpha1.GitRepository{}
+	for _, repo := range grs {
+		out[repo.Name] = repo
+	}
+	return out
+}
+
+func getRepoFilter(url string) (*triggersv1beta1.TriggerInterceptor, error) {
+	// For right now we're assuming that the event body
+	// contains a "repository.html_url" field, as in GitHub event payloads
+	celFilter := fmt.Sprintf("body.repository.html_url.matches('%s')", url)
+	celFilterToJSON, err := filters.ToV1JSON(celFilter)
+	if err != nil {
+		return nil, err
+	}
+	repoInterceptor := triggersv1beta1.TriggerInterceptor{
+		Name: ptr.String("repo"),
+		Ref: triggersv1beta1.InterceptorRef{
+			Name: "cel",
+			Kind: "ClusterInterceptor",
+		},
+		Params: []triggersv1beta1.InterceptorParams{{
+			Name:  "filter",
+			Value: celFilterToJSON,
+		}},
+	}
+	return &repoInterceptor, nil
+}
+
+func getRepoParamReplacements(repos map[string]*v1alpha1.GitRepository) map[string]string {
+	repoPatterns := []string{
+		"repos.%s.url",
+		"repos[%s].url",
+		"repos['%s'].url",
+	}
+	replacements := map[string]string{}
+	for _, pattern := range repoPatterns {
+		for name, repo := range repos {
+			replacements[fmt.Sprintf(pattern, name)] = repo.Spec.URL
+		}
+	}
+	return replacements
 }

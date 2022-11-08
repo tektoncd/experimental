@@ -6,8 +6,8 @@ will be updated to reflect the reduced burden these features will require.
 ## Setup
 
 - First, create a random webhook secret value.
-- Put this value in a Kubernetes secret named "webhook-secret" under the key named "token".
+- Put this value in a Kubernetes secret named "githubsecret" under the key named "secretToken".
+The secret should be in the same namespace as the GitRepository.
 - Replace "url" with a repo you own that has a Dockerfile.
-- Next, set up a GitHub webhook on this repo with the same secret.
-- Point this webhook at the ingress created for the Workflows EventListener
-"workflows-listener" in the "tekton-workflows" namespace.
+- Next, create a personal access token with permission to create webhooks on this repo, and put
+the PAT in the secret named "githubsecret" under the key named "accessToken".

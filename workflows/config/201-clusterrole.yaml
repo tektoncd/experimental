@@ -22,7 +22,10 @@ metadata:
     app.kubernetes.io/part-of: tekton-workflows
 rules:
   - apiGroups: ["workflows.tekton.dev"]
-    resources: ["workflows"]
+    resources: ["workflows", "workflows/status", "gitrepositories", "gitrepositories/status"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["sources.knative.dev"]
+    resources: ["githubsources"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["triggers.tekton.dev"]
     resources: ["triggers"]

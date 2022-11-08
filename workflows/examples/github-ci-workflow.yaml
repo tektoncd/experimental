@@ -16,22 +16,37 @@ spec:
     ]
 ---
 apiVersion: workflows.tekton.dev/v1alpha1
+kind: GitRepository
+metadata:
+  name: webapp
+  namespace: ops
+spec:
+  url: https://github.com/lbernick/web-app-demo
+  webhookSecret:
+    name: githubsecret
+    key: secretToken
+  accessToken:
+    name: githubsecret
+    key: accessToken
+---
+apiVersion: workflows.tekton.dev/v1alpha1
 kind: Workflow
 metadata:
   name: ci-workflow
 spec:
+  repos:
+  - name: webapp
   triggers:
   - event:
-      type: "pull-request"
-      secret:
-        secretName: "webhook-secret"
-        secretKey: "token"
+      source:
+        repo: webapp
+      types: ["pull-request"]
     filters:
       gitRef:
         regex: '^main$'
   params:
   - name: url
-    default: "https://github.com/lbernick/web-app-demo"
+    default: $(repos.webapp.url)
   - name: commit-sha
     default: main
   pipelineSpec:

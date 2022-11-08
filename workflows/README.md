@@ -8,7 +8,7 @@ This project is discussed in the [Workflows Working Group](https://github.com/te
 
 ## Installation
 
-You must first install Tekton Pipelines and Tekton Triggers.
+You must first install Tekton Pipelines, Tekton Triggers, Knative Serving, Knative Eventing, and the Knative GitHubSource.
 
 ### Install from nightly release
 
@@ -29,6 +29,6 @@ To restrict [the Workflows EventListener](./config/workflows-el.yaml) to only be
 in certain namespaces, edit its namespace selector.
 
 ## Future work
-- Support for connecting to GitHub repos
+- Support for connecting to GitHub repos via a GitHub app, or connecting to repos hosted by other providers
 - Support for declaring secrets in a Workflow
 - Improved syntax for Workspaces and volumes

@@ -53,6 +53,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=workflows.tekton.dev, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("gitrepositories"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Workflows().V1alpha1().GitRepositories().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("workflows"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Workflows().V1alpha1().Workflows().Informer()}, nil
 

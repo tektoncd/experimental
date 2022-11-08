@@ -7,7 +7,7 @@ spec:
   serviceAccountName: tekton-triggers-example-sa
   resources:
     kubernetesResource:
-      serviceType: LoadBalancer
+      servicePort: 80
   labelSelector:
     matchLabels:
       managed-by: tekton-workflows
