@@ -55,7 +55,7 @@ func withInformer(ctx context.Context) (context.Context, []controller.Informer) 
 	infs := []controller.Informer{}
 	for _, selector := range labelSelectors {
 		f := filtered.Get(ctx, selector)
-		inf := f.Tekton().V1alpha1().Workflows()
+		inf := f.Workflows().V1alpha1().Workflows()
 		ctx = context.WithValue(ctx, Key{Selector: selector}, inf)
 		infs = append(infs, inf.Informer())
 	}
@@ -115,7 +115,7 @@ func (w *wrapper) List(selector labels.Selector) (ret []*apisworkflowsv1alpha1.W
 		return nil, err
 	}
 	selector = selector.Add(reqs...)
-	lo, err := w.client.TektonV1alpha1().Workflows(w.namespace).List(context.TODO(), v1.ListOptions{
+	lo, err := w.client.WorkflowsV1alpha1().Workflows(w.namespace).List(context.TODO(), v1.ListOptions{
 		LabelSelector: selector.String(),
 		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
 	})
@@ -130,7 +130,7 @@ func (w *wrapper) List(selector labels.Selector) (ret []*apisworkflowsv1alpha1.W
 
 func (w *wrapper) Get(name string) (*apisworkflowsv1alpha1.Workflow, error) {
 	// TODO(mattmoor): Check that the fetched object matches the selector.
-	return w.client.TektonV1alpha1().Workflows(w.namespace).Get(context.TODO(), name, v1.GetOptions{
+	return w.client.WorkflowsV1alpha1().Workflows(w.namespace).Get(context.TODO(), name, v1.GetOptions{
 		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
 	})
 }

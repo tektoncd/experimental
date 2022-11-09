@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1alpha1
+apiVersion: workflows.tekton.dev/v1alpha1
 kind: Workflow
 metadata:
   name: example-workflow

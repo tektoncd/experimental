@@ -26,7 +26,7 @@ import (
 
 	v1alpha1 "github.com/tektoncd/experimental/workflows/pkg/apis/workflows/v1alpha1"
 	versioned "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned"
-	typedtektonv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1"
+	typedworkflowsv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -96,25 +96,25 @@ func convert(from interface{}, to runtime.Object) error {
 	return nil
 }
 
-// TektonV1alpha1 retrieves the TektonV1alpha1Client
-func (w *wrapClient) TektonV1alpha1() typedtektonv1alpha1.TektonV1alpha1Interface {
-	return &wrapTektonV1alpha1{
+// WorkflowsV1alpha1 retrieves the WorkflowsV1alpha1Client
+func (w *wrapClient) WorkflowsV1alpha1() typedworkflowsv1alpha1.WorkflowsV1alpha1Interface {
+	return &wrapWorkflowsV1alpha1{
 		dyn: w.dyn,
 	}
 }
 
-type wrapTektonV1alpha1 struct {
+type wrapWorkflowsV1alpha1 struct {
 	dyn dynamic.Interface
 }
 
-func (w *wrapTektonV1alpha1) RESTClient() rest.Interface {
+func (w *wrapWorkflowsV1alpha1) RESTClient() rest.Interface {
 	panic("RESTClient called on dynamic client!")
 }
 
-func (w *wrapTektonV1alpha1) Workflows(namespace string) typedtektonv1alpha1.WorkflowInterface {
-	return &wrapTektonV1alpha1WorkflowImpl{
+func (w *wrapWorkflowsV1alpha1) Workflows(namespace string) typedworkflowsv1alpha1.WorkflowInterface {
+	return &wrapWorkflowsV1alpha1WorkflowImpl{
 		dyn: w.dyn.Resource(schema.GroupVersionResource{
-			Group:    "tekton.dev",
+			Group:    "workflows.tekton.dev",
 			Version:  "v1alpha1",
 			Resource: "workflows",
 		}),
@@ -123,17 +123,17 @@ func (w *wrapTektonV1alpha1) Workflows(namespace string) typedtektonv1alpha1.Wor
 	}
 }
 
-type wrapTektonV1alpha1WorkflowImpl struct {
+type wrapWorkflowsV1alpha1WorkflowImpl struct {
 	dyn dynamic.NamespaceableResourceInterface
 
 	namespace string
 }
 
-var _ typedtektonv1alpha1.WorkflowInterface = (*wrapTektonV1alpha1WorkflowImpl)(nil)
+var _ typedworkflowsv1alpha1.WorkflowInterface = (*wrapWorkflowsV1alpha1WorkflowImpl)(nil)
 
-func (w *wrapTektonV1alpha1WorkflowImpl) Create(ctx context.Context, in *v1alpha1.Workflow, opts v1.CreateOptions) (*v1alpha1.Workflow, error) {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) Create(ctx context.Context, in *v1alpha1.Workflow, opts v1.CreateOptions) (*v1alpha1.Workflow, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "tekton.dev",
+		Group:   "workflows.tekton.dev",
 		Version: "v1alpha1",
 		Kind:    "Workflow",
 	})
@@ -152,15 +152,15 @@ func (w *wrapTektonV1alpha1WorkflowImpl) Create(ctx context.Context, in *v1alpha
 	return out, nil
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return w.dyn.Namespace(w.namespace).Delete(ctx, name, opts)
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	return w.dyn.Namespace(w.namespace).DeleteCollection(ctx, opts, listOpts)
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Workflow, error) {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Workflow, error) {
 	uo, err := w.dyn.Namespace(w.namespace).Get(ctx, name, opts)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (w *wrapTektonV1alpha1WorkflowImpl) Get(ctx context.Context, name string, o
 	return out, nil
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.WorkflowList, error) {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.WorkflowList, error) {
 	uo, err := w.dyn.Namespace(w.namespace).List(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (w *wrapTektonV1alpha1WorkflowImpl) List(ctx context.Context, opts v1.ListO
 	return out, nil
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Workflow, err error) {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Workflow, err error) {
 	uo, err := w.dyn.Namespace(w.namespace).Patch(ctx, name, pt, data, opts)
 	if err != nil {
 		return nil, err
@@ -196,9 +196,9 @@ func (w *wrapTektonV1alpha1WorkflowImpl) Patch(ctx context.Context, name string,
 	return out, nil
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) Update(ctx context.Context, in *v1alpha1.Workflow, opts v1.UpdateOptions) (*v1alpha1.Workflow, error) {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) Update(ctx context.Context, in *v1alpha1.Workflow, opts v1.UpdateOptions) (*v1alpha1.Workflow, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "tekton.dev",
+		Group:   "workflows.tekton.dev",
 		Version: "v1alpha1",
 		Kind:    "Workflow",
 	})
@@ -217,9 +217,9 @@ func (w *wrapTektonV1alpha1WorkflowImpl) Update(ctx context.Context, in *v1alpha
 	return out, nil
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) UpdateStatus(ctx context.Context, in *v1alpha1.Workflow, opts v1.UpdateOptions) (*v1alpha1.Workflow, error) {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) UpdateStatus(ctx context.Context, in *v1alpha1.Workflow, opts v1.UpdateOptions) (*v1alpha1.Workflow, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "tekton.dev",
+		Group:   "workflows.tekton.dev",
 		Version: "v1alpha1",
 		Kind:    "Workflow",
 	})
@@ -238,6 +238,6 @@ func (w *wrapTektonV1alpha1WorkflowImpl) UpdateStatus(ctx context.Context, in *v
 	return out, nil
 }
 
-func (w *wrapTektonV1alpha1WorkflowImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (w *wrapWorkflowsV1alpha1WorkflowImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return nil, errors.New("NYI: Watch")
 }

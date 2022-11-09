@@ -21,7 +21,7 @@ metadata:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-workflows
 rules:
-  - apiGroups: ["tekton.dev"]
+  - apiGroups: ["workflows.tekton.dev"]
     resources: ["workflows"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["triggers.tekton.dev"]

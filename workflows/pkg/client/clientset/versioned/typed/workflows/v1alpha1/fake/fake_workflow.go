@@ -32,13 +32,13 @@ import (
 
 // FakeWorkflows implements WorkflowInterface
 type FakeWorkflows struct {
-	Fake *FakeTektonV1alpha1
+	Fake *FakeWorkflowsV1alpha1
 	ns   string
 }
 
-var workflowsResource = schema.GroupVersionResource{Group: "tekton.dev", Version: "v1alpha1", Resource: "workflows"}
+var workflowsResource = schema.GroupVersionResource{Group: "workflows.tekton.dev", Version: "v1alpha1", Resource: "workflows"}
 
-var workflowsKind = schema.GroupVersionKind{Group: "tekton.dev", Version: "v1alpha1", Kind: "Workflow"}
+var workflowsKind = schema.GroupVersionKind{Group: "workflows.tekton.dev", Version: "v1alpha1", Kind: "Workflow"}
 
 // Get takes name of the workflow, and returns the corresponding workflow object, and an error if there is any.
 func (c *FakeWorkflows) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Workflow, err error) {

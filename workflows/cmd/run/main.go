@@ -38,7 +38,7 @@ func main() {
 // TODO: fail if the yaml contains unrecognized fields
 func parseWorkflowOrDie(yaml []byte) *v1alpha1.Workflow {
 	var w v1alpha1.Workflow
-	meta := `apiVersion: tekton.dev/v1alpha1
+	meta := `apiVersion: workflows.tekton.dev/v1alpha1
 kind: Workflow
 `
 	bytes := append([]byte(meta), yaml...)

@@ -40,7 +40,7 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	return defaulting.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
-		"webhook.workflows.custom.tekton.dev",
+		"webhook.workflows.tekton.dev",
 
 		// The path on which to serve the webhook.
 		"/defaulting",
@@ -62,7 +62,7 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	return validation.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
-		"validation.webhook.workflows.custom.tekton.dev",
+		"validation.webhook.workflows.tekton.dev",
 
 		// The path on which to serve the webhook.
 		"/resource-validation",

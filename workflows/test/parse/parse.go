@@ -28,10 +28,10 @@ kind: PipelineRun
 	return &pr
 }
 
-// MustParsePipelineRun takes YAML and parses it into a *v1beta1.PipelineRun
+// MustParseWorkflow takes YAML and parses it into a *v1alpha1.Workflow
 func MustParseWorkflow(t *testing.T, name, namespace, yaml string) *v1alpha1.Workflow {
 	var w v1alpha1.Workflow
-	yaml = fmt.Sprintf(`apiVersion: tekton.dev/v1alpha1
+	yaml = fmt.Sprintf(`apiVersion: workflows.tekton.dev/v1alpha1
 kind: Workflow
 metadata:
   name: %s

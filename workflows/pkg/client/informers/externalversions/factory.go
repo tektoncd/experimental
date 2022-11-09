@@ -172,9 +172,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Tekton() workflows.Interface
+	Workflows() workflows.Interface
 }
 
-func (f *sharedInformerFactory) Tekton() workflows.Interface {
+func (f *sharedInformerFactory) Workflows() workflows.Interface {
 	return workflows.New(f, f.namespace, f.tweakListOptions)
 }
