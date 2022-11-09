@@ -37,7 +37,7 @@ func initializeControllerAssets(t *testing.T, r test.Resources, ws []*v1alpha1.W
 		if err := workflowsInformer.Informer().GetIndexer().Add(w); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := workflowsClient.TektonV1alpha1().Workflows(w.Namespace).Create(context.Background(), w, metav1.CreateOptions{}); err != nil {
+		if _, err := workflowsClient.WorkflowsV1alpha1().Workflows(w.Namespace).Create(context.Background(), w, metav1.CreateOptions{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -82,7 +82,7 @@ func sortTriggers(i, j v1beta1.Trigger) bool {
 
 func TestReconcile(t *testing.T) {
 	tr := true
-	ownerRef := metav1.OwnerReference{APIVersion: "tekton.dev/v1alpha1", Kind: "Workflow", Name: "my-workflow", Controller: &tr, BlockOwnerDeletion: &tr}
+	ownerRef := metav1.OwnerReference{APIVersion: "workflows.tekton.dev/v1alpha1", Kind: "Workflow", Name: "my-workflow", Controller: &tr, BlockOwnerDeletion: &tr}
 	namespace := "default"
 	tcs := []struct {
 		name             string
@@ -215,14 +215,14 @@ func TestReconcile(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "another-workflow-my-trigger-2", Namespace: namespace,
 				Labels:          map[string]string{v1alpha1.WorkflowLabelKey: "another-workflow", "managed-by": "tekton-workflows"},
-				OwnerReferences: []metav1.OwnerReference{{APIVersion: "tekton.dev/v1alpha1", Kind: "Workflow", Name: "another-workflow", Controller: &tr, BlockOwnerDeletion: &tr}},
+				OwnerReferences: []metav1.OwnerReference{{APIVersion: "workflows.tekton.dev/v1alpha1", Kind: "Workflow", Name: "another-workflow", Controller: &tr, BlockOwnerDeletion: &tr}},
 			},
 		}},
 		wantTriggers: []v1beta1.Trigger{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "another-workflow-my-trigger-2", Namespace: namespace,
 				Labels:          map[string]string{v1alpha1.WorkflowLabelKey: "another-workflow", "managed-by": "tekton-workflows"},
-				OwnerReferences: []metav1.OwnerReference{{APIVersion: "tekton.dev/v1alpha1", Kind: "Workflow", Name: "another-workflow", Controller: &tr, BlockOwnerDeletion: &tr}},
+				OwnerReferences: []metav1.OwnerReference{{APIVersion: "workflows.tekton.dev/v1alpha1", Kind: "Workflow", Name: "another-workflow", Controller: &tr, BlockOwnerDeletion: &tr}},
 			},
 		}, {
 			ObjectMeta: metav1.ObjectMeta{

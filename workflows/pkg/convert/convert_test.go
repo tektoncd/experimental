@@ -227,9 +227,9 @@ metadata:
   namespace: some-namespace
   labels:
     managed-by: tekton-workflows
-    tekton.dev/workflow: trigger-workflow
+    workflows.tekton.dev/workflow: trigger-workflow
   ownerReferences:
-  - apiVersion: tekton.dev/v1alpha1
+  - apiVersion: workflows.tekton.dev/v1alpha1
     kind: Workflow
     name: trigger-workflow
     controller: true
@@ -295,9 +295,9 @@ metadata:
   namespace: some-namespace
   labels:
     managed-by: tekton-workflows
-    tekton.dev/workflow: trigger-workflow
+    workflows.tekton.dev/workflow: trigger-workflow
   ownerReferences:
-  - apiVersion: tekton.dev/v1alpha1
+  - apiVersion: workflows.tekton.dev/v1alpha1
     kind: Workflow
     name: trigger-workflow
     controller: true

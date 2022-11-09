@@ -13,7 +13,7 @@ metadata:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: validation.webhook.workflows.custom.tekton.dev
+  name: validation.webhook.workflows.tekton.dev
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
@@ -28,17 +28,17 @@ webhooks:
       namespace: tekton-workflows
   rules:
   - operations: ["CREATE", "UPDATE"]
-    apiGroups: ["tekton.dev"]
+    apiGroups: ["workflows.tekton.dev"]
     apiVersions: ["v1alpha1"]
     resources: ["workflows"]
   failurePolicy: Fail
   sideEffects: None
-  name: validation.webhook.workflows.custom.tekton.dev
+  name: validation.webhook.workflows.tekton.dev
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: webhook.workflows.custom.tekton.dev
+  name: webhook.workflows.tekton.dev
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/instance: default
@@ -53,4 +53,4 @@ webhooks:
       namespace: tekton-workflows
   failurePolicy: Fail
   sideEffects: None
-  name: webhook.workflows.custom.tekton.dev
+  name: webhook.workflows.tekton.dev

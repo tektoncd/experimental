@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned"
-	tektonv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1"
-	faketektonv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1/fake"
+	workflowsv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1"
+	fakeworkflowsv1alpha1 "github.com/tektoncd/experimental/workflows/pkg/client/clientset/versioned/typed/workflows/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,7 +79,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// TektonV1alpha1 retrieves the TektonV1alpha1Client
-func (c *Clientset) TektonV1alpha1() tektonv1alpha1.TektonV1alpha1Interface {
-	return &faketektonv1alpha1.FakeTektonV1alpha1{Fake: &c.Fake}
+// WorkflowsV1alpha1 retrieves the WorkflowsV1alpha1Client
+func (c *Clientset) WorkflowsV1alpha1() workflowsv1alpha1.WorkflowsV1alpha1Interface {
+	return &fakeworkflowsv1alpha1.FakeWorkflowsV1alpha1{Fake: &c.Fake}
 }

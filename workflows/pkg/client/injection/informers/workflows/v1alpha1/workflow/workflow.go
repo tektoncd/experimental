@@ -45,7 +45,7 @@ type Key struct{}
 
 func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	f := factory.Get(ctx)
-	inf := f.Tekton().V1alpha1().Workflows()
+	inf := f.Workflows().V1alpha1().Workflows()
 	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 
@@ -96,7 +96,7 @@ func (w *wrapper) SetResourceVersion(resourceVersion string) {
 }
 
 func (w *wrapper) List(selector labels.Selector) (ret []*apisworkflowsv1alpha1.Workflow, err error) {
-	lo, err := w.client.TektonV1alpha1().Workflows(w.namespace).List(context.TODO(), v1.ListOptions{
+	lo, err := w.client.WorkflowsV1alpha1().Workflows(w.namespace).List(context.TODO(), v1.ListOptions{
 		LabelSelector:   selector.String(),
 		ResourceVersion: w.resourceVersion,
 	})
@@ -110,7 +110,7 @@ func (w *wrapper) List(selector labels.Selector) (ret []*apisworkflowsv1alpha1.W
 }
 
 func (w *wrapper) Get(name string) (*apisworkflowsv1alpha1.Workflow, error) {
-	return w.client.TektonV1alpha1().Workflows(w.namespace).Get(context.TODO(), name, v1.GetOptions{
+	return w.client.WorkflowsV1alpha1().Workflows(w.namespace).Get(context.TODO(), name, v1.GetOptions{
 		ResourceVersion: w.resourceVersion,
 	})
 }

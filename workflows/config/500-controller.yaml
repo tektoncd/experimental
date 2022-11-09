@@ -61,7 +61,7 @@ spec:
             - name: CONFIG_LOGGING_NAME
               value: config-logging
             - name: METRICS_DOMAIN
-              value: experimental.tekton.dev/workflows
+              value: workflows.tekton.dev
       volumes:
         - name: config-logging
           configMap:

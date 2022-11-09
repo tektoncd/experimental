@@ -15,14 +15,13 @@ package v1alpha1
 
 import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	triggersv1beta1 "github.com/tektoncd/triggers/pkg/apis/triggers/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
-	WorkflowLabelKey = "tekton.dev/workflow"
+	WorkflowLabelKey = "workflows.tekton.dev/workflow"
 )
 
 // +genclient
@@ -61,7 +60,7 @@ type WorkflowSpec struct {
 
 	// Params define the default values for params in the Pipeline that can be
 	// overridden in a WorkflowRun or (in the future) from an incoming event.
-	Params []pipelinev1beta1.ParamSpec `json:"params,omitempty"`
+	Params []v1beta1.ParamSpec `json:"params,omitempty"`
 
 	// PipelineSpec is an inline pipeline spec.
 	// Cannot specify both PipelineSpec and PipelineRef.
@@ -80,7 +79,7 @@ type WorkflowSpec struct {
 	Workspaces []WorkflowWorkspaceBinding `json:"workspaces"`
 
 	// TODO: Timeout ?
-	Timeout *pipelinev1beta1.TimeoutFields `json:"timeout,omitempty"`
+	Timeout *v1beta1.TimeoutFields `json:"timeout,omitempty"`
 	// TODO: queue_ttl -> pending_timeout
 }
 
@@ -103,8 +102,8 @@ type WorkflowList struct {
 // will add additional magic to auto-propagate/generate PVCs
 // TODO: Fluent Syntax for Binding
 type WorkflowWorkspaceBinding struct {
-	Name                             string `json:"name"`
-	pipelinev1beta1.WorkspaceBinding `json:",inline"`
+	Name                     string `json:"name"`
+	v1beta1.WorkspaceBinding `json:",inline"`
 }
 
 type Secret struct {

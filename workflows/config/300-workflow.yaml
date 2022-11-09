@@ -15,13 +15,13 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: workflows.tekton.dev
+  name: workflows.workflows.tekton.dev
   labels:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-pipelines
     version: "devel"
 spec:
-  group: tekton.dev
+  group: workflows.tekton.dev
   preserveUnknownFields: false
   versions:
     - name: v1alpha1

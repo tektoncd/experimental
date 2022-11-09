@@ -44,7 +44,7 @@ import (
 
 const (
 	defaultControllerAgentName = "workflow-controller"
-	defaultFinalizerName       = "workflows.tekton.dev"
+	defaultFinalizerName       = "workflows.workflows.tekton.dev"
 )
 
 // NewImpl returns a controller.Impl that handles queuing and feeding work from
@@ -98,7 +98,7 @@ func NewImpl(ctx context.Context, r Interface, optionsFns ...controller.OptionsF
 
 	logger = logger.With(
 		zap.String(logkey.ControllerType, ctrTypeName),
-		zap.String(logkey.Kind, "tekton.dev.Workflow"),
+		zap.String(logkey.Kind, "workflows.tekton.dev.Workflow"),
 	)
 
 	impl := controller.NewContext(ctx, rec, controller.ControllerOptions{WorkQueueName: ctrTypeName, Logger: logger})
