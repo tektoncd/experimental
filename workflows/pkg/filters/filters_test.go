@@ -27,7 +27,7 @@ func TestConvertFilters(t *testing.T) {
 		want: []*triggersv1beta1.TriggerInterceptor{{
 			Name:   &gitRef,
 			Ref:    triggersv1beta1.InterceptorRef{Name: "cel", Kind: triggersv1beta1.ClusterInterceptorKind},
-			Params: []triggersv1beta1.InterceptorParams{{Name: "filter", Value: v1.JSON{Raw: []uint8(`"body.ref.split('/')[2].matches(^main$)"`)}}},
+			Params: []triggersv1beta1.InterceptorParams{{Name: "filter", Value: v1.JSON{Raw: []uint8(`"body.ref.split('/')[2].matches('^main$')"`)}}},
 		}},
 	}, {
 		name: "custom filter",

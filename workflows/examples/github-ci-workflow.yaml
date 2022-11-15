@@ -4,10 +4,11 @@ metadata:
   name: python-test
 spec:
   workspaces:
-  - name: source-code
+  - name: source
   steps:
   - name: test
     image: python
+    workingDir: $(workspaces.source.path)
     args: [
       "python",
       "-m",
@@ -50,3 +51,7 @@ spec:
       - name: unit-tests
         taskRef:
           name: python-test
+        runAfter: ["clone"]
+        workspaces:
+        - name: source
+          workspace: source

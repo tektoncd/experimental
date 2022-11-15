@@ -43,7 +43,7 @@ func gitRefToInterceptor(gr v1alpha1.GitRef) (*triggersv1beta1.TriggerIntercepto
 
 	// For right now we're assuming that the event body
 	// contains a top-level "refs" field of the form "refs/heads/main"
-	celFilter := fmt.Sprintf("body.ref.split('/')[2].matches(%s)", gr.Regex)
+	celFilter := fmt.Sprintf("body.ref.split('/')[2].matches('%s')", gr.Regex)
 	celFilterToJSON, err := ToV1JSON(celFilter)
 	if err != nil {
 		return nil, err
