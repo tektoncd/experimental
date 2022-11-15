@@ -322,7 +322,7 @@ spec:
       kind: ClusterInterceptor
     params:
     - name: "filter"
-      value:  "body.ref.split('/')[2].matches(^main$)" 
+      value:  "body.ref.split('/')[2].matches('^main$')" 
   template:
     spec:
       resourcetemplates:

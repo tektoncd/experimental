@@ -43,7 +43,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, w *v1alpha1.Workflow) re
 		if !ok {
 			ops = append(ops, triggerOp{trigger: t, op: v1.Create})
 		} else if !equal(t, got) {
-			ops = append(ops, triggerOp{trigger: t, op: v1.Update})
+			new := got.DeepCopy()
+			new.Spec = t.Spec
+			new.Labels = t.Labels
+			ops = append(ops, triggerOp{trigger: new, op: v1.Update})
 		}
 	}
 	for name, t := range gotTriggers {
@@ -72,9 +75,7 @@ func buildMap(ts []*v1beta1.Trigger) map[string]*v1beta1.Trigger {
 }
 
 func equal(x, y *v1beta1.Trigger) bool {
-	return equality.Semantic.DeepEqual(x.Spec, y.Spec) &&
-		equality.Semantic.DeepEqual(x.Labels, y.Labels) &&
-		equality.Semantic.DeepEqual(x.Annotations, y.Annotations)
+	return equality.Semantic.DeepEqual(x.Spec, y.Spec) && equality.Semantic.DeepEqual(x.Labels, y.Labels)
 }
 
 func (r *Reconciler) updateTriggers(ctx context.Context, ts []triggerOp, namespace string) error {
@@ -83,7 +84,7 @@ func (r *Reconciler) updateTriggers(ctx context.Context, ts []triggerOp, namespa
 	for _, t := range ts {
 		t := t // https://go.dev/doc/faq#closures_and_goroutines
 		g.Go(func() error {
-			logger.Infof("updating Trigger %s in namespace %s", t.trigger.Name, namespace)
+			logger.Infof("Performing operation %s on Trigger %s in namespace %s", t.op, t.trigger.Name, namespace)
 			var err error
 			switch t.op {
 			case v1.Create:

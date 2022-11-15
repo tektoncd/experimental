@@ -4,15 +4,15 @@ metadata:
   name: kaniko-build
 spec:
   workspaces:
-  - name: source-code
+  - name: source
   results:
   - name: digest
   steps:
   - name: build
     image: "gcr.io/kaniko-project/executor:v1.5.1"
     args: [
-      "--dockerfile=$(workspaces.source-code.path)/Dockerfile",
-      "--context=dir://$(workspaces.source-code.path)",
+      "--dockerfile=$(workspaces.source.path)/Dockerfile",
+      "--context=dir://$(workspaces.source.path)",
       "--digest-file=$(results.digest.path)",
       "--no-push",
     ]
@@ -23,7 +23,7 @@ metadata:
   name: build-on-branch-push
 spec:
   triggers:
-  - name: on-pr
+  - name: on-push
     event:
       type: "push"
       secret:
@@ -53,7 +53,7 @@ spec:
             storage: 1Gi
   pipelineSpec:
     tasks:
-      - name: git-clone
+      - name: fetch-source
         taskRef:
           name: git-clone
           bundle: gcr.io/tekton-releases/catalog/upstream/git-clone:0.7
