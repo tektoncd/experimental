@@ -6,9 +6,7 @@ import (
 
 	"github.com/tektoncd/experimental/concurrency/pkg/apis/concurrency/v1alpha1"
 	defaultconfig "github.com/tektoncd/experimental/concurrency/pkg/apis/config"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/tektoncd/experimental/concurrency/pkg/mutatingwebhook"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -30,36 +28,7 @@ const (
 )
 
 var (
-	pipelineRunKind        = v1beta1.SchemeGroupVersion.WithKind("PipelineRun")
 	concurrencyControlKind = v1alpha1.SchemeGroupVersion.WithKind("ConcurrencyControl")
-
-	c = defaulting.NewCallback(func(ctx context.Context, uns *unstructured.Unstructured) error {
-		pr := v1beta1.PipelineRun{}
-		logger := logging.FromContext(ctx)
-		cfg := defaultconfig.FromContext(ctx)
-		if len(cfg.AllowedNamespaces) > 0 && !cfg.AllowedNamespaces.Has(uns.GetNamespace()) {
-			logger.Infof("PipelineRun %s/%s is not in an allowed namespace, skipping concurrency controls", uns.GetNamespace(), uns.GetName())
-			return nil
-		}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(uns.UnstructuredContent(), &pr); err != nil {
-			return err
-		}
-		if pr.Spec.Status == v1beta1.PipelineRunSpecStatusPending {
-			return nil
-		}
-
-		pr.Spec.Status = v1beta1.PipelineRunSpecStatusPending
-		// Add a label to indicate that the webhook was responsible for patching this PipelineRun as pending,
-		// and that the reconciler should start it. This is to distinguish from PipelineRuns that were created
-		// as Pending, and shouldn't be started by the reconciler.
-		pr.ObjectMeta.Labels[v1alpha1.LabelToStartPR] = "true"
-		u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&pr)
-		if err != nil {
-			return err
-		}
-		uns.Object = u
-		return nil
-	}, webhook.Create) // Apply callback only on PipelineRun creation
 )
 
 func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
@@ -89,12 +58,8 @@ func newValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	)
 }
 
-// TODO: This sets defaults based on PipelineRun.SetDefaults imported from Pipelines.
-// We will need to write our own admission webhook that only uses the callback
-// defined above.
 func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-		pipelineRunKind:        &v1beta1.PipelineRun{},
 		concurrencyControlKind: &v1alpha1.ConcurrencyControl{},
 	}
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
@@ -102,7 +67,7 @@ func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	return defaulting.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
-		"webhook.concurrency.custom.tekton.dev",
+		"defaulting.webhook.concurrency.custom.tekton.dev",
 
 		// The path on which to serve the webhook.
 		"/defaulting",
@@ -117,8 +82,24 @@ func newDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 		// Whether to disallow unknown fields.
 		false,
+	)
+}
 
-		map[schema.GroupVersionKind]defaulting.Callback{pipelineRunKind: c},
+func newMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+	return mutatingwebhook.NewAdmissionController(ctx,
+
+		// Name of the resource webhook.
+		"mutation.webhook.concurrency.custom.tekton.dev",
+
+		// The path on which to serve the webhook.
+		"/mutating",
+
+		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
+		func(ctx context.Context) context.Context {
+			return store.ToContext(ctx)
+		},
 	)
 }
 
@@ -147,5 +128,6 @@ func main() {
 		certificates.NewController,
 		newValidationAdmissionController,
 		newDefaultingAdmissionController,
+		newMutatingAdmissionController,
 	)
 }
