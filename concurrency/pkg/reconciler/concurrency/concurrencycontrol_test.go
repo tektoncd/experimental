@@ -136,6 +136,43 @@ func newPipelineRunSpecWithStatus(status v1beta1.PipelineRunSpecStatus) v1beta1.
 	return spec
 }
 
+func TestMatches(t *testing.T) {
+	tcs := []struct {
+		name      string
+		pr        *v1beta1.PipelineRun
+		cc        *v1alpha1.ConcurrencyControl
+		wantMatch bool
+	}{{
+		name:      "empty selector matches everything",
+		pr:        &v1beta1.PipelineRun{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}},
+		cc:        &v1alpha1.ConcurrencyControl{Spec: v1alpha1.ConcurrencySpec{}},
+		wantMatch: true,
+	}, {
+		name:      "label matches selector",
+		pr:        &v1beta1.PipelineRun{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}},
+		cc:        &v1alpha1.ConcurrencyControl{Spec: v1alpha1.ConcurrencySpec{Selector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}}},
+		wantMatch: true,
+	}, {
+		name:      "label doesn't match selector",
+		pr:        &v1beta1.PipelineRun{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "abcd"}}},
+		cc:        &v1alpha1.ConcurrencyControl{Spec: v1alpha1.ConcurrencySpec{Selector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}}},
+		wantMatch: false,
+	}, {
+		name:      "one label matches selector, one doesn't",
+		pr:        &v1beta1.PipelineRun{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar", "abc": "123"}}},
+		cc:        &v1alpha1.ConcurrencyControl{Spec: v1alpha1.ConcurrencySpec{Selector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}}},
+		wantMatch: true,
+	}}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			got := concurrency.Matches(tc.pr, tc.cc)
+			if tc.wantMatch != got {
+				t.Errorf("wantMatch is %t but got %t", tc.wantMatch, got)
+			}
+		})
+	}
+}
+
 func TestConcurrency(t *testing.T) {
 	tcs := []struct {
 		name                string
