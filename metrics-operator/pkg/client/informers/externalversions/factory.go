@@ -171,9 +171,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Monitoring() monitoring.Interface
+	Metrics() monitoring.Interface
 }
 
-func (f *sharedInformerFactory) Monitoring() monitoring.Interface {
+func (f *sharedInformerFactory) Metrics() monitoring.Interface {
 	return monitoring.New(f, f.namespace, f.tweakListOptions)
 }

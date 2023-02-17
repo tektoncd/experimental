@@ -19,8 +19,8 @@ package fake
 
 import (
 	clientset "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned"
-	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned/typed/monitoring/v1alpha1"
-	fakemonitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned/typed/monitoring/v1alpha1/fake"
+	metricsv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned/typed/monitoring/v1alpha1"
+	fakemetricsv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned/typed/monitoring/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -78,7 +78,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// MonitoringV1alpha1 retrieves the MonitoringV1alpha1Client
-func (c *Clientset) MonitoringV1alpha1() monitoringv1alpha1.MonitoringV1alpha1Interface {
-	return &fakemonitoringv1alpha1.FakeMonitoringV1alpha1{Fake: &c.Fake}
+// MetricsV1alpha1 retrieves the MetricsV1alpha1Client
+func (c *Clientset) MetricsV1alpha1() metricsv1alpha1.MetricsV1alpha1Interface {
+	return &fakemetricsv1alpha1.FakeMetricsV1alpha1{Fake: &c.Fake}
 }

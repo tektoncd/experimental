@@ -43,7 +43,7 @@ import (
 
 const (
 	defaultControllerAgentName = "taskmonitor-controller"
-	defaultFinalizerName       = "taskmonitors.monitoring"
+	defaultFinalizerName       = "taskmonitors.metrics.tekton.dev"
 )
 
 // NewImpl returns a controller.Impl that handles queuing and feeding work from
@@ -97,7 +97,7 @@ func NewImpl(ctx context.Context, r Interface, optionsFns ...controller.OptionsF
 
 	logger = logger.With(
 		zap.String(logkey.ControllerType, ctrTypeName),
-		zap.String(logkey.Kind, "monitoring.TaskMonitor"),
+		zap.String(logkey.Kind, "metrics.tekton.dev.TaskMonitor"),
 	)
 
 	impl := controller.NewContext(ctx, rec, controller.ControllerOptions{WorkQueueName: ctrTypeName, Logger: logger})
@@ -114,6 +114,9 @@ func NewImpl(ctx context.Context, r Interface, optionsFns ...controller.OptionsF
 		}
 		if opts.AgentName != "" {
 			agentName = opts.AgentName
+		}
+		if opts.SkipStatusUpdates {
+			rec.skipStatusUpdates = true
 		}
 		if opts.DemoteFunc != nil {
 			rec.DemoteFunc = opts.DemoteFunc

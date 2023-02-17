@@ -54,7 +54,7 @@ func withInformer(ctx context.Context) (context.Context, []controller.Informer) 
 	infs := []controller.Informer{}
 	for _, selector := range labelSelectors {
 		f := filtered.Get(ctx, selector)
-		inf := f.Monitoring().V1alpha1().TaskMonitors()
+		inf := f.Metrics().V1alpha1().TaskMonitors()
 		ctx = context.WithValue(ctx, Key{Selector: selector}, inf)
 		infs = append(infs, inf.Informer())
 	}
@@ -114,7 +114,7 @@ func (w *wrapper) List(selector labels.Selector) (ret []*apismonitoringv1alpha1.
 		return nil, err
 	}
 	selector = selector.Add(reqs...)
-	lo, err := w.client.MonitoringV1alpha1().TaskMonitors(w.namespace).List(context.TODO(), v1.ListOptions{
+	lo, err := w.client.MetricsV1alpha1().TaskMonitors(w.namespace).List(context.TODO(), v1.ListOptions{
 		LabelSelector: selector.String(),
 		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
 	})
@@ -129,7 +129,7 @@ func (w *wrapper) List(selector labels.Selector) (ret []*apismonitoringv1alpha1.
 
 func (w *wrapper) Get(name string) (*apismonitoringv1alpha1.TaskMonitor, error) {
 	// TODO(mattmoor): Check that the fetched object matches the selector.
-	return w.client.MonitoringV1alpha1().TaskMonitors(w.namespace).Get(context.TODO(), name, v1.GetOptions{
+	return w.client.MetricsV1alpha1().TaskMonitors(w.namespace).Get(context.TODO(), name, v1.GetOptions{
 		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
 	})
 }

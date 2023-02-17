@@ -61,13 +61,13 @@ func NewFilteredTaskMonitorInformer(client versioned.Interface, namespace string
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MonitoringV1alpha1().TaskMonitors(namespace).List(context.TODO(), options)
+				return client.MetricsV1alpha1().TaskMonitors(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MonitoringV1alpha1().TaskMonitors(namespace).Watch(context.TODO(), options)
+				return client.MetricsV1alpha1().TaskMonitors(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&monitoringv1alpha1.TaskMonitor{},
