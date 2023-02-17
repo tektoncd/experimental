@@ -34,6 +34,6 @@ func init() {
 
 func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	f := fake.Get(ctx)
-	inf := f.Monitoring().V1alpha1().TaskMonitors()
+	inf := f.Metrics().V1alpha1().TaskMonitors()
 	return context.WithValue(ctx, taskmonitor.Key{}, inf), inf.Informer()
 }

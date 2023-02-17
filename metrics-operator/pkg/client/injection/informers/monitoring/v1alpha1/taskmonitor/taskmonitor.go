@@ -44,7 +44,7 @@ type Key struct{}
 
 func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	f := factory.Get(ctx)
-	inf := f.Monitoring().V1alpha1().TaskMonitors()
+	inf := f.Metrics().V1alpha1().TaskMonitors()
 	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 
@@ -95,7 +95,7 @@ func (w *wrapper) SetResourceVersion(resourceVersion string) {
 }
 
 func (w *wrapper) List(selector labels.Selector) (ret []*apismonitoringv1alpha1.TaskMonitor, err error) {
-	lo, err := w.client.MonitoringV1alpha1().TaskMonitors(w.namespace).List(context.TODO(), v1.ListOptions{
+	lo, err := w.client.MetricsV1alpha1().TaskMonitors(w.namespace).List(context.TODO(), v1.ListOptions{
 		LabelSelector:   selector.String(),
 		ResourceVersion: w.resourceVersion,
 	})
@@ -109,7 +109,7 @@ func (w *wrapper) List(selector labels.Selector) (ret []*apismonitoringv1alpha1.
 }
 
 func (w *wrapper) Get(name string) (*apismonitoringv1alpha1.TaskMonitor, error) {
-	return w.client.MonitoringV1alpha1().TaskMonitors(w.namespace).Get(context.TODO(), name, v1.GetOptions{
+	return w.client.MetricsV1alpha1().TaskMonitors(w.namespace).Get(context.TODO(), name, v1.GetOptions{
 		ResourceVersion: w.resourceVersion,
 	})
 }

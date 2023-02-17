@@ -51,9 +51,9 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=monitoring, Version=v1alpha1
+	// Group=metrics.tekton.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("taskmonitors"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Monitoring().V1alpha1().TaskMonitors().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Metrics().V1alpha1().TaskMonitors().Informer()}, nil
 
 	}
 

@@ -31,13 +31,13 @@ import (
 
 // FakeTaskMonitors implements TaskMonitorInterface
 type FakeTaskMonitors struct {
-	Fake *FakeMonitoringV1alpha1
+	Fake *FakeMetricsV1alpha1
 	ns   string
 }
 
-var taskmonitorsResource = schema.GroupVersionResource{Group: "monitoring", Version: "v1alpha1", Resource: "taskmonitors"}
+var taskmonitorsResource = schema.GroupVersionResource{Group: "metrics.tekton.dev", Version: "v1alpha1", Resource: "taskmonitors"}
 
-var taskmonitorsKind = schema.GroupVersionKind{Group: "monitoring", Version: "v1alpha1", Kind: "TaskMonitor"}
+var taskmonitorsKind = schema.GroupVersionKind{Group: "metrics.tekton.dev", Version: "v1alpha1", Kind: "TaskMonitor"}
 
 // Get takes name of the taskMonitor, and returns the corresponding taskMonitor object, and an error if there is any.
 func (c *FakeTaskMonitors) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.TaskMonitor, err error) {
@@ -94,6 +94,18 @@ func (c *FakeTaskMonitors) Create(ctx context.Context, taskMonitor *v1alpha1.Tas
 func (c *FakeTaskMonitors) Update(ctx context.Context, taskMonitor *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (result *v1alpha1.TaskMonitor, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(taskmonitorsResource, c.ns, taskMonitor), &v1alpha1.TaskMonitor{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.TaskMonitor), err
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeTaskMonitors) UpdateStatus(ctx context.Context, taskMonitor *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (*v1alpha1.TaskMonitor, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(taskmonitorsResource, "status", c.ns, taskMonitor), &v1alpha1.TaskMonitor{})
 
 	if obj == nil {
 		return nil, err

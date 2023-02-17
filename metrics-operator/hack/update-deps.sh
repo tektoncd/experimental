@@ -69,4 +69,4 @@ fi
 # Prune modules.
 go mod tidy
 go mod vendor
-update_licenses third_party/
+#update_licenses third_party/

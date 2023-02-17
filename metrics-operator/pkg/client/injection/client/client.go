@@ -25,7 +25,7 @@ import (
 
 	v1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	versioned "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned"
-	typedmonitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned/typed/monitoring/v1alpha1"
+	typedmetricsv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned/typed/monitoring/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -95,25 +95,25 @@ func convert(from interface{}, to runtime.Object) error {
 	return nil
 }
 
-// MonitoringV1alpha1 retrieves the MonitoringV1alpha1Client
-func (w *wrapClient) MonitoringV1alpha1() typedmonitoringv1alpha1.MonitoringV1alpha1Interface {
-	return &wrapMonitoringV1alpha1{
+// MetricsV1alpha1 retrieves the MetricsV1alpha1Client
+func (w *wrapClient) MetricsV1alpha1() typedmetricsv1alpha1.MetricsV1alpha1Interface {
+	return &wrapMetricsV1alpha1{
 		dyn: w.dyn,
 	}
 }
 
-type wrapMonitoringV1alpha1 struct {
+type wrapMetricsV1alpha1 struct {
 	dyn dynamic.Interface
 }
 
-func (w *wrapMonitoringV1alpha1) RESTClient() rest.Interface {
+func (w *wrapMetricsV1alpha1) RESTClient() rest.Interface {
 	panic("RESTClient called on dynamic client!")
 }
 
-func (w *wrapMonitoringV1alpha1) TaskMonitors(namespace string) typedmonitoringv1alpha1.TaskMonitorInterface {
-	return &wrapMonitoringV1alpha1TaskMonitorImpl{
+func (w *wrapMetricsV1alpha1) TaskMonitors(namespace string) typedmetricsv1alpha1.TaskMonitorInterface {
+	return &wrapMetricsV1alpha1TaskMonitorImpl{
 		dyn: w.dyn.Resource(schema.GroupVersionResource{
-			Group:    "monitoring",
+			Group:    "metrics.tekton.dev",
 			Version:  "v1alpha1",
 			Resource: "taskmonitors",
 		}),
@@ -122,17 +122,17 @@ func (w *wrapMonitoringV1alpha1) TaskMonitors(namespace string) typedmonitoringv
 	}
 }
 
-type wrapMonitoringV1alpha1TaskMonitorImpl struct {
+type wrapMetricsV1alpha1TaskMonitorImpl struct {
 	dyn dynamic.NamespaceableResourceInterface
 
 	namespace string
 }
 
-var _ typedmonitoringv1alpha1.TaskMonitorInterface = (*wrapMonitoringV1alpha1TaskMonitorImpl)(nil)
+var _ typedmetricsv1alpha1.TaskMonitorInterface = (*wrapMetricsV1alpha1TaskMonitorImpl)(nil)
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Create(ctx context.Context, in *v1alpha1.TaskMonitor, opts v1.CreateOptions) (*v1alpha1.TaskMonitor, error) {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) Create(ctx context.Context, in *v1alpha1.TaskMonitor, opts v1.CreateOptions) (*v1alpha1.TaskMonitor, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "monitoring",
+		Group:   "metrics.tekton.dev",
 		Version: "v1alpha1",
 		Kind:    "TaskMonitor",
 	})
@@ -151,15 +151,15 @@ func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Create(ctx context.Context, in *
 	return out, nil
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return w.dyn.Namespace(w.namespace).Delete(ctx, name, opts)
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	return w.dyn.Namespace(w.namespace).DeleteCollection(ctx, opts, listOpts)
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.TaskMonitor, error) {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.TaskMonitor, error) {
 	uo, err := w.dyn.Namespace(w.namespace).Get(ctx, name, opts)
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Get(ctx context.Context, name st
 	return out, nil
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.TaskMonitorList, error) {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.TaskMonitorList, error) {
 	uo, err := w.dyn.Namespace(w.namespace).List(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func (w *wrapMonitoringV1alpha1TaskMonitorImpl) List(ctx context.Context, opts v
 	return out, nil
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.TaskMonitor, err error) {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.TaskMonitor, err error) {
 	uo, err := w.dyn.Namespace(w.namespace).Patch(ctx, name, pt, data, opts)
 	if err != nil {
 		return nil, err
@@ -195,9 +195,9 @@ func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Patch(ctx context.Context, name 
 	return out, nil
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Update(ctx context.Context, in *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (*v1alpha1.TaskMonitor, error) {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) Update(ctx context.Context, in *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (*v1alpha1.TaskMonitor, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "monitoring",
+		Group:   "metrics.tekton.dev",
 		Version: "v1alpha1",
 		Kind:    "TaskMonitor",
 	})
@@ -216,9 +216,9 @@ func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Update(ctx context.Context, in *
 	return out, nil
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) UpdateStatus(ctx context.Context, in *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (*v1alpha1.TaskMonitor, error) {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) UpdateStatus(ctx context.Context, in *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (*v1alpha1.TaskMonitor, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "monitoring",
+		Group:   "metrics.tekton.dev",
 		Version: "v1alpha1",
 		Kind:    "TaskMonitor",
 	})
@@ -237,6 +237,6 @@ func (w *wrapMonitoringV1alpha1TaskMonitorImpl) UpdateStatus(ctx context.Context
 	return out, nil
 }
 
-func (w *wrapMonitoringV1alpha1TaskMonitorImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (w *wrapMetricsV1alpha1TaskMonitorImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return nil, errors.New("NYI: Watch")
 }

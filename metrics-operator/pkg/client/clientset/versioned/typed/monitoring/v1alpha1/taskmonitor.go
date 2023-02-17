@@ -39,6 +39,7 @@ type TaskMonitorsGetter interface {
 type TaskMonitorInterface interface {
 	Create(ctx context.Context, taskMonitor *v1alpha1.TaskMonitor, opts v1.CreateOptions) (*v1alpha1.TaskMonitor, error)
 	Update(ctx context.Context, taskMonitor *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (*v1alpha1.TaskMonitor, error)
+	UpdateStatus(ctx context.Context, taskMonitor *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (*v1alpha1.TaskMonitor, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.TaskMonitor, error)
@@ -55,7 +56,7 @@ type taskMonitors struct {
 }
 
 // newTaskMonitors returns a TaskMonitors
-func newTaskMonitors(c *MonitoringV1alpha1Client, namespace string) *taskMonitors {
+func newTaskMonitors(c *MetricsV1alpha1Client, namespace string) *taskMonitors {
 	return &taskMonitors{
 		client: c.RESTClient(),
 		ns:     namespace,
@@ -127,6 +128,22 @@ func (c *taskMonitors) Update(ctx context.Context, taskMonitor *v1alpha1.TaskMon
 		Namespace(c.ns).
 		Resource("taskmonitors").
 		Name(taskMonitor.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(taskMonitor).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *taskMonitors) UpdateStatus(ctx context.Context, taskMonitor *v1alpha1.TaskMonitor, opts v1.UpdateOptions) (result *v1alpha1.TaskMonitor, err error) {
+	result = &v1alpha1.TaskMonitor{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("taskmonitors").
+		Name(taskMonitor.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(taskMonitor).
 		Do(ctx).
