@@ -1,0 +1,28 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: taskmonitors.metrics.tekton.dev
+  labels:
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-metrics-operator
+    pipeline.tekton.dev/release: "devel"
+    version: "devel"
+spec:
+  group: metrics.tekton.dev
+  scope: Namespaced
+  names:
+    kind: TaskMonitor
+    plural: taskmonitors
+    singular: taskmonitor
+    shortNames:
+    - tm
+    categories:
+    - tekton
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true

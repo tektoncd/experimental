@@ -1,0 +1,7 @@
+apiVersion: metrics.tekton.dev/v1alpha1
+kind: TaskMonitor
+metadata:
+  name: hello-task-monitor
+  namespace: pipelines
+spec:
+  taskName: hello-world
