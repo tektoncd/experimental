@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 100-namespace.yaml
+  - 200-service-account.yaml
+  - 300-rbac.yaml
+  - 400-crd.yaml
+  - 500-controller-service.yaml
+  - 600-controller-deployment.yaml
+  - configmaps
