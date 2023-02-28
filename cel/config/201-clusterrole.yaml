@@ -21,15 +21,15 @@ metadata:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-cel-run
 rules:
-  # Controller needs cluster access to all Run CRs.
+  # Controller needs cluster access to all CustomRun CRs.
   - apiGroups: ["tekton.dev"]
-    resources: ["runs"]
+    resources: ["customruns"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["tekton.dev"]
-    resources: ["runs/finalizers"]
+    resources: ["customruns/finalizers"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["tekton.dev"]
-    resources: ["runs/status"]
+    resources: ["customruns/status"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
 
   # Controller needs cluster access to leases for leader election.
