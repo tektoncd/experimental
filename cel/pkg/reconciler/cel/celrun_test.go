@@ -19,12 +19,16 @@ package cel
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/cel/test"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test/diff"
+
+	"strings"
+	"testing"
+	"time"
 
 	"github.com/tektoncd/pipeline/test/names"
 	corev1 "k8s.io/api/core/v1"
@@ -36,23 +40,20 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestReconcileCelRun(t *testing.T) {
 	testcases := []struct {
 		name            string
-		run             *v1alpha1.Run
+		customRun       *v1beta1.CustomRun
 		expectedStatus  corev1.ConditionStatus
 		expectedReason  string
-		expectedResults []v1alpha1.RunResult
+		expectedResults []v1beta1.CustomRunResult
 		expectedMessage string
 		expectedEvents  []string
 	}{{
 		name: "one expression successful",
-		run: &v1alpha1.Run{
+		customRun: &v1beta1.CustomRun{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cel-run",
 				Namespace: "foo",
@@ -63,12 +64,12 @@ func TestReconcileCelRun(t *testing.T) {
 					"myTestAnnotation": "myTestAnnotationValue",
 				},
 			},
-			Spec: v1alpha1.RunSpec{
+			Spec: v1beta1.CustomRunSpec{
 				Params: []v1beta1.Param{{
 					Name:  "expr1",
 					Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "type(100)"},
 				}},
-				Ref: &v1alpha1.TaskRef{
+				CustomRef: &v1beta1.TaskRef{
 					APIVersion: apiVersion,
 					Kind:       kind,
 					Name:       "a-celrun",
@@ -78,14 +79,14 @@ func TestReconcileCelRun(t *testing.T) {
 		expectedStatus:  corev1.ConditionTrue,
 		expectedReason:  ReasonEvaluationSuccess,
 		expectedMessage: "CEL expressions were evaluated successfully",
-		expectedResults: []v1alpha1.RunResult{{
+		expectedResults: []v1beta1.CustomRunResult{{
 			Name:  "expr1",
 			Value: "int",
 		}},
-		expectedEvents: []string{"Normal RunReconciled Run reconciled: \"foo/cel-run\""},
+		expectedEvents: []string{"Normal CustomRunReconciled CustomRun reconciled: \"foo/cel-run\""},
 	}, {
 		name: "multiple expressions successful",
-		run: &v1alpha1.Run{
+		customRun: &v1beta1.CustomRun{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cel-run",
 				Namespace: "foo",
@@ -96,7 +97,7 @@ func TestReconcileCelRun(t *testing.T) {
 					"myTestAnnotation": "myTestAnnotationValue",
 				},
 			},
-			Spec: v1alpha1.RunSpec{
+			Spec: v1beta1.CustomRunSpec{
 				Params: []v1beta1.Param{{
 					Name:  "expr1",
 					Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "type(100)"},
@@ -104,7 +105,7 @@ func TestReconcileCelRun(t *testing.T) {
 					Name:  "expr2",
 					Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeString, StringVal: "3 == 3"},
 				}},
-				Ref: &v1alpha1.TaskRef{
+				CustomRef: &v1beta1.TaskRef{
 					APIVersion: apiVersion,
 					Kind:       kind,
 					Name:       "a-celrun",
@@ -114,17 +115,17 @@ func TestReconcileCelRun(t *testing.T) {
 		expectedStatus:  corev1.ConditionTrue,
 		expectedReason:  ReasonEvaluationSuccess,
 		expectedMessage: "CEL expressions were evaluated successfully",
-		expectedResults: []v1alpha1.RunResult{{
+		expectedResults: []v1beta1.CustomRunResult{{
 			Name:  "expr1",
 			Value: "int",
 		}, {
 			Name:  "expr2",
 			Value: "true",
 		}},
-		expectedEvents: []string{"Normal RunReconciled Run reconciled: \"foo/cel-run\""},
+		expectedEvents: []string{"Normal CustomRunReconciled CustomRun reconciled: \"foo/cel-run\""},
 	}, {
 		name: "CEL expressions with invalid type",
-		run: &v1alpha1.Run{
+		customRun: &v1beta1.CustomRun{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cel-run",
 				Namespace: "foo",
@@ -135,12 +136,12 @@ func TestReconcileCelRun(t *testing.T) {
 					"myTestAnnotation": "myTestAnnotationValue",
 				},
 			},
-			Spec: v1alpha1.RunSpec{
+			Spec: v1beta1.CustomRunSpec{
 				Params: []v1beta1.Param{{
 					Name:  "expr1",
 					Value: v1beta1.ArrayOrString{Type: v1beta1.ParamTypeArray, ArrayVal: []string{"type(100)", "3 == 3"}},
 				}},
-				Ref: &v1alpha1.TaskRef{
+				CustomRef: &v1beta1.TaskRef{
 					APIVersion: apiVersion,
 					Kind:       kind,
 					Name:       "a-celrun",
@@ -149,10 +150,10 @@ func TestReconcileCelRun(t *testing.T) {
 		},
 		expectedStatus:  corev1.ConditionFalse,
 		expectedReason:  ReasonFailedValidation,
-		expectedMessage: "Run can't be run because it has an invalid spec - invalid value: CEL expression parameter expr1 must be a string: params[expr1].value",
+		expectedMessage: "CustomRun can't be run because it has an invalid spec - invalid value: CEL expression parameter expr1 must be a string: params[expr1].value",
 	}, {
 		name: "missing CEL expressions",
-		run: &v1alpha1.Run{
+		customRun: &v1beta1.CustomRun{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cel-run",
 				Namespace: "foo",
@@ -163,8 +164,8 @@ func TestReconcileCelRun(t *testing.T) {
 					"myTestAnnotation": "myTestAnnotationValue",
 				},
 			},
-			Spec: v1alpha1.RunSpec{
-				Ref: &v1alpha1.TaskRef{
+			Spec: v1beta1.CustomRunSpec{
+				CustomRef: &v1beta1.TaskRef{
 					APIVersion: apiVersion,
 					Kind:       kind,
 					Name:       "a-celrun",
@@ -173,7 +174,7 @@ func TestReconcileCelRun(t *testing.T) {
 		},
 		expectedStatus:  corev1.ConditionFalse,
 		expectedReason:  ReasonFailedValidation,
-		expectedMessage: "Run can't be run because it has an invalid spec - missing field(s): params",
+		expectedMessage: "CustomRun can't be run because it has an invalid spec - missing field(s): params",
 	}}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -181,25 +182,25 @@ func TestReconcileCelRun(t *testing.T) {
 			names.TestingSeed()
 
 			d := test.Data{
-				Runs: []*v1alpha1.Run{tc.run},
+				CustomRuns: []*v1beta1.CustomRun{tc.customRun},
 			}
 
 			testAssets, _ := getCelController(t, d)
 			c := testAssets.Controller
 			clients := testAssets.Clients
 
-			if err := c.Reconciler.Reconcile(ctx, getRunName(tc.run)); err != nil {
+			if err := c.Reconciler.Reconcile(ctx, getCustomRunName(tc.customRun)); err != nil {
 				t.Fatalf("Error reconciling: %s", err)
 			}
 
-			// Fetch the updated Run
-			reconciledRun, err := clients.Pipeline.TektonV1alpha1().Runs(tc.run.Namespace).Get(ctx, tc.run.Name, metav1.GetOptions{})
+			// Fetch the updated CustomRun
+			reconciledCustomRun, err := clients.Pipeline.TektonV1beta1().CustomRuns(tc.customRun.Namespace).Get(ctx, tc.customRun.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("Error getting reconciled run from fake client: %s", err)
 			}
 
 			// Verify that the Run has the expected status and reason
-			checkRunCondition(t, reconciledRun, tc.expectedStatus, tc.expectedReason, tc.expectedMessage)
+			checkCustomRunCondition(t, reconciledCustomRun, tc.expectedStatus, tc.expectedReason, tc.expectedMessage)
 
 			// Verify expected events were created
 			if err := checkEvents(testAssets.Recorder, tc.name, tc.expectedEvents); err != nil {
@@ -207,7 +208,7 @@ func TestReconcileCelRun(t *testing.T) {
 			}
 
 			// Verify the expected Results were produced
-			if d := cmp.Diff(tc.expectedResults, reconciledRun.Status.Results); d != "" {
+			if d := cmp.Diff(tc.expectedResults, reconciledCustomRun.Status.Results); d != "" {
 				t.Errorf("Status Results: %s", diff.PrintWantGot(d))
 			}
 
@@ -240,17 +241,17 @@ func getCelController(t *testing.T, d test.Data) (test.Assets, func()) {
 	}, cancel
 }
 
-func getRunName(run *v1alpha1.Run) string {
-	return strings.Join([]string{run.Namespace, run.Name}, "/")
+func getCustomRunName(customRun *v1beta1.CustomRun) string {
+	return strings.Join([]string{customRun.Namespace, customRun.Name}, "/")
 }
 
-func checkRunCondition(t *testing.T, run *v1alpha1.Run, expectedStatus corev1.ConditionStatus, expectedReason string, expectedMessage string) {
-	condition := run.Status.GetCondition(apis.ConditionSucceeded)
+func checkCustomRunCondition(t *testing.T, customRun *v1beta1.CustomRun, expectedStatus corev1.ConditionStatus, expectedReason string, expectedMessage string) {
+	condition := customRun.Status.GetCondition(apis.ConditionSucceeded)
 	if condition == nil {
-		t.Error("Condition missing in Run")
+		t.Error("Condition missing in CustomRun")
 	} else {
 		if condition.Status != expectedStatus {
-			t.Errorf("Expected Run status to be %v but was %v", expectedStatus, condition)
+			t.Errorf("Expected CustomRun status to be %v but was %v", expectedStatus, condition)
 		}
 		if condition.Reason != expectedReason {
 			t.Errorf("Expected reason to be %q but was %q", expectedReason, condition.Reason)
@@ -259,15 +260,15 @@ func checkRunCondition(t *testing.T, run *v1alpha1.Run, expectedStatus corev1.Co
 			t.Errorf("Expected message to be %q but was %q", expectedMessage, condition.Message)
 		}
 	}
-	if run.Status.StartTime == nil {
-		t.Errorf("Expected Run start time to be set but it wasn't")
+	if customRun.Status.StartTime == nil {
+		t.Errorf("Expected CustomRun start time to be set but it wasn't")
 	}
 	if expectedStatus == corev1.ConditionUnknown {
-		if run.Status.CompletionTime != nil {
-			t.Errorf("Expected Run completion time to not be set but it was")
+		if customRun.Status.CompletionTime != nil {
+			t.Errorf("Expected CustomRun completion time to not be set but it was")
 		}
-	} else if run.Status.CompletionTime == nil {
-		t.Errorf("Expected Run completion time to be set but it wasn't")
+	} else if customRun.Status.CompletionTime == nil {
+		t.Errorf("Expected CustomRun completion time to be set but it wasn't")
 	}
 }
 
