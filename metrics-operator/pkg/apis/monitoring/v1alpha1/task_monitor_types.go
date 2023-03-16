@@ -20,7 +20,37 @@ type TaskMonitor struct {
 
 // TaskMonitorSpec ...
 type TaskMonitorSpec struct {
-	TaskName string `json:"taskName"`
+	TaskName string       `json:"taskName"`
+	Metrics  []TaskMetric `json:"metrics"`
+}
+
+type TaskMetric struct {
+	Type     string                       `json:"type"`
+	Name     string                       `json:"name"`
+	By       []TaskByStatement            `json:"by,omitempty"`
+	Duration *TaskMetricHistogramDuration `json:"duration,omitempty"`
+	Match    *TaskMetricGaugeMatch        `json:"match,omitempty"`
+}
+
+type TaskRunValueRef struct {
+	Condition *string `json:"condition,omitempty"`
+	Param     *string `json:"param,omitempty"`
+	Label     *string `json:"label,omitempty"`
+}
+
+type TaskByStatement struct {
+	TaskRunValueRef `json:",inline"`
+}
+
+type TaskMetricHistogramDuration struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+type TaskMetricGaugeMatch struct {
+	Key      TaskRunValueRef              `json:"key"`
+	Operator metav1.LabelSelectorOperator `json:"operator"`
+	Values   []string                     `json:"values"`
 }
 
 // TaskMonitorStatus

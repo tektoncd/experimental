@@ -5,3 +5,53 @@ metadata:
   namespace: pipelines
 spec:
   taskName: hello-world
+  metrics:
+  # default metric count, by status condition
+  - name: status # tekton_metrics_taskrun_hello_task_monitor_status_total
+    type: counter
+    by:
+    - condition: Succeeded
+  # default duration histogram
+  - name: completion_time # tekton_metrics_taskrun_hello_task_monitor_completion_time_duration_seconds
+    type: histogram
+    duration:
+      from: .status.startTime
+      to: .status.completionTime
+  # default running gauge
+  - name: running # tekton_metrics_taskrun_hello_task_monitor_running
+    type: gauge
+    match:
+      key:
+        condition: Succeeded
+      operator: In
+      values: ["running"]
+  # metric count by some label
+  - name: priority # tekton_metrics_taskrun_hello_task_monitor_priority_total
+    type: counter
+    by:
+    - label: priority
+  # metric count by some param
+  - name: environment # tekton_metrics_taskrun_hello_task_monitor_environment_total
+    type: count
+    by:
+    - param: environment
+  # checkout duration histogram
+  - name: checkout # tekton_metrics_taskrun_hello_task_monitor_checkout_duration_seconds
+    type: histogram
+    duration:
+      from: .status.steps[0].terminated.startedAt
+      to: .status.steps[0].terminated.finishedAt
+  # schedule duration histogram
+  - name: schedule # tekton_metrics_taskrun_hello_task_monitor_schedule_duration_seconds
+    type: histogram
+    duration:
+      from: .metadata.creationTimestamp
+      to: .status.steps[0].terminated.startedAt
+  # done gauge tasks in cluster
+  - name: done # tekton_metrics_taskrun_hello_task_monitor_done
+    type: gauge
+    match:
+      key:
+        condition: Succeeded
+      operator: In
+      values: [success, failed]
