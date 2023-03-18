@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/stats/view"
@@ -34,7 +35,20 @@ func (m *MetricManager) RecordTaskRunDone(ctx context.Context, taskRun *pipeline
 	m.runs[key].Do(func() {
 		m.GetIndex().Record(ctx, taskRun)
 	})
+	time.AfterFunc(1*time.Hour, func() {
+		m.clean(taskRun)
+	})
 	return nil
+}
+
+func (m *MetricManager) clean(taskRun *pipelinev1beta1.TaskRun) {
+	m.rw.Lock()
+	defer m.rw.Unlock()
+	key := fmt.Sprintf("%s/%s/%s", taskRun.GetNamespace(), taskRun.GetName(), taskRun.GetUID())
+	_, exists := m.runs[key]
+	if exists {
+		delete(m.runs, key)
+	}
 }
 
 func NewManager(external view.Meter) *MetricManager {

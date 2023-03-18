@@ -5,6 +5,7 @@ import (
 
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/reconciler/taskmonitor"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/reconciler/taskrun"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/server"
 	"go.opencensus.io/stats/view"
 	"knative.dev/pkg/injection/sharedmain"
@@ -32,13 +33,11 @@ func main() {
 	fmt.Printf("Starting registering external exporter...\n")
 	external.RegisterExporter(exporter.GetExporter())
 
-	// ctx := context.Background()
-
-	// fmt.Printf("Recording...\n")
-	// external.Record(&tag.Map{}, []stats.Measurement{countMeasure.M(1)}, map[string]any{})
-	// fmt.Printf("Recorded...\n")
 	manager := metrics.NewManager(external)
 
 	ctx := signals.NewContext()
-	sharedmain.MainWithContext(ctx, "metrics-operator-controller", taskmonitor.NewController(manager))
+	sharedmain.MainWithContext(ctx, "metrics-operator-controller",
+		taskmonitor.NewController(manager),
+		taskrun.NewController(manager),
+	)
 }
