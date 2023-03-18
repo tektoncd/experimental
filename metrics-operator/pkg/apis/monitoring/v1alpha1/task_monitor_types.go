@@ -1,7 +1,11 @@
 package v1alpha1
 
 import (
+	"errors"
+
+	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -36,6 +40,48 @@ type TaskRunValueRef struct {
 	Condition *string `json:"condition,omitempty"`
 	Param     *string `json:"param,omitempty"`
 	Label     *string `json:"label,omitempty"`
+}
+
+func (t *TaskRunValueRef) Key() (string, error) {
+	if t.Condition != nil {
+		if *t.Condition == string(apis.ConditionSucceeded) {
+			return "status", nil
+		}
+		if *t.Condition == string(apis.ConditionReady) {
+			return "ready", nil
+		}
+		return "", errors.New("invalid")
+	}
+	// TODO: sanatize string
+	if t.Param != nil {
+		return *t.Param, nil
+	}
+	// TODO: sanatize string
+	if t.Label != nil {
+		return *t.Label, nil
+	}
+	return "", errors.New("invalid")
+}
+
+func statusCondition(cond *apis.Condition) string {
+	if cond == nil {
+		return ""
+	}
+	if cond.IsTrue() {
+		return "success"
+	}
+	if cond.IsFalse() {
+		return "failed"
+	}
+	return "unknown"
+}
+func (t *TaskRunValueRef) Value(taskRun *pipelinev1beta1.TaskRun) (string, error) {
+	if t.Condition != nil {
+		if *t.Condition == string(apis.ConditionSucceeded) {
+			return statusCondition(taskRun.Status.GetCondition(apis.ConditionSucceeded)), nil
+		}
+	}
+	return "", errors.New("invalid value")
 }
 
 type TaskByStatement struct {

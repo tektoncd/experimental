@@ -3,22 +3,21 @@ package taskmonitor
 import (
 	"context"
 
-	"go.opencensus.io/stats/view"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 
 	taskmonitorinformer "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/informers/monitoring/v1alpha1/taskmonitor"
 	taskmonitorreconciler "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/reconciler/monitoring/v1alpha1/taskmonitor"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 )
 
-func NewController(external view.Meter) injection.ControllerConstructor {
+func NewController(manager *metrics.MetricManager) injection.ControllerConstructor {
 	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 		taskMonitorInformer := taskmonitorinformer.Get(ctx)
 
 		c := &Reconciler{
-			external: external,
-			// TaskMonitorInformer: taskMonitorInformer,
+			manager: manager,
 		}
 
 		impl := taskmonitorreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
