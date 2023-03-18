@@ -5,6 +5,7 @@ import (
 
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/reconciler/taskmonitor"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/server"
 	"go.opencensus.io/stats/view"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/signals"
@@ -13,7 +14,7 @@ import (
 func main() {
 
 	fmt.Printf("Starting metric-operator...\n")
-	exporter, err := metrics.NewPrometheusExporter(&metrics.MetricConfig{
+	exporter, err := server.NewPrometheusExporter(&server.MetricConfig{
 		PrometheusHost: "0.0.0.0",
 		PrometheusPort: 2112,
 	})
@@ -36,7 +37,8 @@ func main() {
 	// fmt.Printf("Recording...\n")
 	// external.Record(&tag.Map{}, []stats.Measurement{countMeasure.M(1)}, map[string]any{})
 	// fmt.Printf("Recorded...\n")
+	manager := metrics.NewManager(external)
 
 	ctx := signals.NewContext()
-	sharedmain.MainWithContext(ctx, "metrics-operator-controller", taskmonitor.NewController(external))
+	sharedmain.MainWithContext(ctx, "metrics-operator-controller", taskmonitor.NewController(manager))
 }
