@@ -25,7 +25,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/tektoncd/experimental/pipelines-in-pipelines/test"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test/diff"
@@ -67,7 +66,7 @@ func getPipController(t *testing.T, d test.Data) (test.Assets, func()) {
 	}, cancel
 }
 
-func checkRunCondition(t *testing.T, run *v1alpha1.Run, expectedStatus corev1.ConditionStatus, expectedReason string, expectedMessage string) {
+func checkRunCondition(t *testing.T, run *v1beta1.CustomRun, expectedStatus corev1.ConditionStatus, expectedReason string, expectedMessage string) {
 	condition := run.Status.GetCondition(apis.ConditionSucceeded)
 	if condition == nil {
 		t.Error("Condition missing in Run")
@@ -124,7 +123,7 @@ func checkEvents(fr *record.FakeRecorder, testName string, wantEvents []string) 
 	return nil
 }
 
-func getRunName(run *v1alpha1.Run) string {
+func getRunName(run *v1beta1.CustomRun) string {
 	return strings.Join([]string{run.Namespace, run.Name}, "/")
 }
 
@@ -173,8 +172,11 @@ func failed(pr *v1beta1.PipelineRun) *v1beta1.PipelineRun {
 func withResults(pr *v1beta1.PipelineRun, name string, value string) *v1beta1.PipelineRun {
 	prWithStatus := pr.DeepCopy()
 	prWithStatus.Status.PipelineResults = append(prWithStatus.Status.PipelineResults, v1beta1.PipelineRunResult{
-		Name:  name,
-		Value: value,
+		Name: name,
+		Value: v1beta1.ParamValue{
+			Type:      v1beta1.ParamTypeString,
+			StringVal: value,
+		},
 	})
 	return prWithStatus
 }
@@ -188,11 +190,11 @@ var p = &v1beta1.Pipeline{
 		Tasks: []v1beta1.PipelineTask{{
 			Name: "task",
 			TaskSpec: &v1beta1.EmbeddedTask{TaskSpec: v1beta1.TaskSpec{
-				Steps: []v1beta1.Step{{Container: corev1.Container{
+				Steps: []v1beta1.Step{{
 					Image:   "ubuntu",
 					Command: []string{"/bin/bash"},
 					Args:    []string{"-c", "echo hello world"},
-				}}},
+				}},
 			}},
 		}},
 	},
@@ -205,13 +207,13 @@ var pr = &v1beta1.PipelineRun{
 		Name:      "run-with-pipeline",
 		Namespace: "foo",
 		Labels: map[string]string{
-			"tekton.dev/pipeline": "pipeline",
-			"tekton.dev/run":      "run-with-pipeline",
+			"tekton.dev/pipeline":  "pipeline",
+			"tekton.dev/customRun": "run-with-pipeline",
 		},
 		OwnerReferences: []v1.OwnerReference{
 			{
-				APIVersion:         "tekton.dev/v1alpha1",
-				Kind:               "Run",
+				APIVersion:         "tekton.dev/v1beta1",
+				Kind:               "CustomRun",
 				Name:               "run-with-pipeline",
 				Controller:         &isController,
 				BlockOwnerDeletion: &blockOwnerDeletion,
@@ -228,13 +230,13 @@ var pr = &v1beta1.PipelineRun{
 	},
 }
 
-var runWithPipeline = &v1alpha1.Run{
+var runWithPipeline = &v1beta1.CustomRun{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-with-pipeline",
 		Namespace: "foo",
 	},
-	Spec: v1alpha1.RunSpec{
-		Ref: &v1alpha1.TaskRef{
+	Spec: v1beta1.CustomRunSpec{
+		CustomRef: &v1beta1.TaskRef{
 			APIVersion: "tekton.dev/v1beta1",
 			Kind:       "Pipeline",
 			Name:       "pipeline",
@@ -242,39 +244,39 @@ var runWithPipeline = &v1alpha1.Run{
 	},
 }
 
-var runWithoutPipelineName = &v1alpha1.Run{
+var runWithoutPipelineName = &v1beta1.CustomRun{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-with-missing-pipeline",
 		Namespace: "foo",
 	},
-	Spec: v1alpha1.RunSpec{
-		Ref: &v1alpha1.TaskRef{
+	Spec: v1beta1.CustomRunSpec{
+		CustomRef: &v1beta1.TaskRef{
 			APIVersion: "tekton.dev/v1beta1",
 			Kind:       "Pipeline",
 		},
 	},
 }
 
-var runWithoutKind = &v1alpha1.Run{
+var runWithoutKind = &v1beta1.CustomRun{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-with-missing-pipeline",
 		Namespace: "foo",
 	},
-	Spec: v1alpha1.RunSpec{
-		Ref: &v1alpha1.TaskRef{
+	Spec: v1beta1.CustomRunSpec{
+		CustomRef: &v1beta1.TaskRef{
 			APIVersion: "tekton.dev/v1beta1",
 			Name:       "pipeline",
 		},
 	},
 }
 
-var runWithoutAPIVersion = &v1alpha1.Run{
+var runWithoutAPIVersion = &v1beta1.CustomRun{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "run-with-missing-pipeline",
 		Namespace: "foo",
 	},
-	Spec: v1alpha1.RunSpec{
-		Ref: &v1alpha1.TaskRef{
+	Spec: v1beta1.CustomRunSpec{
+		CustomRef: &v1beta1.TaskRef{
 			Kind: "Pipeline",
 			Name: "pipeline",
 		},
@@ -285,11 +287,11 @@ func TestReconcilePipRun(t *testing.T) {
 	testcases := []struct {
 		name                string
 		pipeline            *v1beta1.Pipeline
-		run                 *v1alpha1.Run
+		run                 *v1beta1.CustomRun
 		pipelineRun         *v1beta1.PipelineRun
 		expectedStatus      corev1.ConditionStatus
 		expectedReason      v1beta1.PipelineRunReason
-		expectedResults     []v1alpha1.RunResult
+		expectedResults     []v1beta1.CustomRunResult
 		expectedMessage     string
 		expectedEvents      []string
 		expectedPipelineRun *v1beta1.PipelineRun
@@ -355,7 +357,7 @@ func TestReconcilePipRun(t *testing.T) {
 		pipelineRun:    successful(withResults(pr, "foo", "bar")),
 		expectedStatus: corev1.ConditionTrue,
 		expectedReason: v1beta1.PipelineRunReasonSuccessful,
-		expectedResults: []v1alpha1.RunResult{{
+		expectedResults: []v1beta1.CustomRunResult{{
 			Name:  "foo",
 			Value: "bar",
 		}},
@@ -375,7 +377,7 @@ func TestReconcilePipRun(t *testing.T) {
 			}
 
 			d := test.Data{
-				Runs:         []*v1alpha1.Run{tc.run},
+				CustomRuns:   []*v1beta1.CustomRun{tc.run},
 				Pipelines:    []*v1beta1.Pipeline{tc.pipeline},
 				PipelineRuns: optionalPipelineRuns,
 			}
@@ -386,7 +388,7 @@ func TestReconcilePipRun(t *testing.T) {
 
 			c.Reconciler.Reconcile(ctx, getRunName(tc.run))
 
-			run, err := clients.Pipeline.TektonV1alpha1().Runs(tc.run.Namespace).Get(ctx, tc.run.Name, metav1.GetOptions{})
+			run, err := clients.Pipeline.TektonV1beta1().CustomRuns(tc.run.Namespace).Get(ctx, tc.run.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("Error getting reconciled run from fake client: %s", err)
 			}

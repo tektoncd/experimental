@@ -12,10 +12,10 @@ branches failures such that a `Task` failure in one branch does not stop executi
 - [Pipelines In Pipelines](#pipelines-in-pipelines)
   - [Install](#install)
   - [Usage](#usage)
-    - [Configuring a `Pipeline` in a `Run`](#configuring-a-pipeline-in-a-run)
+    - [Configuring a `Pipeline` in a `CustomRun`](#configuring-a-pipeline-in-a-customrun)
     - [Configuring a `Pipeline` in a `Pipeline`](#configuring-a-pipeline-in-a-pipeline)
     - [Monitoring Execution Status](#monitoring-execution-status)
-    - [Propagating `Results` from `PipelineRun` to `Run`](#propagating-results-from-pipelinerun-to-run)
+    - [Propagating `Results` from `PipelineRun` to `CustomRun`](#propagating-results-from-pipelinerun-to-customrun)
   - [Uninstall](#uninstall)
   - [Contributions](#contributions)
 
@@ -44,25 +44,25 @@ kubectl apply --filename https://storage.googleapis.com/tekton-releases-nightly/
 
 ## Usage
 
-### Configuring a `Pipeline` in a `Run`
+### Configuring a `Pipeline` in a `CustomRun`
 
-To specify a `Pipeline` in a `Pipeline`, we need to define a [`Run`](https://github.com/tektoncd/pipeline/blob/master/docs/runs.md)
+To specify a `Pipeline` in a `Pipeline`, we need to define a [`CustomRun`](https://github.com/tektoncd/pipeline/blob/master/docs/customruns.md)
 type with `apiVersion: tekton.dev/v1beta1`, `kind: Pipeline` and pass in the name of the `Pipeline` to be run.
 
 See the [examples](examples) folder for the `Pipelines` in `Pipelines` `Custom Tasks` to run or use as samples.
 
-The `Pipeline` in `Pipeline` `Custom Task` is defined in a `Run`, which supports the following fields:
+The `Pipeline` in `Pipeline` `Custom Task` is defined in a `CustomRun`, which supports the following fields:
 
-- [`apiVersion`][kubernetes-overview] - Specifies the API version, `tekton.dev/v1alpha1`
-- [`kind`][kubernetes-overview] - Identifies this resource object as a `Run` object
-- [`metadata`][kubernetes-overview] - Specifies the metadata that uniquely identifies the `Run`, such as a `name`
-- [`spec`][kubernetes-overview] - Specifies the configuration for the `Run`
+- [`apiVersion`][kubernetes-overview] - Specifies the API version, `tekton.dev/v1beta1`
+- [`kind`][kubernetes-overview] - Identifies this resource object as a `CustomRun` object
+- [`metadata`][kubernetes-overview] - Specifies the metadata that uniquely identifies the `CustomRun`, such as a `name`
+- [`spec`][kubernetes-overview] - Specifies the configuration for the `CustomRun`
 - [`ref`][kubernetes-overview] - Specifies the `Pipeline` in `Pipeline` `Custom Task`
     - [`apiVersion`][kubernetes-overview] - Specifies the API version, `tekton.dev/v1beta1`
     - [`kind`][kubernetes-overview] - Identifies this resource object as a `Pipeline` object
     - [`name`][kubernetes-overview] - Identifies the `Pipeline` object to be executed
 
-The [example](examples/run-with-pipeline.yaml) below shows a basic `Run`:
+The [example](examples/run-with-pipeline.yaml) below shows a basic `CustomRun`:
 
 ```yaml
 apiVersion: tekton.dev/v1beta1
@@ -80,8 +80,8 @@ spec:
               #!/usr/bin/env bash
               echo "Hello World!"
 ---
-apiVersion: tekton.dev/v1alpha1
-kind: Run
+apiVersion: tekton.dev/v1beta1
+kind: CustomRun
 metadata:
   generateName: piprun-
 spec:
@@ -156,7 +156,7 @@ spec:
 
 ### Monitoring Execution Status
 
-When the `Run` is executed, it creates a `PipelineRun` to execute the `Pipeline` in the `Pipeline`. Taking the 
+When the `CustomRun` is executed, it creates a `PipelineRun` to execute the `Pipeline` in the `Pipeline`. Taking the 
 [example](examples/pipelinerun-with-pipeline-in-pipeline.yaml) above is executed, two `PipelineRuns` and four 
 `TaskRuns` would be created:
 
@@ -193,8 +193,8 @@ $ tkn pr logs pr-8qcz7-greeting-nfchg
 [echo-good-afternoon : echo] Good Afternoon!
 ```
 
-As the `Run` executes, it accumulates information about the overall execution status of the corresponding `PipelineRun`. 
-Specifically, the `ConditionSucceeded` status, message and reason of the `Run` would be updated to match that of its `PipelineRun`.
+As the `CustomRun` executes, it accumulates information about the overall execution status of the corresponding `PipelineRun`. 
+Specifically, the `ConditionSucceeded` status, message and reason of the `CustomRun` would be updated to match that of its `PipelineRun`.
 
 ```yaml
 $ kubectl describe pipelineruns.tekton.dev pr-8qcz7
@@ -315,7 +315,7 @@ Namespace:    default
 Labels:       tekton.dev/pipeline=good-morning-good-afternoon
   tekton.dev/pipelineRun=pr-8qcz7
   tekton.dev/pipelineTask=greeting
-  tekton.dev/run=pr-8qcz7-greeting-nfchg
+  tekton.dev/customRun=pr-8qcz7-greeting-nfchg
 Annotations:  <none>
 API Version:  tekton.dev/v1beta1
 Kind:         PipelineRun
@@ -418,16 +418,16 @@ Events:
   Normal  Succeeded  18m   PipelineRun  Tasks Completed: 2 (Failed: 0, Cancelled 0), Skipped: 0
 ```
 
-### Propagating `Results` from `PipelineRun` to `Run`
+### Propagating `Results` from `PipelineRun` to `CustomRun`
 
 [`PipelineRuns` emit a list of `Results`](https://github.com/tektoncd/pipeline/blob/main/docs/pipelines.md#emitting-results-from-a-pipeline), 
 that summarize the most important `Results` from its `TaskRuns`.
 
-After the `PipelineRun` has successfully executed, the `Run` would be populated with `RunResults` that map to the `PipelineRunResults`. 
+After the `PipelineRun` has successfully executed, the `CustomRun` would be populated with `CustomRunResults` that map to the `PipelineRunResults`. 
 
-Propagating `Results` ensures that they can be reused in the `Run` and in subsequent `Tasks` if configured as a `Pipeline` in a `Pipeline`. 
+Propagating `Results` ensures that they can be reused in the `CustomRun` and in subsequent `Tasks` if configured as a `Pipeline` in a `Pipeline`. 
 
-When we apply the [example](examples/run-with-pipeline-with-results.yaml), a `Run` is executed, which creates a 
+When we apply the [example](examples/run-with-pipeline-with-results.yaml), a `CustomRun` is executed, which creates a 
 `PipelineRun` that emits `PipelineRunResults`:
 
 ```yaml
@@ -436,17 +436,17 @@ $ kubectl describe pipelineruns.tekton.dev piprun-f6t27
 Name:         piprun-f6t27
 Namespace:    default
 Labels:       tekton.dev/pipeline=hello-world
-              tekton.dev/run=piprun-f6t27
+              tekton.dev/customRun=piprun-f6t27
 Annotations:  <none>
 API Version:  tekton.dev/v1beta1
 Kind:         PipelineRun
 Metadata:
   Creation Timestamp:  2021-05-04T13:29:08Z
   Owner References:
-    API Version:           tekton.dev/v1alpha1
+    API Version:           tekton.dev/v1beta1
     Block Owner Deletion:  true
     Controller:            true
-    Kind:                  Run
+    Kind:                  CustomRun
     Name:                  piprun-f6t27
     UID:                   123456789
   Resource Version:        123456789
@@ -533,17 +533,17 @@ Events:
   Normal  Succeeded  14m   PipelineRun  Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0
 ```
 
-Then the `PipelineRunResults` are propagated to the `Run`:
+Then the `PipelineRunResults` are propagated to the `CustomRun`:
 
 ```yaml
-$ kubectl describe runs.tekton.dev piprun-f6t27
+$ kubectl describe customruns.tekton.dev piprun-f6t27
 
 Name:         piprun-f6t27
 Namespace:    default
 Labels:       <none>
 Annotations:  <none>
-API Version:  tekton.dev/v1alpha1
-Kind:         Run
+API Version:  tekton.dev/v1beta1
+Kind:         CustomRun
 Metadata:
   Creation Timestamp:  2021-05-04T13:29:02Z
   Generate Name:       piprun-

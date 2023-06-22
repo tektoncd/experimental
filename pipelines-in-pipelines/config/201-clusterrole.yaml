@@ -21,15 +21,15 @@ metadata:
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-pip-run
 rules:
-  # Controller needs cluster access to all Run CRs.
+  # Controller needs cluster access to all CustomRun CRs.
   - apiGroups: ["tekton.dev"]
-    resources: ["runs", "pipelineruns"]
+    resources: ["customruns", "pipelineruns"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["tekton.dev"]
-    resources: ["runs/finalizers"]
+    resources: ["customruns/finalizers"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["tekton.dev"]
-    resources: ["runs/status", "pipelineruns/status"]
+    resources: ["customruns/status", "pipelineruns/status"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
 
   # Controller needs cluster access to leases for leader election.
@@ -37,7 +37,7 @@ rules:
     resources: ["leases"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
 
-  # Controller needs permission to emit events associated with Run CRs.
+  # Controller needs permission to emit events associated with CustomRun CRs.
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]

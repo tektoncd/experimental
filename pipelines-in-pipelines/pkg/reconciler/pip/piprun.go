@@ -25,15 +25,14 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	clientset "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
-	"github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1alpha1/run"
-	listersalpha "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1beta1/customrun"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/events"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/controller"
@@ -53,19 +52,19 @@ const (
 // Reconciler implements controller.Reconciler for Run resources.
 type Reconciler struct {
 	pipelineClientSet clientset.Interface
-	runLister         listersalpha.RunLister
+	customRunLister   listers.CustomRunLister
 	pipelineRunLister listers.PipelineRunLister
 }
 
 // Check that our Reconciler implements Interface
-var _ run.Interface = (*Reconciler)(nil)
+var _ customrun.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) reconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1beta1.CustomRun) reconciler.Event {
 	logger := logging.FromContext(ctx)
 
-	if run.Spec.Ref == nil ||
-		run.Spec.Ref.APIVersion != v1beta1.SchemeGroupVersion.String() || run.Spec.Ref.Kind != kind {
+	if run.Spec.CustomRef == nil ||
+		run.Spec.CustomRef.APIVersion != v1beta1.SchemeGroupVersion.String() || run.Spec.CustomRef.Kind != kind {
 		logger.Warn("Should not have been notified about Run %s/%s; will do nothing", run.Namespace, run.Name)
 		return nil
 	}
@@ -113,13 +112,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) recon
 
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run) error {
+func (r *Reconciler) reconcile(ctx context.Context, run *v1beta1.CustomRun) error {
 	logger := logging.FromContext(ctx)
 
 	// confirm the run spec is valid
 	if err := validate(run); err != nil {
 		logger.Errorf("Run %s/%s is invalid because of %v", run.Namespace, run.Name, err)
-		run.Status.MarkRunFailed(ReasonRunFailedValidation,
+		run.Status.MarkCustomRunFailed(ReasonRunFailedValidation,
 			"Run can't be run because it has an invalid spec - %v", err)
 		return controller.NewPermanentError(fmt.Errorf("run %s/%s is invalid because of %v", run.Namespace, run.Name, err))
 	}
@@ -132,53 +131,57 @@ func (r *Reconciler) reconcile(ctx context.Context, run *v1alpha1.Run) error {
 	// pipelinerun doesn't exist yet, create a new pipelinerun
 	if _, err := r.createPipelineRun(ctx, run); err != nil {
 		logger.Errorf("Run %s/%s got an error creating PipelineRun - %v", run.Namespace, run.Name, err)
-		run.Status.MarkRunFailed(ReasonRunFailedCreatingPipelineRun,
+		run.Status.MarkCustomRunFailed(ReasonRunFailedCreatingPipelineRun,
 			"Run got an error creating pipelineRun - %v", err)
 	}
 
 	return nil
 }
 
-func updateRunStatus(ctx context.Context, run *v1alpha1.Run, pipelineRun *v1beta1.PipelineRun) error {
+func updateRunStatus(ctx context.Context, run *v1beta1.CustomRun, pipelineRun *v1beta1.PipelineRun) error {
 	logger := logging.FromContext(ctx)
 
 	c := pipelineRun.GetStatusCondition().GetCondition(apis.ConditionSucceeded)
 	if c.IsTrue() {
-		logger.Infof("PipelineRun created by Run %s/%s has succeeded", run.Namespace, run.Name)
-		run.Status.MarkRunSucceeded(c.Reason, c.Message)
+		logger.Infof("PipelineRun created by CustomRun %s/%s has succeeded", run.Namespace, run.Name)
+		run.Status.MarkCustomRunSucceeded(c.Reason, c.Message)
 		propagateResults(run, pipelineRun)
 	} else if c.IsFalse() {
-		logger.Infof("PipelineRun created by Run %s/%s has failed", run.Namespace, run.Name)
-		run.Status.MarkRunFailed(c.Reason, c.Message)
+		logger.Infof("PipelineRun created by CustomRun %s/%s has failed", run.Namespace, run.Name)
+		run.Status.MarkCustomRunFailed(c.Reason, c.Message)
 	} else if c.IsUnknown() {
-		logger.Infof("PipelineRun created by Run %s/%s is still running", run.Namespace, run.Name)
-		run.Status.MarkRunRunning(c.Reason, c.Message)
+		logger.Infof("PipelineRun created by CustomRun %s/%s is still running", run.Namespace, run.Name)
+		if c != nil {
+			run.Status.MarkCustomRunRunning(c.Reason, c.Message)
+		} else {
+			run.Status.MarkCustomRunRunning("Running", fmt.Sprintf("PipelineRun %s/%s has not yet completed", pipelineRun.Namespace, pipelineRun.Name))
+		}
 	} else {
-		logger.Errorf("PipelineRun created by Run %s/%s has an unexpected ConditionSucceeded", run.Namespace, run.Name)
+		logger.Errorf("PipelineRun created by CustomRun %s/%s has an unexpected ConditionSucceeded", run.Namespace, run.Name)
 		return fmt.Errorf("unexpected ConditionSucceded - %s", c)
 	}
 
 	return nil
 }
 
-func propagateResults(run *v1alpha1.Run, pipelineRun *v1beta1.PipelineRun) {
+func propagateResults(run *v1beta1.CustomRun, pipelineRun *v1beta1.PipelineRun) {
 	pipelineResults := pipelineRun.Status.PipelineResults
 	for _, pipelineResult := range pipelineResults {
-		run.Status.Results = append(run.Status.Results, v1alpha1.RunResult{
+		run.Status.Results = append(run.Status.Results, v1beta1.CustomRunResult{
 			Name:  pipelineResult.Name,
-			Value: pipelineResult.Value,
+			Value: pipelineResult.Value.StringVal,
 		})
 	}
 }
 
-func validate(run *v1alpha1.Run) (errs *apis.FieldError) {
-	if run.Spec.Ref.Name == "" {
+func validate(run *v1beta1.CustomRun) (errs *apis.FieldError) {
+	if run.Spec.CustomRef.Name == "" {
 		errs = errs.Also(apis.ErrMissingField("name"))
 	}
 	return errs
 }
 
-func (r *Reconciler) getPipelineRun(ctx context.Context, run *v1alpha1.Run) *v1beta1.PipelineRun {
+func (r *Reconciler) getPipelineRun(ctx context.Context, run *v1beta1.CustomRun) *v1beta1.PipelineRun {
 	logger := logging.FromContext(ctx)
 
 	pr, err := r.pipelineRunLister.PipelineRuns(run.Namespace).Get(run.Name)
@@ -191,7 +194,7 @@ func (r *Reconciler) getPipelineRun(ctx context.Context, run *v1alpha1.Run) *v1b
 	return pr
 }
 
-func (r *Reconciler) createPipelineRun(ctx context.Context, run *v1alpha1.Run) (*v1beta1.PipelineRun, error) {
+func (r *Reconciler) createPipelineRun(ctx context.Context, run *v1beta1.CustomRun) (*v1beta1.PipelineRun, error) {
 	logger := logging.FromContext(ctx)
 
 	pr := &v1beta1.PipelineRun{
@@ -203,44 +206,52 @@ func (r *Reconciler) createPipelineRun(ctx context.Context, run *v1alpha1.Run) (
 	return r.pipelineClientSet.TektonV1beta1().PipelineRuns(run.Namespace).Create(ctx, pr, metav1.CreateOptions{})
 }
 
-func getObjectMeta(run *v1alpha1.Run) metav1.ObjectMeta {
+func getObjectMeta(run *v1beta1.CustomRun) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
-		Name:            run.Name,
-		Namespace:       run.Namespace,
-		OwnerReferences: []metav1.OwnerReference{run.GetOwnerReference()},
-		Labels:          getPipelineRunLabels(run),
-		Annotations:     getPipelineRunAnnotations(run),
+		Name:      run.Name,
+		Namespace: run.Namespace,
+		OwnerReferences: []metav1.OwnerReference{
+			*metav1.NewControllerRef(run, schema.GroupVersionKind{
+				Group:   v1beta1.SchemeGroupVersion.Group,
+				Version: v1beta1.SchemeGroupVersion.Version,
+				Kind:    pipeline.CustomRunControllerName,
+			}),
+		},
+		Labels:      getPipelineRunLabels(run),
+		Annotations: getPipelineRunAnnotations(run),
 	}
 }
 
-func getPipelineRunSpec(run *v1alpha1.Run) v1beta1.PipelineRunSpec {
+func getPipelineRunSpec(run *v1beta1.CustomRun) v1beta1.PipelineRunSpec {
 	return v1beta1.PipelineRunSpec{
 		PipelineRef:        getPipelineRef(run),
 		Params:             run.Spec.Params,
 		ServiceAccountName: run.Spec.ServiceAccountName,
-		PodTemplate:        run.Spec.PodTemplate,
 		Workspaces:         run.Spec.Workspaces,
 	}
 }
 
-func getPipelineRef(run *v1alpha1.Run) *v1beta1.PipelineRef {
+func getPipelineRef(run *v1beta1.CustomRun) *v1beta1.PipelineRef {
+	if run.Spec.CustomRef.Name == "" {
+		return nil
+	}
 	return &v1beta1.PipelineRef{
-		Name:       run.Spec.Ref.Name,
+		Name:       run.Spec.CustomRef.Name,
 		APIVersion: pipeline.GroupName,
 	}
 }
 
-func getPipelineRunLabels(run *v1alpha1.Run) map[string]string {
+func getPipelineRunLabels(run *v1beta1.CustomRun) map[string]string {
 	labels := make(map[string]string, len(run.ObjectMeta.Labels)+1)
 	for key, val := range run.ObjectMeta.Labels {
 		labels[key] = val
 	}
-	labels[pipeline.GroupName+pipeline.RunKey] = run.Name
-	labels[pipeline.GroupName+pipeline.PipelineLabelKey] = run.Spec.Ref.Name
+	labels[pipeline.CustomRunKey] = run.Name
+	labels[pipeline.PipelineLabelKey] = run.Spec.CustomRef.Name
 	return labels
 }
 
-func getPipelineRunAnnotations(run *v1alpha1.Run) map[string]string {
+func getPipelineRunAnnotations(run *v1beta1.CustomRun) map[string]string {
 	annotations := make(map[string]string, len(run.ObjectMeta.Annotations)+1)
 	for key, val := range run.ObjectMeta.Annotations {
 		annotations[key] = val
@@ -248,8 +259,8 @@ func getPipelineRunAnnotations(run *v1alpha1.Run) map[string]string {
 	return annotations
 }
 
-func (r *Reconciler) updateLabelsAndAnnotations(ctx context.Context, run *v1alpha1.Run) error {
-	newRun, err := r.runLister.Runs(run.Namespace).Get(run.Name)
+func (r *Reconciler) updateLabelsAndAnnotations(ctx context.Context, run *v1beta1.CustomRun) error {
+	newRun, err := r.customRunLister.CustomRuns(run.Namespace).Get(run.Name)
 	if err != nil {
 		return fmt.Errorf("error getting Run %s when updating labels/annotations: %w", run.Name, err)
 	}
@@ -264,7 +275,7 @@ func (r *Reconciler) updateLabelsAndAnnotations(ctx context.Context, run *v1alph
 		if err != nil {
 			return err
 		}
-		_, err = r.pipelineClientSet.TektonV1alpha1().Runs(run.Namespace).Patch(ctx, run.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+		_, err = r.pipelineClientSet.TektonV1beta1().CustomRuns(run.Namespace).Patch(ctx, run.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 		return err
 	}
 	return nil
