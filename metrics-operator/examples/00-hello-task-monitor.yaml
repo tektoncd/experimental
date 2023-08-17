@@ -2,9 +2,8 @@ apiVersion: metrics.tekton.dev/v1alpha1
 kind: TaskMonitor
 metadata:
   name: hello-task-monitor
-  namespace: pipelines
 spec:
-  taskName: hello-world
+  taskName: hello
   metrics:
   # default metric count, by status condition
   - name: status # tekton_metrics_taskrun_hello_task_monitor_status_total
@@ -32,7 +31,7 @@ spec:
     - label: priority
   # metric count by some param
   - name: environment # tekton_metrics_taskrun_hello_task_monitor_environment_total
-    type: count
+    type: counter
     by:
     - param: environment
   # checkout duration histogram
