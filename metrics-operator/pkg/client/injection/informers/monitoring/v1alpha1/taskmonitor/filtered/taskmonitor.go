@@ -20,15 +20,8 @@ package filtered
 import (
 	context "context"
 
-	apismonitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
-	versioned "github.com/tektoncd/experimental/metrics-operator/pkg/client/clientset/versioned"
 	v1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/informers/externalversions/monitoring/v1alpha1"
-	client "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/client"
 	filtered "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/informers/factory/filtered"
-	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/client/listers/monitoring/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	cache "k8s.io/client-go/tools/cache"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -36,7 +29,6 @@ import (
 
 func init() {
 	injection.Default.RegisterFilteredInformers(withInformer)
-	injection.Dynamic.RegisterDynamicInformer(withDynamicInformer)
 }
 
 // Key is used for associating the Informer inside the context.Context.
@@ -61,20 +53,6 @@ func withInformer(ctx context.Context) (context.Context, []controller.Informer) 
 	return ctx, infs
 }
 
-func withDynamicInformer(ctx context.Context) context.Context {
-	untyped := ctx.Value(filtered.LabelKey{})
-	if untyped == nil {
-		logging.FromContext(ctx).Panic(
-			"Unable to fetch labelkey from context.")
-	}
-	labelSelectors := untyped.([]string)
-	for _, selector := range labelSelectors {
-		inf := &wrapper{client: client.Get(ctx), selector: selector}
-		ctx = context.WithValue(ctx, Key{Selector: selector}, inf)
-	}
-	return ctx
-}
-
 // Get extracts the typed informer from the context.
 func Get(ctx context.Context, selector string) v1alpha1.TaskMonitorInformer {
 	untyped := ctx.Value(Key{Selector: selector})
@@ -83,53 +61,4 @@ func Get(ctx context.Context, selector string) v1alpha1.TaskMonitorInformer {
 			"Unable to fetch github.com/tektoncd/experimental/metrics-operator/pkg/client/informers/externalversions/monitoring/v1alpha1.TaskMonitorInformer with selector %s from context.", selector)
 	}
 	return untyped.(v1alpha1.TaskMonitorInformer)
-}
-
-type wrapper struct {
-	client versioned.Interface
-
-	namespace string
-
-	selector string
-}
-
-var _ v1alpha1.TaskMonitorInformer = (*wrapper)(nil)
-var _ monitoringv1alpha1.TaskMonitorLister = (*wrapper)(nil)
-
-func (w *wrapper) Informer() cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(nil, &apismonitoringv1alpha1.TaskMonitor{}, 0, nil)
-}
-
-func (w *wrapper) Lister() monitoringv1alpha1.TaskMonitorLister {
-	return w
-}
-
-func (w *wrapper) TaskMonitors(namespace string) monitoringv1alpha1.TaskMonitorNamespaceLister {
-	return &wrapper{client: w.client, namespace: namespace, selector: w.selector}
-}
-
-func (w *wrapper) List(selector labels.Selector) (ret []*apismonitoringv1alpha1.TaskMonitor, err error) {
-	reqs, err := labels.ParseToRequirements(w.selector)
-	if err != nil {
-		return nil, err
-	}
-	selector = selector.Add(reqs...)
-	lo, err := w.client.MetricsV1alpha1().TaskMonitors(w.namespace).List(context.TODO(), v1.ListOptions{
-		LabelSelector: selector.String(),
-		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
-	})
-	if err != nil {
-		return nil, err
-	}
-	for idx := range lo.Items {
-		ret = append(ret, &lo.Items[idx])
-	}
-	return ret, nil
-}
-
-func (w *wrapper) Get(name string) (*apismonitoringv1alpha1.TaskMonitor, error) {
-	// TODO(mattmoor): Check that the fetched object matches the selector.
-	return w.client.MetricsV1alpha1().TaskMonitors(w.namespace).Get(context.TODO(), name, v1.GetOptions{
-		// TODO(mattmoor): Incorporate resourceVersion bounds based on staleness criteria.
-	})
 }

@@ -2,12 +2,14 @@ package taskmonitor
 
 import (
 	"context"
+	"fmt"
 
 	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	taskmonitorreconciler "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/reconciler/monitoring/v1alpha1/taskmonitor"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics/recorder"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 )
 
@@ -20,12 +22,21 @@ var (
 )
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv1alpha1.TaskMonitor) reconciler.Event {
-	// logger := logging.FromContext(ctx)
+	logger := logging.FromContext(ctx).With("monitor", taskMonitor.Name)
 	latestMetrics := sets.NewString()
-	for i, metric := range taskMonitor.Spec.Metrics {
+	for _, metric := range taskMonitor.Spec.Metrics {
 		var runMetric metrics.RunMetric
-		if metric.Type == "counter" {
-			runMetric = recorder.NewTaskCounter(&taskMonitor.Spec.Metrics[i], taskMonitor)
+		// TODO: fail if type is invalid
+		switch metric.Type {
+		case "counter":
+			runMetric = recorder.NewTaskCounter(metric.DeepCopy(), taskMonitor)
+		case "histogram":
+			runMetric = recorder.NewTaskHistogram(metric.DeepCopy(), taskMonitor)
+		case "gauge":
+			logger.Warnw("skipping metric", "metric", metric.Name)
+		default:
+			logger.Errorw("invalid metric type", "metric", metric.Name, "type", metric.Type)
+			return fmt.Errorf("invalid metric type: %q", metric.Type)
 		}
 		if runMetric != nil {
 			latestMetrics = latestMetrics.Insert(runMetric.MetricName())
