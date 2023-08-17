@@ -38,8 +38,10 @@ spec:
   - name: checkout # tekton_metrics_taskrun_hello_task_monitor_checkout_duration_seconds
     type: histogram
     duration:
-      from: .status.steps[0].terminated.startedAt
-      to: .status.steps[0].terminated.finishedAt
+      from: .status.steps[?(@.name=="checkout")].terminated.startedAt
+      to: .status.steps[?(@.name=="checkout")].terminated.finishedAt
+    by:
+    - label: priority
   # schedule duration histogram
   - name: schedule # tekton_metrics_taskrun_hello_task_monitor_schedule_duration_seconds
     type: histogram
