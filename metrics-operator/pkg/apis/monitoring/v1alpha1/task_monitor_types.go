@@ -75,11 +75,35 @@ func statusCondition(cond *apis.Condition) string {
 	}
 	return "unknown"
 }
+
+// TODO: decouple from tekton.dev/v1beta1
 func (t *TaskRunValueRef) Value(taskRun *pipelinev1beta1.TaskRun) (string, error) {
 	if t.Condition != nil {
 		if *t.Condition == string(apis.ConditionSucceeded) {
 			return statusCondition(taskRun.Status.GetCondition(apis.ConditionSucceeded)), nil
 		}
+		return "INVALID", nil
+	}
+
+	if t.Label != nil {
+		labelValue, exists := taskRun.Labels[*t.Label]
+		if !exists {
+			return "MISSING", nil
+		}
+		return labelValue, nil
+	}
+
+	if t.Param != nil {
+		for _, param := range taskRun.Spec.Params {
+			if param.Name == *t.Param {
+				// TODO: support array and objects
+				if param.Value.StringVal != "" {
+					return param.Value.StringVal, nil
+				}
+				return "UNSUPPORTED_VALUE", nil
+			}
+		}
+		return "MISSING", nil
 	}
 	return "", errors.New("invalid value")
 }

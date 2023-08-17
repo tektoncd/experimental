@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
+	"go.uber.org/zap"
 	"knative.dev/pkg/kmp"
+	"knative.dev/pkg/logging"
 )
 
 type RunMetric interface {
@@ -32,6 +35,7 @@ func (m *MetricIndex) Record(ctx context.Context, taskRun *pipelinev1beta1.TaskR
 
 func (m *MetricIndex) RegisterRunMetric(ctx context.Context, runMetric RunMetric) error {
 
+	logger := logging.FromContext(ctx)
 	isRegistered, isModified, err := m.IsRegistered(runMetric)
 	if err != nil {
 		return fmt.Errorf("error verifying run metric registration: %w", err)
@@ -49,11 +53,14 @@ func (m *MetricIndex) RegisterRunMetric(ctx context.Context, runMetric RunMetric
 	m.rw.Lock()
 	defer m.rw.Unlock()
 
+	logger = logger.With(zap.String("metric", runMetric.MetricName()), zap.String("monitor", runMetric.MonitorName()))
 	m.store[runMetric.MetricName()] = runMetric
 	err = m.external.Register(runMetric.View())
 	if err != nil {
+		logger.Errorw("metric registration failed", zap.Error(err))
 		return err
 	}
+	logger.Info("metric registered")
 	return nil
 }
 
@@ -66,7 +73,8 @@ func (m *MetricIndex) IsRegistered(runMetric RunMetric) (bool, bool, error) {
 	if viewFound != nil {
 		lastSeen := m.store[runMetric.MetricName()]
 		isModified := false
-		equals, err := kmp.SafeEqual(lastSeen, runMetric)
+		var runMetricType RunMetric
+		equals, err := kmp.SafeEqual(lastSeen, runMetric, cmpopts.IgnoreUnexported(runMetricType))
 		if err != nil {
 			return true, false, err
 		}
