@@ -32,9 +32,15 @@ func (t *TaskCounter) View() *view.View {
 	return t.view
 }
 
+// Filter returns true when the TaskRun should be recorded, independent of value
+func (t *TaskCounter) Filter(taskRun *pipelinev1beta1.TaskRun) bool {
+	ref := taskRun.Spec.TaskRef
+	return ref != nil && ref.Name == t.TaskName
+}
+
 func (t *TaskCounter) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
 	logger := logging.FromContext(ctx)
-	if ref := taskRun.Spec.TaskRef; ref == nil || ref.Name != t.TaskName {
+	if !t.Filter(taskRun) {
 		return
 	}
 	tagMap, err := tagMapFromByStatements(t.TaskMetric.By, taskRun)
