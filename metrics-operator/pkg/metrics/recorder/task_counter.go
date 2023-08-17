@@ -34,6 +34,9 @@ func (t *TaskCounter) View() *view.View {
 
 func (t *TaskCounter) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
 	logger := logging.FromContext(ctx)
+	if ref := taskRun.Spec.TaskRef; ref == nil || ref.Name != t.TaskName {
+		return
+	}
 	tagMap, err := tagMapFromByStatements(t.TaskMetric.By, taskRun)
 	if err != nil {
 		logger.Errorw("error recording value", "kind", "TaskMonitor", "monitor", t.TaskMonitorName, "metric", t.TaskMetric)
