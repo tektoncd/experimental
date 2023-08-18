@@ -31,6 +31,10 @@ func (c *FakeMetricsV1alpha1) TaskMonitors(namespace string) v1alpha1.TaskMonito
 	return &FakeTaskMonitors{c, namespace}
 }
 
+func (c *FakeMetricsV1alpha1) TaskRunMonitors(namespace string) v1alpha1.TaskRunMonitorInterface {
+	return &FakeTaskRunMonitors{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeMetricsV1alpha1) RESTClient() rest.Interface {

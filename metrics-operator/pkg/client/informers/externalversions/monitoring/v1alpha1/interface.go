@@ -25,6 +25,8 @@ import (
 type Interface interface {
 	// TaskMonitors returns a TaskMonitorInformer.
 	TaskMonitors() TaskMonitorInformer
+	// TaskRunMonitors returns a TaskRunMonitorInformer.
+	TaskRunMonitors() TaskRunMonitorInformer
 }
 
 type version struct {
@@ -41,4 +43,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // TaskMonitors returns a TaskMonitorInformer.
 func (v *version) TaskMonitors() TaskMonitorInformer {
 	return &taskMonitorInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// TaskRunMonitors returns a TaskRunMonitorInformer.
+func (v *version) TaskRunMonitors() TaskRunMonitorInformer {
+	return &taskRunMonitorInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
