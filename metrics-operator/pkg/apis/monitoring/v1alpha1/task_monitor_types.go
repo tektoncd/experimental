@@ -73,7 +73,7 @@ func statusCondition(cond *apis.Condition) string {
 	if cond.IsFalse() {
 		return "failed"
 	}
-	return "unknown"
+	return "running"
 }
 
 // TODO: decouple from tekton.dev/v1beta1

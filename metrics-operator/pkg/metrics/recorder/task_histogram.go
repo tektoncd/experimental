@@ -110,7 +110,6 @@ func (t *TaskHistogram) MonitorName() string {
 	return t.TaskMonitorName
 }
 
-
 func (t *TaskHistogram) View() *view.View {
 	return t.view
 }
@@ -139,7 +138,7 @@ func (t *TaskHistogram) Record(ctx context.Context, recorder stats.Recorder, tas
 	recorder.Record(tagMap, []stats.Measurement{t.measure.M(duration)}, map[string]any{})
 }
 
-func (t *TaskHistogram) Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
+func (t *TaskHistogram) Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
 }
 
 func NewTaskHistogram(metric *v1alpha1.TaskMetric, monitor *v1alpha1.TaskMonitor) *TaskHistogram {
