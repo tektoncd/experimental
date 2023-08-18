@@ -186,6 +186,11 @@ func (t *TaskGauge) Record(ctx context.Context, recorder stats.Recorder, taskRun
 			return
 		}
 	}
+
+	if taskRun.DeletionTimestamp != nil {
+		t.Clean(ctx, recorder, taskRun)
+		return
+	}
 	tagMap, err := tagMapFromByStatements(t.TaskMetric.By, taskRun)
 	if err != nil {
 		logger.Errorf("unable to render tag map for metric: %w", err)
