@@ -1,0 +1,13 @@
+apiVersion: metrics.tekton.dev/v1alpha1
+kind: TaskMonitor
+metadata:
+  name: release
+spec:
+  taskName: release
+  metrics:
+  # default running gauge
+  - name: status # tekton_metrics_task_release_status
+    type: gauge
+    by:
+    - condition: "Succeeded"
+    - label: priority

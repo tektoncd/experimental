@@ -21,6 +21,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRun *pipelinev1beta1
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) reconciler.Event {
 	if taskRun.IsDone() {
+		r.manager.GetIndex().Clean(ctx, taskRun)
 		return r.manager.RecordTaskRunDone(ctx, taskRun)
 	}
 	return r.manager.RecordTaskRunRunning(ctx, taskRun)
