@@ -15,6 +15,7 @@ require (
 	k8s.io/client-go v0.27.1
 	k8s.io/code-generator v0.26.5
 	k8s.io/kube-openapi v0.0.0-20230525220651-2546d827e515
+	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	knative.dev/pkg v0.0.0-20230815132840-4f651e092853
 )
 
@@ -87,7 +88,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.26.5 // indirect
 	k8s.io/gengo v0.0.0-20221011193443-fad74ee6edd9 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
-	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

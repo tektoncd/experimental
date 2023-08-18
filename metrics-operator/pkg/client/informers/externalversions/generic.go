@@ -54,6 +54,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=metrics.tekton.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("taskmonitors"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Metrics().V1alpha1().TaskMonitors().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("taskrunmonitors"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Metrics().V1alpha1().TaskRunMonitors().Informer()}, nil
 
 	}
 

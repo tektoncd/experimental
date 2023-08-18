@@ -28,6 +28,7 @@ import (
 type MetricsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	TaskMonitorsGetter
+	TaskRunMonitorsGetter
 }
 
 // MetricsV1alpha1Client is used to interact with features provided by the metrics.tekton.dev group.
@@ -37,6 +38,10 @@ type MetricsV1alpha1Client struct {
 
 func (c *MetricsV1alpha1Client) TaskMonitors(namespace string) TaskMonitorInterface {
 	return newTaskMonitors(c, namespace)
+}
+
+func (c *MetricsV1alpha1Client) TaskRunMonitors(namespace string) TaskRunMonitorInterface {
+	return newTaskRunMonitors(c, namespace)
 }
 
 // NewForConfig creates a new MetricsV1alpha1Client for the given config.

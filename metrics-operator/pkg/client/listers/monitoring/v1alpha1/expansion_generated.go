@@ -24,3 +24,11 @@ type TaskMonitorListerExpansion interface{}
 // TaskMonitorNamespaceListerExpansion allows custom methods to be added to
 // TaskMonitorNamespaceLister.
 type TaskMonitorNamespaceListerExpansion interface{}
+
+// TaskRunMonitorListerExpansion allows custom methods to be added to
+// TaskRunMonitorLister.
+type TaskRunMonitorListerExpansion interface{}
+
+// TaskRunMonitorNamespaceListerExpansion allows custom methods to be added to
+// TaskRunMonitorNamespaceLister.
+type TaskRunMonitorNamespaceListerExpansion interface{}
