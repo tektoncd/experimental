@@ -16,9 +16,11 @@ import (
 
 type RunMetric interface {
 	MetricName() string
+	MetricType() string
 	MonitorName() string
 	View() *view.View
 	Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
+	Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun)
 }
 
 type MetricIndex struct {
@@ -27,9 +29,17 @@ type MetricIndex struct {
 	rw       sync.RWMutex
 }
 
-func (m *MetricIndex) Record(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
+func (m *MetricIndex) Record(ctx context.Context, taskRun *pipelinev1beta1.TaskRun, metricType string) {
 	for _, metric := range m.store {
-		metric.Record(ctx, m.external, taskRun)
+		if metric.MetricType() == metricType {
+			metric.Record(ctx, m.external, taskRun)
+		}
+	}
+}
+
+func (m *MetricIndex) Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
+	for _, metric := range m.store {
+		metric.Clean(ctx, taskRun)
 	}
 }
 

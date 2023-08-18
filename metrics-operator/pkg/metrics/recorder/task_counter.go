@@ -24,6 +24,10 @@ func (t *TaskCounter) MetricName() string {
 	return naming.CounterMetric("task", t.TaskMonitorName, t.TaskMetric.Name)
 }
 
+func (t *TaskCounter) MetricType() string {
+	return "counter"
+}
+
 func (t *TaskCounter) MonitorName() string {
 	return t.TaskMonitorName
 }
@@ -49,6 +53,9 @@ func (t *TaskCounter) Record(ctx context.Context, recorder stats.Recorder, taskR
 		return
 	}
 	recorder.Record(tagMap, []stats.Measurement{t.measure.M(1)}, map[string]any{})
+}
+
+func (t *TaskCounter) Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
 }
 
 func NewTaskCounter(metric *v1alpha1.TaskMetric, monitor *v1alpha1.TaskMonitor) *TaskCounter {

@@ -16,12 +16,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRun *pipelinev1beta1
 	if taskRun.IsDone() {
 		return r.manager.RecordTaskRunDone(ctx, taskRun)
 	}
-	return nil
+	return r.manager.RecordTaskRunRunning(ctx, taskRun)
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) reconciler.Event {
 	if taskRun.IsDone() {
 		return r.manager.RecordTaskRunDone(ctx, taskRun)
 	}
-	return nil
+	return r.manager.RecordTaskRunRunning(ctx, taskRun)
 }

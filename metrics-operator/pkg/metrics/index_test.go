@@ -84,7 +84,7 @@ func TestMetricIndex(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, "counter")
 
 		resp, err := http.Get("http://0.0.0.0:2112/metrics")
 		if err != nil {
