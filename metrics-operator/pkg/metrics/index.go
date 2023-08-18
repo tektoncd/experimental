@@ -20,7 +20,7 @@ type RunMetric interface {
 	MonitorName() string
 	View() *view.View
 	Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
-	Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun)
+	Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
 }
 
 type MetricIndex struct {
@@ -39,7 +39,7 @@ func (m *MetricIndex) Record(ctx context.Context, taskRun *pipelinev1beta1.TaskR
 
 func (m *MetricIndex) Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
 	for _, metric := range m.store {
-		metric.Clean(ctx, taskRun)
+		metric.Clean(ctx, m.external, taskRun)
 	}
 }
 

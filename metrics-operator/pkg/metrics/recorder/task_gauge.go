@@ -170,16 +170,19 @@ func (t *TaskGauge) syncGauge(ctx context.Context, recorder stats.Recorder, task
 func (t *TaskGauge) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
 	logger := logging.FromContext(ctx)
 	if !t.Filter(taskRun) {
+		t.Clean(ctx, recorder, taskRun)
 		return
 	}
 	if t.TaskMetric.Match != nil {
 		matched, err := match(t.TaskMetric.Match, taskRun)
 		if err != nil {
 			logger.Errorf("skipping taskrun, match failed: %w", err)
+			t.Clean(ctx, recorder, taskRun)
 			return
 		}
 		if !matched {
-			logger.Errorf("skipping taskrun, match is false")
+			logger.Infof("skipping taskrun, match is false")
+			t.Clean(ctx, recorder, taskRun)
 			return
 		}
 	}
@@ -190,21 +193,24 @@ func (t *TaskGauge) Record(ctx context.Context, recorder stats.Recorder, taskRun
 	}
 	t.value.Update(taskRun, tagMap)
 
+	t.reportAll(ctx, recorder, taskRun)
+}
+
+func (t *TaskGauge) reportAll(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
+	logger := logging.FromContext(ctx)
 	for _, existingTagMap := range t.value.Keys() {
 		gaugeMeasurement, err := t.value.ValueFor(existingTagMap)
 		if err != nil {
 			logger.Errorf("unable to render value for metric: %w", err)
 			continue
 		}
-		recorder.Record(tagMap, []stats.Measurement{t.measure.M(float64(gaugeMeasurement))}, map[string]any{})
+		recorder.Record(existingTagMap, []stats.Measurement{t.measure.M(float64(gaugeMeasurement))}, map[string]any{})
 	}
 }
 
-func (t *TaskGauge) Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
-	if !t.Filter(taskRun) {
-		return
-	}
+func (t *TaskGauge) Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
 	t.value.Delete(taskRun)
+	t.reportAll(ctx, recorder, taskRun)
 }
 
 func NewTaskGauge(metric *v1alpha1.TaskMetric, monitor *v1alpha1.TaskMonitor, taskRunLister pipelinev1beta1listers.TaskRunLister) *TaskGauge {
