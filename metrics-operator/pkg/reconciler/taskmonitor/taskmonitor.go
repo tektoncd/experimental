@@ -8,13 +8,15 @@ import (
 	taskmonitorreconciler "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/reconciler/monitoring/v1alpha1/taskmonitor"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics/recorder"
+	pipelinev1beta1listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 )
 
 type Reconciler struct {
-	manager *metrics.MetricManager
+	manager       *metrics.MetricManager
+	taskRunLister pipelinev1beta1listers.TaskRunLister
 }
 
 var (
@@ -33,7 +35,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv
 		case "histogram":
 			runMetric = recorder.NewTaskHistogram(metric.DeepCopy(), taskMonitor)
 		case "gauge":
-			logger.Warnw("skipping metric", "metric", metric.Name)
+			runMetric = recorder.NewTaskGauge(metric.DeepCopy(), taskMonitor, r.taskRunLister)
 		default:
 			logger.Errorw("invalid metric type", "metric", metric.Name, "type", metric.Type)
 			return fmt.Errorf("invalid metric type: %q", metric.Type)
