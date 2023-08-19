@@ -6,6 +6,7 @@ import (
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/reconciler/taskmonitor"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/reconciler/taskrun"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/reconciler/taskrunmonitor"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/server"
 	"go.opencensus.io/stats/view"
 	"knative.dev/pkg/injection/sharedmain"
@@ -38,6 +39,7 @@ func main() {
 	ctx := signals.NewContext()
 	sharedmain.MainWithContext(ctx, "metrics-operator-controller",
 		taskmonitor.NewController(manager),
+		taskrunmonitor.NewController(manager),
 		taskrun.NewController(manager),
 	)
 }
