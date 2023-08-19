@@ -1,4 +1,4 @@
-package taskmonitor
+package taskrunmonitor
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func NewController(manager *metrics.MetricManager) injection.ControllerConstruct
 
 		impl := taskrunmonitorreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
 			return controller.Options{
-				AgentName: "TaskMonitor",
+				AgentName: "TaskRunMonitor",
 			}
 		})
 		taskRunMonitorInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

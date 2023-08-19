@@ -1,0 +1,15 @@
+apiVersion: metrics.tekton.dev/v1alpha1
+kind: TaskRunMonitor
+metadata:
+  name: release
+spec:
+  selector:
+    matchExpressions:
+    - {key: repository, operator: Exists}
+  metrics:
+  # default running gauge
+  - name: status # tekton_metrics_task_release_status
+    type: gauge
+    by:
+    - condition: "Succeeded"
+    - label: repository
