@@ -24,12 +24,11 @@ type GenericTaskRunGauge struct {
 	measure       *stats.Float64Measure
 }
 
+func (g *GenericTaskRunGauge) Metric() *v1alpha1.TaskMetric {
+	return g.TaskMetric
+}
 func (g *GenericTaskRunGauge) MetricName() string {
 	return naming.GaugeMetric(g.Resource, g.Monitor, g.TaskMetric.Name)
-}
-
-func (g *GenericTaskRunGauge) MetricType() string {
-	return "gauge"
 }
 
 func (g *GenericTaskRunGauge) MonitorName() string {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/google/go-cmp/cmp/cmpopts"
+	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -15,9 +15,9 @@ import (
 )
 
 type RunMetric interface {
-	MetricName() string
-	MetricType() string
 	MonitorName() string
+	MetricName() string
+	Metric() *monitoringv1alpha1.TaskMetric
 	View() *view.View
 	Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
 	Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
@@ -31,7 +31,7 @@ type MetricIndex struct {
 
 func (m *MetricIndex) Record(ctx context.Context, taskRun *pipelinev1beta1.TaskRun, metricType string) {
 	for _, metric := range m.store {
-		if metric.MetricType() == metricType {
+		if metric.Metric().Type == metricType {
 			metric.Record(ctx, m.external, taskRun)
 		}
 	}
@@ -81,17 +81,18 @@ func (m *MetricIndex) IsRegistered(runMetric RunMetric) (bool, bool, error) {
 
 	viewFound := m.external.Find(runMetric.MetricName())
 	if viewFound != nil {
-		lastSeen := m.store[runMetric.MetricName()]
-		isModified := false
-		var runMetricType RunMetric
-		equals, err := kmp.SafeEqual(lastSeen, runMetric, cmpopts.IgnoreUnexported(runMetricType))
-		if err != nil {
-			return true, false, err
+		lastSeen, exists := m.store[runMetric.MetricName()]
+		if exists {
+			isModified := false
+			equals, err := kmp.SafeEqual(lastSeen.Metric(), runMetric.Metric())
+			if err != nil {
+				return true, false, err
+			}
+			if !equals {
+				isModified = true
+			}
+			return true, isModified, nil
 		}
-		if !equals {
-			isModified = true
-		}
-		return true, isModified, nil
 	}
 	return false, false, nil
 }

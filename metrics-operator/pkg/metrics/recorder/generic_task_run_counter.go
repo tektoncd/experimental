@@ -20,12 +20,12 @@ type GenericTaskRunCounter struct {
 	measure    *stats.Float64Measure
 }
 
-func (t *GenericTaskRunCounter) MetricName() string {
-	return naming.CounterMetric(t.Resource, t.Monitor, t.TaskMetric.Name)
+func (g *GenericTaskRunCounter) Metric() *v1alpha1.TaskMetric {
+	return g.TaskMetric
 }
 
-func (t *GenericTaskRunCounter) MetricType() string {
-	return "counter"
+func (t *GenericTaskRunCounter) MetricName() string {
+	return naming.CounterMetric(t.Resource, t.Monitor, t.TaskMetric.Name)
 }
 
 func (t *GenericTaskRunCounter) MonitorName() string {
