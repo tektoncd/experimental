@@ -10,8 +10,6 @@ import (
 	pipelinev1beta1listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
-	"k8s.io/apimachinery/pkg/labels"
 	"knative.dev/pkg/logging"
 )
 
@@ -42,57 +40,8 @@ func (g *GenericTaskRunGauge) View() *view.View {
 	return g.view
 }
 
-// Filter returns true when the TaskRun should be recorded, independent of value
-func (g *GenericTaskRunGauge) Filter(taskRun *pipelinev1beta1.TaskRun) bool {
-	ref := taskRun.Spec.TaskRef
-	return ref != nil && ref.Name == g.TaskName
-}
-
-func (g *GenericTaskRunGauge) syncGauge(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
-	logger := logging.FromContext(ctx)
-	allTaskRuns, err := g.TaskRunLister.List(labels.Everything())
-	if err != nil {
-		logger.Errorf("error listing taskruns", "kind", "TaskMonitor", "monitor", g.Monitor, "metric", g.TaskMetric)
-		return
-	}
-
-	gaugeBy := map[string]int{}
-	gaugeMap := map[string]*tag.Map{}
-	for _, tr := range allTaskRuns {
-		if !g.Filter(tr) {
-			continue
-		}
-		if g.TaskMetric.Match != nil {
-			matched, err := match(g.TaskMetric.Match, tr)
-			if err != nil {
-				logger.Errorf("skipping taskrun, match failed: %w", err)
-				continue
-			}
-			if !matched {
-				continue
-			}
-		}
-		tagMap, err := tagMapFromByStatements(g.TaskMetric.By, tr)
-		if err != nil {
-			logger.Errorf("could not render labels for gauge metric: %w", err)
-			continue
-		}
-		gaugeBy[tagMap.String()] += 1
-		gaugeMap[tagMap.String()] = tagMap
-	}
-
-	for key, tagMap := range gaugeMap {
-		gaugeValue := gaugeBy[key]
-		recorder.Record(tagMap, []stats.Measurement{g.measure.M(float64(gaugeValue))}, map[string]any{})
-	}
-}
-
 func (g *GenericTaskRunGauge) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
 	logger := logging.FromContext(ctx)
-	if !g.Filter(taskRun) {
-		g.Clean(ctx, recorder, taskRun)
-		return
-	}
 	if g.TaskMetric.Match != nil {
 		matched, err := match(g.TaskMetric.Match, taskRun)
 		if err != nil {
