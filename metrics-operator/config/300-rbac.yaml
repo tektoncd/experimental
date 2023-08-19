@@ -11,7 +11,7 @@ rules:
     resources: ["taskruns", "pipelineruns", "task", "pipeline"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["metrics.tekton.dev"]
-    resources: ["taskmonitors"]
+    resources: ["taskmonitors", "taskrunmonitors"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   # Controller needs cluster access to leases for leader election.
   - apiGroups: ["coordination.k8s.io"]
