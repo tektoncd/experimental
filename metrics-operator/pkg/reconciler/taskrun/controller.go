@@ -22,7 +22,7 @@ func NewController(manager *metrics.MetricManager) injection.ControllerConstruct
 
 		impl := taskrunreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
 			return controller.Options{
-				AgentName:         "TaskRun",
+				FinalizerName:     "taskrun.metrics.tekton.dev",
 				SkipStatusUpdates: true,
 			}
 		})

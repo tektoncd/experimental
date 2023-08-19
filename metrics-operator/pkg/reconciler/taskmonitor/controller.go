@@ -24,9 +24,7 @@ func NewController(manager *metrics.MetricManager) injection.ControllerConstruct
 		}
 
 		impl := taskmonitorreconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
-			return controller.Options{
-				AgentName: "TaskMonitor",
-			}
+			return controller.Options{}
 		})
 		taskMonitorInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 		return impl

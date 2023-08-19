@@ -26,12 +26,12 @@ type GenericTaskRunHistogram struct {
 	measure    *stats.Float64Measure
 }
 
-func (g *GenericTaskRunHistogram) MetricName() string {
-	return naming.HistogramMetric(g.Resource, g.Monitor, g.TaskMetric.Name)
+func (g *GenericTaskRunHistogram) Metric() *v1alpha1.TaskMetric {
+	return g.TaskMetric
 }
 
-func (g *GenericTaskRunHistogram) MetricType() string {
-	return "histogram"
+func (g *GenericTaskRunHistogram) MetricName() string {
+	return naming.HistogramMetric(g.Resource, g.Monitor, g.TaskMetric.Name)
 }
 
 func (g *GenericTaskRunHistogram) MonitorName() string {
