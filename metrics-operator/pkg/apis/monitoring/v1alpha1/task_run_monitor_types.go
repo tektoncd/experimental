@@ -18,20 +18,20 @@ type TaskRunMonitor struct {
 	Status            TaskRunMonitorStatus `json:"status"`
 }
 
-// TaskMonitorSpec ...
+// TaskRunMonitorSpec ...
 type TaskRunMonitorSpec struct {
 	Selector metav1.LabelSelector `json:"selector"`
 	Metrics  []TaskMetric         `json:"metrics"`
 }
 
-// TaskMonitorStatus
+// TaskRunMonitorStatus
 type TaskRunMonitorStatus struct {
 	duckv1.Status `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TaskMonitorList ...
+// TaskRunMonitorList ...
 type TaskRunMonitorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

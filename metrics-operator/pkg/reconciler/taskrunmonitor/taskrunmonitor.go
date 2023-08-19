@@ -62,7 +62,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRunMonitor *monitori
 	return nil
 }
 
-func (r *Reconciler) FinalizeKind(ctx context.Context, taskRunMonitor *monitoringv1alpha1.TaskMonitor) reconciler.Event {
+func (r *Reconciler) FinalizeKind(ctx context.Context, taskRunMonitor *monitoringv1alpha1.TaskRunMonitor) reconciler.Event {
 	err := r.manager.GetIndex().UnregisterAllMetricsMonitor(taskRunMonitor.Name)
 	if err != nil {
 		return err
