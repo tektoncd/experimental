@@ -13,11 +13,11 @@ import (
 )
 
 type GenericTaskRunCounter struct {
-	Resource    string
-	Monitor string
-	TaskMetric  *v1alpha1.TaskMetric
-	view        *view.View
-	measure     *stats.Float64Measure
+	Resource   string
+	Monitor    string
+	TaskMetric *v1alpha1.TaskMetric
+	view       *view.View
+	measure    *stats.Float64Measure
 }
 
 func (t *GenericTaskRunCounter) MetricName() string {
@@ -51,9 +51,9 @@ func (t *GenericTaskRunCounter) Clean(ctx context.Context, recorder stats.Record
 
 func NewGenericTaskRunCounter(metric *v1alpha1.TaskMetric, resource, monitorName string) *GenericTaskRunCounter {
 	counter := &GenericTaskRunCounter{
-		Resource: resource,
-		Monitor: monitorName,
-		TaskMetric:      metric,
+		Resource:   resource,
+		Monitor:    monitorName,
+		TaskMetric: metric,
 	}
 	counter.measure = stats.Float64(counter.MetricName(), fmt.Sprintf("count samples for TaskMonitor %s/%s", counter.Monitor, counter.TaskMetric.Name), stats.UnitDimensionless)
 	view := &view.View{

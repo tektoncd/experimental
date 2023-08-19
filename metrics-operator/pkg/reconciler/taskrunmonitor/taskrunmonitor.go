@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
-	taskmonitorreconciler "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/reconciler/monitoring/v1alpha1/taskmonitor"
+	taskrunmonitorreconciler "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/reconciler/monitoring/v1alpha1/taskrunmonitor"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics/recorder"
 	pipelinev1beta1listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
@@ -20,7 +20,7 @@ type Reconciler struct {
 }
 
 var (
-	_ taskmonitorreconciler.Interface = (*Reconciler)(nil)
+	_ taskrunmonitorreconciler.Interface = (*Reconciler)(nil)
 )
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, taskRunMonitor *monitoringv1alpha1.TaskRunMonitor) reconciler.Event {
@@ -31,7 +31,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRunMonitor *monitori
 		// TODO: fail if type is invalid
 		switch metric.Type {
 		case "counter":
-			runMetric = recorder.NewTaskCounter(metric.DeepCopy(), taskRunMonitor)
+			runMetric = recorder.NewTaskRunCounter(metric.DeepCopy(), taskRunMonitor)
 		case "histogram":
 			runMetric = recorder.NewTaskHistogram(metric.DeepCopy(), taskMonitor)
 		case "gauge":
