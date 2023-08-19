@@ -33,9 +33,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRunMonitor *monitori
 		case "counter":
 			runMetric = recorder.NewTaskRunCounter(metric.DeepCopy(), taskRunMonitor)
 		case "histogram":
-			runMetric = recorder.NewTaskHistogram(metric.DeepCopy(), taskMonitor)
+			runMetric = recorder.NewTaskRunHistogram(metric.DeepCopy(), taskRunMonitor)
 		case "gauge":
-			runMetric = recorder.NewTaskGauge(metric.DeepCopy(), taskMonitor, r.taskRunLister)
+			runMetric = recorder.NewTaskRunGauge(metric.DeepCopy(), taskRunMonitor, r.taskRunLister)
 		default:
 			logger.Errorw("invalid metric type", "metric", metric.Name, "type", metric.Type)
 			return fmt.Errorf("invalid metric type: %q", metric.Type)
@@ -49,7 +49,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRunMonitor *monitori
 		}
 	}
 
-	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor(taskMonitor.Name)...)
+	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor(taskRunMonitor.Name)...)
 	removed := registeredMetrics.Difference(latestMetrics)
 
 	for _, removedMetricName := range removed.List() {
