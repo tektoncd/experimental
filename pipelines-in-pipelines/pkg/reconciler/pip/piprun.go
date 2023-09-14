@@ -85,6 +85,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, run *v1beta1.CustomRun) 
 		events.Emit(ctx, nil, afterCondition, run)
 	}
 
+	// If the run has been cancelled, cancel the pipelineRun
+	if run.IsCancelled() {
+		if err := r.cancelPipelineRun(ctx, run); err != nil {
+			logger.Errorf("Failed to cancel PipelineRun created by CustomRun %s/%s due to %v", run.Namespace, run.Name, err)
+		}
+	}
+
 	if run.IsDone() {
 		logger.Infof("Run %s/%s is done", run.Namespace, run.Name)
 		return nil
@@ -222,12 +229,32 @@ func getObjectMeta(run *v1beta1.CustomRun) metav1.ObjectMeta {
 	}
 }
 
+func (r *Reconciler) cancelPipelineRun(ctx context.Context, run *v1beta1.CustomRun) error {
+	if pr := r.getPipelineRun(ctx, run); pr != nil {
+		logger := logging.FromContext(ctx)
+		logger.Infof("Cancelling PipelineRun created by CustomRun %s/%s", pr.Namespace, pr.Name)
+		mergePatch := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"status": v1beta1.PipelineRunSpecStatusCancelled,
+			},
+		}
+		patch, err := json.Marshal(mergePatch)
+		if err != nil {
+			return err
+		}
+		_, err = r.pipelineClientSet.TektonV1beta1().PipelineRuns(pr.Namespace).Patch(ctx, pr.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+		return err
+	}
+	return nil
+}
+
 func getPipelineRunSpec(run *v1beta1.CustomRun) v1beta1.PipelineRunSpec {
 	return v1beta1.PipelineRunSpec{
 		PipelineRef:        getPipelineRef(run),
 		Params:             run.Spec.Params,
 		ServiceAccountName: run.Spec.ServiceAccountName,
 		Workspaces:         run.Spec.Workspaces,
+		Timeout:            run.Spec.Timeout,
 	}
 }
 
