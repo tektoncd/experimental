@@ -248,7 +248,7 @@ func (in *TaskRunMonitorList) DeepCopyInto(out *TaskRunMonitorList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]TaskMonitor, len(*in))
+		*out = make([]TaskRunMonitor, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
