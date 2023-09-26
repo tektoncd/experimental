@@ -35,5 +35,5 @@ type TaskRunMonitorStatus struct {
 type TaskRunMonitorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []TaskMonitor `json:"items"`
+	Items           []TaskRunMonitor `json:"items"`
 }
