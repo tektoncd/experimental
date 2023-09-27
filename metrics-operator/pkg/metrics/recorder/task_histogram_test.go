@@ -9,10 +9,10 @@ import (
 )
 
 func TestParseDuration(t *testing.T) {
-	metric := &monitoringv1alpha1.TaskMetric{
+	metric := &monitoringv1alpha1.Metric{
 		Type: "histogram",
 		Name: "duration",
-		Duration: &monitoringv1alpha1.TaskMetricHistogramDuration{
+		Duration: &monitoringv1alpha1.MetricHistogramDuration{
 			From: ".metadata.creationTimestamp",
 			To:   ".status.completionTime",
 		},

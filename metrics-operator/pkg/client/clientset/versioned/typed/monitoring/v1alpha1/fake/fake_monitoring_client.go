@@ -27,6 +27,14 @@ type FakeMetricsV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeMetricsV1alpha1) PipelineMonitors(namespace string) v1alpha1.PipelineMonitorInterface {
+	return &FakePipelineMonitors{c, namespace}
+}
+
+func (c *FakeMetricsV1alpha1) PipelineRunMonitors(namespace string) v1alpha1.PipelineRunMonitorInterface {
+	return &FakePipelineRunMonitors{c, namespace}
+}
+
 func (c *FakeMetricsV1alpha1) TaskMonitors(namespace string) v1alpha1.TaskMonitorInterface {
 	return &FakeTaskMonitors{c, namespace}
 }

@@ -18,13 +18,13 @@ type GenericTaskRunGauge struct {
 	Monitor       string
 	Resource      string
 	TaskRunLister pipelinev1beta1listers.TaskRunLister
-	TaskMetric    *v1alpha1.TaskMetric
+	TaskMetric    *v1alpha1.Metric
 	value         GaugeValue
 	view          *view.View
 	measure       *stats.Float64Measure
 }
 
-func (g *GenericTaskRunGauge) Metric() *v1alpha1.TaskMetric {
+func (g *GenericTaskRunGauge) Metric() *v1alpha1.Metric {
 	return g.TaskMetric
 }
 func (g *GenericTaskRunGauge) MetricName() string {
@@ -88,7 +88,7 @@ func (g *GenericTaskRunGauge) Clean(ctx context.Context, recorder stats.Recorder
 	g.reportAll(ctx, recorder, taskRun)
 }
 
-func NewGenericTaskRunGauge(metric *v1alpha1.TaskMetric, resource, monitorName string, taskRunLister pipelinev1beta1listers.TaskRunLister) *GenericTaskRunGauge {
+func NewGenericTaskRunGauge(metric *v1alpha1.Metric, resource, monitorName string, taskRunLister pipelinev1beta1listers.TaskRunLister) *GenericTaskRunGauge {
 	gauge := &GenericTaskRunGauge{
 		Resource:      resource,
 		Monitor:       monitorName,

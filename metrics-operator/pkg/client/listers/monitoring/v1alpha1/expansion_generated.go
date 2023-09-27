@@ -17,6 +17,22 @@ limitations under the License.
 
 package v1alpha1
 
+// PipelineMonitorListerExpansion allows custom methods to be added to
+// PipelineMonitorLister.
+type PipelineMonitorListerExpansion interface{}
+
+// PipelineMonitorNamespaceListerExpansion allows custom methods to be added to
+// PipelineMonitorNamespaceLister.
+type PipelineMonitorNamespaceListerExpansion interface{}
+
+// PipelineRunMonitorListerExpansion allows custom methods to be added to
+// PipelineRunMonitorLister.
+type PipelineRunMonitorListerExpansion interface{}
+
+// PipelineRunMonitorNamespaceListerExpansion allows custom methods to be added to
+// PipelineRunMonitorNamespaceLister.
+type PipelineRunMonitorNamespaceListerExpansion interface{}
+
 // TaskMonitorListerExpansion allows custom methods to be added to
 // TaskMonitorLister.
 type TaskMonitorListerExpansion interface{}

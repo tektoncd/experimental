@@ -17,7 +17,7 @@ import (
 type RunMetric interface {
 	MonitorName() string
 	MetricName() string
-	Metric() *monitoringv1alpha1.TaskMetric
+	Metric() *monitoringv1alpha1.Metric
 	View() *view.View
 	Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
 	Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)

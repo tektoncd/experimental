@@ -9,31 +9,31 @@ import (
 // +genreconciler:krshapedlogic=false
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TaskMonitor ...
+// PipelineRunMonitor ...
 // +k8s:openapi-gen=true
-type TaskMonitor struct {
+type PipelineRunMonitor struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              TaskMonitorSpec   `json:"spec"`
-	Status            TaskMonitorStatus `json:"status"`
+	Spec              PipelineRunMonitorSpec   `json:"spec"`
+	Status            PipelineRunMonitorStatus `json:"status"`
 }
 
-// TaskMonitorSpec ...
-type TaskMonitorSpec struct {
-	TaskName string   `json:"taskName"`
-	Metrics  []Metric `json:"metrics"`
+// PipelineRunMonitorSpec ...
+type PipelineRunMonitorSpec struct {
+	Selector metav1.LabelSelector `json:"selector"`
+	Metrics  []Metric             `json:"metrics"`
 }
 
-// TaskMonitorStatus
-type TaskMonitorStatus struct {
+// PipelineRunMonitorStatus
+type PipelineRunMonitorStatus struct {
 	duckv1.Status `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TaskMonitorList ...
-type TaskMonitorList struct {
+// PipelineRunMonitorList ...
+type PipelineRunMonitorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []TaskMonitor `json:"items"`
+	Items           []PipelineRunMonitor `json:"items"`
 }

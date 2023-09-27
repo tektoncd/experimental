@@ -52,6 +52,10 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=metrics.tekton.dev, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("pipelinemonitors"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Metrics().V1alpha1().PipelineMonitors().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("pipelinerunmonitors"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Metrics().V1alpha1().PipelineRunMonitors().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("taskmonitors"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Metrics().V1alpha1().TaskMonitors().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("taskrunmonitors"):

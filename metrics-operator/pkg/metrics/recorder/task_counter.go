@@ -26,7 +26,7 @@ func (t *TaskCounter) Record(ctx context.Context, recorder stats.Recorder, taskR
 	t.GenericTaskRunCounter.Record(ctx, recorder, taskRun)
 }
 
-func NewTaskCounter(metric *v1alpha1.TaskMetric, monitor *v1alpha1.TaskMonitor) *TaskCounter {
+func NewTaskCounter(metric *v1alpha1.Metric, monitor *v1alpha1.TaskMonitor) *TaskCounter {
 	generic := NewGenericTaskRunCounter(metric, "task", monitor.Name)
 	counter := &TaskCounter{
 		GenericTaskRunCounter: *generic,
