@@ -11,14 +11,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-func tagMapFromByStatements(by []v1alpha1.TaskByStatement, taskRun *pipelinev1beta1.TaskRun) (*tag.Map, error) {
+func tagMapFromByStatements(by []v1alpha1.ByStatement, taskRun *pipelinev1beta1.TaskRun) (*tag.Map, error) {
 	mutators := []tag.Mutator{}
 	for _, byStatement := range by {
 		byKey, err := byStatement.Key()
 		if err != nil {
 			return nil, err
 		}
-		byValue, err := byStatement.Value(taskRun)
+		byValue, err := byStatement.Value(taskRun.Status.Status, taskRun.Labels, taskRun.Spec.Params)
 		if err != nil {
 			return nil, err
 		}
@@ -33,7 +33,7 @@ func tagMapFromByStatements(by []v1alpha1.TaskByStatement, taskRun *pipelinev1be
 	return tag.FromContext(ctx), nil
 }
 
-func viewTags(by []v1alpha1.TaskByStatement) []tag.Key {
+func viewTags(by []v1alpha1.ByStatement) []tag.Key {
 	keys := []tag.Key{}
 	for _, byStatement := range by {
 		key, err := byStatement.Key()
@@ -49,8 +49,8 @@ func viewTags(by []v1alpha1.TaskByStatement) []tag.Key {
 	return keys
 }
 
-func match(m *v1alpha1.TaskMetricGaugeMatch, taskRun *pipelinev1beta1.TaskRun) (bool, error) {
-	v, err := m.Key.Value(taskRun)
+func match(m *v1alpha1.MetricGaugeMatch, taskRun *pipelinev1beta1.TaskRun) (bool, error) {
+	v, err := m.Key.Value(taskRun.Status.Status, taskRun.Labels, taskRun.Spec.Params)
 	if err != nil {
 		return false, err
 	}

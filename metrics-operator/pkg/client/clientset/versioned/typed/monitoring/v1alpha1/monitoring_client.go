@@ -27,6 +27,8 @@ import (
 
 type MetricsV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	PipelineMonitorsGetter
+	PipelineRunMonitorsGetter
 	TaskMonitorsGetter
 	TaskRunMonitorsGetter
 }
@@ -34,6 +36,14 @@ type MetricsV1alpha1Interface interface {
 // MetricsV1alpha1Client is used to interact with features provided by the metrics.tekton.dev group.
 type MetricsV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *MetricsV1alpha1Client) PipelineMonitors(namespace string) PipelineMonitorInterface {
+	return newPipelineMonitors(c, namespace)
+}
+
+func (c *MetricsV1alpha1Client) PipelineRunMonitors(namespace string) PipelineRunMonitorInterface {
+	return newPipelineRunMonitors(c, namespace)
 }
 
 func (c *MetricsV1alpha1Client) TaskMonitors(namespace string) TaskMonitorInterface {

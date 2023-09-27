@@ -33,7 +33,7 @@ spec:
       containers:
         - name: controller
           image: ko://github.com/tektoncd/experimental/metrics-operator/cmd/controller 
-          imagePullPolicy: Never
+          # imagePullPolicy: Never
           volumeMounts:
             - name: config-logging
               mountPath: /etc/config-logging

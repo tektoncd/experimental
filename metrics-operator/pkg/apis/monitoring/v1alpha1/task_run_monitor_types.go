@@ -21,7 +21,7 @@ type TaskRunMonitor struct {
 // TaskRunMonitorSpec ...
 type TaskRunMonitorSpec struct {
 	Selector metav1.LabelSelector `json:"selector"`
-	Metrics  []TaskMetric         `json:"metrics"`
+	Metrics  []Metric         `json:"metrics"`
 }
 
 // TaskRunMonitorStatus

@@ -49,12 +49,12 @@ func TestMetricIndex(t *testing.T) {
 		},
 		Spec: v1alpha1.TaskMonitorSpec{
 			TaskName: "hello-world",
-			Metrics: []v1alpha1.TaskMetric{
+			Metrics: []v1alpha1.Metric{
 				{
 					Name: "status",
 					Type: "counter",
-					By: []v1alpha1.TaskByStatement{
-						{TaskRunValueRef: v1alpha1.TaskRunValueRef{Condition: ptr.String("Succeeded")}},
+					By: []v1alpha1.ByStatement{
+						{MetricDimensionRef: v1alpha1.MetricDimensionRef{Condition: ptr.String("Succeeded")}},
 					},
 				},
 			},

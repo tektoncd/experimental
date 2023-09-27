@@ -41,7 +41,7 @@ func (t *TaskRunGauge) Record(ctx context.Context, recorder stats.Recorder, task
 	t.GenericTaskRunGauge.Record(ctx, recorder, taskRun)
 }
 
-func NewTaskRunGauge(metric *v1alpha1.TaskMetric, monitor *v1alpha1.TaskRunMonitor, taskRunLister pipelinev1beta1listers.TaskRunLister) *TaskRunGauge {
+func NewTaskRunGauge(metric *v1alpha1.Metric, monitor *v1alpha1.TaskRunMonitor, taskRunLister pipelinev1beta1listers.TaskRunLister) *TaskRunGauge {
 	gauge := &TaskRunGauge{
 		GenericTaskRunGauge: *NewGenericTaskRunGauge(metric, "taskrun", monitor.Name, taskRunLister),
 		Selector:            monitor.Spec.Selector.DeepCopy(),

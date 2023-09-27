@@ -21,12 +21,12 @@ import (
 type GenericTaskRunHistogram struct {
 	Resource   string
 	Monitor    string
-	TaskMetric *v1alpha1.TaskMetric
+	TaskMetric *v1alpha1.Metric
 	view       *view.View
 	measure    *stats.Float64Measure
 }
 
-func (g *GenericTaskRunHistogram) Metric() *v1alpha1.TaskMetric {
+func (g *GenericTaskRunHistogram) Metric() *v1alpha1.Metric {
 	return g.TaskMetric
 }
 
@@ -66,7 +66,7 @@ func (g *GenericTaskRunHistogram) Record(ctx context.Context, recorder stats.Rec
 func (t *GenericTaskRunHistogram) Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
 }
 
-func NewGenericTaskRunHistogram(metric *v1alpha1.TaskMetric, resource, monitorName string) *GenericTaskRunHistogram {
+func NewGenericTaskRunHistogram(metric *v1alpha1.Metric, resource, monitorName string) *GenericTaskRunHistogram {
 	buckets := []float64{.25, .5, 1, 2.5, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000}
 	histogram := &GenericTaskRunHistogram{
 		Resource:   resource,
@@ -104,7 +104,7 @@ func parseTime(field string, value reflect.Value) (*metav1.Time, error) {
 }
 
 // ParseDuration returns from, to and error
-func ParseDuration(duration *monitoringv1alpha1.TaskMetricHistogramDuration, input any) (*metav1.Time, *metav1.Time, error) {
+func ParseDuration(duration *monitoringv1alpha1.MetricHistogramDuration, input any) (*metav1.Time, *metav1.Time, error) {
 	j := jsonpath.New("duration")
 	templateFrom := fmt.Sprintf("{%s}{%s}", duration.From, duration.To)
 	err := j.Parse(templateFrom)

@@ -37,7 +37,7 @@ func (t *TaskRunHistogram) Record(ctx context.Context, recorder stats.Recorder, 
 	t.GenericTaskRunHistogram.Record(ctx, recorder, taskRun)
 }
 
-func NewTaskRunHistogram(metric *v1alpha1.TaskMetric, monitor *v1alpha1.TaskRunMonitor) *TaskRunHistogram {
+func NewTaskRunHistogram(metric *v1alpha1.Metric, monitor *v1alpha1.TaskRunMonitor) *TaskRunHistogram {
 	generic := NewGenericTaskRunHistogram(metric, "taskrun", monitor.Name)
 	histogram := &TaskRunHistogram{
 		GenericTaskRunHistogram: *generic,

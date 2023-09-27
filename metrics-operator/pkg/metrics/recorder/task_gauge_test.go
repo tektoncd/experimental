@@ -13,17 +13,17 @@ import (
 
 func TestGaugeValue(t *testing.T) {
 	v := &GaugeValue{}
-	metric := &v1alpha1.TaskMetric{
+	metric := &v1alpha1.Metric{
 		Type: "gauge",
 		Name: "status",
-		By: []v1alpha1.TaskByStatement{
+		By: []v1alpha1.ByStatement{
 			{
-				TaskRunValueRef: v1alpha1.TaskRunValueRef{
+				MetricDimensionRef: v1alpha1.MetricDimensionRef{
 					Condition: pointer.String("Succeeded"),
 				},
 			},
 			{
-				TaskRunValueRef: v1alpha1.TaskRunValueRef{
+				MetricDimensionRef: v1alpha1.MetricDimensionRef{
 					Label: pointer.String("repository"),
 				},
 			},

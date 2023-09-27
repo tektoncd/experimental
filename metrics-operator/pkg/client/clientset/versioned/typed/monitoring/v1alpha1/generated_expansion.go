@@ -17,6 +17,10 @@ limitations under the License.
 
 package v1alpha1
 
+type PipelineMonitorExpansion interface{}
+
+type PipelineRunMonitorExpansion interface{}
+
 type TaskMonitorExpansion interface{}
 
 type TaskRunMonitorExpansion interface{}
