@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"sync"
 
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type GaugeTagMapValue struct {
-	tagMap       *tag.Map
-	taskRunNames sets.Set[string]
+	tagMap *tag.Map
+	runIds sets.Set[string]
 }
 
 type GaugeValue struct {
@@ -31,7 +31,7 @@ func (g *GaugeValue) ValueFor(tagMap *tag.Map) (float64, error) {
 		return 0.0, fmt.Errorf("tag does not exist")
 	}
 
-	return float64(tagMapValue.taskRunNames.Len()), nil
+	return float64(tagMapValue.runIds.Len()), nil
 }
 
 func (g *GaugeValue) Keys() []*tag.Map {
@@ -48,42 +48,41 @@ func (g *GaugeValue) Keys() []*tag.Map {
 	return result
 }
 
-func (g *GaugeValue) deleteTaskRunFromAllTagMapValues(taskRun *pipelinev1beta1.TaskRun, exceptions sets.Set[string]) {
+func (g *GaugeValue) deleteTaskRunFromAllTagMapValues(run *v1alpha1.RunDimensions, exceptions sets.Set[string]) {
 	for key, tagMapValue := range g.m {
-		if tagMapValue.taskRunNames.Has(taskRun.Name) && !exceptions.Has(key) {
-			tagMapValue.taskRunNames = tagMapValue.taskRunNames.Delete(taskRun.Name)
+		if tagMapValue.runIds.Has(run.GetId()) && !exceptions.Has(key) {
+			tagMapValue.runIds = tagMapValue.runIds.Delete(run.GetId())
 		}
 	}
 }
 
-func (g *GaugeValue) Delete(taskRun *pipelinev1beta1.TaskRun) {
+func (g *GaugeValue) Delete(run *v1alpha1.RunDimensions) {
 	g.rw.Lock()
 	defer g.rw.Unlock()
 	if g.m == nil {
 		g.m = map[string]GaugeTagMapValue{}
 	}
 
-	g.deleteTaskRunFromAllTagMapValues(taskRun, sets.New[string]())
+	g.deleteTaskRunFromAllTagMapValues(run, sets.New[string]())
 }
 
-func (g *GaugeValue) Update(taskRun *pipelinev1beta1.TaskRun, tagMap *tag.Map) {
+func (g *GaugeValue) Update(run *v1alpha1.RunDimensions, tagMap *tag.Map) {
 	g.rw.Lock()
 	defer g.rw.Unlock()
 	if g.m == nil {
 		g.m = map[string]GaugeTagMapValue{}
 	}
 
-	g.deleteTaskRunFromAllTagMapValues(taskRun, sets.New[string](tagMap.String()))
+	g.deleteTaskRunFromAllTagMapValues(run, sets.New[string](tagMap.String()))
 
-	// TODO: namespace
 	tagMapValue, exists := g.m[tagMap.String()]
 	if !exists {
 		g.m[tagMap.String()] = GaugeTagMapValue{
-			tagMap:       tagMap,
-			taskRunNames: sets.New[string](taskRun.Name),
+			tagMap: tagMap,
+			runIds: sets.New[string](run.GetId()),
 		}
 	} else {
-		tagMapValue.taskRunNames = tagMapValue.taskRunNames.Insert(taskRun.Name)
+		tagMapValue.runIds = tagMapValue.runIds.Insert(run.GetId())
 	}
 
 }

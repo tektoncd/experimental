@@ -9,7 +9,6 @@ import (
 	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/naming"
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
@@ -42,15 +41,15 @@ func (g *GenericTaskRunHistogram) View() *view.View {
 	return g.view
 }
 
-func (g *GenericTaskRunHistogram) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
+func (g *GenericTaskRunHistogram) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 	logger := logging.FromContext(ctx).With("resource", g.Resource, "monitor", g.Monitor, "metric", g.TaskMetric)
-	tagMap, err := tagMapFromByStatements(g.TaskMetric.By, taskRun)
+	tagMap, err := tagMapFromByStatements(g.TaskMetric.By, run)
 	if err != nil {
 		logger.Errorw("error recording value, invalid tag map", zap.Error(err))
 		return
 	}
 
-	from, to, err := ParseDuration(g.TaskMetric.Duration, taskRun)
+	from, to, err := ParseDuration(g.TaskMetric.Duration, run.Object)
 	if err != nil {
 		logger.Errorw("error parsing duration", zap.Error(err))
 		return
@@ -63,7 +62,7 @@ func (g *GenericTaskRunHistogram) Record(ctx context.Context, recorder stats.Rec
 	recorder.Record(tagMap, []stats.Measurement{g.measure.M(duration)}, map[string]any{})
 }
 
-func (t *GenericTaskRunHistogram) Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
+func (t *GenericTaskRunHistogram) Clean(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 }
 
 func NewGenericTaskRunHistogram(metric *v1alpha1.Metric, resource, monitorName string) *GenericTaskRunHistogram {
@@ -73,7 +72,7 @@ func NewGenericTaskRunHistogram(metric *v1alpha1.Metric, resource, monitorName s
 		Monitor:    monitorName,
 		TaskMetric: metric,
 	}
-	histogram.measure = stats.Float64(histogram.MetricName(), fmt.Sprintf("histogram samples in seconds for TaskMonitor %s/%s", histogram.Monitor, histogram.TaskMetric.Name), stats.UnitSeconds)
+	histogram.measure = stats.Float64(histogram.MetricName(), fmt.Sprintf("histogram samples in seconds for %s %s/%s", histogram.Resource, histogram.Monitor, histogram.TaskMetric.Name), stats.UnitSeconds)
 	view := &view.View{
 		Description: histogram.measure.Description(),
 		Measure:     histogram.measure,

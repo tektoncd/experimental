@@ -6,72 +6,68 @@ import (
 
 	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/naming"
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	pipelinev1beta1listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"knative.dev/pkg/logging"
 )
 
-type GenericTaskRunGauge struct {
-	TaskName      string
-	Monitor       string
-	Resource      string
-	TaskRunLister pipelinev1beta1listers.TaskRunLister
-	TaskMetric    *v1alpha1.Metric
-	value         GaugeValue
-	view          *view.View
-	measure       *stats.Float64Measure
+type GenericRunGauge struct {
+	Monitor   string
+	Resource  string
+	RunMetric *v1alpha1.Metric
+	value     GaugeValue
+	view      *view.View
+	measure   *stats.Float64Measure
 }
 
-func (g *GenericTaskRunGauge) Metric() *v1alpha1.Metric {
-	return g.TaskMetric
+func (g *GenericRunGauge) Metric() *v1alpha1.Metric {
+	return g.RunMetric
 }
-func (g *GenericTaskRunGauge) MetricName() string {
-	return naming.GaugeMetric(g.Resource, g.Monitor, g.TaskMetric.Name)
+func (g *GenericRunGauge) MetricName() string {
+	return naming.GaugeMetric(g.Resource, g.Monitor, g.RunMetric.Name)
 }
 
-func (g *GenericTaskRunGauge) MonitorName() string {
+func (g *GenericRunGauge) MonitorName() string {
 	return g.Monitor
 }
 
-func (g *GenericTaskRunGauge) View() *view.View {
+func (g *GenericRunGauge) View() *view.View {
 	return g.view
 }
 
-func (g *GenericTaskRunGauge) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
+func (g *GenericRunGauge) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 	logger := logging.FromContext(ctx)
-	if g.TaskMetric.Match != nil {
-		matched, err := match(g.TaskMetric.Match, taskRun)
+	if g.RunMetric.Match != nil {
+		matched, err := match(g.RunMetric.Match, run)
 		if err != nil {
 			logger.Errorf("skipping taskrun, match failed: %w", err)
-			g.Clean(ctx, recorder, taskRun)
+			g.Clean(ctx, recorder, run)
 			return
 		}
 		if !matched {
 			logger.Infof("skipping taskrun, match is false")
-			g.Clean(ctx, recorder, taskRun)
+			g.Clean(ctx, recorder, run)
 			return
 		}
 	}
 
-	if taskRun.DeletionTimestamp != nil {
+	if run.IsDeleted {
 		logger.Infof("cleanup taskrun, deleted")
-		g.Clean(ctx, recorder, taskRun)
+		g.Clean(ctx, recorder, run)
 		return
 	}
 
-	tagMap, err := tagMapFromByStatements(g.TaskMetric.By, taskRun)
+	tagMap, err := tagMapFromByStatements(g.RunMetric.By, run)
 	if err != nil {
 		logger.Errorf("unable to render tag map for metric: %w", err)
 		return
 	}
 
-	g.value.Update(taskRun, tagMap)
-	g.reportAll(ctx, recorder, taskRun)
+	g.value.Update(run, tagMap)
+	g.reportAll(ctx, recorder, run)
 }
 
-func (g *GenericTaskRunGauge) reportAll(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
+func (g *GenericRunGauge) reportAll(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 	logger := logging.FromContext(ctx)
 	for _, existingTagMap := range g.value.Keys() {
 		gaugeMeasurement, err := g.value.ValueFor(existingTagMap)
@@ -83,19 +79,18 @@ func (g *GenericTaskRunGauge) reportAll(ctx context.Context, recorder stats.Reco
 	}
 }
 
-func (g *GenericTaskRunGauge) Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
-	g.value.Delete(taskRun)
-	g.reportAll(ctx, recorder, taskRun)
+func (g *GenericRunGauge) Clean(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
+	g.value.Delete(run)
+	g.reportAll(ctx, recorder, run)
 }
 
-func NewGenericTaskRunGauge(metric *v1alpha1.Metric, resource, monitorName string, taskRunLister pipelinev1beta1listers.TaskRunLister) *GenericTaskRunGauge {
-	gauge := &GenericTaskRunGauge{
-		Resource:      resource,
-		Monitor:       monitorName,
-		TaskMetric:    metric,
-		TaskRunLister: taskRunLister,
+func NewGenericTaskRunGauge(metric *v1alpha1.Metric, resource, monitorName string) *GenericRunGauge {
+	gauge := &GenericRunGauge{
+		Resource:  resource,
+		Monitor:   monitorName,
+		RunMetric: metric,
 	}
-	gauge.measure = stats.Float64(gauge.MetricName(), fmt.Sprintf("gauge samples for TaskMonitor %s/%s", gauge.Monitor, gauge.TaskMetric.Name), stats.UnitDimensionless)
+	gauge.measure = stats.Float64(gauge.MetricName(), fmt.Sprintf("gauge samples for %s %s/%s", gauge.Resource, gauge.Monitor, gauge.RunMetric.Name), stats.UnitDimensionless)
 	view := &view.View{
 		Description: gauge.measure.Description(),
 		Measure:     gauge.measure,

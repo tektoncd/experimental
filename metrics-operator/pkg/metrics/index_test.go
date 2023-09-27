@@ -69,7 +69,7 @@ func TestMetricIndex(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		index.Record(ctx, &v1beta1.TaskRun{
+		taskRun := &v1beta1.TaskRun{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hello-world-xpto0",
 				Namespace: "dev",
@@ -84,7 +84,9 @@ func TestMetricIndex(t *testing.T) {
 					},
 				},
 			},
-		}, "counter")
+		}
+		run := recorder.TaskRunDimensions(taskRun)
+		index.Record(ctx, run, "counter")
 
 		resp, err := http.Get("http://0.0.0.0:2112/metrics")
 		if err != nil {

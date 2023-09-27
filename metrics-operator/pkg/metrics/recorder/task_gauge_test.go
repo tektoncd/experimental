@@ -48,12 +48,13 @@ func TestGaugeValue(t *testing.T) {
 			},
 		},
 	}
-	tagMap, err := tagMapFromByStatements(metric.By, taskRun)
+	run := TaskRunDimensions(taskRun)
+	tagMap, err := tagMapFromByStatements(metric.By, run)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var gauge float64
-	v.Update(taskRun, tagMap)
+	v.Update(run, tagMap)
 
 	gauge, err = v.ValueFor(tagMap)
 	if err != nil {
@@ -65,7 +66,8 @@ func TestGaugeValue(t *testing.T) {
 
 	taskRun2 := taskRun.DeepCopy()
 	taskRun2.Name = "hello-world-run2"
-	v.Update(taskRun2, tagMap)
+	run2 := TaskRunDimensions(taskRun2)
+	v.Update(run2, tagMap)
 
 	gauge, err = v.ValueFor(tagMap)
 	if err != nil {
@@ -75,7 +77,7 @@ func TestGaugeValue(t *testing.T) {
 		t.Errorf("Expected 2, got %f", gauge)
 	}
 
-	v.Delete(taskRun2)
+	v.Delete(run2)
 
 	gauge, err = v.ValueFor(tagMap)
 	if err != nil {
@@ -88,12 +90,13 @@ func TestGaugeValue(t *testing.T) {
 	taskRun.Labels = map[string]string{
 		"repository": "repo2",
 	}
-	tagMap2, err := tagMapFromByStatements(metric.By, taskRun)
+	run = TaskRunDimensions(taskRun)
+	tagMap2, err := tagMapFromByStatements(metric.By, run)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	v.Update(taskRun, tagMap2)
+	v.Update(run, tagMap2)
 
 	gauge, err = v.ValueFor(tagMap2)
 	if err != nil {

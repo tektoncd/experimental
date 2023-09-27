@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
@@ -19,8 +19,8 @@ type RunMetric interface {
 	MetricName() string
 	Metric() *monitoringv1alpha1.Metric
 	View() *view.View
-	Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
-	Clean(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun)
+	Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions)
+	Clean(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions)
 }
 
 type MetricIndex struct {
@@ -29,17 +29,17 @@ type MetricIndex struct {
 	rw       sync.RWMutex
 }
 
-func (m *MetricIndex) Record(ctx context.Context, taskRun *pipelinev1beta1.TaskRun, metricType string) {
+func (m *MetricIndex) Record(ctx context.Context, run *v1alpha1.RunDimensions, metricType string) {
 	for _, metric := range m.store {
 		if metric.Metric().Type == metricType {
-			metric.Record(ctx, m.external, taskRun)
+			metric.Record(ctx, m.external, run)
 		}
 	}
 }
 
-func (m *MetricIndex) Clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
+func (m *MetricIndex) Clean(ctx context.Context, run *v1alpha1.RunDimensions) {
 	for _, metric := range m.store {
-		metric.Clean(ctx, m.external, taskRun)
+		metric.Clean(ctx, m.external, run)
 	}
 }
 

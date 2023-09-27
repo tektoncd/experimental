@@ -7,18 +7,19 @@ import (
 	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/tag"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-func tagMapFromByStatements(by []v1alpha1.ByStatement, taskRun *pipelinev1beta1.TaskRun) (*tag.Map, error) {
+func tagMapFromByStatements(by []v1alpha1.ByStatement, run *v1alpha1.RunDimensions) (*tag.Map, error) {
 	mutators := []tag.Mutator{}
 	for _, byStatement := range by {
 		byKey, err := byStatement.Key()
 		if err != nil {
 			return nil, err
 		}
-		byValue, err := byStatement.Value(taskRun.Status.Status, taskRun.Labels, taskRun.Spec.Params)
+		byValue, err := byStatement.Value(run)
 		if err != nil {
 			return nil, err
 		}
@@ -49,19 +50,45 @@ func viewTags(by []v1alpha1.ByStatement) []tag.Key {
 	return keys
 }
 
-func match(m *v1alpha1.MetricGaugeMatch, taskRun *pipelinev1beta1.TaskRun) (bool, error) {
-	v, err := m.Key.Value(taskRun.Status.Status, taskRun.Labels, taskRun.Spec.Params)
+func match(m *v1alpha1.MetricGaugeMatch, run *v1alpha1.RunDimensions) (bool, error) {
+	v, err := m.Key.Value(run)
 	if err != nil {
 		return false, err
 	}
 
 	values := sets.New[string](m.Values...)
 	switch m.Operator {
-	case v1.LabelSelectorOpIn:
+	case metav1.LabelSelectorOpIn:
 		return values.Has(v), nil
-	case v1.LabelSelectorOpNotIn:
+	case metav1.LabelSelectorOpNotIn:
 		return !values.Has(v), nil
 	default:
 		return false, fmt.Errorf("unsupported operation: %q", m.Operator)
+	}
+}
+
+func TaskRunDimensions(taskRun *pipelinev1beta1.TaskRun) *v1alpha1.RunDimensions {
+	return &v1alpha1.RunDimensions{
+		Resource:  "taskrun",
+		Name:      taskRun.Name,
+		Namespace: taskRun.Namespace,
+		IsDeleted: taskRun.DeletionTimestamp != nil,
+		Status:    taskRun.Status.Status,
+		Labels:    taskRun.Labels,
+		Params:    taskRun.Spec.Params,
+		Object:    taskRun,
+	}
+}
+
+func PipelineRunDimensions(pipelineRun *pipelinev1beta1.PipelineRun) *v1alpha1.RunDimensions {
+	return &v1alpha1.RunDimensions{
+		Resource:  "pipelinerun",
+		Name:      pipelineRun.Name,
+		Namespace: pipelineRun.Namespace,
+		IsDeleted: pipelineRun.DeletionTimestamp != nil,
+		Status:    pipelineRun.Status.Status,
+		Labels:    pipelineRun.Labels,
+		Params:    pipelineRun.Spec.Params,
+		Object:    pipelineRun,
 	}
 }
