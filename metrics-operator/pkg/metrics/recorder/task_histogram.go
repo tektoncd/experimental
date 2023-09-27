@@ -13,16 +13,20 @@ type TaskHistogram struct {
 	TaskName string
 }
 
-func (t *TaskHistogram) Filter(taskRun *pipelinev1beta1.TaskRun) bool {
+func (t *TaskHistogram) Filter(run *v1alpha1.RunDimensions) bool {
+	taskRun, ok := run.Object.(*pipelinev1beta1.TaskRun)
+	if !ok {
+		return false
+	}
 	ref := taskRun.Spec.TaskRef
 	return ref != nil && ref.Name == t.TaskName
 }
 
-func (t *TaskHistogram) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
-	if !t.Filter(taskRun) {
+func (t *TaskHistogram) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
+	if !t.Filter(run) {
 		return
 	}
-	t.GenericTaskRunHistogram.Record(ctx, recorder, taskRun)
+	t.GenericTaskRunHistogram.Record(ctx, recorder, run)
 }
 
 func NewTaskHistogram(metric *v1alpha1.Metric, monitor *v1alpha1.TaskMonitor) *TaskHistogram {

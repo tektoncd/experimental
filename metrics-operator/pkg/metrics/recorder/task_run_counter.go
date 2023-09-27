@@ -2,6 +2,7 @@ package recorder
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -12,12 +13,16 @@ import (
 )
 
 type TaskRunCounter struct {
-	GenericTaskRunCounter
+	GenericRunCounter
 	Selector *metav1.LabelSelector
 }
 
 // Filter returns true when the TaskRun should be recorded, independent of value
-func (t *TaskRunCounter) Filter(taskRun *pipelinev1beta1.TaskRun) (bool, error) {
+func (t *TaskRunCounter) Filter(run *v1alpha1.RunDimensions) (bool, error) {
+	taskRun, ok := run.Object.(*pipelinev1beta1.TaskRun)
+	if !ok {
+		return false, fmt.Errorf("expected taskRun, but got %T", run.Object)
+	}
 	if t.Selector == nil {
 		return true, nil
 	}
@@ -28,9 +33,9 @@ func (t *TaskRunCounter) Filter(taskRun *pipelinev1beta1.TaskRun) (bool, error) 
 	return selector.Matches(labels.Set(taskRun.Labels)), nil
 }
 
-func (t *TaskRunCounter) Record(ctx context.Context, recorder stats.Recorder, taskRun *pipelinev1beta1.TaskRun) {
+func (t *TaskRunCounter) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 	logger := logging.FromContext(ctx)
-	matched, err := t.Filter(taskRun)
+	matched, err := t.Filter(run)
 	if err != nil {
 		logger.Errorf("could not record metric")
 		return
@@ -38,14 +43,14 @@ func (t *TaskRunCounter) Record(ctx context.Context, recorder stats.Recorder, ta
 	if !matched {
 		return
 	}
-	t.GenericTaskRunCounter.Record(ctx, recorder, taskRun)
+	t.GenericRunCounter.Record(ctx, recorder, run)
 }
 
 func NewTaskRunCounter(metric *v1alpha1.Metric, monitor *v1alpha1.TaskRunMonitor) *TaskRunCounter {
-	generic := NewGenericTaskRunCounter(metric, "taskrun", monitor.Name)
+	generic := NewGenericRunCounter(metric, "taskrun", monitor.Name)
 	counter := &TaskRunCounter{
-		GenericTaskRunCounter: *generic,
-		Selector:              monitor.Spec.Selector.DeepCopy(),
+		GenericRunCounter: *generic,
+		Selector:          monitor.Spec.Selector.DeepCopy(),
 	}
 	return counter
 }

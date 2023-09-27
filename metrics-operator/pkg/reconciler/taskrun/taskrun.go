@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics/recorder"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"knative.dev/pkg/reconciler"
 )
@@ -20,8 +21,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRun *pipelinev1beta1
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) reconciler.Event {
+	run := recorder.TaskRunDimensions(taskRun)
 	if taskRun.IsDone() {
-		r.manager.GetIndex().Clean(ctx, taskRun)
+		r.manager.GetIndex().Clean(ctx, run)
 		return r.manager.RecordTaskRunDone(ctx, taskRun)
 	}
 	return r.manager.RecordTaskRunRunning(ctx, taskRun)

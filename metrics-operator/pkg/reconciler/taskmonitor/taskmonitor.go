@@ -35,7 +35,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv
 		case "histogram":
 			runMetric = recorder.NewTaskHistogram(metric.DeepCopy(), taskMonitor)
 		case "gauge":
-			runMetric = recorder.NewTaskGauge(metric.DeepCopy(), taskMonitor, r.taskRunLister)
+			runMetric = recorder.NewTaskGauge(metric.DeepCopy(), taskMonitor)
 		default:
 			logger.Errorw("invalid metric type", "metric", metric.Name, "type", metric.Type)
 			return fmt.Errorf("invalid metric type: %q", metric.Type)

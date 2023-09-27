@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics/recorder"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/stats/view"
 )
@@ -32,10 +33,12 @@ func (m *MetricManager) RecordTaskRunDone(ctx context.Context, taskRun *pipeline
 		m.runs[key] = &sync.Once{}
 	}
 
+	run := recorder.TaskRunDimensions(taskRun)
+
 	m.runs[key].Do(func() {
-		m.GetIndex().Record(ctx, taskRun, "histogram")
-		m.GetIndex().Record(ctx, taskRun, "counter")
-		m.GetIndex().Record(ctx, taskRun, "gauge")
+		m.GetIndex().Record(ctx, run, "histogram")
+		m.GetIndex().Record(ctx, run, "counter")
+		m.GetIndex().Record(ctx, run, "gauge")
 	})
 	time.AfterFunc(1*time.Hour, func() {
 		m.clean(ctx, taskRun)
@@ -47,12 +50,15 @@ func (m *MetricManager) RecordTaskRunRunning(ctx context.Context, taskRun *pipel
 	if taskRun.IsDone() {
 		return fmt.Errorf("record task run running called with a done TaskRun")
 	}
-	m.GetIndex().Record(ctx, taskRun, "gauge")
+	run := recorder.TaskRunDimensions(taskRun)
+	m.GetIndex().Record(ctx, run, "gauge")
 	return nil
 }
 
 func (m *MetricManager) clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
-	m.GetIndex().Clean(ctx, taskRun)
+
+	run := recorder.TaskRunDimensions(taskRun)
+	m.GetIndex().Clean(ctx, run)
 	m.rw.Lock()
 	defer m.rw.Unlock()
 	key := fmt.Sprintf("%s/%s/%s", taskRun.GetNamespace(), taskRun.GetName(), taskRun.GetUID())

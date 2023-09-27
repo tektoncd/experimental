@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"errors"
+	"fmt"
 
 	"knative.dev/pkg/apis"
 
@@ -10,6 +11,21 @@ import (
 
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
+
+type RunDimensions struct {
+	Resource  string
+	Name      string
+	Namespace string
+	IsDeleted bool
+	Status    duckv1.Status
+	Labels    map[string]string
+	Params    pipelinev1beta1.Params
+	Object    any
+}
+
+func (r *RunDimensions) GetId() string {
+	return fmt.Sprintf("%s/%s/%s", r.Resource, r.Name, r.Namespace)
+}
 
 type MetricDimensionRef struct {
 	Condition *string `json:"condition,omitempty"`
@@ -38,16 +54,16 @@ func (t *MetricDimensionRef) Key() (string, error) {
 	return "", errors.New("invalid")
 }
 
-func (t *MetricDimensionRef) Value(status duckv1.Status, labels map[string]string, params pipelinev1beta1.Params) (string, error) {
+func (t *MetricDimensionRef) Value(runDimentions *RunDimensions) (string, error) {
 	if t.Condition != nil {
 		if *t.Condition == string(apis.ConditionSucceeded) {
-			return statusCondition(status.GetCondition(apis.ConditionSucceeded)), nil
+			return statusCondition(runDimentions.Status.GetCondition(apis.ConditionSucceeded)), nil
 		}
 		return "INVALID", nil
 	}
 
 	if t.Label != nil {
-		labelValue, exists := labels[*t.Label]
+		labelValue, exists := runDimentions.Labels[*t.Label]
 		if !exists {
 			return "MISSING", nil
 		}
@@ -55,7 +71,7 @@ func (t *MetricDimensionRef) Value(status duckv1.Status, labels map[string]strin
 	}
 
 	if t.Param != nil {
-		for _, param := range params {
+		for _, param := range runDimentions.Params {
 			if param.Name == *t.Param {
 				// TODO: support array and objects
 				if param.Value.StringVal != "" {
