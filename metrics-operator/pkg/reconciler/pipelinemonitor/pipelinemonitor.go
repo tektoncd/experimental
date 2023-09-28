@@ -15,12 +15,13 @@ import (
 )
 
 type Reconciler struct {
-	manager       *metrics.MetricManager
+	manager           *metrics.MetricManager
 	pipelineRunLister pipelinev1beta1listers.PipelineRunLister
 }
 
 var (
-	_ pipelinemonitorreconciler.Interface = (*Reconciler)(nil)
+	resource                                     = "pipeline"
+	_        pipelinemonitorreconciler.Interface = (*Reconciler)(nil)
 )
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, pipelineMonitor *monitoringv1alpha1.PipelineMonitor) reconciler.Event {
@@ -49,7 +50,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, pipelineMonitor *monitor
 		}
 	}
 
-	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor("task", pipelineMonitor.Name)...)
+	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor(resource, pipelineMonitor.Name)...)
 	removed := registeredMetrics.Difference(latestMetrics)
 
 	for _, removedMetricName := range removed.List() {
@@ -63,7 +64,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, pipelineMonitor *monitor
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, pipelineMonitor *monitoringv1alpha1.PipelineMonitor) reconciler.Event {
-	err := r.manager.GetIndex().UnregisterAllMetricsMonitor("task", pipelineMonitor.Name)
+	err := r.manager.GetIndex().UnregisterAllMetricsMonitor(resource, pipelineMonitor.Name)
 	if err != nil {
 		return err
 	}

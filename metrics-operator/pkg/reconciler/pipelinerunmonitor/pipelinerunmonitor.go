@@ -1,11 +1,11 @@
-package taskmonitor
+package pipelinerunmonitor
 
 import (
 	"context"
 	"fmt"
 
 	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
-	taskmonitorreconciler "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/reconciler/monitoring/v1alpha1/taskmonitor"
+	pipelinerunmonitorreconciler "github.com/tektoncd/experimental/metrics-operator/pkg/client/injection/reconciler/monitoring/v1alpha1/pipelinerunmonitor"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics"
 	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics/recorder"
 	pipelinev1beta1listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1beta1"
@@ -16,27 +16,27 @@ import (
 
 type Reconciler struct {
 	manager       *metrics.MetricManager
-	taskRunLister pipelinev1beta1listers.TaskRunLister
+	pipelineRunLister pipelinev1beta1listers.PipelineRunLister
 }
 
 var (
-	resource = "task"
-	_ taskmonitorreconciler.Interface = (*Reconciler)(nil)
+	resource = "pipelinerun"
+	_ pipelinerunmonitorreconciler.Interface = (*Reconciler)(nil)
 )
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv1alpha1.TaskMonitor) reconciler.Event {
-	logger := logging.FromContext(ctx).With("monitor", taskMonitor.Name)
+func (r *Reconciler) ReconcileKind(ctx context.Context, pipelineRunMonitor *monitoringv1alpha1.PipelineRunMonitor) reconciler.Event {
+	logger := logging.FromContext(ctx).With("monitor", pipelineRunMonitor.Name)
 	latestMetrics := sets.NewString()
-	for _, metric := range taskMonitor.Spec.Metrics {
+	for _, metric := range pipelineRunMonitor.Spec.Metrics {
 		var runMetric metrics.RunMetric
 		// TODO: fail if type is invalid
 		switch metric.Type {
 		case "counter":
-			runMetric = recorder.NewTaskCounter(metric.DeepCopy(), taskMonitor)
+			runMetric = recorder.NewPipelineRunCounter(metric.DeepCopy(), pipelineRunMonitor)
 		case "histogram":
-			runMetric = recorder.NewTaskHistogram(metric.DeepCopy(), taskMonitor)
+			runMetric = recorder.NewPipelineRunHistogram(metric.DeepCopy(), pipelineRunMonitor)
 		case "gauge":
-			runMetric = recorder.NewTaskGauge(metric.DeepCopy(), taskMonitor)
+			runMetric = recorder.NewPipelineRunGauge(metric.DeepCopy(), pipelineRunMonitor)
 		default:
 			logger.Errorw("invalid metric type", "metric", metric.Name, "type", metric.Type)
 			return fmt.Errorf("invalid metric type: %q", metric.Type)
@@ -50,7 +50,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv
 		}
 	}
 
-	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor(resource, taskMonitor.Name)...)
+	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor(resource, pipelineRunMonitor.Name)...)
 	removed := registeredMetrics.Difference(latestMetrics)
 
 	for _, removedMetricName := range removed.List() {
@@ -63,8 +63,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv
 	return nil
 }
 
-func (r *Reconciler) FinalizeKind(ctx context.Context, taskMonitor *monitoringv1alpha1.TaskMonitor) reconciler.Event {
-	err := r.manager.GetIndex().UnregisterAllMetricsMonitor(resource, taskMonitor.Name)
+func (r *Reconciler) FinalizeKind(ctx context.Context, pipelineRunMonitor *monitoringv1alpha1.PipelineRunMonitor) reconciler.Event {
+	err := r.manager.GetIndex().UnregisterAllMetricsMonitor(resource, pipelineRunMonitor.Name)
 	if err != nil {
 		return err
 	}
