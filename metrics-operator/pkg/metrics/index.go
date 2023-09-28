@@ -7,6 +7,7 @@ import (
 
 	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	monitoringv1alpha1 "github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/naming"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
@@ -15,7 +16,7 @@ import (
 )
 
 type RunMetric interface {
-	MonitorName() string
+	MonitorId() string
 	MetricName() string
 	Metric() *monitoringv1alpha1.Metric
 	View() *view.View
@@ -63,7 +64,7 @@ func (m *MetricIndex) RegisterRunMetric(ctx context.Context, runMetric RunMetric
 	m.rw.Lock()
 	defer m.rw.Unlock()
 
-	logger = logger.With(zap.String("metric", runMetric.MetricName()), zap.String("monitor", runMetric.MonitorName()))
+	logger = logger.With(zap.String("metric", runMetric.MetricName()), zap.String("monitor", runMetric.MonitorId()))
 	m.store[runMetric.MetricName()] = runMetric
 	err = m.external.Register(runMetric.View())
 	if err != nil {
@@ -113,20 +114,20 @@ func (m *MetricIndex) UnregisterRunMetric(runMetric RunMetric) error {
 	return m.UnregisterRunMetricByName(runMetric.MetricName())
 }
 
-func (m *MetricIndex) GetAllMetricNamesFromMonitor(monitor string) []string {
+func (m *MetricIndex) GetAllMetricNamesFromMonitor(resource string, monitor string) []string {
 	metrics := []string{}
 	m.rw.Lock()
 	defer m.rw.Unlock()
 	for _, runMetric := range m.store {
-		if monitor == runMetric.MonitorName() {
+		if naming.MonitorId(resource, monitor) == runMetric.MonitorId() {
 			metrics = append(metrics, runMetric.MetricName())
 		}
 	}
 	return metrics
 }
 
-func (m *MetricIndex) UnregisterAllMetricsMonitor(monitor string) error {
-	for _, metricName := range m.GetAllMetricNamesFromMonitor(monitor) {
+func (m *MetricIndex) UnregisterAllMetricsMonitor(resource string, monitor string) error {
+	for _, metricName := range m.GetAllMetricNamesFromMonitor(resource, monitor) {
 		err := m.UnregisterRunMetricByName(metricName)
 		if err != nil {
 			return err

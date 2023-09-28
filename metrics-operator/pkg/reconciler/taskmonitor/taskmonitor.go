@@ -49,7 +49,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv
 		}
 	}
 
-	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor(taskMonitor.Name)...)
+	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor("task", taskMonitor.Name)...)
 	removed := registeredMetrics.Difference(latestMetrics)
 
 	for _, removedMetricName := range removed.List() {
@@ -63,7 +63,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskMonitor *monitoringv
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, taskMonitor *monitoringv1alpha1.TaskMonitor) reconciler.Event {
-	err := r.manager.GetIndex().UnregisterAllMetricsMonitor(taskMonitor.Name)
+	err := r.manager.GetIndex().UnregisterAllMetricsMonitor("task", taskMonitor.Name)
 	if err != nil {
 		return err
 	}
