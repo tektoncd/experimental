@@ -17,39 +17,39 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-type GenericTaskRunHistogram struct {
-	Resource   string
-	Monitor    string
-	TaskMetric *v1alpha1.Metric
-	view       *view.View
-	measure    *stats.Float64Measure
+type GenericRunHistogram struct {
+	Resource  string
+	Monitor   string
+	RunMetric *v1alpha1.Metric
+	view      *view.View
+	measure   *stats.Float64Measure
 }
 
-func (g *GenericTaskRunHistogram) Metric() *v1alpha1.Metric {
-	return g.TaskMetric
+func (g *GenericRunHistogram) Metric() *v1alpha1.Metric {
+	return g.RunMetric
 }
 
-func (g *GenericTaskRunHistogram) MetricName() string {
-	return naming.HistogramMetric(g.Resource, g.Monitor, g.TaskMetric.Name)
+func (g *GenericRunHistogram) MetricName() string {
+	return naming.HistogramMetric(g.Resource, g.Monitor, g.RunMetric.Name)
 }
 
-func (g *GenericTaskRunHistogram) MonitorName() string {
+func (g *GenericRunHistogram) MonitorName() string {
 	return g.Monitor
 }
 
-func (g *GenericTaskRunHistogram) View() *view.View {
+func (g *GenericRunHistogram) View() *view.View {
 	return g.view
 }
 
-func (g *GenericTaskRunHistogram) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
-	logger := logging.FromContext(ctx).With("resource", g.Resource, "monitor", g.Monitor, "metric", g.TaskMetric)
-	tagMap, err := tagMapFromByStatements(g.TaskMetric.By, run)
+func (g *GenericRunHistogram) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
+	logger := logging.FromContext(ctx).With("resource", g.Resource, "monitor", g.Monitor, "metric", g.RunMetric)
+	tagMap, err := tagMapFromByStatements(g.RunMetric.By, run)
 	if err != nil {
 		logger.Errorw("error recording value, invalid tag map", zap.Error(err))
 		return
 	}
 
-	from, to, err := ParseDuration(g.TaskMetric.Duration, run.Object)
+	from, to, err := ParseDuration(g.RunMetric.Duration, run.Object)
 	if err != nil {
 		logger.Errorw("error parsing duration", zap.Error(err))
 		return
@@ -62,17 +62,18 @@ func (g *GenericTaskRunHistogram) Record(ctx context.Context, recorder stats.Rec
 	recorder.Record(tagMap, []stats.Measurement{g.measure.M(duration)}, map[string]any{})
 }
 
-func (t *GenericTaskRunHistogram) Clean(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
+func (t *GenericRunHistogram) Clean(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 }
 
-func NewGenericTaskRunHistogram(metric *v1alpha1.Metric, resource, monitorName string) *GenericTaskRunHistogram {
+func NewGenericRunHistogram(metric *v1alpha1.Metric, resource, monitorName string) *GenericRunHistogram {
+	// TODO: make buckets configurable
 	buckets := []float64{.25, .5, 1, 2.5, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000}
-	histogram := &GenericTaskRunHistogram{
-		Resource:   resource,
-		Monitor:    monitorName,
-		TaskMetric: metric,
+	histogram := &GenericRunHistogram{
+		Resource:  resource,
+		Monitor:   monitorName,
+		RunMetric: metric,
 	}
-	histogram.measure = stats.Float64(histogram.MetricName(), fmt.Sprintf("histogram samples in seconds for %s %s/%s", histogram.Resource, histogram.Monitor, histogram.TaskMetric.Name), stats.UnitSeconds)
+	histogram.measure = stats.Float64(histogram.MetricName(), fmt.Sprintf("histogram samples in seconds for %s %s/%s", histogram.Resource, histogram.Monitor, histogram.RunMetric.Name), stats.UnitSeconds)
 	view := &view.View{
 		Description: histogram.measure.Description(),
 		Measure:     histogram.measure,

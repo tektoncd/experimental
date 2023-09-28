@@ -33,7 +33,7 @@ func (t *TaskGauge) Record(ctx context.Context, recorder stats.Recorder, run *v1
 
 func NewTaskGauge(metric *v1alpha1.Metric, monitor *v1alpha1.TaskMonitor) *TaskGauge {
 	gauge := &TaskGauge{
-		GenericRunGauge: *NewGenericTaskRunGauge(metric, "task", monitor.Name),
+		GenericRunGauge: *NewGenericRunGauge(metric, "task", monitor.Name),
 		TaskName:        monitor.Spec.TaskName,
 	}
 	return gauge
