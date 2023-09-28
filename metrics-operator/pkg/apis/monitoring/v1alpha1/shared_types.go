@@ -7,6 +7,7 @@ import (
 	"knative.dev/pkg/apis"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -20,7 +21,7 @@ type RunDimensions struct {
 	Status    duckv1.Status
 	Labels    map[string]string
 	Params    pipelinev1beta1.Params
-	Object    any
+	Object    runtime.Object
 }
 
 func (r *RunDimensions) GetId() string {

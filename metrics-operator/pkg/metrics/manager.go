@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
-	"github.com/tektoncd/experimental/metrics-operator/pkg/metrics/recorder"
+	"github.com/tektoncd/experimental/metrics-operator/pkg/apis/monitoring/v1alpha1"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"go.opencensus.io/stats/view"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type MetricManager struct {
@@ -21,47 +21,19 @@ func (m *MetricManager) GetIndex() *MetricIndex {
 	return m.Index
 }
 
-func (m *MetricManager) RecordTaskRunDone(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) error {
-	if !taskRun.IsDone() {
-		return fmt.Errorf("record task run done called with a running TaskRun")
-	}
-	m.rw.Lock()
-	defer m.rw.Unlock()
-	key := fmt.Sprintf("%s/%s/%s", taskRun.GetNamespace(), taskRun.GetName(), taskRun.GetUID())
-	_, exists := m.runs[key]
-	if !exists {
-		m.runs[key] = &sync.Once{}
-	}
-
-	run := recorder.TaskRunDimensions(taskRun)
-
-	m.runs[key].Do(func() {
-		m.GetIndex().Record(ctx, run, "histogram")
-		m.GetIndex().Record(ctx, run, "counter")
-		m.GetIndex().Record(ctx, run, "gauge")
-	})
-	time.AfterFunc(1*time.Hour, func() {
-		m.clean(ctx, taskRun)
-	})
-	return nil
-}
-
-func (m *MetricManager) RecordTaskRunRunning(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) error {
-	if taskRun.IsDone() {
-		return fmt.Errorf("record task run running called with a done TaskRun")
-	}
-	run := recorder.TaskRunDimensions(taskRun)
-	m.GetIndex().Record(ctx, run, "gauge")
-	return nil
-}
-
-func (m *MetricManager) clean(ctx context.Context, taskRun *pipelinev1beta1.TaskRun) {
-
-	run := recorder.TaskRunDimensions(taskRun)
+func (m *MetricManager) clean(ctx context.Context, run *v1alpha1.RunDimensions) {
 	m.GetIndex().Clean(ctx, run)
 	m.rw.Lock()
 	defer m.rw.Unlock()
-	key := fmt.Sprintf("%s/%s/%s", taskRun.GetNamespace(), taskRun.GetName(), taskRun.GetUID())
+
+	var uid types.UID
+	switch r := run.Object.(type) {
+	case *pipelinev1beta1.PipelineRun:
+		uid = r.ObjectMeta.UID
+	case *pipelinev1beta1.TaskRun:
+		uid = r.ObjectMeta.UID
+	}
+	key := fmt.Sprintf("%s/%s/%s", run.Namespace, run.Name, uid)
 	_, exists := m.runs[key]
 	if exists {
 		delete(m.runs, key)
