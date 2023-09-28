@@ -33,6 +33,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&TaskMonitorList{},
 		&TaskRunMonitor{},
 		&TaskRunMonitorList{},
+		&PipelineMonitor{},
+		&PipelineMonitorList{},
+		&PipelineRunMonitor{},
+		&PipelineRunMonitorList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
