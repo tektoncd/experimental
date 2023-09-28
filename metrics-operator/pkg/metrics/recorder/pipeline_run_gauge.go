@@ -11,16 +11,16 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-type TaskRunGauge struct {
+type PipelineRunGauge struct {
 	GenericRunGauge
 	Selector *metav1.LabelSelector
 }
 
-// Filter returns true when the TaskRun should be recorded, independent of value
-func (t *TaskRunGauge) Filter(run *v1alpha1.RunDimensions) (bool, error) {
-	taskRun, ok := run.Object.(*pipelinev1beta1.TaskRun)
+// Filter returns true when the PipelineRun should be recorded, independent of value
+func (t *PipelineRunGauge) Filter(run *v1alpha1.RunDimensions) (bool, error) {
+	pipelineRun, ok := run.Object.(*pipelinev1beta1.PipelineRun)
 	if !ok {
-		return false, fmt.Errorf("expected taskRun, but got %T", run.Object)
+		return false, fmt.Errorf("expected PipelineRun, but got %T", run.Object)
 	}
 	if t.Selector == nil {
 		return true, nil
@@ -29,10 +29,10 @@ func (t *TaskRunGauge) Filter(run *v1alpha1.RunDimensions) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return selector.Matches(labels.Set(taskRun.Labels)), nil
+	return selector.Matches(labels.Set(pipelineRun.Labels)), nil
 }
 
-func (t *TaskRunGauge) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
+func (t *PipelineRunGauge) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 	matched, err := t.Filter(run)
 	if err != nil {
 		t.Clean(ctx, recorder, run)
@@ -45,9 +45,9 @@ func (t *TaskRunGauge) Record(ctx context.Context, recorder stats.Recorder, run 
 	t.GenericRunGauge.Record(ctx, recorder, run)
 }
 
-func NewTaskRunGauge(metric *v1alpha1.Metric, monitor *v1alpha1.TaskRunMonitor) *TaskRunGauge {
-	gauge := &TaskRunGauge{
-		GenericRunGauge: *NewGenericRunGauge(metric, "taskrun", monitor.Name),
+func NewPipelineRunGauge(metric *v1alpha1.Metric, monitor *v1alpha1.PipelineRunMonitor) *PipelineRunGauge {
+	gauge := &PipelineRunGauge{
+		GenericRunGauge: *NewGenericRunGauge(metric, "pipelinerun", monitor.Name),
 		Selector:        monitor.Spec.Selector.DeepCopy(),
 	}
 	return gauge

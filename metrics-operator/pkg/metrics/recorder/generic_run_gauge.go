@@ -40,19 +40,19 @@ func (g *GenericRunGauge) Record(ctx context.Context, recorder stats.Recorder, r
 	if g.RunMetric.Match != nil {
 		matched, err := match(g.RunMetric.Match, run)
 		if err != nil {
-			logger.Errorf("skipping taskrun, match failed: %w", err)
+			logger.Errorf("skipping run, match failed: %w", err)
 			g.Clean(ctx, recorder, run)
 			return
 		}
 		if !matched {
-			logger.Infof("skipping taskrun, match is false")
+			logger.Infof("skipping run, match is false")
 			g.Clean(ctx, recorder, run)
 			return
 		}
 	}
 
 	if run.IsDeleted {
-		logger.Infof("cleanup taskrun, deleted")
+		logger.Infof("cleanup run, deleted")
 		g.Clean(ctx, recorder, run)
 		return
 	}
@@ -84,7 +84,7 @@ func (g *GenericRunGauge) Clean(ctx context.Context, recorder stats.Recorder, ru
 	g.reportAll(ctx, recorder, run)
 }
 
-func NewGenericTaskRunGauge(metric *v1alpha1.Metric, resource, monitorName string) *GenericRunGauge {
+func NewGenericRunGauge(metric *v1alpha1.Metric, resource, monitorName string) *GenericRunGauge {
 	gauge := &GenericRunGauge{
 		Resource:  resource,
 		Monitor:   monitorName,

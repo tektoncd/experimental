@@ -11,15 +11,15 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-type TaskRunHistogram struct {
+type PipelineRunHistogram struct {
 	GenericRunHistogram
 	Selector *metav1.LabelSelector
 }
 
-func (t *TaskRunHistogram) Filter(run *v1alpha1.RunDimensions) (bool, error) {
-	taskRun, ok := run.Object.(*pipelinev1beta1.TaskRun)
+func (t *PipelineRunHistogram) Filter(run *v1alpha1.RunDimensions) (bool, error) {
+	pipelineRun, ok := run.Object.(*pipelinev1beta1.PipelineRun)
 	if !ok {
-		return false, fmt.Errorf("expected taskRun, but got %T", run.Object)
+		return false, fmt.Errorf("expected PipelineRun, but got %T", run.Object)
 	}
 	if t.Selector == nil {
 		return true, nil
@@ -28,10 +28,10 @@ func (t *TaskRunHistogram) Filter(run *v1alpha1.RunDimensions) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return selector.Matches(labels.Set(taskRun.Labels)), nil
+	return selector.Matches(labels.Set(pipelineRun.Labels)), nil
 }
 
-func (t *TaskRunHistogram) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
+func (t *PipelineRunHistogram) Record(ctx context.Context, recorder stats.Recorder, run *v1alpha1.RunDimensions) {
 	matched, err := t.Filter(run)
 	if err != nil {
 		return
@@ -42,9 +42,9 @@ func (t *TaskRunHistogram) Record(ctx context.Context, recorder stats.Recorder, 
 	t.GenericRunHistogram.Record(ctx, recorder, run)
 }
 
-func NewTaskRunHistogram(metric *v1alpha1.Metric, monitor *v1alpha1.TaskRunMonitor) *TaskRunHistogram {
-	generic := NewGenericRunHistogram(metric, "taskrun", monitor.Name)
-	histogram := &TaskRunHistogram{
+func NewPipelineRunHistogram(metric *v1alpha1.Metric, monitor *v1alpha1.PipelineRunMonitor) *PipelineRunHistogram {
+	generic := NewGenericRunHistogram(metric, "pipelinerun", monitor.Name)
+	histogram := &PipelineRunHistogram{
 		GenericRunHistogram: *generic,
 		Selector:            monitor.Spec.Selector.DeepCopy(),
 	}
