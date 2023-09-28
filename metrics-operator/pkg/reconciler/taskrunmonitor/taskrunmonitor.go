@@ -20,6 +20,7 @@ type Reconciler struct {
 }
 
 var (
+	resource = "taskrun"
 	_ taskrunmonitorreconciler.Interface = (*Reconciler)(nil)
 )
 
@@ -49,7 +50,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRunMonitor *monitori
 		}
 	}
 
-	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor("taskrun", taskRunMonitor.Name)...)
+	registeredMetrics := sets.NewString(r.manager.Index.GetAllMetricNamesFromMonitor(resource, taskRunMonitor.Name)...)
 	removed := registeredMetrics.Difference(latestMetrics)
 
 	for _, removedMetricName := range removed.List() {
@@ -63,7 +64,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, taskRunMonitor *monitori
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, taskRunMonitor *monitoringv1alpha1.TaskRunMonitor) reconciler.Event {
-	err := r.manager.GetIndex().UnregisterAllMetricsMonitor("taskrun", taskRunMonitor.Name)
+	err := r.manager.GetIndex().UnregisterAllMetricsMonitor(resource, taskRunMonitor.Name)
 	if err != nil {
 		return err
 	}
