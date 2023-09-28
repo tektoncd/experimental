@@ -27,8 +27,8 @@ func (g *GenericRunGauge) MetricName() string {
 	return naming.GaugeMetric(g.Resource, g.Monitor, g.RunMetric.Name)
 }
 
-func (g *GenericRunGauge) MonitorName() string {
-	return g.Monitor
+func (g *GenericRunGauge) MonitorId() string {
+	return naming.MonitorId(g.Resource, g.Monitor)
 }
 
 func (g *GenericRunGauge) View() *view.View {

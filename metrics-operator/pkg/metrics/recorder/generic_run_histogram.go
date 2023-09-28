@@ -33,8 +33,8 @@ func (g *GenericRunHistogram) MetricName() string {
 	return naming.HistogramMetric(g.Resource, g.Monitor, g.RunMetric.Name)
 }
 
-func (g *GenericRunHistogram) MonitorName() string {
-	return g.Monitor
+func (g *GenericRunHistogram) MonitorId() string {
+	return naming.MonitorId(g.Resource, g.Monitor)
 }
 
 func (g *GenericRunHistogram) View() *view.View {

@@ -27,8 +27,8 @@ func (t *GenericRunCounter) MetricName() string {
 	return naming.CounterMetric(t.Resource, t.Monitor, t.RunMetric.Name)
 }
 
-func (t *GenericRunCounter) MonitorName() string {
-	return t.Monitor
+func (t *GenericRunCounter) MonitorId() string {
+	return naming.MonitorId(t.Resource, t.Monitor)
 }
 
 func (t *GenericRunCounter) View() *view.View {
@@ -39,7 +39,7 @@ func (t *GenericRunCounter) Record(ctx context.Context, recorder stats.Recorder,
 	logger := logging.FromContext(ctx)
 	tagMap, err := tagMapFromByStatements(t.RunMetric.By, run)
 	if err != nil {
-		logger.Errorw("error recording value", "resource", t.Resource, "monitor", t.MonitorName(), "metric", t.RunMetric)
+		logger.Errorw("error recording value", "resource", t.Resource, "monitor", t.Monitor, "metric", t.RunMetric)
 		return
 	}
 	recorder.Record(tagMap, []stats.Measurement{t.measure.M(1)}, map[string]any{})
