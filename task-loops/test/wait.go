@@ -30,7 +30,6 @@ ConditionFunc (https://godoc.org/k8s.io/apimachinery/pkg/util/wait#ConditionFunc
 a boolean to indicate if the function should stop or continue polling, and an
 error to indicate if there has been an error.
 
-
 For example, you can poll a TaskRun object to wait for it to have a Status.Condition:
 
 	err = WaitForTaskRunState(c, hwTaskRunName, func(tr *v1alpha1.TaskRun) (bool, error) {
@@ -39,7 +38,6 @@ For example, you can poll a TaskRun object to wait for it to have a Status.Condi
 		}
 		return false, nil
 	}, "TaskRunHasCondition")
-
 */
 package test
 
