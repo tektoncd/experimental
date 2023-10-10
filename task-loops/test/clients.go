@@ -20,8 +20,8 @@ Get access to client objects
 To initialize client objects you can use the setup function. It returns a clients struct
 that contains initialized clients for accessing:
 
-	- Kubernetes objects
-	- Pipelines (https://github.com/tektoncd/pipeline#pipeline)
+  - Kubernetes objects
+  - Pipelines (https://github.com/tektoncd/pipeline#pipeline)
 
 For example, to create a Pipeline
 
@@ -34,7 +34,6 @@ And you can use the client to clean up resources created by your test
 	        clients.Delete([]string{routeName}, []string{configName})
 	    }
 	}
-
 */
 package test
 

@@ -1,3 +1,4 @@
+//go:build e2e || examples
 // +build e2e examples
 
 /*
