@@ -24,7 +24,6 @@ func (r *GitHubAppReconciler) HandleStatus(ctx context.Context, tr *v1beta1.Task
 	}
 
 	url, err := dashboardURL(tr)
-
 	if err != nil {
 		return err
 	}
@@ -58,7 +57,7 @@ const (
 	StateFailure = "failure"
 )
 
-//pending, success, error, or failure.
+// pending, success, error, or failure.
 func state(s v1beta1.TaskRunStatus) *string {
 	c := s.GetCondition(apis.ConditionSucceeded)
 	if c == nil {
