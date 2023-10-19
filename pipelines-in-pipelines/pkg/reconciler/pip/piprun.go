@@ -208,7 +208,7 @@ func (r *Reconciler) createPipelineRun(ctx context.Context, run *v1beta1.CustomR
 	var err error
 	ownerPipelineRunName := getOwnerPipelineRunName(run)
 	if ownerPipelineRunName != "" {
-		ownerPipelineRun, err = r.pipelineClientSet.TektonV1beta1().PipelineRuns(run.Namespace).Get(ctx, ownerPipelineRunName, metav1.GetOptions{})
+		ownerPipelineRun, err = r.pipelineRunLister.PipelineRuns(run.Namespace).Get(ownerPipelineRunName)
 		if err != nil {
 			logger.Errorf("Failed to fetch the owner PipelineRun - %v", run.Namespace, ownerPipelineRunName, err)
 		}
