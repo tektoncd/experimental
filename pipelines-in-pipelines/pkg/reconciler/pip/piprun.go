@@ -204,9 +204,19 @@ func (r *Reconciler) getPipelineRun(ctx context.Context, run *v1beta1.CustomRun)
 func (r *Reconciler) createPipelineRun(ctx context.Context, run *v1beta1.CustomRun) (*v1beta1.PipelineRun, error) {
 	logger := logging.FromContext(ctx)
 
+	var ownerPipelineRun *v1beta1.PipelineRun
+	var err error
+	ownerPipelineRunName := getOwnerPipelineRunName(run)
+	if ownerPipelineRunName != "" {
+		ownerPipelineRun, err = r.pipelineRunLister.PipelineRuns(run.Namespace).Get(ownerPipelineRunName)
+		if err != nil {
+			logger.Errorf("Failed to fetch the owner PipelineRun - %v", run.Namespace, ownerPipelineRunName, err)
+		}
+	}
+
 	pr := &v1beta1.PipelineRun{
 		ObjectMeta: getObjectMeta(run),
-		Spec:       getPipelineRunSpec(run),
+		Spec:       getPipelineRunSpec(run, ownerPipelineRun),
 	}
 
 	logger.Infof("Creating a new PipelineRun object %s", pr.Name)
@@ -248,14 +258,27 @@ func (r *Reconciler) cancelPipelineRun(ctx context.Context, run *v1beta1.CustomR
 	return nil
 }
 
-func getPipelineRunSpec(run *v1beta1.CustomRun) v1beta1.PipelineRunSpec {
-	return v1beta1.PipelineRunSpec{
+func getPipelineRunSpec(run *v1beta1.CustomRun, ownerPipelineRun *v1beta1.PipelineRun) v1beta1.PipelineRunSpec {
+	pipelineRunSpec := v1beta1.PipelineRunSpec{
 		PipelineRef:        getPipelineRef(run),
 		Params:             run.Spec.Params,
 		ServiceAccountName: run.Spec.ServiceAccountName,
 		Workspaces:         run.Spec.Workspaces,
 		Timeout:            run.Spec.Timeout,
 	}
+	if ownerPipelineRun != nil {
+		pipelineRunSpec.PodTemplate = ownerPipelineRun.Spec.PodTemplate
+	}
+	return pipelineRunSpec
+}
+
+func getOwnerPipelineRunName(run *v1beta1.CustomRun) string {
+	for _, ref := range run.GetOwnerReferences() {
+		if ref.Kind == pipeline.PipelineRunControllerName {
+			return ref.Name
+		}
+	}
+	return ""
 }
 
 func getPipelineRef(run *v1beta1.CustomRun) *v1beta1.PipelineRef {
