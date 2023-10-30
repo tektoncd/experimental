@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/docker/cli v0.0.0-20200130152716-5d0cf8839492 // indirect
-	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce // indirect
+	github.com/docker/docker v24.0.7+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/google/go-containerregistry v0.0.0-20200115214256-379933c9c22b
 	github.com/onsi/ginkgo v1.11.0 // indirect
