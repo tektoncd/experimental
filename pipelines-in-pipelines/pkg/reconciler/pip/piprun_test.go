@@ -169,6 +169,17 @@ func failed(pr *v1beta1.PipelineRun) *v1beta1.PipelineRun {
 	return prWithStatus
 }
 
+func cancelled(pr *v1beta1.PipelineRun) *v1beta1.PipelineRun {
+	prWithStatus := pr.DeepCopy()
+	prWithStatus.Status.SetCondition(&apis.Condition{
+		Type:    apis.ConditionSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  v1beta1.PipelineRunReasonCancelled.String(),
+		Message: "PipelineRun run-with-pipeline was cancelled",
+	})
+	return prWithStatus
+}
+
 func withResults(pr *v1beta1.PipelineRun, name string, value string) *v1beta1.PipelineRun {
 	prWithStatus := pr.DeepCopy()
 	prWithStatus.Status.PipelineResults = append(prWithStatus.Status.PipelineResults, v1beta1.PipelineRunResult{
@@ -241,6 +252,21 @@ var runWithPipeline = &v1beta1.CustomRun{
 			Kind:       "Pipeline",
 			Name:       "pipeline",
 		},
+	},
+}
+
+var runWithPipelineCancelled = &v1beta1.CustomRun{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "run-with-pipeline",
+		Namespace: "foo",
+	},
+	Spec: v1beta1.CustomRunSpec{
+		CustomRef: &v1beta1.TaskRef{
+			APIVersion: "tekton.dev/v1beta1",
+			Kind:       "Pipeline",
+			Name:       "pipeline",
+		},
+		Status: "RunCancelled",
 	},
 }
 
@@ -364,6 +390,18 @@ func TestReconcilePipRun(t *testing.T) {
 		expectedEvents: []string{
 			"Normal Started ",
 			"Normal Succeeded ",
+		},
+	}, {
+		name:            "Reconcile a run with a cancelled status",
+		pipeline:        p,
+		run:             runWithPipelineCancelled,
+		pipelineRun:     cancelled(pr),
+		expectedMessage: "PipelineRun run-with-pipeline was cancelled",
+		expectedStatus:  corev1.ConditionFalse,
+		expectedReason:  v1beta1.PipelineRunReasonCancelled,
+		expectedEvents: []string{
+			"Normal Started ",
+			"Warning Failed PipelineRun run-with-pipeline was cancelled",
 		},
 	}}
 	for _, tc := range testcases {
