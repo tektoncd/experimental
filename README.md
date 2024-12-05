@@ -1,5 +1,7 @@
 # Experimental Tekton Components
 
+**NOTE**: _This repository is no longer maintained or updated. If you wish to continue to develop this code yourself, we recommend you fork it._</code>
+
 Welcome to the Tekton Experimental 🧪  components repo!
 
 Tekton projects may start off in this repo so community members can
